@@ -8,6 +8,13 @@
       "when": 1788962907605,
       "tag": "0000_giant_blackheart",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788982011739,
+      "tag": "0001_good_steve_rogers",
+      "breakpoints": true
     }
   ]
 }
