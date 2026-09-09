@@ -61,6 +61,7 @@ One line per merged feature. Newest at the top.
 
 | Date | Feature | Notes |
 | --- | --- | --- |
+| 2026-09-09 | S1 — App-Shell | Authentifizierte Shell unter `src/app/(app)/` mit Sidebar nach `Design.md` §4.1 (sieben Nav-Punkte, aktiver Zustand mit `AnimatePresence`-Scale/Fade-Spring), sieben leere Seiten mit Überschrift. Erster Verbraucher von `getCurrentUser()`. Details in `decisions.md`. |
 | 2026-09-09 | P0.4 — DB-Seam | Drizzle-Client gegen lokales Postgres 18, `users`-Tabelle (volles Datenmodell) mit erster Migration, `getCurrentUser()` liefert den geseedeten Nutzer, lokales Storage-Interface. Details in `decisions.md`. |
 | 2026-09-09 | P0.3 — Designfundament | Design-Tokens und `@utility`-Sammlung aus `Design.md` §2 in `globals.css`, Instrument Sans + IBM Plex Mono selbst gehostet über `next/font/local` (vendorte Dateien, keine Google-Anfrage), `MotionConfig reducedMotion="user"` im Root-Layout. Details in `decisions.md`. |
 | 2026-09-09 | P0.2 — Scaffold und Toolchain | Next 16.3.4 Scaffold, exakte Pins, Biome/Vitest/tsconfig, `CLAUDE.md`-Befehlsliste um P0.2-Abweichung ergänzt. `next.config.ts` nach Review um nicht-autorisiertes `agentRules: false` bereinigt. |

@@ -121,3 +121,57 @@ ganze Projekt, nicht nur diesen Slice — Vorschlag: in die Decisions-Liste in
 `context/project-overview.md` übernehmen. Das entscheide ich nicht selbst.
 
 **Offen geblieben.** Keins.
+
+---
+
+## 2026-09-09 — S1 App-Shell — feature/s1-app-shell — 0936685
+
+**Gebaut.** Eine authentifizierte Shell unter `src/app/(app)/` mit Sidebar nach
+Design.md §4.1 und sieben leeren Routen (Dashboard, Trade Journal, Analytics,
+Progress, Prop Firm Rules, Econ Calendar, Settings), je nur eine Überschrift. Vorher
+gab es keine Navigation und keine Route außer der P0.3-Platzhalterseite. Erster echter
+Verbraucher von `getCurrentUser()` aus P0.4.
+
+**Dateien.** `src/components/shell/nav-items.ts`, `src/components/shell/sidebar.tsx`,
+`src/app/(app)/layout.tsx`, die sieben `page.tsx`, `src/app/globals.css`,
+`package.json`, `context/coding-standards.md`. Vollständige Liste im Commit.
+
+**Entschieden unterwegs.**
+- Sidebar-Breite 260px und Icon-Bibliothek `lucide-react` — beides nirgends
+  vorgegeben, vor dem Schreiben des Specs mit Sascha abgestimmt.
+- Kein Blur (`backdrop-filter`) und kein shadcn-Primitive auf der Sidebar — §4.1s
+  eigene Bullet-Liste verlangt keins von beiden, wörtlich gelesen; `shadcn init`
+  bleibt ungetan.
+- Vier neue Tokens (`--color-nav-idle`, `--color-nav-hover`,
+  `--color-nav-active-ring`, `--color-divider-glow`) in `globals.css` — Design.md
+  schreibt explizit vor, dass rgba-Werte aus §4 beim Bauen der Komponente als Token
+  ergänzt werden, nicht als Literal übernommen.
+- `page-title`-Utility neu angelegt (statt Sidebar-Zustände als Utilities), weil sie
+  von jeder künftigen Seite wiederverwendet wird — die Sidebar-Zustände (aktiv/hover/
+  Trenner) sind aktuell Einzelverbraucher und stehen direkt als Tailwind-Arbitrary-
+  Values mit `var(--token)`.
+- Während `verify`, auf direkte Anfrage: ein zweiter Trenner zwischen „Progress" und
+  „Prop Firm Rules", nicht Teil des ursprünglichen Specs, in `current-feature.md`
+  nachgetragen.
+- Während `verify`, ebenfalls auf direkte Anfrage: eine `motion`/`AnimatePresence`-
+  Animation auf dem aktiven Nav-Item, über drei Iterationen verfeinert (erst
+  gleitendes `layoutId`, dann verworfen zugunsten von unabhängigem Scale/Fade pro
+  Item, zuletzt von einem Duration-Tween auf einen Spring umgestellt und dessen
+  Stiffness/Damping proportional verlangsamt). Neuer, dauerhafter Motion-Anwendungsfall
+  — in `coding-standards.md` nachgetragen. Kein neues Paket, `motion` ist seit P0.3
+  installiert.
+- Aktiver Nav-Zustand per `pathname === href || pathname.startsWith(href + "/")`,
+  nicht nur exakter Vergleich — robust gegen künftige Unterrouten wie
+  `/journal/import`.
+- `t.integer().generatedAlwaysAsIdentity()`-Konvention aus P0.4 nicht betroffen, da
+  dieser Slice kein Schema anfasst.
+
+**Offen geblieben.**
+- Im Review als ⚠️ notiert, nicht behoben: die Trennlinie (Verlauf + Glow) steht als
+  identischer, langer Tailwind-Arbitrary-Value-String zweimal wörtlich in
+  `sidebar.tsx`. Kandidat für eine kleine gemeinsame Klasse oder ein
+  `@utility nav-divider`, wenn ein dritter Verbraucher dazukommt.
+- Visibility-Hinweis aus dem Review: die sieben Routen sind ohne Session erreichbar,
+  wie das ganze Projekt in Phase 1. Kein neuer Verstoß dieser Slice, aber der erste
+  Slice mit echten klickbaren App-Routen — `(app)/layout.tsx` ist die vorgesehene
+  Stelle für die Better-Auth-Session-Prüfung in Phase 2.
