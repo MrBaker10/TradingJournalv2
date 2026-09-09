@@ -82,6 +82,12 @@
   --color-practice: #ffb547; /* = warning, eigener Name für eigene Bedeutung */
   --color-practice-dim: rgba(255, 181, 71, 0.16);
   --shadow-practice: inset 3px 0 0 0 #ffb547;
+
+  /* --- Sidebar / Navigation (§4.1) --- */
+  --color-nav-idle: rgba(255, 255, 255, 0.06);
+  --color-nav-hover: rgba(255, 255, 255, 0.04);
+  --color-nav-active-ring: rgba(33, 212, 253, 0.28);
+  --color-divider-glow: rgba(33, 212, 253, 0.45);
 }
 
 /* Standardkarte */
@@ -133,6 +139,14 @@
 @utility text-glow {
   color: var(--color-cyan);
   text-shadow: 0 0 22px rgba(33, 212, 253, 0.65);
+}
+
+/* Seitentitel */
+@utility page-title {
+  font-size: 19px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 /* Kapitälchen-Label */

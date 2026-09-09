@@ -93,9 +93,10 @@ commit that changes nothing else.
 
 ## Motion
 
-- `motion` for row expansion, disclosure panels, the streak bump and the load-in of
-  calendar and score. CSS transitions for everything else: hover, focus, colour and
-  border changes.
+- `motion` for row expansion, disclosure panels, the streak bump, the load-in of
+  calendar and score, and the sidebar's active-nav-indicator (`AnimatePresence`
+  scale/opacity spring, independent per item). CSS transitions for everything else:
+  hover, focus, colour and border changes.
 - **`<MotionConfig reducedMotion="user">` at the app root is mandatory.** The
   `prefers-reduced-motion` CSS block does not stop `motion`, which animates through
   JS-set inline styles. Without it the accessibility promise in `Design.md` is false.
