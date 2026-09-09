@@ -1,6 +1,7 @@
-import { and, asc, eq, isNull, max } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, max } from "drizzle-orm";
 import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
+import { tradeAccounts } from "../schema/trades.ts";
 
 export async function listAllAccountsForSettings(userId: number) {
   return db
@@ -37,9 +38,36 @@ export async function getNextSortOrder(userId: number): Promise<number> {
   return (maxSortOrder ?? -1) + 1;
 }
 
-// TODO(S4): once trade_accounts exists, this becomes
-// `SELECT count(*) FROM trade_accounts WHERE account_id = $1`.
-// Always 0 today because no trade can exist yet.
-export async function countAssignedTrades(_accountId: number): Promise<number> {
-  return 0;
+export async function countAssignedTrades(accountId: number): Promise<number> {
+  const [row] = await db
+    .select({ count: count(tradeAccounts.id) })
+    .from(tradeAccounts)
+    .where(eq(tradeAccounts.accountId, accountId));
+
+  return row.count;
+}
+
+// Never trusts a client-supplied account id list: filters it down to ids
+// that belong to this user and are not archived before anything downstream
+// treats them as valid.
+export async function listOwnedAccountIds(
+  userId: number,
+  accountIds: number[],
+): Promise<number[]> {
+  if (accountIds.length === 0) {
+    return [];
+  }
+
+  const rows = await db
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(
+      and(
+        eq(accounts.userId, userId),
+        isNull(accounts.archivedAt),
+        inArray(accounts.id, accountIds),
+      ),
+    );
+
+  return rows.map((row) => row.id);
 }

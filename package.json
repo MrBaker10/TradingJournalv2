@@ -11,7 +11,8 @@
     "db:generate": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs generate",
     "db:migrate": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs migrate",
     "db:seed": "node --env-file=.env.local src/db/seed.ts",
-    "db:seed:instruments": "node --env-file=.env.local src/db/seed-instruments.ts"
+    "db:seed:instruments": "node --env-file=.env.local src/db/seed-instruments.ts",
+    "db:seed:trade-tags": "node --env-file=.env.local src/db/seed-trade-tags.ts"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
