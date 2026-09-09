@@ -326,3 +326,71 @@ ist jetzt dreimal identisch von Hand geschrieben (Archive und Default in
 `account-row.tsx`, Delete in `archived-accounts-list.tsx`) statt einmal als Hook
 extrahiert — im Review als ⚠️ notiert, nicht behoben, da nicht blockierend. Kandidat für
 eine spätere Aufräum-Slice, sobald ein vierter Aufrufer dazukommt.
+
+## 2026-09-10 — S4 Trades und Missed Setups — feature/s4-trades — a1d8ef4
+
+**Gebaut.** Der Nutzer kann über ein neues Formular unter `/journal/new` einen
+ausgeführten Trade oder ein Missed Setup loggen — mit live abgeleitetem P&L/R
+(überschreibbar), Kontozuweisung auf ein oder mehrere Konten und Confluence-/
+Mistake-Tagging. Vorher konnte kein Trade angelegt werden; `src/domain/pnl.ts` und
+`src/domain/accounts.ts` hatten keinen echten Aufrufer.
+
+**Dateien.** `src/db/schema/trades.ts`, `src/domain/trades.ts` (+Test),
+`src/schemas/trades.ts`, `src/actions/trades.ts`, `src/db/queries/trades.ts`,
+`src/db/queries/instruments.ts`, `src/db/queries/accounts.ts` (erweitert),
+`src/db/seed-trade-tags.ts`, `src/app/(app)/journal/new/page.tsx`,
+`src/components/trades/*`. Vollständige Liste im Commit.
+
+**Migration.** `0003_parallel_pete_wisdom.sql` — sechs neue Tabellen: `trades`,
+`trade_accounts`, `confluence_tags`, `trade_confluences`, `mistake_tags`,
+`trade_mistakes`.
+
+**Regeln.** „Ein Trade braucht mindestens ein Konto, ein Missed Setup keines" lebt in
+`validateTradeAccountAssignment` (`src/domain/trades.ts`), abgesichert durch
+`src/domain/__tests__/trades.test.ts` (5 Fälle). `pnl.ts` und `accounts.ts` blieben
+unverändert — dieser Slice ist ihr erster echter Aufrufer:
+`countAssignedTrades` in `src/db/queries/accounts.ts` ist jetzt eine echte
+`trade_accounts`-Query statt des `TODO(S4)`-Stubs aus S3.
+
+**Entschieden unterwegs.**
+- Enum-Vokabulare (`session`, `setup_type`, `entry_model`, `result`, `grade`, `felt`)
+  und die Seed-Daten für sechs Confluence-Gruppen (58 Tags) und zehn Mistake-Tags standen
+  in keiner Datei — mit Sascha vor `start` abgestimmt, nicht geraten.
+- Missed-Setup-Feldsichtbarkeit (welche Felder bei `taken=false` gelten) war die
+  heikelste Lücke: `project-overview.md` verlangt „mindestens ein Konto pro Trade"
+  generell, Sascha hat das explizit auf `taken=true` eingeschränkt — ein Missed Setup
+  bekommt bewusst keine Kontozuweisung.
+- `direction` ist in beiden Zweigen Pflicht (auch bei Missed Setups), obwohl die
+  Feldliste es dort nicht nannte — mit Sascha geklärt statt stillschweigend entschieden.
+- `import_batch_id` komplett weggelassen, nicht einmal als ungenutzter Stub — anders als
+  `countAssignedTrades` in S3, das bewusst als Vorgriff auf S4 angelegt wurde. Hier
+  entschieden: CSV-Import (S10) bekommt die Spalte, wenn es sie braucht.
+- `points` ist kein eigenes Formularfeld, sondern wird serverseitig als reine
+  Subtraktion abgeleitet (`exitPrice - entryPrice`, vorzeichenabhängig von `direction`)
+  statt über `calculatePnl`s BigInt-Pfad — eine einzelne Subtraktion ohne
+  Multiplikationskette braucht das Skalierungsverfahren nicht, das für Geldwerte
+  gilt.
+- Route `/journal/new` statt Modal, aus `project-structure.md`s bereits dokumentierter
+  `journal/import/`-Subroute abgeleitet, die das Muster „Anlage-Flows unter
+  `/journal/*`" schon vor der eigentlichen Listen-Seite (S5) etabliert.
+- Join-Tabellen (`trade_accounts`, `trade_confluences`, `trade_mistakes`) bekamen eine
+  Integer-Identity-PK plus Unique-Index statt der zusammengesetzten PK aus dem
+  Draft-SQL in `project-overview.md` — konsistent mit der bereits in P0.4
+  getroffenen projektweiten Entscheidung für Integer-Identity-PKs auf jeder Tabelle,
+  keine neue Festlegung.
+- Im Review (`/feature-review`) zwei ⚠️ gefunden und direkt behoben: `getFieldClass`/
+  `fieldState` in `new-trade-form.tsx` ergänzen den fehlenden sechsten Feldzustand aus
+  Design.md §4.5 (grüner „valid"-Rand, vorher nur default/hover/focus/invalid/disabled
+  vorhanden — dieselbe Lücke besteht weiterhin in `account-create-form.tsx` aus S3,
+  dort nicht nachgezogen, da außerhalb des Scope dieses Branches); und
+  `countExistingConfluenceTags`/`countExistingMistakeTags` in
+  `src/db/queries/trades.ts` prüfen Tag-IDs jetzt vor dem Insert auf Existenz, statt
+  sich auf einen rohen FK-Fehler zu verlassen — konsistent mit der bereits
+  vorhandenen Behandlung von `instrumentId`.
+
+**Offen geblieben.** Beim Verifizieren der Hard-Delete-Blockade (Konto mit
+zugewiesenem Trade) zeigte `archived-accounts-list.tsx` (aus S3, hier nicht
+angefasst) die Fehlermeldung nicht sichtbar in der `InlineMessage`, obwohl die
+Blockade serverseitig nachweislich griff (Account blieb in der DB archiviert, nicht
+gelöscht). Nicht untersucht, da außerhalb des Scope dieses Slices — falls das eine
+echte UI-Lücke ist, wäre es ein Fix für `archived-accounts-list.tsx` selbst.
