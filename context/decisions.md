@@ -64,3 +64,60 @@ Kein Screen sichtbar außer dem globalen `page-glow`-Hintergrund.
   `coding-standards.md` gepinnt, keine neue Versionsentscheidung.
 
 **Offen geblieben.** Keins.
+
+---
+
+## 2026-09-09 — P0.4 DB-Seam — feature/p0-4-db-seam — 5aae141
+
+**Gebaut.** Die App spricht jetzt mit einer echten Postgres-Datenbank über einen
+validierten Drizzle-Client. Ein einzelner geseedeter lokaler Nutzer existiert und ist
+über `getCurrentUser()` erreichbar. Ein Storage-Interface mit lokaler Disk-Implementierung
+steht bereit, noch ohne Aufrufer. Vorher gab es keine DB-Verbindung, keinen persistenten
+Nutzer und keine Storage-Anbindung.
+
+**Dateien.** `src/lib/env.ts`, `drizzle.config.ts`, `src/db/schema/users.ts`,
+`src/db/index.ts`, `src/db/migrations/0000_giant_blackheart.sql`, `src/db/seed.ts`,
+`src/lib/auth/get-current-user.ts`, `src/lib/storage/`, `package.json`, `CLAUDE.md`.
+Vollständige Liste im Commit.
+
+**Migration.** `0000_giant_blackheart.sql`, Tabelle `users`. Über `db:generate` erzeugt,
+über `db:migrate` gegen die lokale `tradingjournal`-DB angewendet und geprüft.
+
+**Entschieden unterwegs.**
+- Postgres-Treiber `postgres` (postgres.js) — nicht in `coding-standards.md` gepinnt,
+  mit Sascha abgestimmt vor dem Schreiben des Specs.
+- Primary-Key-Strategie projektweit: Integer statt UUID — mit Sascha abgestimmt, gilt
+  für jede künftige Tabelle, nicht nur `users`.
+- `users`-Tabelle bekommt das volle Draft-Modell aus `project-overview.md` jetzt, nicht
+  nur die Phase-1-Teilmenge — mit Sascha abgestimmt. Daraus folgen zwei Konsequenzen,
+  die nicht mehr einzeln abgestimmt wurden, weil sie mechanisch aus dieser Wahl plus
+  den bestehenden „Do not build"-Grenzen folgen: `selected_account_id` ohne
+  FK-Constraint (Zieltabelle `accounts` existiert nicht), `password_hash`/`totp_secret`
+  nullable (Better Auth nicht in diesem Slice).
+- `t.integer().generatedAlwaysAsIdentity()` statt `serial()` für die PK-Spalte —
+  Drizzles eigene Doku führt `serial` als deprecated zugunsten von Identity-Spalten,
+  bleibt aber ein Integer-PK, nur die aktuelle Schreibweise.
+- Kein `dotenv`: Node 24 lädt `.env.local` nativ über `--env-file`, alle `db:*`-Scripts
+  nutzen das statt einer zusätzlichen Abhängigkeit.
+- `db:generate`/`db:migrate` zeigen auf `drizzle-kit/bin.cjs` statt auf den
+  `.bin`-Shim, weil pnpms Shim kein reines Node-Skript ist und `node --env-file` daran
+  scheitert.
+- `tsconfig.json`: `allowImportingTsExtensions: true` ergänzt, damit `seed.ts` seine
+  relativen Imports mit `.ts`-Endung behalten kann, die Node für direkte Ausführung
+  verlangt.
+- Geseedeter User: `username: "local"`, `timezone: "UTC"`, `currencyDisplay: "USD"` —
+  Platzhalterwerte ohne Produktbedeutung, in Settings später änderbar.
+- `.gitignore` um `/storage/uploads` ergänzt, sonst würden lokale Testdateien der neuen
+  Disk-Storage ins öffentliche Repo wandern.
+- Kein `"type": "module"` in `package.json`, obwohl Node bei jedem `db:*`-Lauf eine
+  Performance-Warnung dazu ausgibt — das Feld global zu setzen wäre riskant für die
+  Next.js-/Tailwind-Configs, für eine reine Perf-Notiz nicht das Risiko wert.
+- Die liegengebliebene, nie committete P0.3-CLAUDE.md-Aufräumung (decisions.md-Referenz,
+  Gate-Zahl drei statt vier) wurde im Review gefunden und als eigener Commit `dfeb37c`
+  von diesem Slice getrennt, damit der P0.4-Commit nicht zum Sammelcommit wird.
+
+Die ersten drei Punkte (Treiber, PK-Strategie, `users`-Spaltenumfang) betreffen das
+ganze Projekt, nicht nur diesen Slice — Vorschlag: in die Decisions-Liste in
+`context/project-overview.md` übernehmen. Das entscheide ich nicht selbst.
+
+**Offen geblieben.** Keins.
