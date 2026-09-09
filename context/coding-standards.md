@@ -83,8 +83,11 @@ commit that changes nothing else.
   columns, so they must align.
 - Colours live in `@theme` as tokens. **No hex and no `rgba()` literal inside a
   component**, ever. This is what keeps a later light mode possible at all.
-- Fonts: Instrument Sans and IBM Plex Mono via `next/font`, self-hosted, no external
-  font request.
+- Fonts: Instrument Sans and IBM Plex Mono via `next/font/local`, loading font files
+  vendored in `src/app/fonts/`. Never `next/font/google` — it still fetches from
+  Google's servers at build time even though the browser never does. Vendor files from
+  the font's official foundry repo (e.g. GitHub releases), not from Google. See
+  `project-overview.md` Decisions.
 - **Money does not glow.** Process values get the neon treatment, money values get a
   semantic colour and nothing else. `Design.md` section 1 is the rule, not a suggestion.
 
