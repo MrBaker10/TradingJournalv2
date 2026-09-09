@@ -1,26 +1,175 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* --- Flächen --- */
+  --color-bg: #0f1535;
+  --color-card-from: rgba(6, 11, 40, 0.94);
+  --color-card-to: rgba(10, 14, 35, 0.49);
+  --color-inset-from: rgba(24, 29, 60, 0.94);
+  --color-inset-to: rgba(10, 14, 35, 0.49);
+  --color-well: rgba(6, 11, 40, 0.66); /* Inputs */
+
+  /* --- Text --- */
+  --color-fg: #ffffff;
+  --color-fg-muted: #a0aec0;
+  --color-fg-subtle: #718096;
+  --color-fg-placeholder: #5b6b8c;
+
+  /* --- Akzent (Prozess) --- */
+  --color-info: #0075ff;
+  --color-cyan: #21d4fd;
+
+  /* --- Semantisch (Geld & Regeln) --- */
+  --color-success: #01b574;
+  --color-success-fg: #01d98c; /* Zahlen auf dunkel */
+  --color-success-hi: #22f0a0; /* nur Kalender-Kachel */
+  --color-danger: #e31a1a;
+  --color-danger-fg: #ff6a6a;
+  --color-danger-hi: #ff7b7b;
+  --color-warning: #ffb547;
+
+  /* --- Verläufe --- */
+  --gradient-info: linear-gradient(310deg, #0075ff 0%, #21d4fd 100%);
+  --gradient-card: linear-gradient(
+    126.97deg,
+    var(--color-card-from) 19.41%,
+    var(--color-card-to) 76.65%
+  );
+  --gradient-inset: linear-gradient(
+    126.97deg,
+    var(--color-inset-from) 19.41%,
+    var(--color-inset-to) 76.65%
+  );
+  --gradient-dark: linear-gradient(310deg, #141727 0%, #3a416f 100%);
+  --gradient-edge: linear-gradient(
+    126.97deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.04) 60%,
+    rgba(255, 255, 255, 0.12)
+  );
+  --gradient-edge-neon: linear-gradient(
+    310deg,
+    rgba(33, 212, 253, 0.85),
+    rgba(0, 117, 255, 0.28) 55%,
+    rgba(255, 255, 255, 0.1)
+  );
+
+  /* --- Schatten & Neon --- */
+  --shadow-card: 0 20px 50px -30px rgba(0, 0, 0, 0.9);
+  --shadow-neon:
+    0 0 14px rgba(33, 212, 253, 0.55), 0 0 42px rgba(0, 117, 255, 0.35);
+  --shadow-neon-soft: 0 0 10px rgba(33, 212, 253, 0.35);
+  --shadow-neon-edge: 0 0 26px -6px rgba(0, 117, 255, 0.42);
+  --shadow-neon-hover:
+    0 0 20px rgba(33, 212, 253, 0.7), 0 0 54px rgba(0, 117, 255, 0.5);
+  --shadow-focus:
+    0 0 0 3px rgba(33, 212, 253, 0.16), 0 0 22px -6px rgba(33, 212, 253, 0.55);
+
+  /* --- Radien --- */
+  --radius-card: 20px;
+  --radius-ctl: 12px;
+  --radius-xs: 9px;
+
+  /* --- Schrift --- */
+  --font-sans:
+    var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* --- Motion --- */
+  --ease-soft: cubic-bezier(0.2, 0.7, 0.3, 1);
+
+  /* --- Übungskonto --- */
+  --color-practice: #ffb547; /* = warning, eigener Name für eigene Bedeutung */
+  --color-practice-dim: rgba(255, 181, 71, 0.16);
+  --shadow-practice: inset 3px 0 0 0 #ffb547;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Standardkarte */
+@utility card-surface {
+  background: var(--gradient-card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  position: relative;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Verlaufsrahmen (1px, per Mask) — neutral */
+@utility edge {
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--gradient-edge);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+    pointer-events: none;
   }
 }
 
+/* Verlaufsrahmen — Neon, nur für Prozess-Karten */
+@utility edge-neon {
+  box-shadow: var(--shadow-card), var(--shadow-neon-edge);
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--gradient-edge-neon);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+    pointer-events: none;
+  }
+}
+
+/* Glühende Zahl — ausschließlich Prozess-Werte */
+@utility text-glow {
+  color: var(--color-cyan);
+  text-shadow: 0 0 22px rgba(33, 212, 253, 0.65);
+}
+
+/* Kapitälchen-Label */
+@utility cap {
+  font-size: 0.656rem; /* 10.5px */
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-fg-muted);
+}
+@utility cap-neon {
+  color: var(--color-cyan);
+  text-shadow: var(--shadow-neon-soft);
+}
+
+/* Seitenhintergrund — drei radiale Verläufe, konstant über alle Screens */
+@utility page-glow {
+  background:
+    radial-gradient(
+      700px 440px at 0% 0%,
+      rgba(0, 117, 255, 0.26),
+      transparent 66%
+    ),
+    radial-gradient(
+      640px 400px at 100% 2%,
+      rgba(33, 212, 253, 0.16),
+      transparent 66%
+    ),
+    radial-gradient(
+      900px 520px at 50% 108%,
+      rgba(0, 117, 255, 0.13),
+      transparent 70%
+    );
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
 }
