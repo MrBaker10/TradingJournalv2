@@ -61,5 +61,6 @@ One line per merged feature. Newest at the top.
 
 | Date | Feature | Notes |
 | --- | --- | --- |
+| 2026-09-09 | P0.3 — Designfundament | Design-Tokens und `@utility`-Sammlung aus `Design.md` §2 in `globals.css`, Instrument Sans + IBM Plex Mono selbst gehostet über `next/font/local` (vendorte Dateien, keine Google-Anfrage), `MotionConfig reducedMotion="user"` im Root-Layout. Details in `decisions.md`. |
 | 2026-09-09 | P0.2 — Scaffold und Toolchain | Next 16.3.4 Scaffold, exakte Pins, Biome/Vitest/tsconfig, `CLAUDE.md`-Befehlsliste um P0.2-Abweichung ergänzt. `next.config.ts` nach Review um nicht-autorisiertes `agentRules: false` bereinigt. |
 | — | — | Nothing merged yet |

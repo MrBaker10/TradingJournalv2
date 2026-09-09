@@ -567,6 +567,11 @@ answer while coding.
   struck, since it needs the deferred prop firm link.
 - **"Do not build"** — two lists with two homes: permanent limits under Not Building
   above, the per-branch fence in `current-feature.md`.
+- **Fonts** — `next/font/local` with font files vendored in the repo, never
+  `next/font/google`. "Self-hosted" means no network request to a third party at all,
+  not even once at build time — `next/font/google` still fetches from Google's servers
+  during the build even though the browser never does. Source the vendored files from
+  the font's official foundry repo (e.g. GitHub releases), not from Google.
 
 ---
 
