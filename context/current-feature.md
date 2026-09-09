@@ -47,7 +47,7 @@ with their tests.
 At least two concrete, neighbouring-scope exclusions.
 
 ### Acceptance
-Browser-checkable checkboxes, including the three gates and one explicit click path.
+Browser-checkable checkboxes, including the four gates and one explicit click path.
 
 ### Open questions
 Leave empty, or list what the spec does not decide.

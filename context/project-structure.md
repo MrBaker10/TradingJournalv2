@@ -16,7 +16,7 @@ several self-named accounts (demo, evaluation, backtest, live) in one journal.
 | `/analytics` | Analytics | Eleven dimensions incl. account, hold time, risk calibration, exit efficiency, missed setups |
 | `/progress` | Progress | Streak rules, consistency score, 12 badges |
 | `/prop-firms` | Prop Firm Rules | ~15 firms, 18 rule fields each, search, filter chips, compare |
-| `/econ-calendar` | Econ Calendar | This week / next week, high-impact filter, user's timezone |
+| `/econ-calendar` | Econ Calendar (**Phase 2**) | This week / next week, high-impact filter, user's timezone |
 | `/settings` | Settings | Profile, accounts, password, 2FA, timezone, currency, danger zone |
 
 ## Directory layout
@@ -31,19 +31,19 @@ src/
       analytics/
       progress/
       prop-firms/
-      econ-calendar/
+      econ-calendar/          # Phase 2
       settings/
     api/
       cron/
         fx/route.ts           # daily ECB rates via frankfurter
-        econ/route.ts         # econ calendar sync (Forex Factory weekly JSON)
+        econ/route.ts         # Phase 2 — econ calendar sync (Forex Factory weekly JSON)
         month-close/route.ts  # monthly consistency score snapshot
       uploads/route.ts        # signed URLs for screenshots
     globals.css               # Tailwind v4 @theme lives here
   components/
     ui/                       # shadcn primitives
     dashboard/  journal/  analytics/  progress/
-    prop-firms/  econ/  settings/
+    prop-firms/  econ/  settings/    # econ/ is Phase 2
   domain/                     # pure, tested, no DB
     pnl.ts
     accounts.ts               # assignment rules, per-account vs combined, multipliers
@@ -66,7 +66,7 @@ src/
     auth/                     # getCurrentUser() seam
     storage/                  # local disk | S3-compatible seam
     fx/                       # rate fetch + display conversion
-    econ/                     # feed adapter, swappable in one file
+    econ/                     # Phase 2 — feed adapter, swappable in one file
     money.ts  time.ts  env.ts
   hooks/
   types/
@@ -156,8 +156,5 @@ econ calendar sync and the cron jobs.
 
 ## Open decisions
 
-Everything technical is settled — see the Decisions list in `project-overview.md`.
-Three things remain, none of them blocking the schema:
-
-- None. Everything technical is settled; see the Decisions list in
-  `project-overview.md`.
+None. Everything technical is settled — see the Decisions list in
+`project-overview.md`.

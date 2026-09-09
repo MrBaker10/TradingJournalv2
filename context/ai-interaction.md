@@ -22,12 +22,13 @@ Same loop for every feature and every fix:
    "Do not build" list.
 2. **Branch** — `feature/[name]` or `fix/[name]`.
 3. **Implement** — only what the spec says.
-4. **Verify** — three gates, in this order:
+4. **Verify** — four gates, in this order:
+   - `pnpm lint` (Biome)
    - `pnpm typecheck` (tsc from TypeScript 7)
    - `pnpm test` for anything touching `src/domain/**`
    - `pnpm build`, then click through the affected screens in the browser
 5. **Iterate** — fix and re-verify.
-6. **Commit** — only after all three gates pass. Ask first.
+6. **Commit** — only after all four gates pass. Ask first.
 7. **Merge** to main, then ask before deleting the branch.
 8. **Record** — mark done in `context/current-feature.md` and append one line to History.
 

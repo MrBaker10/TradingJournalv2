@@ -65,8 +65,8 @@ As of P0.2: only `dev`, `build`, `typecheck`, `test`, `lint` exist in `package.j
 `test:e2e`, `db:*` and `job:*` land with the slice that creates their target
 (Playwright, the DB schema, the cron handlers respectively).
 
-Verification gates before any commit, in order: `pnpm typecheck`, `pnpm test`,
-`pnpm build`, then click through the affected screens.
+Verification gates before any commit, in order: `pnpm lint`, `pnpm typecheck`,
+`pnpm test`, `pnpm build`, then click through the affected screens.
 
 ## Traps specific to this project
 
@@ -126,7 +126,7 @@ These are the mistakes that are easy to make here and expensive to find later.
 
 Document the feature in `context/current-feature.md` with its "Do not build" list →
 branch `feature/[name]` or `fix/[name]` → implement only what the spec says → pass the
-three gates → verify in the browser → ask before committing → merge → record one line
+four gates → verify in the browser → ask before committing → merge → record one line
 in History.
 
 Conventional commits (`feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`). Never
@@ -141,8 +141,8 @@ After 2–3 failed attempts at the same problem, stop and explain it. No random 
   the real `package.json`.
 - `PropFirmsData.md` needs cleanup before seeding: four of fifteen firm blocks have lost
   their name, and headings use `##Name` without a space so they do not parse.
-- Decisions and the three remaining open questions are at the end of
-  `context/project-overview.md`. Do not resolve one by picking an answer.
+- Decisions and open questions are at the end of `context/project-overview.md`. Do not
+  resolve one by picking an answer.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

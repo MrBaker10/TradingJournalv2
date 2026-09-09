@@ -238,6 +238,8 @@ every figure for display only, including historical ones. Prop firm limits stay 
 ```sql
 users                (id, username UNIQUE, display_name, discord_username,
                       timezone, currency_display,
+                      selected_account_id NULL,   -- remembered account selector,
+                                                   -- NULL = "All accounts"
                       password_hash, totp_secret, created_at)
 
 accounts             (id, user_id, name, sort_order,
@@ -556,6 +558,8 @@ answer while coding.
   Single-owner journal, self-contained feedback loop.
 - **Timezone** — stored per user, prefilled from the browser, applied only to econ
   events.
+- **Account selector memory** — a nullable `selected_account_id` column on `users`,
+  not browser storage. `NULL` means "All accounts".
 - **Name** — Trading-Journal.
 - **Design** — `Design.md` is authoritative. Dark only, no theme toggle. `motion` 13.2
   planned, with `MotionConfig reducedMotion="user"` mandatory. Missed setups,
