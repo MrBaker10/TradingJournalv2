@@ -244,3 +244,85 @@ selbst.
 aus meinem Wissen, nicht aus einer projekteigenen Quelle geprüft. Im Review als ⚠️
 notiert, von Sascha mit „so übernehmen" akzeptiert — bleibt aber ungegenprüft gegen
 eine autoritative externe Quelle.
+
+---
+
+## 2026-09-10 — S3 Accounts — feature/s3-accounts — a477853
+
+**Gebaut.** Der Nutzer kann eigene Konten anlegen, umbenennen, sortieren, archivieren
+(und wiederherstellen), als Übungskonto markieren und eines als Default für neue Trades
+setzen. Konten erscheinen als Kacheln in den Settings und im neuen Kontoschalter in der
+Sidebar. Vorher gab es keine Konten, nur den vorbereiteten, ungenutzten
+`users.selected_account_id`-Hook.
+
+**Dateien.** `src/db/schema/accounts.ts`, `src/domain/accounts.ts` (+Tests),
+`src/db/queries/accounts.ts`, `src/actions/accounts.ts`, `src/schemas/accounts.ts`,
+`src/components/settings/*`, `src/components/shell/account-switcher.tsx`,
+`src/components/ui/toggle-switch.tsx`. Vollständige Liste im Commit.
+
+**Migration.** `0002_square_psylocke.sql` — neue Tabelle `accounts`, FK-Nachtrag auf
+`users.selected_account_id`.
+
+**Regeln.** Geldmultiplikator über echte zugewiesene Konten (`realAccountMultiplier`/
+`applyMoneyMultiplier` vs. `countMultiplier`) und Practice-Ausschluss aus jedem
+kombinierten Wert (`excludePracticeAccounts`/`contributesToMoneyAggregate`) leben in
+`src/domain/accounts.ts`, abgesichert durch `src/domain/__tests__/accounts.test.ts`.
+Noch kein echter Aufrufer — das ist die Schnittstelle für S4 (Trades), sobald
+`trade_accounts` existiert. Die Kontoschalter-Reihenfolge aus Design.md §4.12
+(archiviert nie sichtbar, echte vor Practice-Konten) steckt in `groupAccountsForSwitcher`,
+ebenfalls getestet.
+
+**Entschieden unterwegs.**
+- Zirkulärer Schema-Import zwischen `accounts.ts` und `users.ts` (jede Tabelle
+  referenziert die andere) über Drizzles `.references(() => col)`-Thunk mit explizitem
+  `AnyPgColumn`-Rückgabetyp gelöst — ohne den Typ bricht TypeScripts zirkuläre
+  Typinferenz. Erster Fall dieser Art im Projekt; jede künftige zirkuläre FK-Beziehung
+  zwischen zwei Tabellen braucht denselben Kniff.
+- „Ein Default-Konto pro User" auf DB-Ebene über einen Partial-Unique-Index erzwungen
+  (`accounts_user_default_unique`, WHERE `is_default_for_new_trades = true`), nicht nur
+  in der Action-Logik — Anwendungscode kann sich irren, ein DB-Constraint nicht.
+- `countAssignedTrades(accountId)` als echte Funktion mit finaler Signatur angelegt, die
+  heute immer `0` zurückgibt (kein `trade_accounts` existiert), statt „Hard Delete immer
+  erlaubt" hart im Code zu verdrahten — wenn S4 `trade_accounts` baut, ändert sich nur
+  der Funktionskörper, nicht die Action oder ihre Tests.
+- UI komplett handgestrickt mit Tailwind und bestehenden Design-Tokens, keine neue
+  Dependency (kein shadcn/ui, kein Radix, kein react-hook-form) — vorab mit Sascha
+  abgestimmt, shadcn-Einführung verschiebt sich auf eine eigene spätere Aufgabe.
+  Sortieren per Auf/Ab statt Drag-and-Drop, aus demselben Grund.
+- `<main>` wurde zu einem eigenen Scrollbereich (sticky + overflow-y-auto wie die
+  Sidebar) umgebaut, damit der Practice-Amber-Streifen aus Design.md §4.12 beim Scrollen
+  tatsächlich fixiert bleibt — eine Layout-Änderung über den Accounts-Rahmen hinaus,
+  deshalb vorab mit Sascha abgestimmt statt still mitgezogen.
+- Kein Unarchive war die ursprüngliche Entscheidung beim Laden der Spec (Sascha:
+  „nicht bauen"). Während der Umsetzung hat er das zurückgenommen und ausdrücklich
+  Restore angefragt — jetzt ein einfacher Klick ohne Zwei-Schritt-Bestätigung, da
+  unkritisch und jederzeit erneut archivierbar.
+- Die Settings-UI wurde über mehrere Feedback-Runden von einer flachen Liste zu einem
+  Kachel-Grid mit einer „Geist"-Anlege-Kachel umgebaut (klick zum Aufklappen, schließt
+  nach Erfolg automatisch), nachdem Sascha das Anlegen als „ideenlos" und die Kacheln
+  als schwer lesbar bezeichnet hatte. Sortier-Pfeile wurden zu einer gerahmten
+  Stepper-Box zusammengefasst (waren als zwei lose Icons nicht als ein Control
+  erkennbar), der Default-Stern wurde durch einen Haken mit sichtbarer
+  Zwei-Schritt-Bestätigung ersetzt (Stern passte semantisch nicht, die Bestätigung war
+  unsichtbar), und Practice-Toggle sowie Default-Haken bekamen je eine eigene
+  beschriftete Zeile (Label links, Control rechts — das Muster aus dem
+  Anlegen-Formular), nachdem am reinen Icon nicht ablesbar war, was es tut.
+- Im Review fielen mehrere inline `rgba()`-Werte auf (entgegen „Farben nur als
+  `@theme`-Token"). Nachgezogen als echte Tokens: `--color-toggle-track`,
+  `--color-cyan-dim`, `--color-cyan-glow`, `--shadow-button-primary(-hover)`, dazu
+  `--gradient-success` für den Button-Erfolgszustand. Zwei 40px-Hit-Area-Lücken
+  (Restore/Delete in der Archiv-Liste, Cancel in der Anlege-Kachel) ebenfalls im Review
+  gefunden und behoben.
+
+Der Thunk-Kniff für zirkuläre Schema-Importe und die neuen Button-/Toggle-Tokens
+betreffen voraussichtlich mehr als diesen Slice — jede künftige Tabelle mit einer
+zirkulären FK-Beziehung braucht denselben Mechanismus, und jeder künftige Primary-Button
+sollte `--shadow-button-primary` statt eines neuen inline-`rgba()`-Werts verwenden.
+Vorschlag: einen Hinweis dazu in `coding-standards.md` (Datenbank-Abschnitt) und in
+`Design.md`s Token-Liste aufnehmen. Das entscheide ich nicht selbst.
+
+**Offen geblieben.** Der Zwei-Schritt-Bestätigen-Fluss (State + Timeout-Ref + Revert)
+ist jetzt dreimal identisch von Hand geschrieben (Archive und Default in
+`account-row.tsx`, Delete in `archived-accounts-list.tsx`) statt einmal als Hook
+extrahiert — im Review als ⚠️ notiert, nicht behoben, da nicht blockierend. Kandidat für
+eine spätere Aufräum-Slice, sobald ein vierter Aufrufer dazukommt.

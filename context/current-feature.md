@@ -61,6 +61,7 @@ One line per merged feature. Newest at the top.
 
 | Date | Feature | Notes |
 | --- | --- | --- |
+| 2026-09-10 | S3 — Accounts | `accounts`-Tabelle (Partial-Unique-Index für Default), `src/domain/accounts.ts` (Geldmultiplikator, Practice-Ausschluss, Kontoschalter-Gruppierung), Kontoverwaltung als Kacheln in Settings, Kontoschalter in der Sidebar nach Design.md §4.12. Details in `decisions.md`. |
 | 2026-09-09 | S2 — Instruments und P&L | `instruments`-Tabelle (Punktwert, Tick), idempotenter Seeder für zehn Futures (Minis + Micros), `src/lib/money.ts` (integer minor units) und `src/domain/pnl.ts` (P&L/R-Multiple, override-fähig, BigInt-Fixpunkt-Arithmetik). Details in `decisions.md`. |
 | 2026-09-09 | S1 — App-Shell | Authentifizierte Shell unter `src/app/(app)/` mit Sidebar nach `Design.md` §4.1 (sieben Nav-Punkte, aktiver Zustand mit `AnimatePresence`-Scale/Fade-Spring), sieben leere Seiten mit Überschrift. Erster Verbraucher von `getCurrentUser()`. Details in `decisions.md`. |
 | 2026-09-09 | P0.4 — DB-Seam | Drizzle-Client gegen lokales Postgres 18, `users`-Tabelle (volles Datenmodell) mit erster Migration, `getCurrentUser()` liefert den geseedeten Nutzer, lokales Storage-Interface. Details in `decisions.md`. |
