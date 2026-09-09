@@ -175,3 +175,72 @@ Verbraucher von `getCurrentUser()` aus P0.4.
   wie das ganze Projekt in Phase 1. Kein neuer Verstoß dieser Slice, aber der erste
   Slice mit echten klickbaren App-Routen — `(app)/layout.tsx` ist die vorgesehene
   Stelle für die Better-Auth-Session-Prüfung in Phase 2.
+
+---
+
+## 2026-09-09 — S2 Instruments und P&L — feature/s2-instruments-pnl — 6b406be
+
+**Gebaut.** Der Punktwert eines Futures-Kontrakts kommt jetzt aus der `instruments`-
+Tabelle statt aus einem Literal. `src/domain/pnl.ts` leitet P&L und R-Multiple rein aus
+Preisen, Richtung, Kontrakten und Punktwert ab, override-fähig. `src/lib/money.ts`
+liefert die Umrechnung zwischen Dezimalbetrag und ganzzahligen Cent, die `pnl.ts`
+intern nutzt. Vorher gab es weder eine Instrumententabelle noch ein P&L-Modul; jeder
+künftige Slice, der einen Punktwert braucht, liest ihn jetzt aus der Tabelle.
+
+**Dateien.** `src/db/schema/instruments.ts`, `src/db/seed-instruments.ts`,
+`src/lib/money.ts`, `src/domain/pnl.ts`, die vier zugehörigen Testdateien,
+`src/db/index.ts`, `package.json`. Vollständige Liste im Commit.
+
+**Migration.** `0001_good_steve_rogers.sql`, Tabelle `instruments`. Über `db:generate`
+erzeugt, über `db:migrate` gegen die lokale DB angewendet.
+
+**Regeln.** „Domain math: integer minor units" lebt in `src/lib/money.ts`, abgesichert
+durch `money.test.ts`. „P&L und R-Multiple rein aus Preisen und Punktwert ableiten,
+override-fähig" lebt in `src/domain/pnl.ts::calculatePnl`, abgesichert durch
+`pnl.test.ts`. „Punktwert nie als Literal" ist strukturell erzwungen: `pnl.ts` nimmt
+`pointValue` nur als Parameter, Literale existieren nur im Seeder als Tabellendaten
+selbst.
+
+**Entschieden unterwegs.**
+- Instrumentenliste (Minis + Micros: ES, NQ, YM, RTY, GC, CL, MES, MNQ, MYM, M2K, mit
+  Punktwert/Tick) — im Spec nicht vorgegeben, mit Sascha vor `load` per Rückfrage
+  festgelegt, da falsche Punktwerte die Geld-Korrektheit des Tools direkt verletzen.
+- R-Multiple-Formel (`P&L ÷ initiales Risiko`, `initiales Risiko = |entry − stop| ×
+  point_value × contracts`, `stop_price` Pflicht-Parameter, `null` ohne sinnvollen
+  Stop) — nirgends dokumentiert, mit Sascha vor `load` abgestimmt.
+- Override-API als ein Funktionsparameter (`calculatePnl(input, overridePnlCents?)`)
+  statt zwei getrennter Funktionen — mit Sascha vor `load` abgestimmt.
+- Während des Reviews: `pnl.ts` von einer verketteten Float-Multiplikation
+  (Preis × Punktwert × Kontrakte, erst am Ende gerundet) auf `BigInt`-Fixpunkt-
+  Arithmetik umgebaut (Preise auf Faktor 10 000 skaliert, Multiplikationskette exakt
+  in Integer, nur an den beiden Rändern ein einzelner kontrollierter Float-Schritt).
+  Grund: die ursprüngliche Fassung widersprach der Regel „nie Float-Arithmetik auf
+  Geld" aus `coding-standards.md`, auch wenn sie für die getesteten Größenordnungen
+  korrekt rundete. Mit Sascha abgestimmt statt eines API-Wechsels auf String-Inputs,
+  um die Signatur stabil zu halten.
+- BigInt-Literalsyntax (`10_000n`) scheiterte am TS-Target `ES2017` aus dem
+  Next.js-Scaffold (`TS2737`). Statt das Projekt-Target auf ES2020 anzuheben — eine
+  projektweite Konfigurationsänderung außerhalb des Slice-Scopes — durchgängig
+  `BigInt(...)`-Aufrufe statt der `n`-Suffix-Literale verwendet; funktional identisch,
+  keine Zielversion nötig.
+- Script `db:seed:instruments` in `package.json` — im Spec nur als „Seeder" benannt,
+  Name aus dem bereits dokumentierten Muster `db:seed:propfirms` (`CLAUDE.md`)
+  abgeleitet, keine Rückfrage nötig, da reine Namenskonvention.
+- `src/db/index.ts`: Schema-Registrierung von `import * as schema from "./schema/
+  users.ts"` auf `{ ...users, ...instruments }` umgestellt, da der Client ab jetzt
+  mehr als eine Schemadatei kennen muss. Erstes Mal, dass dieses Muster gebraucht
+  wurde — künftige Schema-Dateien reihen sich hier ein.
+
+Der BigInt-Fixpunkt-Ansatz für Preis-×-Punktwert-Multiplikationen betrifft
+voraussichtlich mehr als diesen Slice — jeder künftige Ort, der Preise mit einem
+Punktwert in TypeScript multipliziert (z. B. S4 Trades, CSV-Import), müsste denselben
+Mechanismus reproduzieren oder eine gemeinsame Hilfsfunktion daraus machen. Vorschlag:
+einen kurzen Hinweis dazu in den „Money"-Abschnitt von `coding-standards.md`
+aufnehmen, nicht in die Decisions-Liste von `project-overview.md`, da es sich um eine
+Implementierungsregel und keine Produktentscheidung handelt. Das entscheide ich nicht
+selbst.
+
+**Offen geblieben.** Die zehn Punktwerte/Ticks sind Standard-CME-Kontraktspezifikationen
+aus meinem Wissen, nicht aus einer projekteigenen Quelle geprüft. Im Review als ⚠️
+notiert, von Sascha mit „so übernehmen" akzeptiert — bleibt aber ungegenprüft gegen
+eine autoritative externe Quelle.
