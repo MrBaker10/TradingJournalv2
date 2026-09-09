@@ -11,3 +11,4 @@ next-env.d.ts
 *.pem
 .pnpm-debug.log*
 .claude/settings.local.json
+/storage/uploads

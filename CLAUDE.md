@@ -62,6 +62,12 @@ pnpm job:econ         # econ calendar sync (Forex Factory weekly JSON)
 pnpm job:month-close  # monthly consistency score snapshot
 ```
 
+As of P0.4: `db:generate`, `db:migrate` and `db:seed` are real. `db:seed` creates only
+the one seeded user — no default account yet, since the `accounts` table doesn't exist
+until the Accounts slice. `test:e2e`, `db:seed:propfirms` and `job:*` still don't exist;
+they land with the slice that creates their target (Playwright, the prop-firm seeder,
+the cron handlers respectively).
+
 Verification gates before any commit, in order: `pnpm typecheck`, `pnpm test`,
 `pnpm build`, then click through the affected screens.
 

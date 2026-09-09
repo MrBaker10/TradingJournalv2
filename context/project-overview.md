@@ -537,8 +537,8 @@ Context files: `project-overview.md` (this file), `project-structure.md`,
 
 ## ✅ Decisions
 
-All settled 2026-09-08. Reopen one by editing this section, not by picking a different
-answer while coding.
+All settled 2026-09-08 unless noted otherwise. Reopen one by editing this section, not
+by picking a different answer while coding.
 
 - **Stack** — Next.js, ground-up rebuild, local first, Vercel later.
 - **Accounts** — user-created and freely named; figures default to all accounts and are
@@ -572,6 +572,18 @@ answer while coding.
   not even once at build time — `next/font/google` still fetches from Google's servers
   during the build even though the browser never does. Source the vendored files from
   the font's official foundry repo (e.g. GitHub releases), not from Google.
+- **Postgres driver** (2026-09-09, P0.4) — `postgres` (postgres.js), not `pg` or
+  `@neondatabase/serverless`. Not pinned in `coding-standards.md` before this; works
+  unchanged against local Postgres 18 and Neon in phase 2.
+- **Primary keys** (2026-09-09, P0.4) — integer identity columns
+  (`generatedAlwaysAsIdentity()`, the non-deprecated successor to `serial()`)
+  project-wide, not UUID. Applies to every table, not only `users`.
+- **`users` table scope** (2026-09-09, P0.4) — built with the full draft column set from
+  the Data Model section below in P0.4, not deferred to a phase-1 subset. Columns tied
+  to features not yet built stay nullable and unused until their slice lands:
+  `selected_account_id` has no FK constraint yet (`accounts` doesn't exist),
+  `password_hash`/`totp_secret` stay empty until Better Auth. Reasoning and the exact
+  slice: `context/decisions.md`, P0.4 entry.
 
 ---
 
