@@ -115,6 +115,8 @@ Farbmodell aus dem Vision-UI-Vorbild kommt und exakt getroffen werden soll.
   --shadow-neon-edge: 0 0 26px -6px rgba(0,117,255,.42);
   --shadow-neon-hover:0 0 20px rgba(33,212,253,.70), 0 0 54px rgba(0,117,255,.50);
   --shadow-focus:     0 0 0 3px rgba(33,212,253,.16), 0 0 22px -6px rgba(33,212,253,.55);
+  --shadow-button-primary:       0 0 0 1px rgba(33,212,253,.5), var(--shadow-neon);
+  --shadow-button-primary-hover: 0 0 0 1px rgba(33,212,253,.5), var(--shadow-neon-hover);
 
   /* --- Radien --- */
   --radius-card: 20px;
@@ -278,7 +280,7 @@ Zwei Varianten. Primär trägt den Verlauf, sekundär ist Glas.
 
 ```
 primary : background var(--gradient-info); color #fff;
-          box-shadow 0 0 0 1px rgba(33,212,253,.5), var(--shadow-neon)
+          box-shadow var(--shadow-button-primary)
 ghost   : background rgba(255,255,255,.05);
           box-shadow inset 0 0 0 1px rgba(255,255,255,.12)
 ```

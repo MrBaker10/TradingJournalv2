@@ -5,13 +5,21 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";
+import type { SwitcherAccount } from "@/components/shell/account-switcher";
+import { AccountSwitcher } from "@/components/shell/account-switcher";
 import { navItems } from "./nav-items";
 
 interface SidebarProps {
   displayName: string;
+  accounts: SwitcherAccount[];
+  selectedAccountId: number | null;
 }
 
-export function Sidebar({ displayName }: SidebarProps) {
+export function Sidebar({
+  displayName,
+  accounts,
+  selectedAccountId,
+}: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -72,6 +80,11 @@ export function Sidebar({ displayName }: SidebarProps) {
           );
         })}
       </nav>
+
+      <AccountSwitcher
+        accounts={accounts}
+        selectedAccountId={selectedAccountId}
+      />
 
       <div className="m-3 flex items-center justify-between rounded-ctl bg-[image:var(--gradient-inset)] px-3 py-2.5">
         <span className="truncate text-sm text-fg">{displayName}</span>

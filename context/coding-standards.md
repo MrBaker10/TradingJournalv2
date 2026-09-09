@@ -116,6 +116,10 @@ commit that changes nothing else.
 - An `account_id` coming from the client is checked against the current user before
   use, in exactly the same way as a trade id. Accounts are a permission boundary, not
   just a label.
+- Two tables that reference each other (a circular FK) resolve via Drizzle's
+  `.references(() => col)` thunk with an explicit `AnyPgColumn` return type — without
+  it, TypeScript's circular type inference between the two tables breaks. First
+  instance: `src/db/schema/accounts.ts` ↔ `users.ts`.
 
 ## Money
 

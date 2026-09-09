@@ -8,6 +8,7 @@
   --color-inset-from: rgba(24, 29, 60, 0.94);
   --color-inset-to: rgba(10, 14, 35, 0.49);
   --color-well: rgba(6, 11, 40, 0.66); /* Inputs */
+  --color-toggle-track: rgba(255, 255, 255, 0.08); /* Toggle-Switch aus */
 
   /* --- Text --- */
   --color-fg: #ffffff;
@@ -18,6 +19,8 @@
   /* --- Akzent (Prozess) --- */
   --color-info: #0075ff;
   --color-cyan: #21d4fd;
+  --color-cyan-dim: rgba(33, 212, 253, 0.12);
+  --color-cyan-glow: rgba(33, 212, 253, 0.16);
 
   /* --- Semantisch (Geld & Regeln) --- */
   --color-success: #01b574;
@@ -41,6 +44,7 @@
     var(--color-inset-to) 76.65%
   );
   --gradient-dark: linear-gradient(310deg, #141727 0%, #3a416f 100%);
+  --gradient-success: linear-gradient(310deg, #019a63 0%, #01d98c 100%);
   --gradient-edge: linear-gradient(
     126.97deg,
     rgba(255, 255, 255, 0.2),
@@ -64,6 +68,10 @@
     0 0 20px rgba(33, 212, 253, 0.7), 0 0 54px rgba(0, 117, 255, 0.5);
   --shadow-focus:
     0 0 0 3px rgba(33, 212, 253, 0.16), 0 0 22px -6px rgba(33, 212, 253, 0.55);
+  --shadow-button-primary:
+    0 0 0 1px rgba(33, 212, 253, 0.5), var(--shadow-neon);
+  --shadow-button-primary-hover:
+    0 0 0 1px rgba(33, 212, 253, 0.5), var(--shadow-neon-hover);
 
   /* --- Radien --- */
   --radius-card: 20px;
@@ -160,6 +168,10 @@
 @utility cap-neon {
   color: var(--color-cyan);
   text-shadow: var(--shadow-neon-soft);
+}
+@utility cap-practice {
+  color: var(--color-practice);
+  background: var(--color-practice-dim);
 }
 
 /* Seitenhintergrund — drei radiale Verläufe, konstant über alle Screens */

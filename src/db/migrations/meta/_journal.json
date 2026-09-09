@@ -15,6 +15,13 @@
       "when": 1788982011739,
       "tag": "0001_good_steve_rogers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788986638640,
+      "tag": "0002_square_psylocke",
+      "breakpoints": true
     }
   ]
 }
