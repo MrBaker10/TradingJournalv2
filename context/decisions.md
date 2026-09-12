@@ -592,3 +592,108 @@ Handelstagsdefinition (`IsoDate`, `isTradingDay`, `toTradingDay`) lebt einmal in
 2. `user_badges` ist angelegt, aber leer — das Vergeben von Badges ist ein eigener
    Slice, ebenso `monthly_scores` und der Month-Close-Job.
 3. Vorschlag oben zu `project-overview.md`, noch nicht entschieden.
+
+---
+
+## 2026-09-12 — S8 Dashboard — feature/s8-dashboard — 37bf756
+
+**Gebaut.** `/dashboard` ist von einer nackten Überschrift zur vollen Seite geworden:
+Metrik-Tafel mit fünfzehn Kennzahlen in **einer** Karte nach `Design.md` §4.7,
+P&L-Kalender-Heatmap des laufenden Monats (§4.8), die fünf jüngsten Einträge über die
+unveränderte `TradeRow` aus S5 (§4.9), drei Prozess-Kacheln für Streak, Consistency und
+Badges (§4.3) und die Plan-Karte mit optionalem End-of-Day-Review (§4.6). Damit gibt es
+zum ersten Mal aggregierte Zahlen im UI und einen Ort für den Tagesplan. S8 ist
+außerdem der erste Aufrufer der drei Domainmodule aus S7.
+
+**Dateien.** `src/db/queries/dashboard.ts` (sechs Aggregatqueries),
+`src/db/queries/daily-notes.ts`, `src/db/schema/daily-notes.ts`,
+`src/schemas/daily-notes.ts`, `src/actions/daily-notes.ts`, `src/lib/time.ts` (mit
+Tests), fünf Komponenten unter `src/components/dashboard/`,
+`src/app/(app)/dashboard/page.tsx`. In `src/db/queries/trades.ts` kamen
+`tradePnlCents`, `listRecentTrades` und der gemeinsame Kern `queryTradeRows` dazu;
+`hasRealAccount` ist jetzt exportiert. `globals.css` trägt neun neue `@theme`-Token für
+Tafel und Kalender.
+
+**Migration.** `0006_panoramic_morgan_stark.sql` legt `daily_notes` an (`user_id`,
+`note_date DATE`, `premarket_plan`, `eod_review`, Audit-Spalten, Unique auf
+(`user_id`, `note_date`)). Über `db:generate` erzeugt, mit `db:migrate` angewandt, im
+selben Commit wie die Schemadatei.
+
+**Regeln.** `src/domain/**` ist **nicht verändert** — die Arbeit steckt darin, die
+S7-Module richtig zu füttern. `getStreakEntryDays` gruppiert `group by trade_date` mit
+`min(created_at)` und joint **nicht** über `trade_accounts`; ein Copy-Trade auf drei
+Konten hätte sonst drei Logging-Tage erzeugt. `getMonthScoreDays` liefert eine Zeile
+pro Eintrag mit `EXISTS`-Flags, die Tagesmittelung bleibt in `consistency.ts`. Badges
+bekommen `longestStreak` aus `calculateStreak` (Backfills lösen sie nicht aus) und
+`entriesLogged` aus der Gesamthistorie (Backfills zählen). Lokal bestätigt: drei am
+12.09. nachgetragene Trades vom 1./3./5. erzeugten keine Streak, nur der rechtzeitig
+geloggte vom 10. — das 48h-Fenster greift. Neu getestet sind `src/lib/time.ts`
+(9 Tests: Zeitzonengrenzen, Monatsränder) und `tradePnlCents` (7 Paritätstests gegen
+`calculatePnl` in echtem Postgres, zwei davon auf Sub-Cent-Beträgen).
+
+**Entschieden unterwegs.**
+- **Vier Widersprüche zwischen `project-overview.md` E und `Design.md`**, alle Sascha
+  vorgelegt und von ihm entschieden: (1) **fünfzehn** statt dreizehn Zellen, weil §4.7
+  Missed setups und By the book zusätzlich führt und dreizehn Einzelkarten ausdrücklich
+  verbietet; (2) die **Today-Zelle** behält den Inset-Verlauf, ihr Wert bekommt nur die
+  semantische Farbe — §4.7 wollte `text-glow`, §1 verbietet Glow auf Geld; (3) die
+  **Badge-Kachel** zählt live aus `earnedBadges()`, ohne in `user_badges` zu schreiben;
+  (4) **Avg winner/loser und Expectancy** teilen durch die Summe der Kontobeiträge,
+  nicht durch die Trade-Zahl, sonst hebt ein Copy-Trade den Mittelwert.
+- **Max drawdown** rechnet über den laufenden Monat und misst vom höheren aus laufendem
+  Peak und Null. Ein Monat, der nur fällt, hat damit einen Drawdown in Höhe seines
+  Verlusts statt gar keinen.
+- **Gewinner und Verlierer hängen am abgeleiteten P&L**, nicht am optionalen Feld
+  `trades.result`. `result` darf leer bleiben, und eine Win rate, die Net P&L
+  widerspricht, ist schlimmer als keine.
+- **Ein Tag mit ausschließlich Missed Setups bekommt eine Kalenderkachel**, neutral, mit
+  Betrag 0; die Zahl darunter zählt Einträge, nicht gehandelte Trades.
+- **Missed Setups folgen dem Kontoschalter nicht** — `src/domain/trades.ts` verbietet
+  ihnen jede Kontozuordnung, es gibt also nichts, wonach sich filtern ließe.
+- **Streak, Score und Badges folgen dem Kontoschalter ebenfalls nicht**: sie sehen laut
+  `project-structure.md` nur echte Konten, unabhängig von der Auswahl. Ein gewähltes
+  Übungskonto ändert seine Geldzahlen, nicht seine Prozesszahlen.
+- **`export const dynamic = "force-dynamic"` auf der Dashboard-Seite.** Ohne dynamische
+  API prerendert Next 16 die Seite beim Build und friert jede Zahl ins Bundle. Gilt
+  sinngemäß für jede Seite dieser App, die pro Nutzer rechnet.
+- **`tradePnlCents` rundet mit `floor(x + 0.5)`**, weil das bitgenau `Math.round` aus
+  `dollarsToCents` ist. Nach dem Muster von `rMultipleSortKey` aus S5: die Formel
+  existiert einmal in SQL, und ein Paritätstest gegen `pnl.ts` hält sie fest.
+- **`formatCents` in `src/lib/money.ts`** statt einer zweiten Geldformatierung im
+  Dashboard. `trade-row.tsx` (aus S6, außerhalb des Scope) wurde mit umgestellt, weil
+  beide auf dem Dashboard nebeneinander stehen und sonst `$-120.00` neben `-$120.00`
+  erschienen wäre.
+- **`InlineMessage` bekam einen `tone`-Prop** (`error` als Default, plus `hint` und
+  `success`), damit §4.6 seine dreistufige Live-Rückmeldung bekommt, ohne eine zweite
+  Meldungszeilen-Komponente daneben zu stellen. Ebenfalls außerhalb des Scope.
+- **Der Aufklapper des Reviews animiert `height: auto` statt `max-height: 230px`.**
+  §4.6 nennt 230px; eine feste Höhe würde das Textfeld auf schmalen Fenstern
+  abschneiden. Dauer und Kurve bleiben wie dort beschrieben.
+- **`daily_notes` bekam `created_at`/`updated_at`**, die der Datenmodell-Entwurf nicht
+  nennt — wie bei `trades`, damit die Tabelle nicht als einzige ohne Audit-Spalten
+  dasteht.
+- Im Review gefunden und behoben: die Eintragszahl in der Kalenderkachel lief in
+  Instrument Sans statt IBM Plex Mono. `Design.md` §3 verlangt Mono mit Tabellenziffern
+  für **alle** Zahlen, Zählwerte eingeschlossen.
+
+**Offen geblieben.**
+1. `bestMonthlyScore` für das Badge `score_90` kommt aus dem live berechneten Score des
+   laufenden Monats, weil `monthly_scores` noch nicht existiert. Ein abgeschlossener
+   Monat mit 90+ bleibt unberücksichtigt, bis der Month-Close-Slice die Tabelle füllt.
+2. Der `@media (prefers-reduced-motion: reduce)`-Block aus `Design.md` §5 fehlt in
+   `globals.css` — vermutlich seit P0.3. `MotionConfig reducedMotion="user"` ist da und
+   deckt `motion` ab, aber CSS-Transitions und `animate-spin` laufen weiter. Nicht
+   angefasst, weil projektweit und außerhalb dieses Slices.
+3. Der Kontoschalter in der Sidebar zeigt nach dem Umschalten weiter den alten
+   Kontonamen, obwohl Zahlen und Amber-Streifen sofort wechseln; erst ein Reload
+   korrigiert das Label. Client-State in `account-switcher.tsx` aus S3.
+4. `/settings` wird beim Build als statisch geführt und liest dabei die Datenbank —
+   dieselbe Ursache, die auf dem Dashboard mit `force-dynamic` gelöst wurde.
+5. `src/components/settings/archived-accounts-list.tsx:81` trägt ein `rgba()`-Literal in
+   der Komponente, gegen `coding-standards.md` §Styling. Aus S3, nicht angefasst.
+6. `dailyNotes` steht nicht im `schema`-Objekt in `src/db/index.ts`, genau wie `badges`
+   aus S7. Folgenlos, solange der Relational Query Builder nicht benutzt wird.
+7. **Vorschlag an Sascha, nicht selbst entschieden:** Punkt 7 der Liste oben
+   (`force-dynamic` für jede per-Nutzer rechnende Seite) betrifft das ganze Projekt und
+   gehört als Zeile in die Decisions-Liste in `project-overview.md`, zusammen mit dem
+   Hinweis auf `/settings`.
