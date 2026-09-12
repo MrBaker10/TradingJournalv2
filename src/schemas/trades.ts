@@ -33,6 +33,28 @@ const dateField = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date");
 const timeField = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time");
 const priceField = z.number().positive();
 
+const MAX_URL_LENGTH = 2048;
+
+// "https scheme only, parsed with the URL API, length capped. No http, no
+// javascript:, no data:" (coding-standards.md, External links on trades) —
+// checking protocol === "https:" against a value the URL API could parse
+// rejects all three in one step, since none of them ever parse to "https:".
+export const httpsUrlSchema = z
+  .string()
+  .max(MAX_URL_LENGTH, "Link is too long")
+  .refine((value) => {
+    try {
+      return new URL(value).protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "Only https:// links are allowed");
+
+export const tradeLinkSchema = z.object({
+  url: httpsUrlSchema,
+  label: z.string().trim().max(200).optional(),
+});
+
 const sharedFields = {
   tradeDate: dateField,
   instrumentId: z.number().int().positive(),
@@ -50,6 +72,9 @@ const sharedFields = {
   notes: z.string().max(4000).optional(),
   felt: feltEnum.optional(),
   grade: gradeEnum.optional(),
+  // Either branch may have links, taken or missed alike — project-overview.md
+  // doesn't restrict this to taken trades the way account assignment is.
+  links: z.array(tradeLinkSchema).default([]),
 };
 
 // Missed setup: nothing was executed, so exit/contracts/P&L/result/account
@@ -92,3 +117,20 @@ export const createTradeSchema = z.discriminatedUnion("taken", [
 ]);
 
 export type CreateTradeInput = z.infer<typeof createTradeSchema>;
+
+const tradeIdSchema = z.object({
+  tradeId: z.number().int().positive(),
+});
+
+export const addTradeLinkSchema = tradeIdSchema.extend({
+  url: httpsUrlSchema,
+  label: z.string().trim().max(200).optional(),
+});
+
+export const deleteTradeLinkSchema = tradeIdSchema.extend({
+  linkId: z.number().int().positive(),
+});
+
+export const deleteTradeScreenshotSchema = tradeIdSchema.extend({
+  screenshotId: z.number().int().positive(),
+});

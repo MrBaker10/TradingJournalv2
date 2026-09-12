@@ -134,3 +134,37 @@ export const tradeMistakes = pgTable(
     uniqueIndex("trade_mistakes_unique").on(table.tradeId, table.mistakeTagId),
   ],
 );
+
+// Up to three per trade (enforced in src/domain/trades.ts,
+// canAddScreenshot), private, served only through signed URLs
+// (coding-standards.md). storageKey is the src/lib/storage/ key, never the
+// raw file path exposed to the client.
+export const tradeScreenshots = pgTable(
+  "trade_screenshots",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    tradeId: integer("trade_id")
+      .notNull()
+      .references(() => trades.id, { onDelete: "cascade" }),
+    storageKey: text("storage_key").notNull(),
+    sortOrder: integer("sort_order").notNull(),
+  },
+  (table) => [index("trade_screenshots_trade_idx").on(table.tradeId)],
+);
+
+// Arbitrarily many per trade, https-only (validated in src/schemas/trades.ts,
+// never fetched server-side — coding-standards.md, "External links on
+// trades").
+export const tradeLinks = pgTable(
+  "trade_links",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    tradeId: integer("trade_id")
+      .notNull()
+      .references(() => trades.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    label: text("label"),
+    sortOrder: integer("sort_order").notNull(),
+  },
+  (table) => [index("trade_links_trade_idx").on(table.tradeId)],
+);

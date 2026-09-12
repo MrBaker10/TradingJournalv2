@@ -5,12 +5,17 @@ import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { createTrade } from "@/actions/trades";
 import { AccountMultiSelect } from "@/components/trades/account-multi-select";
+import { ScreenshotSlots } from "@/components/trades/screenshot-slots";
 import type { TagGroup } from "@/components/trades/tag-multi-select";
 import { TagMultiSelect } from "@/components/trades/tag-multi-select";
+import type { TradeLinkItem } from "@/components/trades/trade-links-input";
+import { TradeLinksInput } from "@/components/trades/trade-links-input";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { calculatePnl, type TradeDirection } from "@/domain/pnl";
+import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
 import { centsToDollars } from "@/lib/money";
+import { resizeAndCompressImage } from "@/lib/uploads/resize-image";
 import {
   createTradeSchema,
   directionEnum,
@@ -21,6 +26,12 @@ import {
   sessionEnum,
   setupTypeEnum,
 } from "@/schemas/trades";
+
+interface StagedScreenshot {
+  id: string;
+  blob: Blob;
+  url: string;
+}
 
 const SUCCESS_HOLD_MS = 1400;
 
@@ -124,6 +135,9 @@ export function NewTradeForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successSummary, setSuccessSummary] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [links, setLinks] = useState<TradeLinkItem[]>([]);
+  const [screenshots, setScreenshots] = useState<StagedScreenshot[]>([]);
+  const [screenshotError, setScreenshotError] = useState<string | null>(null);
 
   const loading = isPending;
   const success = successSummary !== null;
@@ -183,6 +197,33 @@ export function NewTradeForm({
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: "" }));
   }
 
+  async function handleAddScreenshot(file: File) {
+    if (screenshots.length >= MAX_SCREENSHOTS_PER_TRADE) {
+      setScreenshotError(
+        `A trade can have at most ${MAX_SCREENSHOTS_PER_TRADE} screenshots.`,
+      );
+      return;
+    }
+    try {
+      const blob = await resizeAndCompressImage(file);
+      setScreenshots((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), blob, url: URL.createObjectURL(blob) },
+      ]);
+      setScreenshotError(null);
+    } catch {
+      setScreenshotError("Could not process that image.");
+    }
+  }
+
+  function handleRemoveScreenshot(id: string | number) {
+    setScreenshots((prev) => {
+      const removed = prev.find((screenshot) => screenshot.id === id);
+      if (removed) URL.revokeObjectURL(removed.url);
+      return prev.filter((screenshot) => screenshot.id !== id);
+    });
+  }
+
   function buildPayload() {
     const shared = {
       tradeDate: state.tradeDate,
@@ -202,6 +243,10 @@ export function NewTradeForm({
       notes: state.notes.trim() === "" ? undefined : state.notes,
       felt: state.felt === "" ? undefined : state.felt,
       grade: state.grade === "" ? undefined : state.grade,
+      links: links.map((link) => ({
+        url: link.url,
+        label: link.label ?? undefined,
+      })),
     };
 
     if (!state.taken) {
@@ -243,6 +288,24 @@ export function NewTradeForm({
         return;
       }
 
+      // Screenshots can only be uploaded once the trade exists (trade_id is
+      // NOT NULL) — same /api/uploads endpoint an attach-afterward edit uses,
+      // just called right after creation instead of later.
+      let screenshotUploadError: string | null = null;
+      for (const screenshot of screenshots) {
+        const formData = new FormData();
+        formData.append("tradeId", String(result.data.id));
+        formData.append("file", screenshot.blob, "screenshot.jpg");
+        const response = await fetch("/api/uploads", {
+          method: "POST",
+          body: formData,
+        });
+        if (!response.ok) {
+          screenshotUploadError =
+            "Trade saved, but a screenshot failed to upload.";
+        }
+      }
+
       const summary =
         result.data.pnlCents !== null
           ? `${result.data.pnlCents >= 0 ? "+" : ""}$${centsToDollars(result.data.pnlCents).toFixed(2)}${
@@ -252,10 +315,15 @@ export function NewTradeForm({
             }`
           : "Missed setup logged";
       setSuccessSummary(summary);
-      setErrors({});
+      setErrors(screenshotUploadError ? { form: screenshotUploadError } : {});
       setTimeout(() => {
         setState(initialState);
         setSuccessSummary(null);
+        for (const screenshot of screenshots) {
+          URL.revokeObjectURL(screenshot.url);
+        }
+        setScreenshots([]);
+        setLinks([]);
       }, SUCCESS_HOLD_MS);
     });
   }
@@ -745,6 +813,41 @@ export function NewTradeForm({
           <InlineMessage message={errors.accountIds ?? null} />
         </div>
       )}
+
+      <div className="card-surface edge flex flex-col gap-4 p-5">
+        <div className="flex flex-col gap-1.5">
+          <span className="cap">Screenshots</span>
+          <ScreenshotSlots
+            screenshots={screenshots}
+            disabled={loading || success}
+            error={screenshotError}
+            onAdd={handleAddScreenshot}
+            onRemove={handleRemoveScreenshot}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className="cap">Links</span>
+          <TradeLinksInput
+            links={links}
+            disabled={loading || success}
+            onAdd={(input) =>
+              setLinks((prev) => [
+                ...prev,
+                {
+                  id: crypto.randomUUID(),
+                  url: input.url,
+                  label: input.label ?? null,
+                },
+              ])
+            }
+            onRemove={(id) =>
+              setLinks((prev) => prev.filter((link) => link.id !== id))
+            }
+          />
+          <InlineMessage message={errors.links ?? null} />
+        </div>
+      </div>
 
       <div className="flex flex-col gap-1">
         <button

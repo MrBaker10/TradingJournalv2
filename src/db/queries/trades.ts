@@ -1,6 +1,18 @@
-import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  lte,
+  max,
+  sql,
+} from "drizzle-orm";
 import { calculatePnl } from "../../domain/pnl.ts";
 import { dollarsToCents } from "../../lib/money.ts";
+import { createSignedUploadUrl } from "../../lib/uploads/signed-url.ts";
 import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
 import { instruments } from "../schema/instruments.ts";
@@ -8,6 +20,8 @@ import {
   confluenceTags,
   mistakeTags,
   tradeAccounts,
+  tradeLinks,
+  tradeScreenshots,
   trades,
 } from "../schema/trades.ts";
 
@@ -31,6 +45,19 @@ export interface JournalTradeAccount {
   id: number;
   name: string;
   isPractice: boolean;
+}
+
+export interface JournalTradeScreenshot {
+  id: number;
+  url: string;
+  sortOrder: number;
+}
+
+export interface JournalTradeLink {
+  id: number;
+  url: string;
+  label: string | null;
+  sortOrder: number;
 }
 
 export interface JournalTradeRow {
@@ -61,6 +88,8 @@ export interface JournalTradeRow {
   pnlCents: number | null;
   rMultiple: number | null;
   accounts: JournalTradeAccount[];
+  screenshots: JournalTradeScreenshot[];
+  links: JournalTradeLink[];
 }
 
 export interface JournalHiddenPracticeCount {
@@ -104,6 +133,44 @@ const accountsJson = sql<JournalTradeAccount[]>`(
   from ${tradeAccounts}
   join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
   where ${tradeAccounts.tradeId} = ${trades.id}
+)`;
+
+// Raw storage keys, not signed URLs — signing happens per-row in TypeScript
+// after the query runs (createSignedUploadUrl needs a fresh timestamp per
+// issue, not something SQL should do).
+const screenshotsJson = sql<
+  { id: number; storageKey: string; sortOrder: number }[]
+>`(
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'id', ${tradeScreenshots.id},
+        'storageKey', ${tradeScreenshots.storageKey},
+        'sortOrder', ${tradeScreenshots.sortOrder}
+      )
+      order by ${tradeScreenshots.sortOrder}
+    ),
+    '[]'::jsonb
+  )
+  from ${tradeScreenshots}
+  where ${tradeScreenshots.tradeId} = ${trades.id}
+)`;
+
+const linksJson = sql<JournalTradeLink[]>`(
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'id', ${tradeLinks.id},
+        'url', ${tradeLinks.url},
+        'label', ${tradeLinks.label},
+        'sortOrder', ${tradeLinks.sortOrder}
+      )
+      order by ${tradeLinks.sortOrder}
+    ),
+    '[]'::jsonb
+  )
+  from ${tradeLinks}
+  where ${tradeLinks.tradeId} = ${trades.id}
 )`;
 
 // Sort key for "R-Multiple": for a taken trade this mirrors calculatePnl in
@@ -192,6 +259,8 @@ export async function listJournalTrades(
       postExitMfeR: trades.postExitMfeR,
       pnlOverride: trades.pnlOverride,
       accounts: accountsJson,
+      screenshots: screenshotsJson,
+      links: linksJson,
       totalCount: sql<number>`(count(*) over())::int`,
     })
     .from(trades)
@@ -281,6 +350,12 @@ export async function listJournalTrades(
           ? Number(row.mfeR)
           : null,
       accounts: row.accounts,
+      screenshots: row.screenshots.map((screenshot) => ({
+        id: screenshot.id,
+        url: createSignedUploadUrl(screenshot.storageKey),
+        sortOrder: screenshot.sortOrder,
+      })),
+      links: row.links,
     };
   });
 
@@ -327,6 +402,47 @@ export async function listConfluenceTags() {
 
 export async function listMistakeTags() {
   return db.select().from(mistakeTags).orderBy(asc(mistakeTags.id));
+}
+
+// A tradeId from the client is only usable once it's checked against the
+// current user — same treatment as getOwnedAccount in db/queries/accounts.ts.
+export async function getOwnedTrade(userId: number, tradeId: number) {
+  const [trade] = await db
+    .select()
+    .from(trades)
+    .where(and(eq(trades.id, tradeId), eq(trades.userId, userId)))
+    .limit(1);
+
+  return trade;
+}
+
+export async function countTradeScreenshots(tradeId: number): Promise<number> {
+  const [row] = await db
+    .select({ count: count(tradeScreenshots.id) })
+    .from(tradeScreenshots)
+    .where(eq(tradeScreenshots.tradeId, tradeId));
+
+  return row.count;
+}
+
+export async function getNextScreenshotSortOrder(
+  tradeId: number,
+): Promise<number> {
+  const [{ maxSortOrder }] = await db
+    .select({ maxSortOrder: max(tradeScreenshots.sortOrder) })
+    .from(tradeScreenshots)
+    .where(eq(tradeScreenshots.tradeId, tradeId));
+
+  return (maxSortOrder ?? -1) + 1;
+}
+
+export async function getNextLinkSortOrder(tradeId: number): Promise<number> {
+  const [{ maxSortOrder }] = await db
+    .select({ maxSortOrder: max(tradeLinks.sortOrder) })
+    .from(tradeLinks)
+    .where(eq(tradeLinks.tradeId, tradeId));
+
+  return (maxSortOrder ?? -1) + 1;
 }
 
 export async function countExistingConfluenceTags(

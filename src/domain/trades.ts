@@ -30,3 +30,23 @@ export function validateTradeAccountAssignment(
   }
   return { success: true };
 }
+
+export const MAX_SCREENSHOTS_PER_TRADE = 3;
+
+export type ScreenshotSlotResult =
+  | { success: true }
+  | { success: false; error: string };
+
+// "Up to three screenshots per trade" (project-overview.md, Core Feature C).
+// Runs against the current count fetched fresh from the DB, so it holds for
+// both the create-time upload and a later attach, with no distinction between
+// the two call sites.
+export function canAddScreenshot(existingCount: number): ScreenshotSlotResult {
+  if (existingCount >= MAX_SCREENSHOTS_PER_TRADE) {
+    return {
+      success: false,
+      error: `A trade can have at most ${MAX_SCREENSHOTS_PER_TRADE} screenshots.`,
+    };
+  }
+  return { success: true };
+}
