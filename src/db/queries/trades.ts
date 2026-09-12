@@ -8,6 +8,7 @@ import {
   inArray,
   lte,
   max,
+  type SQL,
   sql,
 } from "drizzle-orm";
 import { calculatePnl } from "../../domain/pnl.ts";
@@ -109,7 +110,7 @@ export interface JournalTradesResult {
 // contributesToMoneyAggregate in src/domain/accounts.ts, but as a set
 // membership check rather than a money multiplier — this decides list
 // visibility, not a P&L figure.
-const hasRealAccount = sql<boolean>`exists (
+export const hasRealAccount = sql<boolean>`exists (
   select 1 from ${tradeAccounts}
   join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
   where ${tradeAccounts.tradeId} = ${trades.id} and ${accounts.isPractice} = false
@@ -202,8 +203,40 @@ export const rMultipleSortKey = sql<number | null>`(
   end
 )`;
 
-function buildFilterConditions(filters: JournalFilters) {
-  const conditions = [eq(trades.userId, filters.userId)];
+// Realised P&L in integer cents, mirroring calculatePnl in
+// src/domain/pnl.ts: COALESCE the user's override (stored in dollars), else
+// derive it from the prices, the instrument's point value and the contract
+// count. `floor(x + 0.5)` is exactly what Math.round does inside
+// dollarsToCents, so the two agree cent for cent — the parity test in
+// __tests__/trades.test.ts pins that against real NUMERIC arithmetic.
+//
+// NULL wherever there is no realised P&L (a missed setup, a trade without an
+// exit): it then drops out of a SUM and out of the winner/loser split instead
+// of reading as a flat zero. Needs the instruments join in scope.
+//
+// This is the per-trade value, not a figure. Whether it multiplies by the
+// assigned real accounts is the caller's decision — see
+// src/db/queries/dashboard.ts.
+export const tradePnlCents = sql<number | null>`(
+  case
+    when ${trades.taken} = false then null
+    when ${trades.exitPrice} is null or ${trades.contracts} is null then null
+    else floor(
+      coalesce(
+        ${trades.pnlOverride},
+        case when ${trades.direction} = 'long'
+          then (${trades.exitPrice} - ${trades.entryPrice})
+          else (${trades.entryPrice} - ${trades.exitPrice})
+        end * ${instruments.pointValue} * ${trades.contracts}
+      ) * 100 + 0.5
+    )
+  end
+)::bigint`;
+
+// Ownership is not in here: queryTradeRows applies it to every caller, so it
+// can't be forgotten by a new one.
+function buildFilterConditions(filters: JournalFilters): SQL[] {
+  const conditions: SQL[] = [];
   if (filters.dateFrom) {
     conditions.push(gte(trades.tradeDate, filters.dateFrom));
   }
@@ -226,11 +259,26 @@ function buildOrderBy(filters: JournalFilters) {
   return [sql`${key} ${direction} nulls last`, desc(trades.id)];
 }
 
-export async function listJournalTrades(
-  filters: JournalFilters,
-): Promise<JournalTradesResult> {
-  const conditions = buildFilterConditions(filters);
+interface TradeRowsQuery {
+  userId: number;
+  selectedAccountId: number | null;
+  /** Extra filters on top of the ownership and visibility conditions. */
+  conditions: SQL[];
+  orderBy: SQL[];
+  limit: number;
+  offset?: number;
+}
 
+// The one place that reads a trade row and shapes it for §4.9 rendering.
+// Both the journal list and the dashboard's "Recent trades" go through it,
+// so the two can't drift apart.
+//
+// The window count comes along for either caller: Postgres computes it from
+// the rows it has to filter anyway, and one select shape is worth more here
+// than saving that aggregate on the dashboard.
+async function queryTradeRows(
+  input: TradeRowsQuery,
+): Promise<{ rows: JournalTradeRow[]; totalCount: number }> {
   const baseQuery = db
     .select({
       id: trades.id,
@@ -266,11 +314,14 @@ export async function listJournalTrades(
     .from(trades)
     .innerJoin(instruments, eq(trades.instrumentId, instruments.id));
 
+  const ownership = eq(trades.userId, input.userId);
+
   const query =
-    filters.selectedAccountId === null
+    input.selectedAccountId === null
       ? baseQuery.where(
           and(
-            ...conditions,
+            ownership,
+            ...input.conditions,
             sql`(${trades.taken} = false or (${trades.taken} = true and ${hasRealAccount}))`,
           ),
         )
@@ -279,15 +330,15 @@ export async function listJournalTrades(
             tradeAccounts,
             and(
               eq(tradeAccounts.tradeId, trades.id),
-              eq(tradeAccounts.accountId, filters.selectedAccountId),
+              eq(tradeAccounts.accountId, input.selectedAccountId),
             ),
           )
-          .where(and(...conditions));
+          .where(and(ownership, ...input.conditions));
 
   const rawRows = await query
-    .orderBy(...buildOrderBy(filters))
-    .limit(JOURNAL_PAGE_SIZE)
-    .offset((filters.page - 1) * JOURNAL_PAGE_SIZE);
+    .orderBy(...input.orderBy)
+    .limit(input.limit)
+    .offset(input.offset ?? 0);
 
   const totalCount = rawRows[0]?.totalCount ?? 0;
 
@@ -359,12 +410,46 @@ export async function listJournalTrades(
     };
   });
 
+  return { rows, totalCount };
+}
+
+export async function listJournalTrades(
+  filters: JournalFilters,
+): Promise<JournalTradesResult> {
+  const { rows, totalCount } = await queryTradeRows({
+    userId: filters.userId,
+    selectedAccountId: filters.selectedAccountId,
+    conditions: buildFilterConditions(filters),
+    orderBy: buildOrderBy(filters),
+    limit: JOURNAL_PAGE_SIZE,
+    offset: (filters.page - 1) * JOURNAL_PAGE_SIZE,
+  });
+
   const hiddenPracticeCounts =
     filters.selectedAccountId === null
       ? await listHiddenPracticeCounts(filters.userId)
       : [];
 
   return { rows, totalCount, hiddenPracticeCounts };
+}
+
+// Design.md §4.8/§4.9: the dashboard's "Recent trades" is the same row as the
+// journal list, newest first, so it reuses both the query and the component.
+// Missed setups belong here too — they are equal entries, not a lesser kind.
+export async function listRecentTrades(
+  userId: number,
+  selectedAccountId: number | null,
+  limit: number,
+): Promise<JournalTradeRow[]> {
+  const { rows } = await queryTradeRows({
+    userId,
+    selectedAccountId,
+    conditions: [],
+    orderBy: [desc(trades.tradeDate), desc(trades.id)],
+    limit,
+  });
+
+  return rows;
 }
 
 // Trades that are taken but assigned only to practice accounts — hidden from

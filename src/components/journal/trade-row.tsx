@@ -15,7 +15,7 @@ import { TradeLinksInput } from "@/components/trades/trade-links-input";
 import { InlineMessage } from "@/components/ui/inline-message";
 import type { JournalTradeRow as JournalTradeRowData } from "@/db/queries/trades";
 import { domainLabel } from "@/lib/links";
-import { centsToDollars } from "@/lib/money";
+import { formatCents } from "@/lib/money";
 import { resizeAndCompressImage } from "@/lib/uploads/resize-image";
 
 interface TradeRowProps {
@@ -116,8 +116,10 @@ export function TradeRow({ trade }: TradeRowProps) {
   }
 
   const amount =
-    trade.pnlCents !== null ? centsToDollars(trade.pnlCents) : null;
-  const amountPositive = amount !== null && amount >= 0;
+    trade.pnlCents !== null
+      ? formatCents(trade.pnlCents, { signed: true })
+      : null;
+  const amountPositive = trade.pnlCents !== null && trade.pnlCents >= 0;
   const showWouldBeR = !trade.taken && trade.rMultiple !== null;
   const showR = trade.taken && trade.rMultiple !== null;
 
@@ -170,7 +172,7 @@ export function TradeRow({ trade }: TradeRowProps) {
                 amountPositive ? "text-success-fg" : "text-danger-fg"
               }`}
             >
-              {amountPositive ? "+" : ""}${amount.toFixed(2)}
+              {amount}
             </span>
           ) : (
             <span className="font-mono text-sm text-fg-subtle">—</span>

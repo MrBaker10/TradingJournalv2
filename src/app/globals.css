@@ -91,6 +91,35 @@
   --color-practice-dim: rgba(255, 181, 71, 0.16);
   --shadow-practice: inset 3px 0 0 0 #ffb547;
 
+  /* --- Dashboard: Metrik-Tafel (§4.7) --- */
+  --shadow-metric-cell: inset -1px -1px 0 rgba(255, 255, 255, 0.07);
+  /* Die Zelle "Today" ist hervorgehoben, ihr Wert bleibt semantisch gefärbt:
+     Geld leuchtet nicht (§1). */
+  --gradient-today: linear-gradient(
+    310deg,
+    rgba(0, 117, 255, 0.16) 0%,
+    rgba(33, 212, 253, 0.05) 100%
+  );
+
+  /* --- Dashboard: Kalender-Heatmap (§4.8) --- */
+  /* Hier ist der farbige Schein auf Geldtagen erlaubt: er codiert Dichte über
+     den Monat, nicht Belohnung, und sitzt auf der Kachel statt auf der Zahl. */
+  --gradient-day-win: linear-gradient(
+    310deg,
+    rgba(1, 181, 116, 0.3) 0%,
+    rgba(1, 181, 116, 0.08) 100%
+  );
+  --shadow-day-win: inset 0 0 0 1px rgba(1, 217, 140, 0.45);
+  --gradient-day-loss: linear-gradient(
+    310deg,
+    rgba(227, 26, 26, 0.28) 0%,
+    rgba(227, 26, 26, 0.08) 100%
+  );
+  --shadow-day-loss: inset 0 0 0 1px rgba(255, 106, 106, 0.4);
+  --shadow-day-flat: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-day-today:
+    inset 0 0 0 1.5px #21d4fd, 0 0 22px -4px rgba(33, 212, 253, 0.75);
+
   /* --- Sidebar / Navigation (§4.1) --- */
   --color-nav-idle: rgba(255, 255, 255, 0.06);
   --color-nav-hover: rgba(255, 255, 255, 0.04);

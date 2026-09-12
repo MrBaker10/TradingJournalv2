@@ -15,3 +15,23 @@ export function centsToDollars(cents: number): number {
   }
   return cents / CENTS_PER_DOLLAR;
 }
+
+const USD = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+
+/**
+ * Display only. Trades are stored in USD and the display-currency conversion
+ * is a later slice, so this formats USD and nothing else.
+ *
+ * `signed` puts an explicit + on a gain, which is what a P&L column wants;
+ * a loss carries its own minus either way.
+ */
+export function formatCents(
+  cents: number,
+  options?: { signed?: boolean },
+): string {
+  const formatted = USD.format(centsToDollars(cents));
+  return options?.signed && cents > 0 ? `+${formatted}` : formatted;
+}

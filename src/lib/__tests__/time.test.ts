@@ -1,0 +1,78 @@
+import { describe, expect, it } from "vitest";
+import {
+  formatDayLabel,
+  monthKeyOf,
+  monthRangeOf,
+  todayInTimeZone,
+} from "../time.ts";
+
+describe("todayInTimeZone", () => {
+  it("returns the date of the user's own calendar, not UTC's", () => {
+    // 23:30 UTC is already tomorrow in Berlin and still yesterday's evening
+    // in New York. Both users see their own day.
+    const instant = new Date("2026-09-12T23:30:00Z");
+    expect(todayInTimeZone("Europe/Berlin", instant)).toBe("2026-09-13");
+    expect(todayInTimeZone("America/New_York", instant)).toBe("2026-09-12");
+    expect(todayInTimeZone("UTC", instant)).toBe("2026-09-12");
+  });
+
+  it("crosses the month boundary in the user's zone", () => {
+    const instant = new Date("2026-09-30T22:15:00Z");
+    expect(todayInTimeZone("Europe/Berlin", instant)).toBe("2026-10-01");
+    expect(todayInTimeZone("UTC", instant)).toBe("2026-09-30");
+  });
+
+  it("handles a zone ahead of the date line", () => {
+    const instant = new Date("2026-09-12T12:00:00Z");
+    expect(todayInTimeZone("Pacific/Kiritimati", instant)).toBe("2026-09-13");
+  });
+
+  it("uses the current instant when none is passed", () => {
+    expect(todayInTimeZone("UTC")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe("monthKeyOf", () => {
+  it("takes the month of a date", () => {
+    expect(monthKeyOf("2026-09-12")).toBe("2026-09");
+    expect(monthKeyOf("2026-01-01")).toBe("2026-01");
+  });
+});
+
+describe("formatDayLabel", () => {
+  it("renders the date the string says, in any machine timezone", () => {
+    expect(formatDayLabel("2026-09-03")).toBe("Sep 3");
+    expect(formatDayLabel("2026-01-01")).toBe("Jan 1");
+    expect(formatDayLabel("2026-12-31")).toBe("Dec 31");
+  });
+});
+
+describe("monthRangeOf", () => {
+  it("spans a 30-day month", () => {
+    expect(monthRangeOf("2026-09")).toEqual({
+      from: "2026-09-01",
+      to: "2026-09-30",
+    });
+  });
+
+  it("spans a 31-day month", () => {
+    expect(monthRangeOf("2026-12")).toEqual({
+      from: "2026-12-01",
+      to: "2026-12-31",
+    });
+  });
+
+  it("spans February in a common year", () => {
+    expect(monthRangeOf("2026-02")).toEqual({
+      from: "2026-02-01",
+      to: "2026-02-28",
+    });
+  });
+
+  it("spans February in a leap year", () => {
+    expect(monthRangeOf("2028-02")).toEqual({
+      from: "2028-02-01",
+      to: "2028-02-29",
+    });
+  });
+});

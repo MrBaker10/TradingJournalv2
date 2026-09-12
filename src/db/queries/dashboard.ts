@@ -1,0 +1,467 @@
+import { and, eq, gte, lte, type SQL, sql } from "drizzle-orm";
+import type { ScoreDay, ScoreEntry } from "../../domain/consistency.ts";
+import type { IsoDate } from "../../domain/streak.ts";
+import { monthRangeOf } from "../../lib/time.ts";
+import { db } from "../index.ts";
+import { accounts } from "../schema/accounts.ts";
+import { dailyNotes } from "../schema/daily-notes.ts";
+import { instruments } from "../schema/instruments.ts";
+import {
+  tradeAccounts,
+  tradeConfluences,
+  tradeLinks,
+  tradeScreenshots,
+  trades,
+} from "../schema/trades.ts";
+import { hasEodReview, listMonthReviewDates } from "./daily-notes.ts";
+import { hasRealAccount, rMultipleSortKey, tradePnlCents } from "./trades.ts";
+
+// Every figure on the dashboard comes from this file, and every exported
+// function says in its header whether it is a **money aggregate** (multiplies
+// by the assigned real accounts) or a **count aggregate** (does not). Getting
+// that wrong misstates P&L silently — coding-standards.md, Money.
+//
+// Scope, in one place so no query invents its own:
+//
+// - "All accounts" means all accounts with is_practice = false. The practice
+//   filter sits inside realAccountCount and hasRealAccount and runs before
+//   anything is summed.
+// - A selected account is the only code path allowed to read practice data,
+//   and it never multiplies: the per-account value is the figure.
+// - A missed setup carries no account at all (src/domain/trades.ts) and no
+//   P&L. It is therefore in scope in both modes, and drops out of every money
+//   sum on its own because tradePnlCents is NULL for it.
+// - Streak, consistency score and badges see real accounts only
+//   (project-structure.md), so their queries take no selected account and do
+//   not follow the switcher.
+
+export interface DashboardScope {
+  userId: number;
+  /** `users.selected_account_id`. null = "All accounts" = all real accounts. */
+  selectedAccountId: number | null;
+}
+
+// The money multiplier from src/domain/accounts.ts, in SQL because the
+// aggregation runs in the database: how many real accounts this trade was
+// copy-traded onto. is_practice = false is the first thing it filters.
+const realAccountCount = sql<number>`(
+  select count(*)::int
+  from ${tradeAccounts}
+  join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
+  where ${accounts.isPractice} = false
+    and ${tradeAccounts.tradeId} = ${trades.id}
+)`;
+
+function assignedToAccount(accountId: number): SQL<boolean> {
+  return sql<boolean>`exists (
+    select 1 from ${tradeAccounts}
+    where ${tradeAccounts.tradeId} = ${trades.id}
+      and ${tradeAccounts.accountId} = ${accountId}
+  )`;
+}
+
+/**
+ * The rows a dashboard figure is allowed to see: this user's entries in the
+ * date range, with taken trades narrowed to the selected scope and missed
+ * setups always included, since they belong to no account by design.
+ */
+function scopeConditions(
+  scope: DashboardScope,
+  range: { from: IsoDate; to: IsoDate },
+): SQL[] {
+  const inScope =
+    scope.selectedAccountId === null
+      ? hasRealAccount
+      : assignedToAccount(scope.selectedAccountId);
+
+  return [
+    eq(trades.userId, scope.userId),
+    gte(trades.tradeDate, range.from),
+    lte(trades.tradeDate, range.to),
+    sql`(${trades.taken} = false or ${inScope})`,
+  ];
+}
+
+/** One trade's contribution to a money figure, in integer cents. */
+function moneyContribution(scope: DashboardScope): SQL<number> {
+  return scope.selectedAccountId === null
+    ? sql<number>`(${tradePnlCents} * ${realAccountCount})`
+    : sql<number>`${tradePnlCents}`;
+}
+
+/**
+ * How many times this trade lands in a money figure: the denominator that
+ * belongs to the numerator above. A copy-trade on three real accounts adds
+ * three times to the sum and three to this, so an average stays the average
+ * of one execution on one account.
+ */
+function moneyWeight(scope: DashboardScope): SQL<number> {
+  return scope.selectedAccountId === null
+    ? sql<number>`${realAccountCount}`
+    : sql<number>`1`;
+}
+
+function toNumber(value: unknown): number {
+  return Number(value ?? 0);
+}
+
+/** Integer cents in, integer cents out — never a fraction of a cent. */
+function ratioCents(totalCents: number, weight: number): number | null {
+  return weight > 0 ? Math.round(totalCents / weight) : null;
+}
+
+export interface MonthMoneyMetrics {
+  netPnlCents: number;
+  grossWinCents: number;
+  /** Magnitude, always >= 0. */
+  grossLossCents: number;
+  avgWinnerCents: number | null;
+  avgLoserCents: number | null;
+  expectancyCents: number | null;
+  /** Gross win over gross loss. null when the month has no loss to divide by. */
+  profitFactor: number | null;
+}
+
+/**
+ * **Money aggregate.** Net P&L and everything derived from it for one month.
+ *
+ * Winner and loser are decided by the derived P&L sign, not by the optional
+ * `trades.result` field: `result` is user-set and may be empty, and a win
+ * rate that disagrees with Net P&L is worse than no win rate.
+ *
+ * The three averages and the profit factor are ratios of two aggregates, not
+ * aggregates themselves — the sums are computed in SQL, the single division
+ * happens here so the rounding back to whole cents stays visible.
+ */
+export async function getMonthMoneyMetrics(
+  scope: DashboardScope,
+  month: string,
+): Promise<MonthMoneyMetrics> {
+  const contribution = moneyContribution(scope);
+  const weight = moneyWeight(scope);
+
+  const [row] = await db
+    .select({
+      netPnlCents: sql<string>`coalesce(sum(${contribution}), 0)::bigint`,
+      grossWinCents: sql<string>`coalesce(sum(${contribution}) filter (where ${tradePnlCents} > 0), 0)::bigint`,
+      grossLossCents: sql<string>`abs(coalesce(sum(${contribution}) filter (where ${tradePnlCents} < 0), 0))::bigint`,
+      winnerWeight: sql<number>`coalesce(sum(${weight}) filter (where ${tradePnlCents} > 0), 0)::int`,
+      loserWeight: sql<number>`coalesce(sum(${weight}) filter (where ${tradePnlCents} < 0), 0)::int`,
+      totalWeight: sql<number>`coalesce(sum(${weight}) filter (where ${tradePnlCents} is not null), 0)::int`,
+    })
+    .from(trades)
+    .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
+    .where(and(...scopeConditions(scope, monthRangeOf(month))));
+
+  const netPnlCents = toNumber(row.netPnlCents);
+  const grossWinCents = toNumber(row.grossWinCents);
+  const grossLossCents = toNumber(row.grossLossCents);
+
+  return {
+    netPnlCents,
+    grossWinCents,
+    grossLossCents,
+    avgWinnerCents: ratioCents(grossWinCents, row.winnerWeight),
+    avgLoserCents: ratioCents(-grossLossCents, row.loserWeight),
+    expectancyCents: ratioCents(netPnlCents, row.totalWeight),
+    profitFactor: grossLossCents > 0 ? grossWinCents / grossLossCents : null,
+  };
+}
+
+export interface MonthCountMetrics {
+  tradesLogged: number;
+  missedSetups: number;
+  byTheBook: number;
+  /** Share of taken trades with a positive P&L, 0–1. null with no trades. */
+  winRate: number | null;
+  avgR: number | null;
+}
+
+/**
+ * **Count aggregate.** A trade counts once, however many accounts it was
+ * copy-traded onto — it was one decision.
+ *
+ * Missed setups are counted over the whole user, not the selected account:
+ * they carry no account assignment at all, so there is nothing to filter them
+ * by. They stay out of win rate and avg R, which are P&L figures.
+ */
+export async function getMonthCountMetrics(
+  scope: DashboardScope,
+  month: string,
+): Promise<MonthCountMetrics> {
+  const [row] = await db
+    .select({
+      tradesLogged: sql<number>`count(*) filter (where ${trades.taken})::int`,
+      wins: sql<number>`count(*) filter (where ${tradePnlCents} > 0)::int`,
+      missedSetups: sql<number>`count(*) filter (where ${trades.taken} = false)::int`,
+      byTheBook: sql<number>`count(*) filter (where ${trades.taken} and ${trades.byTheBook})::int`,
+      avgR: sql<
+        string | null
+      >`avg(${rMultipleSortKey}) filter (where ${trades.taken})`,
+    })
+    .from(trades)
+    .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
+    .where(and(...scopeConditions(scope, monthRangeOf(month))));
+
+  return {
+    tradesLogged: row.tradesLogged,
+    missedSetups: row.missedSetups,
+    byTheBook: row.byTheBook,
+    winRate: row.tradesLogged > 0 ? row.wins / row.tradesLogged : null,
+    avgR: row.avgR === null ? null : Number(row.avgR),
+  };
+}
+
+export interface DayTotal {
+  date: IsoDate;
+  /** Money aggregate: multiplied by the real accounts of each trade. */
+  amountCents: number;
+  /** Count aggregate: entries logged that day, taken and missed alike. */
+  entryCount: number;
+}
+
+export interface MonthDayTotals {
+  days: DayTotal[];
+  /** Money aggregate: the month's largest peak-to-trough fall, >= 0. */
+  maxDrawdownCents: number;
+}
+
+/**
+ * **Money aggregate** for the amount, **count aggregate** for the number
+ * beside it. One row per calendar day with at least one entry, which is what
+ * Design.md §4.8 paints, plus Best day, Worst day, Today and Max drawdown.
+ *
+ * A day with nothing but missed setups is a real row with a zero amount: it
+ * was journaled, and the calendar shows journaling.
+ *
+ * The drawdown runs over the month's own cumulative P&L and measures from the
+ * higher of the running peak and zero, so a month that only ever falls has a
+ * drawdown equal to its loss rather than none at all.
+ */
+export async function getMonthDayTotals(
+  scope: DashboardScope,
+  month: string,
+): Promise<MonthDayTotals> {
+  const contribution = moneyContribution(scope);
+
+  const dayTotals = db.$with("day_totals").as(
+    db
+      .select({
+        day: trades.tradeDate,
+        amountCents: sql<string>`coalesce(sum(${contribution}), 0)::bigint`.as(
+          "amount_cents",
+        ),
+        entryCount: sql<number>`count(*)::int`.as("entry_count"),
+      })
+      .from(trades)
+      .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
+      .where(and(...scopeConditions(scope, monthRangeOf(month))))
+      .groupBy(trades.tradeDate),
+  );
+
+  const cumulative = db.$with("cumulative").as(
+    db
+      .select({
+        day: dayTotals.day,
+        amountCents: dayTotals.amountCents,
+        entryCount: dayTotals.entryCount,
+        equityCents:
+          sql<string>`sum(${dayTotals.amountCents}) over (order by ${dayTotals.day})`.as(
+            "equity_cents",
+          ),
+      })
+      .from(dayTotals),
+  );
+
+  const withPeak = db.$with("with_peak").as(
+    db
+      .select({
+        day: cumulative.day,
+        amountCents: cumulative.amountCents,
+        entryCount: cumulative.entryCount,
+        drawdownCents:
+          sql<string>`greatest(max(${cumulative.equityCents}) over (order by ${cumulative.day}), 0) - ${cumulative.equityCents}`.as(
+            "drawdown_cents",
+          ),
+      })
+      .from(cumulative),
+  );
+
+  const rows = await db
+    .with(dayTotals, cumulative, withPeak)
+    .select({
+      day: withPeak.day,
+      amountCents: withPeak.amountCents,
+      entryCount: withPeak.entryCount,
+      // Same value on every row, like the window count in queries/trades.ts —
+      // one round trip instead of a second statement.
+      maxDrawdownCents: sql<string>`max(${withPeak.drawdownCents}) over ()`,
+    })
+    .from(withPeak)
+    .orderBy(withPeak.day);
+
+  return {
+    days: rows.map((row) => ({
+      date: row.day,
+      amountCents: toNumber(row.amountCents),
+      entryCount: row.entryCount,
+    })),
+    maxDrawdownCents: toNumber(rows[0]?.maxDrawdownCents),
+  };
+}
+
+export interface StreakEntryDay {
+  tradeDate: IsoDate;
+  loggedAt: Date;
+}
+
+/**
+ * **Count aggregate.** One row per logged calendar date over the whole
+ * history, carrying the earliest `created_at` of that date — which is the
+ * moment the 48h streak window is measured against.
+ *
+ * Real accounts only and no selected account: "streak, consistency score and
+ * badges see real accounts only" (project-structure.md), so the switcher does
+ * not move these. Grouping in SQL is also what keeps a copy-trade from
+ * counting as several logged days.
+ */
+export async function getStreakEntryDays(
+  userId: number,
+): Promise<StreakEntryDay[]> {
+  const rows = await db
+    .select({
+      tradeDate: trades.tradeDate,
+      loggedAt: sql<Date>`min(${trades.createdAt})`,
+    })
+    .from(trades)
+    .where(
+      and(
+        eq(trades.userId, userId),
+        sql`(${trades.taken} = false or ${hasRealAccount})`,
+      ),
+    )
+    .groupBy(trades.tradeDate)
+    .orderBy(trades.tradeDate);
+
+  return rows.map((row) => ({
+    tradeDate: row.tradeDate,
+    loggedAt: new Date(row.loggedAt),
+  }));
+}
+
+/**
+ * **Count aggregate.** One row per entry of the month with the flags
+ * `calculateConsistencyScore` needs. The per-day averaging is the domain
+ * module's job, not the query's — twenty trades in one day must count as one
+ * day, and that rule lives in src/domain/consistency.ts.
+ *
+ * Real accounts only, like the streak.
+ */
+export async function getMonthScoreDays(
+  userId: number,
+  month: string,
+): Promise<ScoreDay[]> {
+  const range = monthRangeOf(month);
+
+  const [entryRows, reviewDates] = await Promise.all([
+    db
+      .select({
+        tradeDate: trades.tradeDate,
+        taken: trades.taken,
+        byTheBook: trades.byTheBook,
+        hasNotes: sql<boolean>`(${trades.notes} is not null and ${trades.notes} <> '')`,
+        hasGrade: sql<boolean>`(${trades.grade} is not null)`,
+        hasFelt: sql<boolean>`(${trades.felt} is not null)`,
+        hasConfluence: sql<boolean>`exists (
+          select 1 from ${tradeConfluences}
+          where ${tradeConfluences.tradeId} = ${trades.id}
+        )`,
+        hasScreenshotOrLink: sql<boolean>`(
+          exists (
+            select 1 from ${tradeScreenshots}
+            where ${tradeScreenshots.tradeId} = ${trades.id}
+          )
+          or exists (
+            select 1 from ${tradeLinks}
+            where ${tradeLinks.tradeId} = ${trades.id}
+          )
+        )`,
+      })
+      .from(trades)
+      .where(
+        and(
+          eq(trades.userId, userId),
+          gte(trades.tradeDate, range.from),
+          lte(trades.tradeDate, range.to),
+          sql`(${trades.taken} = false or ${hasRealAccount})`,
+        ),
+      )
+      .orderBy(trades.tradeDate),
+    listMonthReviewDates(userId, month),
+  ]);
+
+  const reviewed = new Set(reviewDates);
+  const byDate = new Map<IsoDate, ScoreEntry[]>();
+  for (const row of entryRows) {
+    const entry: ScoreEntry = {
+      taken: row.taken,
+      hasNotes: row.hasNotes,
+      hasGrade: row.hasGrade,
+      hasFelt: row.hasFelt,
+      hasConfluence: row.hasConfluence,
+      hasScreenshotOrLink: row.hasScreenshotOrLink,
+      byTheBook: row.byTheBook ?? false,
+    };
+    const entries = byDate.get(row.tradeDate);
+    if (entries) {
+      entries.push(entry);
+    } else {
+      byDate.set(row.tradeDate, [entry]);
+    }
+  }
+
+  // A day with a review but no entry is not a scoring day — the score
+  // averages over days that carry entries (src/domain/consistency.ts).
+  return [...byDate.entries()].map(([date, entries]) => ({
+    date,
+    entries,
+    hasEodReview: reviewed.has(date),
+  }));
+}
+
+export interface BadgeCounters {
+  entriesLogged: number;
+  reviewsWritten: number;
+  byTheBookTrades: number;
+}
+
+/**
+ * **Count aggregate**, over the whole history and over real accounts only.
+ * Backfills count here, unlike in the streak: a late entry still happened.
+ */
+export async function getBadgeCounters(userId: number): Promise<BadgeCounters> {
+  const [entries, reviews] = await Promise.all([
+    db
+      .select({
+        entriesLogged: sql<number>`count(*)::int`,
+        byTheBookTrades: sql<number>`count(*) filter (where ${trades.taken} and ${trades.byTheBook})::int`,
+      })
+      .from(trades)
+      .where(
+        and(
+          eq(trades.userId, userId),
+          sql`(${trades.taken} = false or ${hasRealAccount})`,
+        ),
+      ),
+    db
+      .select({ reviewsWritten: sql<number>`count(*)::int` })
+      .from(dailyNotes)
+      .where(and(eq(dailyNotes.userId, userId), hasEodReview)),
+  ]);
+
+  return {
+    entriesLogged: entries[0].entriesLogged,
+    byTheBookTrades: entries[0].byTheBookTrades,
+    reviewsWritten: reviews[0].reviewsWritten,
+  };
+}

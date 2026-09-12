@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { centsToDollars, dollarsToCents } from "../money.ts";
+import { centsToDollars, dollarsToCents, formatCents } from "../money.ts";
 
 describe("dollarsToCents", () => {
   it("converts a whole dollar amount", () => {
@@ -44,6 +44,26 @@ describe("centsToDollars", () => {
 
   it("rejects a non-integer cents value", () => {
     expect(() => centsToDollars(12.5)).toThrow(RangeError);
+  });
+});
+
+describe("formatCents", () => {
+  it("formats a positive amount with a thousands separator", () => {
+    expect(formatCents(123456)).toBe("$1,234.56");
+  });
+
+  it("keeps the minus in front of the currency symbol", () => {
+    expect(formatCents(-12000)).toBe("-$120.00");
+  });
+
+  it("adds an explicit plus only when asked and only for a gain", () => {
+    expect(formatCents(30000, { signed: true })).toBe("+$300.00");
+    expect(formatCents(-30000, { signed: true })).toBe("-$300.00");
+    expect(formatCents(0, { signed: true })).toBe("$0.00");
+  });
+
+  it("rejects a non-integer cents value", () => {
+    expect(() => formatCents(12.5)).toThrow(RangeError);
   });
 });
 

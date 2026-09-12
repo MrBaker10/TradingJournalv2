@@ -43,6 +43,13 @@
       "when": 1789234003780,
       "tag": "0005_jittery_photon",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789242258402,
+      "tag": "0006_panoramic_morgan_stark",
+      "breakpoints": true
     }
   ]
 }
