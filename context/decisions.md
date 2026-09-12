@@ -446,3 +446,66 @@ einer zurückgerollten Transaktion, kein Trace in der Dev-DB).
   zusätzlich in die Decisions-Liste in `context/project-overview.md` aufzunehmen.
 
 **Offen geblieben.** Nichts Neues über den bereits dokumentierten S4-Punkt hinaus.
+
+## 2026-09-12 — S6 Screenshots und Links — feature/s6-screenshots-und-links — 3a41488
+
+**Gebaut.** Der Nutzer kann bis zu drei Screenshots und beliebig viele Links pro Trade
+anhängen — sowohl beim Anlegen unter `/journal/new` als auch nachträglich über einen
+Stift-Auslöser in der aufgeklappten Journal-Zeile. Screenshots werden im Browser auf
+1600px verkleinert, als JPEG komprimiert und nur über signierte URLs ausgeliefert.
+Vorher existierte weder `trade_screenshots` noch `trade_links`, obwohl beide seit
+Projektbeginn in `project-overview.md` vorgezeichnet waren.
+
+**Dateien.** `src/domain/trades.ts` (+Test), `src/db/schema/trades.ts`,
+`src/db/migrations/0004_flippant_dagger.sql`, `src/lib/uploads/signed-url.ts` (+Test),
+`src/lib/uploads/resize-image.ts`, `src/lib/env.ts`, `src/app/api/uploads/route.ts`
+(erster Route-Handler im Projekt), `src/db/queries/trades.ts`, `src/actions/trades.ts`,
+`src/schemas/trades.ts`, `src/lib/links.ts`, `src/components/trades/screenshot-slots.tsx`,
+`src/components/trades/trade-links-input.tsx`,
+`src/components/journal/screenshot-lightbox.tsx`, `new-trade-form.tsx` und
+`trade-row.tsx` (beide erweitert).
+
+**Migration.** `0004_flippant_dagger.sql` — `trade_screenshots`, `trade_links`, beide
+mit `trade_id`-FK (`onDelete: cascade`) und Index.
+
+**Regeln.** „Max. 3 Screenshots pro Trade" lebt in `canAddScreenshot`
+(`src/domain/trades.ts`), abgesichert durch `src/domain/__tests__/trades.test.ts`.
+Https-Validierung für Links bewusst in `src/schemas/trades.ts` statt in `domain/` —
+reine Format-/Sicherheitsprüfung, kein Geschäftsregel-Fall wie die Screenshot-Grenze.
+
+**Entschieden unterwegs.**
+- Erfassungszeitpunkt zweimal korrigiert: erst „nur beim Anlegen" vorgeschlagen und mit
+  Sascha bestätigt, dann von Sascha zurückgenommen — Screenshots und Links sind jetzt
+  auch nachträglich anhäng- und entfernbar, für beide Anhangsarten gleichermaßen.
+- Der Stift-Auslöser in der aufgeklappten Zeile ist eine bewusste, mit Sascha
+  geklärte Abweichung von Design.md §4.13s wörtlicher Formulierung „kein 'Add
+  screenshot' in der Leseansicht" — der Auslöser ist keine leere Einladung, sondern
+  eine bewusste Aktion. Vorschlag an Sascha, das als einen Satz in Design.md §4.13
+  nachzutragen; nicht selbst entschieden.
+- Screenshots werden clientseitig immer nach JPEG neuverschlüsselt, unabhängig vom
+  Ausgangsformat — hält `trade_screenshots` exakt bei den vier im Draft stehenden
+  Spalten, keine zusätzliche `content_type`-Spalte nötig.
+- Hochladen läuft über den Route-Handler (Binärtransport, die einzige von
+  `coding-standards.md` erlaubte Ausnahme), Löschen bewusst über eine Server Action
+  (kein Binärtransport beteiligt) — bewusste Trennung, kein einheitlicher „Anhänge"-
+  Endpunkt für beides.
+- Im Review (`/feature-review`) einen echten Bug gefunden und sofort behoben:
+  `ScreenshotLightbox` griff beim Server-Render auf `document.body` zu und crashte
+  `/journal` mit 500 — behoben über das „erst nach dem Mount portalen"-Muster.
+- Im Review danach drei Nacharbeitspunkte gefunden und behoben: stille Fehlschläge im
+  Live-Anhänge-Modus (jetzt sichtbares Fehler-Feedback über `InlineMessage`); ein zu
+  langes Link-Label beim Anlegen scheiterte beim Submit ohne sichtbaren Fehler (jetzt
+  `maxLength` plus `errors.links`-Anzeige); die Screenshot-Obergrenze war dreifach
+  unabhängig als Literal `3` dupliziert (jetzt ein Import von
+  `MAX_SCREENSHOTS_PER_TRADE`).
+- Eine vierte Review-Anmerkung bewusst offen gelassen: `/api/uploads` prüft die
+  Dateigröße, aber nicht, ob die Bytes tatsächlich ein Bild sind — ausdrücklich als
+  Transparenz-Notiz ohne Blocker-Charakter eingestuft, nicht angefordert.
+
+**Offen geblieben.** Zwei Punkte, beide nicht selbst entschieden:
+1. Design.md §4.13 widerspricht wörtlich dem Stift-Auslöser — Vorschlag oben, einen
+   Satz zu ergänzen.
+2. Keine serverseitige Formatprüfung des Uploads (siehe „Entschieden unterwegs") —
+   bei einem einzelnen lokalen Nutzer ohne echte Auth-Grenze in Phase 1 kein akutes
+   Risiko, aber eine Lücke gegenüber „nur Bilder, komprimiert", falls das je relevant
+   wird.
