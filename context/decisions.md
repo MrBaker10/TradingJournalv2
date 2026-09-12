@@ -509,3 +509,86 @@ reine Format-/Sicherheitsprüfung, kein Geschäftsregel-Fall wie die Screenshot-
    bei einem einzelnen lokalen Nutzer ohne echte Auth-Grenze in Phase 1 kein akutes
    Risiko, aber eine Lücke gegenüber „nur Bilder, komprimiert", falls das je relevant
    wird.
+
+---
+
+## 2026-09-12 — S7 Progress-Domain — feature/progress-domain — cd29fe1
+
+**Gebaut.** Die drei Produktregeln aus `project-structure.md` („Rules the code must
+honour") existieren jetzt als getestete, DB-freie Module: Streak, Consistency-Score und
+Badges. Dazu `badge_defs` mit den zwölf Definitionen in der Datenbank und `user_badges`
+als vorbereitete, noch leere Tabelle. Sichtbar ändert sich nichts — der Slice hat
+bewusst keinen Aufrufer in der UI und legt das Fundament für die `/progress`-Seite und
+die Dashboard-Kacheln.
+
+**Dateien.** `src/domain/streak.ts`, `src/domain/consistency.ts`, `src/domain/badges.ts`
+(je mit Vitest-Suite im selben Commit, Tests zuerst geschrieben),
+`src/db/schema/badges.ts`, `src/db/seed-badges.ts`, Script `db:seed:badges` und die
+Pins `date-fns@4.4.0` / `@date-fns/tz@1.5.0` in `package.json`.
+`context/coding-standards.md` §Time ist geändert (siehe „Entschieden unterwegs").
+
+**Migration.** `0005_jittery_photon.sql` legt `badge_defs` (`key` unique als Natural
+Key) und `user_badges` (FK auf `users` und `badge_defs`, Unique auf dem Paar,
+`earned_at` als `timestamptz`) an. Über `db:generate` erzeugt, mit `db:migrate`
+angewandt, im selben Commit wie die Schemadatei. `pnpm db:seed:badges` ist idempotent
+(`onConflictDoNothing` auf `key`) und zweimal gegen die lokale DB gelaufen: zwölf
+Zeilen, 3 Getting started / 4 Volume / 3 Streaks / 2 Craft.
+
+**Regeln.** Streak: 48h-Fenster ab Mitternacht des `trade_date` in `users.timezone`,
+Samstag existiert nicht, Sonntag fällt auf Montag, ein Grace Day pro Kalendermonat (der
+zweite Fehltag bricht), heute zählt nie gegen den Nutzer, Backfills zählen für Statistik
+und Volume-Badges, erzeugen aber nie eine Streak. Score: monatlich 40/20/25/15, Einträge
+**erst pro Tag gemittelt** — zwanzig Trades an einem Tag zählen wie einer, festgenagelt
+durch einen eigenen Test. Badges: zwölf Keys in vier Kategorien, Kriterien als
+Prädikat-Map neben den Definitionen, damit beides nicht auseinanderläuft. Die
+Handelstagsdefinition (`IsoDate`, `isTradingDay`, `toTradingDay`) lebt einmal in
+`streak.ts` und wird von den beiden anderen Modulen importiert.
+
+**Entschieden unterwegs.**
+- **Die zwölf Badges** waren nirgends definiert — die Docs nannten nur die vier
+  Kategorien. Vorschlag gemacht und von Sascha freigegeben: `first_entry`,
+  `first_review`, `full_week` (Getting started), `logged_10/50/250/1000` (Volume),
+  `streak_7/30/100` (Streaks), `by_the_book_20`, `score_90` (Craft).
+- **Die drei Score-Teilmetriken** hatten Gewichte, aber keine Definition. Freigegeben:
+  Vollständigkeit = Anteil der Einträge mit Notes, Grade, Felt, mindestens einer
+  Confluence und mindestens einem Screenshot oder Link; Planbefolgung = Anteil der
+  taken-Trades mit `by_the_book`; Reviewgewohnheit = Anteil der Logging-Tage mit
+  `eod_review`.
+- **Nenner von `showing_up`** sind die Handelstage bis einschließlich heute, nicht alle
+  des Monats — sonst ist der Wert im laufenden Monat irreführend niedrig, und am
+  Monatsende sind beide identisch.
+- **Tage ohne einen einzigen taken-Trade** fallen aus dem Adherence-Mittel heraus,
+  statt als 0 zu zählen; das Loggen von Missed Setups darf keine Punkte kosten. Ein
+  Monat mit Einträgen, aber ohne taken-Trade bekommt die vollen 25.
+- **Ein Monat ganz ohne Eintrag** bekommt 0 in allen vier Teilwerten, auch bei der
+  Planbefolgung. Sonst bekäme ein leeres Journal 25 Punkte geschenkt.
+- **Ein samstagsdatierter Eintrag** fällt aus der Streak, statt gefaltet zu werden —
+  nur für den Sonntag nennt der Spec eine Faltung.
+- **`date-fns` und `@date-fns/tz` neu aufgenommen** (vorher freigegeben), weil
+  `coding-standards.md` sie für Datumsarbeit vorschreibt. Beim Einbau nachgemessen:
+  `new TZDate("2026-09-09T00:00:00", zone)` liest den String in der **System**-Zeitzone
+  und liefert unter verschobener `TZ` den falschen Tag. Nur die Parts-Form
+  `new TZDate(2026, 8, 9, zone)` trifft Mitternacht in der Zielzone; für reine
+  Kalendermathematik ist das `Z`-Suffix Pflicht. Beides steht als Warnung im Kopf von
+  `streak.ts`.
+- **`context/coding-standards.md` §Time geändert** — projektweit, nicht nur dieser
+  Slice. Die Regel sagte, die Zeitzone des Nutzers gelte „für Econ-Events only". Das
+  widerspricht der Entscheidung, dass `today`, „dieser Monat" und der Fensterschluss aus
+  `users.timezone` kommen. Neue Fassung: die Zeitzone entscheidet jede
+  **Kalendergrenze** plus Econ-Events, `entry_time`/`exit_time` bleiben unkonvertierte
+  Chart-Uhr. Vorschlag an Sascha, denselben Satz zusätzlich in die Decisions-Liste in
+  `project-overview.md` aufzunehmen; nicht selbst entschieden.
+- Im Review vier Nacharbeitspunkte gefunden und behoben: das 48h-Fenster rechnete in
+  Millisekunden statt mit `addHours` und in UTC statt in der Nutzerzone; die
+  Modulköpfe sagten nicht, dass Einträge und nicht Trade-Zeilen gezählt werden (ein
+  Join über `trade_accounts` hätte jede Zahl still verdreifacht); die Herkunft von
+  `today` war nicht festgelegt; der bewusste Unterschied zwischen Streak und Score bei
+  einem Sonntag, dessen Montag noch nicht da ist, war ungetestet.
+
+**Offen geblieben.**
+1. `src/lib/time.ts` mit einem `todayInTimeZone()`-Helfer gibt es noch nicht. Jeder
+   künftige Aufrufer muss `today` und `month` selbst in `users.timezone` bilden; der
+   Helfer gehört in den Slice, der die Module zum ersten Mal aufruft.
+2. `user_badges` ist angelegt, aber leer — das Vergeben von Badges ist ein eigener
+   Slice, ebenso `monthly_scores` und der Month-Close-Job.
+3. Vorschlag oben zu `project-overview.md`, noch nicht entschieden.
