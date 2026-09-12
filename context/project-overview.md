@@ -590,6 +590,15 @@ by picking a different answer while coding.
   test` never saw `DATABASE_URL`; any test importing `src/db/index.ts` failed at
   import time regardless of whether Postgres was actually running. Project-wide, not
   specific to one slice. Reasoning: `context/decisions.md`, S5 entry.
+- **Per-user pages are dynamic** (2026-09-12, S8) — every route that reads or computes
+  anything for the current user carries `export const dynamic = "force-dynamic"`.
+  Without a dynamic API in the tree, Next 16 prerenders the page at build time: one
+  user's figures get frozen into the bundle, and the build itself needs a reachable
+  database. This is the request-time half of the existing "do not enable
+  `cacheComponents`" rule, and it applies to every page behind the session, not only to
+  the ones that show money. `/dashboard` carries it. **`/settings` still does not and
+  should** — it reads accounts at build time today. Reasoning: `context/decisions.md`,
+  S8 entry.
 
 ---
 
