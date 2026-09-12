@@ -584,6 +584,12 @@ by picking a different answer while coding.
   `selected_account_id` has no FK constraint yet (`accounts` doesn't exist),
   `password_hash`/`totp_secret` stay empty until Better Auth. Reasoning and the exact
   slice: `context/decisions.md`, P0.4 entry.
+- **Vitest environment loading** (2026-09-12, S5) — `vitest.config.mts` loads
+  `.env.local` via a `setupFiles` entry (`vitest.setup.ts`, `process.loadEnvFile`),
+  mirroring the `--env-file` flag the `db:*` scripts already use. Without it, `pnpm
+  test` never saw `DATABASE_URL`; any test importing `src/db/index.ts` failed at
+  import time regardless of whether Postgres was actually running. Project-wide, not
+  specific to one slice. Reasoning: `context/decisions.md`, S5 entry.
 
 ---
 

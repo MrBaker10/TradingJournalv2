@@ -394,3 +394,55 @@ angefasst) die Fehlermeldung nicht sichtbar in der `InlineMessage`, obwohl die
 Blockade serverseitig nachweislich griff (Account blieb in der DB archiviert, nicht
 gelöscht). Nicht untersucht, da außerhalb des Scope dieses Slices — falls das eine
 echte UI-Lücke ist, wäre es ein Fix für `archived-accounts-list.tsx` selbst.
+
+## 2026-09-12 — S5 Journal-Liste — feature/s5-journal-liste — 82915fc
+
+**Gebaut.** Der Nutzer kann unter `/journal` seine Trades und Missed Setups sehen,
+nach Zeitraum und Instrument filtern, nach Datum oder R-Multiple sortieren und
+durchblättern. Übungskonto-only-Trades fehlen in der kombinierten Ansicht, erscheinen
+aber als Zähler mit Ein-Klick-Reveal. Vorher war `/journal` nur eine Überschrift mit
+Link zu `/journal/new`.
+
+**Dateien.** `src/db/queries/trades.ts` (erweitert um `listJournalTrades`),
+`src/app/(app)/journal/page.tsx` (umgebaut), `src/components/journal/*` (neu:
+`journal-filters.tsx`, `trade-row.tsx`, `pagination-controls.tsx`,
+`hidden-practice-banner.tsx`), `src/lib/journal/href.ts`,
+`src/db/queries/__tests__/trades.test.ts`. Außerhalb des ursprünglichen Scope-Blocks,
+aber Voraussetzung für den DB-Test: `vitest.config.mts` und `vitest.setup.ts`.
+
+**Migration.** Keine — alle genutzten Tabellen/Spalten existierten bereits seit S3/S4.
+
+**Regeln.** Keine neue Domain-Regel; `src/domain/accounts.ts` und `src/domain/pnl.ts`
+blieben unverändert. Die SQL-`EXISTS`-Bedingung für „nur Übungskonten" in
+`listJournalTrades` spiegelt `contributesToMoneyAggregate` als reine
+Sichtbarkeits-Prüfung, keine neue Geldregel. Der SQL-`rMultipleSortKey` (exportiert)
+mirrort `calculatePnl`s R-Formel für `ORDER BY`, abgesichert durch
+`src/db/queries/__tests__/trades.test.ts` gegen echtes Postgres (Wegwerf-Insert in
+einer zurückgerollten Transaktion, kein Trace in der Dev-DB).
+
+**Entschieden unterwegs.**
+- „Kontofilter" aus `project-overview.md` ist der bereits bestehende globale
+  Kontoschalter (`users.selected_account_id`), kein zweiter journal-lokaler Filter —
+  mit Sascha abgestimmt, keine Annahme.
+- Filterfelder (Zeitraum, Instrument), Pagination (Seitenzahlen, URL-State, 25/Seite),
+  sortierbare Spalten (Datum, R-Multiple) und der Ein-Klick-Reveal-Mechanismus für
+  Übungskonto-Trades standen in keiner Kontextdatei — vor `start` mit Sascha geklärt.
+- R-Multiple ist keine Spalte, sondern zur Laufzeit aus Preisen abgeleitet
+  (`pnl.ts`); für `ORDER BY` musste die Formel in SQL dupliziert werden (exakte
+  `NUMERIC`-Arithmetik, kein Float) statt eine Spalte zu persistieren oder R aus der
+  sortierbaren Liste zu streichen — mit Sascha als bewusster Trade-off entschieden.
+- Missed Setups (`taken=false`, nie ein Konto) fallen in der Einzelkonto-Ansicht
+  folgerichtig raus, bleiben aber in der kombinierten Ansicht gleichwertig sichtbar
+  (Design.md §4.9) — eine Konsequenz des Datenmodells, keine neue Regel.
+- Im Review (`/feature-review`) zwei Punkte gefunden und behoben: Entry-/Exit-Zeit
+  wurden abgefragt, aber nirgends in `trade-row.tsx` gerendert — ergänzt. Und der
+  ursprüngliche R-Formel-Test verglich nur zwei JS-Beschreibungen derselben Formel
+  miteinander, nicht die echte SQL-Formel gegen echtes Postgres — der Test läuft jetzt
+  gegen eine echte, zurückgerollte Transaktion mit dem exportierten
+  `rMultipleSortKey`. Dabei kam zutage, dass `pnpm test` `.env.local` bisher gar nicht
+  lud (anders als die `db:*`-Skripte) — behoben über `vitest.setup.ts`
+  (`process.loadEnvFile`, Node-24-Bordmittel) plus eine Zeile in `vitest.config.mts`.
+  Das betrifft das ganze Projekt, nicht nur diesen Slice — Vorschlag an Sascha, das
+  zusätzlich in die Decisions-Liste in `context/project-overview.md` aufzunehmen.
+
+**Offen geblieben.** Nichts Neues über den bereits dokumentierten S4-Punkt hinaus.
