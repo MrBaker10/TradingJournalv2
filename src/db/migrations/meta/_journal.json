@@ -36,6 +36,13 @@
       "when": 1789215784279,
       "tag": "0004_flippant_dagger",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789234003780,
+      "tag": "0005_jittery_photon",
+      "breakpoints": true
     }
   ]
 }

@@ -12,9 +12,12 @@
     "db:migrate": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs migrate",
     "db:seed": "node --env-file=.env.local src/db/seed.ts",
     "db:seed:instruments": "node --env-file=.env.local src/db/seed-instruments.ts",
-    "db:seed:trade-tags": "node --env-file=.env.local src/db/seed-trade-tags.ts"
+    "db:seed:trade-tags": "node --env-file=.env.local src/db/seed-trade-tags.ts",
+    "db:seed:badges": "node --env-file=.env.local src/db/seed-badges.ts"
   },
   "dependencies": {
+    "@date-fns/tz": "1.5.0",
+    "date-fns": "4.4.0",
     "drizzle-orm": "0.45.2",
     "lucide-react": "1.43.0",
     "motion": "13.2.0",

@@ -146,8 +146,11 @@ Non-negotiable, because this is a P&L tool:
 ## Time
 
 - `trade_date` is `date`.
-- The user's timezone lives on `users` and is applied to econ events only. Never to
-  trade times.
+- The user's timezone lives on `users` and decides every **calendar boundary**: what
+  "today" and "this month" mean for streak, consistency score and badges, and when a
+  trade's 48h logging window closes. Econ events render in it too.
+- It is never applied to `entry_time` / `exit_time`. Those are the user's chart clock
+  and stay unconverted.
 - `entry_time` / `exit_time` are `time without time zone`. This is the user's chart
   clock and is **never** converted to another timezone.
 - Econ events and audit columns are `timestamptz`.
