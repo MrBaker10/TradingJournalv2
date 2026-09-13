@@ -788,3 +788,65 @@ Zählern (Backfills zählen fürs Volumen).
    `DEFERRED_BADGE_KEYS` wieder herausgefiltert. Wer `score_90` später freigibt, muss die
    Quelle mitändern; die Bedingung dafür steht im Kommentar über der Konstante.
 5. Vorschlag aus „Entschieden unterwegs" zu `Design.md` §10, noch nicht entschieden.
+
+---
+
+## 2026-09-13 — Fix Dynamic Rendering und Reduced Motion — fix/dynamic-rendering-and-reduced-motion — 592e052
+
+**Gebaut.** Zwei Zusagen eingelöst, die das Projekt schriftlich gab und brach. Erstens
+wird keine Seite hinter der Session mehr beim Build vorgerendert: `/settings` und
+`/journal/new` lasen die Datenbank zur Bauzeit. Zweitens schaltet
+`prefers-reduced-motion: reduce` jetzt tatsächlich alles ab — der CSS-Block aus
+`Design.md` §5 fehlte seit P0.3 vollständig, sodass jede CSS-Transition und jeder
+Spinner weiterlief, während `MotionConfig` seinen Teil längst erfüllte.
+
+**Dateien.** `src/app/(app)/layout.tsx` (eine Zeile), `src/app/(app)/dashboard/page.tsx`
+und `src/app/(app)/progress/page.tsx` (ihre Zeilen entfallen), `src/app/globals.css`
+(der §5-Block), `src/components/ui/pending-indicator.tsx` (neu) plus die drei
+Aufrufstellen in `new-trade-form.tsx`, `plan-card.tsx` und `account-create-form.tsx`.
+`context/project-overview.md` und `context/Design.md` §5 sind nachgezogen.
+
+**Regeln.** `src/domain/**` nicht berührt. Der Fix fasst keine Produktregel an.
+
+**Entschieden unterwegs.**
+- **`force-dynamic` gehört ins `(app)`-Layout, nicht auf jede Seite.**
+  Route-Segment-Konfiguration in einem Layout gilt für jedes Segment darunter, also für
+  alle sieben Seiten auf einmal — auch für die noch leeren und die noch nicht gebauten.
+  Damit trägt das Segment die Regel statt der Disziplin: eine neue Seite unter `(app)`
+  kann sie nicht mehr vergessen. Im Build gegengeprüft: aus vier `ƒ` wurden neun.
+  `src/app/page.tsx` bleibt statisch, sie liegt außerhalb und liest nichts.
+- **`animation-iteration-count: 1 !important` kam im Review dazu** — eine Zeile mehr,
+  als §5 ausschreibt, und die, die den Rest erst wahr macht. `animate-spin` läuft mit
+  `infinite`; eine Dauer von 0.01ms stoppt es nicht, sie dreht es hunderttausendmal pro
+  Sekunde. Betroffen waren die beiden Icon-Tausch-Stellen, für die der Spec „ohne
+  Rotation erkennbar" behauptet hatte. **`Design.md` §5 ist mitkorrigiert**, samt einem
+  Absatz, warum die Zeile nicht optional ist, und mit Datum — wer an einem älteren
+  Screen arbeitet, weiß damit, dass der Block dort gefehlt haben kann.
+- **Der CSS-Block steht außerhalb jedes `@layer`.** Ungelayertes CSS mit `!important`
+  schlägt jedes gelayerte Utility, und genau das ist hier die Aufgabe.
+- **`PendingIndicator` rendert beide Zustände und lässt CSS wählen**
+  (`motion-reduce:hidden` am Icon, `hidden motion-reduce:inline` am Text). Ein
+  `matchMedia`-Hook wäre eine Hydration-Abweichung auf genau den Rechnern, für die das
+  Ganze gebaut ist: der Server kann nicht wissen, was der Browser bevorzugt.
+- **Nur drei der fünf `animate-spin`-Stellen bekommen den Textersatz.** Die beiden
+  anderen (`screenshot-slots.tsx`, `trade-links-input.tsx`) tauschen ein `Plus`-Icon
+  gegen `Loader2` — der Zustandswechsel steckt im Icon, nicht in der Bewegung, und in
+  eine 56px-Kachel passt „Saving…" ohnehin nicht. Beide Dateien blieben unverändert.
+- **Drei `biome-ignore`-Kommentare statt einer stehengelassenen Warnung.** Biome meldet
+  `lint/complexity/noImportantStyles`; der Gate blieb grün, aber die Ausgabe von
+  `pnpm lint` war nicht mehr sauber. Unterdrückt mit Regelnamen und Begründung.
+- **Der Umschalt-Beweis kam aus dem CSSOM, nicht aus einer OS-Emulation.** Die
+  Chrome-Werkzeuge dieser Session können `prefers-reduced-motion` nicht emulieren.
+  Nachgemessen: beide Utilities kompiliert und im Media-Block, Quellreihenfolge 389/390
+  hinter `.hidden` (101) und `.animate-spin` (178) — bei gleicher Spezifität entscheidet
+  die Reihenfolge, der Media-Block gewinnt also, sobald er greift. Die visuelle
+  Bestätigung hat Sascha im Klickpfad übernommen.
+
+**Offen geblieben.**
+1. Der barrierefreie Name der drei Buttons setzt sich weiter aus Label und beiden
+   Overlays zusammen, weil die Overlays über `opacity` ein- und ausgeblendet werden und
+   im Accessibility-Baum bleiben; unter reduzierter Bewegung kommt „Saving…" hinzu.
+   Sauber wäre `aria-busy` am Button. Geerbt aus S3/S4/S8, eigener Fix.
+2. Drei Altfunde aus den S8- und S9-Reviews sind weiter offen: das stale Label im
+   Kontoschalter (S3), das `rgba()`-Literal in `archived-accounts-list.tsx:81` (S3) und
+   `dailyNotes` / `badges` fehlen im `schema`-Objekt in `src/db/index.ts`.
