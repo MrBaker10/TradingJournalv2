@@ -850,3 +850,102 @@ Aufrufstellen in `new-trade-form.tsx`, `plan-card.tsx` und `account-create-form.
 2. Drei Altfunde aus den S8- und S9-Reviews sind weiter offen: das stale Label im
    Kontoschalter (S3), das `rgba()`-Literal in `archived-accounts-list.tsx:81` (S3) und
    `dailyNotes` / `badges` fehlen im `schema`-Objekt in `src/db/index.ts`.
+
+## 2026-09-13 — S10a CSV-Export — feature/csv-export — 33a1432
+
+**Gebaut.** Ein Download in Settings, der das vollständige Journal als CSV liefert: eine
+Zeile pro Trade, 33 Spalten, alle Trades — unabhängig vom Kontoschalter, von den
+Journal-Filtern und vom Übungskonto-Ausschluss. Feature D in `project-overview.md` deckt
+Export *und* Import ab; der Import ist als S10b abgetrennt, weil beides zusammen ein
+Commit aus Migration, zwei Domain-Modulen, Wizard und Undo geworden wäre.
+
+**Dateien.** `src/lib/csv/serialize.ts` (RFC-4180-Writer, CRLF, BOM, Quoting),
+`src/lib/csv/trade-export.ts` (die Spaltenliste und die Zeilenabbildung),
+`src/lib/csv/__tests__/` (27 Tests), `src/db/queries/export.ts`
+(`listTradesForExport`, eine Query mit fünf korrelierten Subqueries),
+`src/app/api/export/trades/route.ts` (GET, parameterlos),
+`src/components/settings/export-card.tsx`. Geändert: `src/lib/money.ts`
+(`formatCentsPlain`), sein Test, die Settings-Seite, `project-structure.md` (zwei
+Zeilen im Baum), `coding-standards.md` (eine Zeile, siehe unten).
+
+**Regeln.** `src/domain/**` ist nicht berührt. `calculatePnl` aus `src/domain/pnl.ts`
+wird benutzt, nicht kopiert: `pnl` und `r_multiple` entstehen im Export über denselben
+Weg wie in der Journal-Zeile, damit keine zweite P&L-Formel existiert, die auseinander
+driften kann.
+
+**Entschieden unterwegs.**
+- **Der Export filtert `accounts.is_practice = false` ausdrücklich nicht.** Jede
+  kombinierte Query tut das zuerst (`coding-standards.md`, Money) — der Export ist aber
+  keine kombinierte Kennzahl, sondern ein Backup: „an export that depends on a UI filter
+  is not a backup". Die Trennung echt/Übung überlebt, weil sie pro Konto geschrieben
+  wird, nicht weil Übungszeilen wegfallen. Der Kommentar an `listTradesForExport` sagt
+  das, damit das Review es nicht als Verstoß liest.
+- **`accounts` und `is_practice` sind zwei positionsgleiche Semikolonlisten**,
+  `"Eval 1;Practice A"` / `"false;true"`. Ein einzelnes Boolean pro Trade hätte bei einem
+  gemischt zugewiesenen Trade die Zuordnung verloren. `links` und `link_labels` folgen
+  demselben Muster. Beide Paare entstehen aus demselben Array, und die Tests nageln die
+  Ausrichtung fest.
+- **`screenshot_count` steht in der Datei.** Screenshots passen nicht in eine CSV; die
+  Lücke ist damit sichtbar statt still — dieselbe Begründung wie beim Übungs-Zähler in
+  der Journal-Liste.
+- **`formatCentsPlain` neben `formatCents`, keine zweite Geldformatierung woanders.**
+  `formatCents` liefert `$1,234.56`: ein Komma mitten im Feld und ein Währungssymbol vor
+  einer Zahl, die nichts zurückparst. Die neue Funktion rechnet ganzzahlig auf den Cents.
+- **Route-Handler statt Server Action, und die Whitelist in `coding-standards.md` hat
+  dafür einen vierten Punkt bekommen** („file downloads that need response headers,
+  `/api/export/*`"). Eine Server-Komponente kann `Content-Disposition` nicht setzen. Die
+  Alternative — eine Server Action, die die ganze Datei als String zurückgibt, plus
+  `Blob`-Download im Client — macht aus einem Lesevorgang einen Schreibvorgang und
+  schiebt das gesamte Journal durch die Action-Payload. Von Sascha freigegeben.
+- **Die Route nimmt keinen einzigen Parameter entgegen.** Kein Zeitraum, kein Konto,
+  keine Nutzer-ID. Das ist zugleich die Ownership-Prüfung (es gibt nichts zu prüfen) und
+  die Garantie, dass kein gefilterter Export entstehen kann.
+- **`src/lib/csv/trade-export.ts` ist zusätzlich zum Spec entstanden.** Im Scope stand
+  nur der Writer; die Zeilenabbildung im Route-Handler wäre eine 120-Zeilen-Funktion ohne
+  Testzugriff geworden.
+- **`Cache-Control: no-store` am Response**, nicht specced: ein Journal-Dump gehört in
+  keinen Cache.
+
+**Für S10b vorentschieden.** Beim Laden von S10a mitentschieden, damit der Reset von
+`current-feature.md` sie nicht verliert:
+- **CSV-Parser und -Writer werden selbst geschrieben, keine neue Abhängigkeit.** Der
+  Writer ist mit S10a da; der Parser kommt als `src/lib/csv/parse.ts` dazu — RFC 4180,
+  Delimiter-Erkennung (Komma, Semikolon, Tab), BOM, eingebettete Zeilenumbrüche.
+- **Session aus `entry_time` auf der NY-Chart-Uhr**, mit festen Fenstern: Asia
+  18:00–03:00, London 03:00–09:30, NY-AM 09:30–12:00, NY-PM 12:00–16:00, außerhalb bleibt
+  die Session leer. Eine vom Nutzer gewählte Session wird nie überschrieben. Die Grenzen
+  standen in keinem Dokument und sind hier zum ersten Mal festgelegt.
+- **`src/domain/import/detect.ts` und `normalize.ts`, Tests zuerst**, plus Migration
+  `import_batches` und nullable `trades.import_batch_id`. Datei oder Paste, bis 2000
+  Zeilen, Vorschau vor dem Speichern, Kontozuweisung vor der Bestätigung, Undo je Batch.
+- **Nicht bauen in S10b:** Broker-API, automatischer Abgleich, Duplikatabgleich über D
+  hinaus, Import von Screenshots oder Links.
+- Vier Punkte werden beim Laden von S10b geklärt und sind bewusst **nicht** entschieden:
+  was „unangetastet" technisch heißt, wie ein unbekanntes Instrument-Symbol behandelt
+  wird, was mit teilweise gültigen Zeilen passiert, und ob der Import die Badge-Vergabe
+  einmal pro Batch auslöst.
+
+**Projektweit, zur Übernahme vorgeschlagen — nicht selbst entschieden.** Der
+Whitelist-Eintrag für Datei-Downloads gilt für jede künftige Export-Route, nicht nur für
+diese. Er steht in `coding-standards.md`; ob er zusätzlich in die Decisions-Liste in
+`project-overview.md` gehört, entscheidest du.
+
+**Offen geblieben.**
+1. Ein Kontoname mit Semikolon zerlegt die parallele Liste. Heute verhindert das nichts.
+   Entweder lehnt der Export so einen Namen ab, oder S10b trennt anders. Zu entscheiden
+   beim Laden von S10b.
+2. Der Export puffert das gesamte Journal als einen String, ohne Streaming. Bei diesem
+   Datenstand irrelevant, aber der Punkt, an dem später ein `ReadableStream` fällig wird.
+   Ein `LIMIT` ist ausdrücklich keine Lösung — das wäre wieder ein gefilterter Export.
+3. `Design.md` §4.2 beschreibt den Ghost-Button als `inset 0 0 0 1px rgba(255,255,255,.12)`,
+   der Code benutzt seit S3 durchgehend `border border-white/12`. Die Export-Karte folgt
+   dem Code. Der Widerspruch ist älter als dieser Slice und gehört in einen eigenen
+   `fix/`-Branch. Ebenso die Hover-Dauer: §4.2 verlangt 150 ms rein und 200 ms raus, die
+   Karte nutzt 200 ms in beide Richtungen.
+4. Die Time-Zeile der Review-Checkliste in `.claude/skills/feature-review/SKILL.md` steht
+   auf dem Stand vor S7 („Zeitzone gilt ausschließlich für Econ-Events"), während
+   `coding-standards.md` §Time seit S7 „entscheidet jede Kalendergrenze" sagt. Der
+   Dateiname des Exports nutzt `todayInTimeZone` und ist nach der aktuellen Regel richtig.
+5. Die drei Altfunde aus S8/S9 sind weiter offen: stale Label im Kontoschalter (S3), das
+   `rgba()`-Literal in `archived-accounts-list.tsx:81` (S3), `dailyNotes`/`badges` fehlen
+   im `schema`-Objekt in `src/db/index.ts`.
