@@ -39,6 +39,7 @@ src/
         econ/route.ts         # Phase 2 — econ calendar sync (Forex Factory weekly JSON)
         month-close/route.ts  # monthly consistency score snapshot
       uploads/route.ts        # signed URLs for screenshots
+      export/trades/route.ts  # whole-journal CSV download
     globals.css               # Tailwind v4 @theme lives here
   components/
     ui/                       # shadcn primitives
@@ -65,6 +66,7 @@ src/
   lib/
     auth/                     # getCurrentUser() seam
     storage/                  # local disk | S3-compatible seam
+    csv/                      # RFC 4180 writer + reader, and the export row shape
     fx/                       # rate fetch + display conversion
     econ/                     # Phase 2 — feed adapter, swappable in one file
     money.ts  time.ts  env.ts

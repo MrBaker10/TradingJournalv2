@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { centsToDollars, dollarsToCents, formatCents } from "../money.ts";
+import {
+  centsToDollars,
+  dollarsToCents,
+  formatCents,
+  formatCentsPlain,
+} from "../money.ts";
 
 describe("dollarsToCents", () => {
   it("converts a whole dollar amount", () => {
@@ -64,6 +69,34 @@ describe("formatCents", () => {
 
   it("rejects a non-integer cents value", () => {
     expect(() => formatCents(12.5)).toThrow(RangeError);
+  });
+});
+
+describe("formatCentsPlain", () => {
+  it("writes no thousands separator and no currency symbol", () => {
+    expect(formatCentsPlain(123456)).toBe("1234.56");
+  });
+
+  it("keeps a leading minus", () => {
+    expect(formatCentsPlain(-123456)).toBe("-1234.56");
+  });
+
+  it("pads a single-digit cents remainder", () => {
+    expect(formatCentsPlain(1205)).toBe("12.05");
+    expect(formatCentsPlain(-5)).toBe("-0.05");
+  });
+
+  it("always writes two decimals", () => {
+    expect(formatCentsPlain(30000)).toBe("300.00");
+    expect(formatCentsPlain(0)).toBe("0.00");
+  });
+
+  it("survives an amount past the float-precision comfort zone", () => {
+    expect(formatCentsPlain(999999999999)).toBe("9999999999.99");
+  });
+
+  it("rejects a non-integer cents value", () => {
+    expect(() => formatCentsPlain(12.5)).toThrow(RangeError);
   });
 });
 

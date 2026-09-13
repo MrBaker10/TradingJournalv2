@@ -35,3 +35,23 @@ export function formatCents(
   const formatted = USD.format(centsToDollars(cents));
   return options?.signed && cents > 0 ? `+${formatted}` : formatted;
 }
+
+/**
+ * The same amount for a machine: `-1234.56`, no thousands separator, no
+ * currency symbol, always two decimals. That is what the CSV export writes —
+ * `formatCents` would put a comma inside a field and a `$` in front of a
+ * number nothing can parse back.
+ *
+ * Built by splitting the integer cents, never by dividing into a float and
+ * formatting that.
+ */
+export function formatCentsPlain(cents: number): string {
+  if (!Number.isInteger(cents)) {
+    throw new RangeError(`cents must be an integer, got ${cents}`);
+  }
+  const sign = cents < 0 ? "-" : "";
+  const absolute = Math.abs(cents);
+  const dollars = Math.trunc(absolute / CENTS_PER_DOLLAR);
+  const remainder = absolute % CENTS_PER_DOLLAR;
+  return `${sign}${dollars}.${String(remainder).padStart(2, "0")}`;
+}

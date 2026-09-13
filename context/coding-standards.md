@@ -54,6 +54,7 @@ commit that changes nothing else.
   - cron endpoints (`/api/cron/*`)
   - screenshot upload and signed-URL issuing
   - webhooks, if any ever arrive
+  - file downloads that need response headers (`/api/export/*`)
 - Everything else fetches directly in the Server Component.
 
 ## Tailwind CSS v4
