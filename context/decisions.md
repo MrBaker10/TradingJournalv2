@@ -697,3 +697,94 @@ geloggte vom 10. — das 48h-Fenster greift. Neu getestet sind `src/lib/time.ts`
    (`force-dynamic` für jede per-Nutzer rechnende Seite) betrifft das ganze Projekt und
    gehört als Zeile in die Decisions-Liste in `project-overview.md`, zusammen mit dem
    Hinweis auf `/settings`.
+
+---
+
+## 2026-09-13 — S9 Progress-Seite — feature/s9-progress-seite — d8a2af2
+
+**Gebaut.** `/progress` erklärt die drei Produktregeln, statt nur ihre Zahlen zu zeigen:
+Streak mit den sechs Regeln im Klartext, Consistency Score des laufenden Monats mit der
+40/20/25/15-Aufschlüsselung als vier Balken, alle zwölf Badges in vier Kategorien mit
+erreicht und offen, und die Grace-Day-Leiste nach `Design.md` §4.4. Vor allem aber wird
+die **Badge-Vergabe echt**: `user_badges` wird zum ersten Mal beschrieben, und ein seit
+dem letzten Besuch freigeschaltetes Badge bekommt die Karte aus §6. Damit ist der Punkt
+abgearbeitet, den S7 und S8 beide vertagt hatten.
+
+**Dateien.** `src/domain/badges.ts` (+ Tests), `src/db/queries/badges.ts`,
+`src/lib/badges/sync.ts`, `src/actions/badges.ts`, vier Komponenten unter
+`src/components/progress/`, `src/app/(app)/progress/page.tsx`, drei Token in
+`globals.css`. Je ein Aufruf in `src/actions/trades.ts` und `src/actions/daily-notes.ts`.
+`src/app/(app)/dashboard/page.tsx` liest die Badge-Zahl jetzt aus `user_badges`.
+
+**Migration.** `0007_charming_jackpot.sql` fügt `users.badges_seen_at` (`timestamptz`,
+nullable) hinzu. Über `db:generate` erzeugt, mit `db:migrate` angewandt, im selben
+Commit wie die Schemadatei.
+
+**Regeln.** Neu in `src/domain/badges.ts`: `badgesToAward(progress, alreadyEarnedKeys)`
+als reine Funktion und `DEFERRED_BADGE_KEYS`. Sechs Tests halten fest, dass ein bereits
+vergebener Key nicht zweimal kommt, dass ein Fortschritt ohne neue Badges leer
+zurückkommt und dass `score_90` auch bei Score 100 nicht vergeben wird. Die S7-Module
+bleiben unverändert; sie werden hier zum ersten Mal **schreibend** benutzt, und die
+Trennung aus ihren Modulköpfen wird dabei scharf: `longestStreak` kommt aus
+`calculateStreak` (Backfills lösen keine Streak-Badges aus), `entriesLogged` aus den
+Zählern (Backfills zählen fürs Volumen).
+
+**Entschieden unterwegs.**
+- **Die Vergabe läuft in den Schreibpfaden**, nicht beim Rendern: `createTrade` und
+  `saveDailyNote` rufen `awardBadgesQuietly`. Ein GET darf keinen Seiteneffekt haben —
+  sonst vergibt ein Seitenaufruf, dessen Antwort nie ankommt, trotzdem ein Badge.
+- **`score_90` wird noch nicht vergeben.** Sein Kriterium lautet „Finish a month", und
+  ohne `monthly_scores` gibt es nur den laufenden, noch fallenden Monatswert. Ein daraus
+  geschriebenes Badge wäre permanent und falsch. Es steht sichtbar offen, mit dem
+  Hinweis, dass es am Monatsende ausgewertet wird.
+- **„Neu freigeschaltet" heißt „seit dem letzten Blick"**, über die neue Spalte
+  `users.badges_seen_at`. Die Alternative — ein 24-Stunden-Fenster — hätte die Karte
+  mehrfach gezeigt und sie verpasst, wenn jemand zwei Tage nicht hereinschaut.
+- **Die Karte meldet sich selbst als gesehen**, per `useEffect` nach dem Rendern, nicht
+  während die Seite gebaut wird. Sonst gilt ein Badge auch dann als gesehen, wenn die
+  Antwort den Nutzer nie erreicht hat.
+- **Micro-Rewards nur, soweit sie auf dieser Seite stattfinden.** Die fünf Toast-Auslöser
+  aus §6 brauchen ein Toast-System; Sonner steht zwar in `coding-standards.md`
+  §Error handling, ist aber keine Dependency. Eigener Slice.
+- **`awardBadgesQuietly` loggt einen Fehler und gibt kein `success: false` zurück.**
+  Bewusste Abweichung von `coding-standards.md` §Error handling: der Trade ist an dieser
+  Stelle schon geschrieben, „Konnte nicht speichern" wäre gelogen, und der nächste Write
+  vergibt nach.
+- **`insertEarnedBadges` gibt die tatsächlich geschriebenen Keys zurück** (`returning`
+  nach `onConflictDoNothing`), damit der Aufrufer ohne zweites Lesen weiß, was neu ist.
+- **Ein Key ohne Zeile in `badge_defs` wird still übersprungen.** Ein vergessener
+  `db:seed:badges` darf keinen Trade-Write scheitern lassen.
+- **`grace-day-notice.tsx` ist in `streak-card.tsx` aufgegangen.** Der Chevron der Leiste
+  öffnet laut §4.4 die Streak-Regeln, und die liegen in derselben Karte; getrennt hätte
+  der Aufklappzustand in einen gemeinsamen Elternteil gehoben werden müssen.
+- **Der Score-Balken benutzt einundzwanzig statische Breitenklassen** in
+  Fünf-Prozent-Schritten statt eines Inline-Styles, weil `coding-standards.md` §Styling
+  Inline-Styles verbietet und Tailwind nur Klassen ausgibt, die es im Quelltext sieht.
+  Der exakte Wert steht als Zahl daneben.
+- **Die Dashboard-Kachel liest jetzt `user_badges`** statt live zu rechnen (im Review
+  gefunden, von Sascha freigegeben). Ohne das hätten beide Seiten ab einem Monatsscore
+  von 90 unterschiedliche Zahlen gezeigt, weil das Dashboard `score_90` mitgezählt hätte.
+  `getBadgeCounters` fällt dort ersatzlos weg.
+- **`Design.md` beschreibt die Progress-Seite nicht auf Komponentenebene** — §4.3 und
+  §4.4 sind alles, und §10 führt nur Analytics und Prop Firm Rules als offen. Die
+  Score-Aufschlüsselung (vier Balken) und das Badge-Raster sind aus den vorhandenen
+  Primitiven gebaut, der Balken-Entwurf war vorher freigegeben. Vorschlag: die
+  Progress-Seite in §10 nachtragen oder die beiden Komponenten dort beschreiben.
+
+**Offen geblieben.**
+1. Zwei Acceptance-Punkte sind nicht im Browser belegt. Die **Grace-Day-Leiste** ließ
+   sich nicht auslösen: `graceDayUsed` ist für den Testnutzer `false`, weil der beim
+   S8-Test angelegte Trade vom 11.09. die Lücke geschlossen hat. Und der **sichtbare
+   Freischalt-Moment über den Trade-Pfad** fehlt: dass `createTrade` den Sync auslöst,
+   ist belegt, nur war bei neun Einträgen nichts Neues fällig (`logged_10` braucht zehn).
+   Über `saveDailyNote` ist der Moment vollständig belegt.
+2. `getStreakEntryDays`, `getMonthScoreDays` und `getBadgeCounters` liegen weiter in
+   `src/db/queries/dashboard.ts`, dienen aber inzwischen zwei Seiten und der Vergabe. Ein
+   späterer Slice könnte sie nach `src/db/queries/progress.ts` ziehen.
+3. `syncUserBadges` rechnet Streak und Score bei jedem Trade- und Notiz-Write neu (drei
+   Queries plus zwei reine Funktionen). Unkritisch bei diesen Datenmengen, aber der erste
+   Kandidat, falls das Speichern je spürbar langsamer wird.
+4. `bestMonthlyScore` wird an `badgesToAward` übergeben und dort durch
+   `DEFERRED_BADGE_KEYS` wieder herausgefiltert. Wer `score_90` später freigibt, muss die
+   Quelle mitändern; die Bedingung dafür steht im Kommentar über der Konstante.
+5. Vorschlag aus „Entschieden unterwegs" zu `Design.md` §10, noch nicht entschieden.
