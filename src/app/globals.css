@@ -237,3 +237,27 @@ body {
   color: var(--color-fg);
   font-family: var(--font-sans);
 }
+
+/* Design.md §5. MotionConfig reducedMotion="user" covers everything `motion`
+   animates; this covers everything CSS does. Without both, the promise in §5
+   is only half true.
+
+   The iteration count is one line more than §5 writes out, and it is what
+   makes the rest of the block true: `animate-spin` loops forever, so a
+   duration of 0.01ms alone would not stop it — it would spin it a hundred
+   thousand times a second. Capping the count at one is what actually ends a
+   looping animation. Found in review; §5 should be corrected to match. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: overriding every
+       component's own duration regardless of specificity is the entire job of
+       this block — it is the one place where reversing the cascade is correct. */
+    animation-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: same reason as above. */
+    animation-iteration-count: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: same reason as above. */
+    transition-duration: 0.01ms !important;
+  }
+}

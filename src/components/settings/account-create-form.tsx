@@ -1,10 +1,11 @@
 "use client";
 
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { motion } from "motion/react";
 import { useState, useTransition } from "react";
 import { createAccount } from "@/actions/accounts";
 import { InlineMessage } from "@/components/ui/inline-message";
+import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { createAccountSchema } from "@/schemas/accounts";
 
@@ -107,7 +108,7 @@ export function AccountCreateForm({ onCreated }: AccountCreateFormProps) {
                 loading ? "opacity-100" : "opacity-0"
               }`}
             >
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <PendingIndicator label="Saving…" />
             </span>
             <span
               className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200 ease-linear ${

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, Loader2 } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState } from "react";
 import { saveDailyNote } from "@/actions/daily-notes";
@@ -8,6 +8,7 @@ import {
   InlineMessage,
   type InlineMessageTone,
 } from "@/components/ui/inline-message";
+import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { PLAN_HINT_LENGTH } from "@/schemas/daily-notes";
 
 interface PlanCardProps {
@@ -185,7 +186,7 @@ export function PlanCard({ premarketPlan, eodReview }: PlanCardProps) {
               loading ? "opacity-100" : "opacity-0"
             }`}
           >
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            <PendingIndicator label="Saving…" />
           </span>
           <span
             className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200 ease-linear ${

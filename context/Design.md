@@ -516,10 +516,17 @@ Regeln:
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
   }
 }
 ```
+
+**Die Zeile `animation-iteration-count` ist nicht optional.** Eine Endlosanimation
+wie ein rotierender Spinner läuft mit `infinite`; eine Dauer von `.01ms` stoppt sie
+nicht, sie dreht sie hunderttausendmal pro Sekunde. Erst der gekappte Zähler beendet
+sie. Der Block stand bis 2026-09-13 ohne diese Zeile hier und war damit genau für
+die Elemente wirkungslos, für die er am nötigsten ist.
 
 **Der CSS-Block oben genügt nicht.** `motion` animiert über JS-gesetzte
 Inline-Styles und ignoriert die Regel vollständig. Es braucht zusätzlich

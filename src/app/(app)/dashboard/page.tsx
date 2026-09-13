@@ -24,12 +24,6 @@ import { calculateStreak } from "@/domain/streak";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { monthKeyOf, todayInTimeZone } from "@/lib/time";
 
-// Without this the page has no dynamic API in it, so Next prerenders it at
-// build time and freezes every figure into the bundle. "Every number in this
-// app is per-user and belongs at request time" (coding-standards.md) — that
-// is what this line buys, and it is also why cacheComponents stays off.
-export const dynamic = "force-dynamic";
-
 const RECENT_TRADES_LIMIT = 5;
 
 // Best and worst day are a pick from the day series the calendar already

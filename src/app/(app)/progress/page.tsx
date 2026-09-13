@@ -14,11 +14,6 @@ import { calculateStreak } from "@/domain/streak";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { monthKeyOf, todayInTimeZone } from "@/lib/time";
 
-// Per-user figures belong at request time (project-overview.md Decisions,
-// S8). Without this Next prerenders the page and freezes one user's badges
-// into the bundle.
-export const dynamic = "force-dynamic";
-
 export default async function ProgressPage() {
   const user = await getCurrentUser();
 

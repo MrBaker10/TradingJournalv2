@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { createTrade } from "@/actions/trades";
@@ -11,6 +11,7 @@ import { TagMultiSelect } from "@/components/trades/tag-multi-select";
 import type { TradeLinkItem } from "@/components/trades/trade-links-input";
 import { TradeLinksInput } from "@/components/trades/trade-links-input";
 import { InlineMessage } from "@/components/ui/inline-message";
+import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { calculatePnl, type TradeDirection } from "@/domain/pnl";
 import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
@@ -871,7 +872,7 @@ export function NewTradeForm({
               loading ? "opacity-100" : "opacity-0"
             }`}
           >
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            <PendingIndicator label="Saving…" />
           </span>
           <span
             className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200 ease-linear ${
