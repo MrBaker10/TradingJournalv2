@@ -22,6 +22,7 @@ import {
 import { calculatePnl } from "@/domain/pnl";
 import { validateTradeAccountAssignment } from "@/domain/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { awardBadgesQuietly } from "@/lib/badges/sync";
 import { dollarsToCents } from "@/lib/money";
 import { storage } from "@/lib/storage";
 import {
@@ -185,6 +186,8 @@ export async function createTrade(input: unknown): Promise<
 
     return trade.id;
   });
+
+  await awardBadgesQuietly(user.id, user.timezone);
 
   revalidatePath("/journal");
   return { success: true, data: { id: createdId, pnlCents, rMultiple } };

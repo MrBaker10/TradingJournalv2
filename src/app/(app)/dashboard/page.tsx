@@ -3,10 +3,10 @@ import { PlanCard } from "@/components/dashboard/plan-card";
 import { PnlCalendar } from "@/components/dashboard/pnl-calendar";
 import { ProgressTiles } from "@/components/dashboard/progress-tiles";
 import { TradeRow } from "@/components/journal/trade-row";
+import { listUserBadges } from "@/db/queries/badges";
 import { getDailyNote } from "@/db/queries/daily-notes";
 import {
   type DayTotal,
-  getBadgeCounters,
   getMonthCountMetrics,
   getMonthDayTotals,
   getMonthMoneyMetrics,
@@ -14,7 +14,7 @@ import {
   getStreakEntryDays,
 } from "@/db/queries/dashboard";
 import { listRecentTrades } from "@/db/queries/trades";
-import { BADGE_DEFINITIONS, earnedBadges } from "@/domain/badges";
+import { BADGE_DEFINITIONS } from "@/domain/badges";
 import {
   calculateConsistencyScore,
   SCORE_WEIGHTS,
@@ -67,7 +67,7 @@ export default async function DashboardPage() {
     dayTotals,
     streakDays,
     scoreDays,
-    badgeCounters,
+    userBadges,
     note,
     recentTrades,
   ] = await Promise.all([
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
     getMonthDayTotals(scope, month),
     getStreakEntryDays(user.id),
     getMonthScoreDays(user.id, month),
-    getBadgeCounters(user.id),
+    listUserBadges(user.id),
     getDailyNote(user.id, today),
     listRecentTrades(user.id, user.selectedAccountId, RECENT_TRADES_LIMIT),
   ]);
@@ -95,31 +95,23 @@ export default async function DashboardPage() {
           (score.showingUp / SCORE_WEIGHTS.showingUp) * elapsedTradingDays,
         );
 
-  // `user_badges` stays untouched: awarding is its own slice. bestMonthlyScore
-  // is the running month's score because `monthly_scores` does not exist yet,
-  // so a finished month above 90 is not visible to score_90 until it does.
-  const badges = earnedBadges({
-    entriesLogged: badgeCounters.entriesLogged,
-    reviewsWritten: badgeCounters.reviewsWritten,
-    loggedTradingDays: streakDays.map((day) => day.tradeDate),
-    longestStreak: streak.longest,
-    byTheBookTrades: badgeCounters.byTheBookTrades,
-    bestMonthlyScore: score.score,
-  });
-
   const todayTotal = dayTotals.days.find((day) => day.date === today);
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="page-title">Welcome back, {user.displayName}</h1>
 
+      {/* badgesEarned comes from `user_badges`, the same source /progress
+          reads. Computing it live here instead would disagree with that page
+          the moment a badge is earned but deliberately not awarded —
+          score_90 is exactly that case until `monthly_scores` exists. */}
       <ProgressTiles
         currentStreak={streak.current}
         longestStreak={streak.longest}
         score={score.score}
         loggedDays={loggedDays}
         elapsedTradingDays={elapsedTradingDays}
-        badgesEarned={badges.length}
+        badgesEarned={userBadges.length}
         badgesTotal={BADGE_DEFINITIONS.length}
         hasEntriesThisMonth={scoreDays.length > 0}
       />

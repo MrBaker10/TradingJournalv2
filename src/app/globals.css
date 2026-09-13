@@ -91,6 +91,15 @@
   --color-practice-dim: rgba(255, 181, 71, 0.16);
   --shadow-practice: inset 3px 0 0 0 #ffb547;
 
+  /* --- Progress: Hinweisleiste (§4.4) und Score-Balken --- */
+  /* Eigene Namen trotz gleichem Wert wie beim Übungskonto: die Leiste erklärt
+     eine Regel, sie markiert kein Konto. */
+  --color-warning-dim: rgba(255, 181, 71, 0.16);
+  --shadow-notice-amber:
+    inset 0 0 0 1px rgba(255, 181, 71, 0.3),
+    0 0 24px -12px rgba(255, 181, 71, 0.5);
+  --color-bar-track: rgba(255, 255, 255, 0.08);
+
   /* --- Dashboard: Metrik-Tafel (§4.7) --- */
   --shadow-metric-cell: inset -1px -1px 0 rgba(255, 255, 255, 0.07);
   /* Die Zelle "Today" ist hervorgehoben, ihr Wert bleibt semantisch gefärbt:

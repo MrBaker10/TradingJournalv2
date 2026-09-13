@@ -629,11 +629,20 @@ Die fünf Punkte dieses Abschnitts sind abgearbeitet:
 5. **Landing-Page** — bleibt ein separates Dokument und braucht als einzige
    öffentliche Seite eine ausdrückliche Ausnahme von der „no public pages"-Regel.
 
-Offen bleibt einer, weil er Gestaltung und nicht Entscheidung ist:
+Offen bleiben zwei, weil sie Gestaltung und nicht Entscheidung sind:
 
 - **Analytics und Prop Firm Rules** sind hier nicht auf Komponentenebene
   beschrieben. Die Balkendiagramme, die Filter-Chips und die Regel-Detailtabelle
   brauchen eine eigene Runde, sobald das Dashboard steht.
+- **Die Progress-Seite** ist hier nur über 4.3 (Gamification-Kacheln) und 4.4
+  (Grace-Day-Leiste) abgedeckt. Für die Aufschlüsselung des Consistency Score in
+  seine vier Teilwerte und für das Raster der zwölf Badges gibt es keine Vorgabe.
+  S9 hat beides aus den vorhandenen Primitiven gebaut — der Score als vier
+  Balken in einer `card-surface edge-neon`-Karte mit `--gradient-info` als
+  Füllung und `--color-bar-track` als Spur, die Badges als Kacheln mit
+  `edge-neon` und Verlaufsfläche im erreichten und matter Fläche im offenen
+  Zustand. Das ist tragfähig, aber nicht entworfen: es hat nie jemand gegen die
+  anderen Screens gehalten. Eine eigene Runde, zusammen mit Analytics.
 
 ---
 

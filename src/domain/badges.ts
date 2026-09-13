@@ -162,3 +162,32 @@ const CRITERIA: Record<string, (progress: BadgeProgress) => boolean> = {
 export function earnedBadges(progress: BadgeProgress): BadgeDefinition[] {
   return BADGE_DEFINITIONS.filter((badge) => CRITERIA[badge.key](progress));
 }
+
+/**
+ * Badges that are visible and explained but never written yet, because the
+ * number their criterion asks for does not exist in a trustworthy form.
+ *
+ * `score_90` says "finish a month". Until `monthly_scores` and the month-close
+ * job exist, the only value available is the running month's score, and that
+ * can still fall. A badge written from it would be permanent and wrong, so it
+ * stays open and says why.
+ */
+export const DEFERRED_BADGE_KEYS: readonly string[] = ["score_90"];
+
+/**
+ * Which badge keys to write for a user right now: earned by the numbers, not
+ * already on the user, not deferred.
+ *
+ * Awarding is a one-way door — a row in `user_badges` is never removed — so
+ * this is deliberately separate from `earnedBadges`, which answers the looser
+ * question of what the numbers currently satisfy.
+ */
+export function badgesToAward(
+  progress: BadgeProgress,
+  alreadyEarnedKeys: readonly string[],
+): string[] {
+  const already = new Set(alreadyEarnedKeys);
+  return earnedBadges(progress)
+    .map((badge) => badge.key)
+    .filter((key) => !already.has(key) && !DEFERRED_BADGE_KEYS.includes(key));
+}

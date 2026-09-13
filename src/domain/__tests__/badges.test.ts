@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   BADGE_DEFINITIONS,
   type BadgeProgress,
+  badgesToAward,
+  DEFERRED_BADGE_KEYS,
   earnedBadges,
   hasFullLoggedWeek,
 } from "../badges.ts";
@@ -198,5 +200,58 @@ describe("earnedBadges", () => {
       "logged_10",
       "streak_7",
     ]);
+  });
+});
+
+describe("badgesToAward", () => {
+  it("returns the keys that are earned but not yet written", () => {
+    const progress = { ...nothing, entriesLogged: 10, longestStreak: 7 };
+
+    expect(badgesToAward(progress, [])).toEqual([
+      "first_entry",
+      "logged_10",
+      "streak_7",
+    ]);
+  });
+
+  it("never returns a key that is already on the user", () => {
+    const progress = { ...nothing, entriesLogged: 10, longestStreak: 7 };
+
+    expect(badgesToAward(progress, ["first_entry", "logged_10"])).toEqual([
+      "streak_7",
+    ]);
+    expect(
+      badgesToAward(progress, ["first_entry", "logged_10", "streak_7"]),
+    ).toEqual([]);
+  });
+
+  it("returns nothing when no badge is earned yet", () => {
+    expect(badgesToAward(nothing, [])).toEqual([]);
+  });
+
+  // score_90 says "finish a month". Until monthly_scores exists there is only
+  // the running month's value, which can still fall — and a badge written from
+  // it could never be taken back.
+  it("holds back score_90 even at a score of 100", () => {
+    expect(keysFor({ bestMonthlyScore: 100 })).toContain("score_90");
+    expect(badgesToAward({ ...nothing, bestMonthlyScore: 100 }, [])).toEqual(
+      [],
+    );
+  });
+
+  it("keeps the other Craft badge awardable", () => {
+    expect(
+      badgesToAward({ ...nothing, entriesLogged: 20, byTheBookTrades: 20 }, [
+        "first_entry",
+        "logged_10",
+      ]),
+    ).toEqual(["by_the_book_20"]);
+  });
+
+  it("lists only deferred keys that exist as definitions", () => {
+    const keys = BADGE_DEFINITIONS.map((badge) => badge.key);
+    for (const deferred of DEFERRED_BADGE_KEYS) {
+      expect(keys).toContain(deferred);
+    }
   });
 });

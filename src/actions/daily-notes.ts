@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { upsertDailyNote } from "@/db/queries/daily-notes";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { awardBadgesQuietly } from "@/lib/badges/sync";
 import { todayInTimeZone } from "@/lib/time";
 import { saveDailyNoteSchema } from "@/schemas/daily-notes";
 
@@ -31,6 +32,10 @@ export async function saveDailyNote(
       premarketPlan: parsed.data.premarketPlan,
       eodReview: parsed.data.eodReview ? parsed.data.eodReview : null,
     });
+
+    // A review is what first_review asks for, so the note is a badge trigger
+    // like a logged trade is.
+    await awardBadgesQuietly(user.id, user.timezone);
 
     revalidatePath("/dashboard");
     return { success: true, data: null };
