@@ -949,3 +949,109 @@ diese. Er steht in `coding-standards.md`; ob er zusätzlich in die Decisions-Lis
 5. Die drei Altfunde aus S8/S9 sind weiter offen: stale Label im Kontoschalter (S3), das
    `rgba()`-Literal in `archived-accounts-list.tsx:81` (S3), `dailyNotes`/`badges` fehlen
    im `schema`-Objekt in `src/db/index.ts`.
+
+## 2026-09-14 — S11 Prop Firm Rules — feature/prop-firm-rules — 5dbf5c8
+
+**Gebaut.** `/prop-firms` zeigt die 2026er Regelsätze von 15 Prop Firms: durchsuchbar,
+über elf Chips filterbar, pro Firma aufklappbar auf alle 18 Regelfelder und bis zu dritt
+nebeneinander vergleichbar. Vorher war die Seite eine Überschrift. Die Daten kommen
+ausschließlich aus `context/PropFirmsData.md`, geladen über `pnpm db:seed:propfirms`,
+beliebig oft wiederholbar.
+
+**Dateien.** `src/lib/prop-firms/parse.ts` (reiner Parser, 19 Tests),
+`src/lib/prop-firms/href.ts` (URL-Zustand), `src/db/schema/prop-firms.ts`,
+`src/db/seed-propfirms.ts`, `src/db/queries/prop-firms.ts`,
+`src/components/prop-firms/` (Filter, Karte, Vergleich),
+`src/app/(app)/prop-firms/page.tsx`.
+
+**Migration.** `0008_graceful_kronos.sql` legt `prop_firms` und `prop_firm_programs` an,
+FK mit `on delete cascade`, Unique-Index auf `(firm_id, name)` als Konfliktziel des
+Seeders.
+
+**Regeln.** `src/domain/**` ist nicht berührt. Der Parser liegt unter
+`src/lib/prop-firms/`, nicht unter `src/domain/`: er setzt keine Produktregel um, er
+liest ein Dateiformat — dieselbe Schichtung wie `src/lib/csv/` aus S10a. Die
+Produktzusage aus `project-overview.md` H) („die App erfindet keine Regel") ist an drei
+Stellen erzwungen: alle 18 Felder sind `text` und nullable, der Parser wirft bei jeder
+unplatzierbaren Zeile statt ein Feld fallen zu lassen, und ein `null`-Feld rendert
+„Not recorded" statt zu verschwinden.
+
+**Entschieden unterwegs.**
+
+1. **Die 18 Regelfelder sind `text`, auch `account_size` und `min_trading_days`.** Die
+   Quelle schreibt `$2,000 (EOD)`, `None`, `No stated cap`, `0`. Eine Zahl daraus zu
+   ziehen hieße, die Regel zu deuten. `numeric(14,2)` wäre hier die falsche Anwendung der
+   Geld-Regel aus `coding-standards.md`: deren Zweck ist Rechengenauigkeit, und hier wird
+   nichts gerechnet. Prop-Firm-Limits bleiben ohnehin in USD und werden nie umgerechnet.
+2. **Die Filter-Chips kommen aus dem Badge-Block der Datei**, gespeichert als
+   `summary_tags text[]`, nicht aus den 18 Feldern abgeleitet. Über die 15 Firmen ergibt
+   das elf Chips. Jede Ableitung aus dem Freitext wäre Interpretation gewesen. Mehrere
+   Chips wirken als UND (`@>`), zwei Chips derselben Facette liefern also bewusst eine
+   leere Liste — die ehrliche Antwort, wenn die App nicht weiß, welche Facette ein Tag
+   beschreibt.
+3. **`last_verified_at` ist `date`, nicht `timestamptz`.** Die Endung `_at` liest sich wie
+   eine Audit-Spalte, ist aber keine: ein von Hand gepflegtes Kalenderdatum ohne Uhrzeit.
+   `timestamptz` würde eine Uhrzeit und eine Zone erfinden.
+4. **Die Absatzregel im Parser.** Blank Lines sind in dieser Datei Struktur: jeder
+   Firmenblock hat die Signatur `[1, 3–5, 1, 36]` — Programmname, Summary-Tags, `target`,
+   Regeltabelle. Über alle 15 Blöcke nachgemessen; das erste bekannte Label steht überall
+   am Absatzanfang. Genau das ist jetzt Vertrag: teilt sich das erste Label seinen Absatz
+   mit der Zeile davor, hat diese Zeile ihr Label verloren und der Parser wirft. Ohne die
+   Regel wurde ein Wert vor dem ersten Label stillschweigend zum Summary-Tag und das Feld
+   blieb `null`. Preis: entfernt jemand eine Leerzeile, scheitert der Seeder laut. Das ist
+   der Zweck, nicht der Nebeneffekt. Kam aus `/feature-review`.
+5. **`listPropFirmProgramsByIds` — dritte Query, stand nicht im Spec.** Der Vergleich
+   liest die gewählten Programme per Id statt aus der gefilterten Liste. Sonst verliert er
+   eine Spalte, sobald ein Filter das gewählte Programm ausblendet: E8 Markets ist
+   `Static` und fällt durch den `EOD`-Filter, soll aber in der Vergleichstabelle stehen
+   bleiben.
+6. **Der Parser lehnt eine Nicht-https-Website ab.** Stand nicht im Spec, aber
+   `coding-standards.md` verbietet `http:`, `javascript:` und `data:` überall, wo die App
+   einen Anchor rendert. Eine handgepflegte Datei bekommt dafür keine Ausnahme.
+7. **Ein erklärender Satz im Seitenkopf** („Recorded by hand in
+   context/PropFirmsData.md…"). Das Kernversprechen aus H) ist sonst unsichtbar.
+8. **Sortierung alphabetisch nach Firmenname.** Der Spec sagt dazu nichts, und die
+   Dateireihenfolge ist keine.
+9. **Die Feldlabels bleiben wörtlich wie in der Datei.** „Consistency when funded" hat 23
+   Zeichen und liegt damit knapp über der ~22-Zeichen-Grenze für Kapitälchen aus
+   `Design.md` §3. Kürzen hieße, ein Regelfeld umzubenennen.
+10. **Der Clear-Button setzt `Design.md` §4.2 erstmals wörtlich um** — 150 ms rein,
+    200 ms raus, 100 ms active, dazu `active:translate-y-0`, weil §4.2 den Button beim
+    Drücken skaliert und nicht versetzt. Damit ist Punkt 3 unter „Offen geblieben" im
+    S10a-Block teilweise beantwortet: die Export-Karte bleibt bei pauschal 200 ms und ist
+    jetzt sichtbar der Ausreißer. Das Angleichen gehört in einen eigenen `fix/`-Branch.
+    Beim Rand folgt der Button weiter dem Code-Muster (`border border-white/12`) statt dem
+    Inset-Shadow aus §4.2 — derselbe Widerspruch, ebenfalls älter als dieser Slice.
+11. **Mono pro Feld, nicht pro Wert.** Sieben Spalten der Vergleichstabelle bekommen
+    `font-mono tabular-nums` (`Design.md` §3, weil Zahlen in Spalten untereinander stehen
+    müssen). Die Folge: `None` und `No stated cap` stehen ebenfalls in Mono, weil sie in
+    derselben Spalte sitzen wie `$1,000`. Die Alternative wäre eine Werterkennung gewesen
+    — genau die Interpretation, die dieser Slice nirgends macht.
+12. **Prop Firm Rules wurde ohne Designrunde gebaut**, aus den vorhandenen Primitiven,
+    wie S9. `Design.md` §10 sagt weiterhin, dass Filter-Chips und Regel-Detailtabelle eine
+    eigene Runde brauchen; `Design.md` ist in diesem Branch unangetastet geblieben.
+
+**Offen geblieben.**
+1. `website` und `last_verified_at` sind für keine Firma gepflegt. Der Parser liest beide
+   Labels bereits (`Firm website`, `Last verified`), die Spalten bleiben bis dahin `NULL`
+   und die Seite sagt „Website not recorded" / „Never verified". Sobald die Datei gepflegt
+   wird, greift es ohne Codeänderung. Der Phase-0-Eintrag in `current-feature.md` bleibt
+   damit offen.
+2. Ein Firmenblock **ohne jedes erkennbare Label** wird weiterhin still zu einem Programm
+   mit 18 leeren Feldern. Die Absatzregel deckt diese Fehlerklasse nicht ab. Für die
+   echte Datei fängt der Test „fills every one of the eighteen rule fields for every
+   program" es ab.
+3. Der Seeder räumt nicht auf: verschwindet eine Firma aus der Markdown-Datei, bleibt ihre
+   Zeile stehen. Bewusst so, Löschen ist nicht seine Aufgabe.
+4. Kein expliziter Fokusring auf den Filter-Chips und dem Karten-Auslöser. `Design.md` §8
+   verlangt `2px solid var(--color-cyan)`; im Projekt existiert der nirgends, auch nicht
+   in `journal-filters.tsx`. Kein `outline: none` ohne Ersatz gesetzt, der Browser-Ring
+   bleibt also. Projektweit offen, gehört nicht in diesen Branch.
+5. `firstValue` existiert jetzt zweimal — `journal/page.tsx:21` und
+   `prop-firms/href.ts:14`. Drei Zeilen, aber eine Kopie.
+6. Die Suche ist ein Seq Scan über `concat_ws` mit `ilike '%…%'`. Bei 15 Zeilen
+   Referenzdaten irrelevant; ab vierstelligen Zeilenzahlen wäre ein GIN-Index auf
+   `to_tsvector` fällig.
+7. Altfund aus S8/S9 weiterhin offen und im Review erneut gesehen: `dailyNotes` und
+   `badges` fehlen im `schema`-Objekt in `src/db/index.ts`. Folgenlos, solange nirgends
+   `db.query.*` benutzt wird.
