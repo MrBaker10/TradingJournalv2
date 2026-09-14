@@ -116,12 +116,21 @@ export function PnlCalendar({ month, today, days }: PnlCalendarProps) {
           // Every cell answers the mouse with a lighter surface and ring.
           // `hover:bg-white/5` is a background-color and the fill is a
           // background-image, so both apply — and because the fill tops out at
-          // 30% opacity, the tint reaches green and red days too. Only days
-          // with entries also lift (see whileHover below): an empty day is not
-          // a link, and lifting it would promise a click that does nothing.
-          const className = `relative flex aspect-[1/0.82] flex-col justify-between rounded-ctl p-1.5 transition-[background-color,box-shadow] duration-150 ease-[var(--ease-soft)] hover:bg-white/5 ${fillClass(
-            total?.amountCents ?? 0,
-          )}`;
+          // 30% opacity, the tint reaches green and red days too.
+          //
+          // Only days with entries also lift. An empty day is not a link, and
+          // lifting it would promise a click that does nothing.
+          //
+          // The lift is a CSS hover, not motion's `whileHover`. Design.md §5
+          // divides the work that way — "hover, focus, colour and border
+          // changes stay CSS transitions; motion only does row expansion,
+          // disclosure panels, the streak bump and the load-in" — and the
+          // `whileHover` this replaces never took effect at all. Both halves
+          // of the hover now run through the same mechanism, and reduced
+          // motion reaches them through the CSS block rather than MotionConfig.
+          const className = `relative flex aspect-[1/0.82] flex-col justify-between rounded-ctl p-1.5 transition-[background-color,box-shadow,translate] duration-150 ease-[var(--ease-soft)] hover:bg-white/5 ${
+            total ? "hover:-translate-y-0.5" : ""
+          } ${fillClass(total?.amountCents ?? 0)}`;
 
           const content = (
             <>
@@ -161,7 +170,6 @@ export function PnlCalendar({ month, today, days }: PnlCalendarProps) {
                 delay: BUILD_IN_DELAY + index * PER_CELL_DELAY,
                 ease: EASE_SOFT,
               }}
-              whileHover={total ? { y: -2 } : undefined}
             >
               {total ? (
                 <Link
