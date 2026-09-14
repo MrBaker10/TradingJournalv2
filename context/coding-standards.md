@@ -99,6 +99,14 @@ commit that changes nothing else.
   calendar and score, and the sidebar's active-nav-indicator (`AnimatePresence`
   scale/opacity spring, independent per item). CSS transitions for everything else:
   hover, focus, colour and border changes.
+- **Hover is CSS even when `motion` already wraps the component.** Reaching for
+  `whileHover` because the element happens to be a `motion.div` is the easy mistake:
+  the calendar's 2px lift was written that way in S8, looked right in review, and never
+  took effect once. It is CSS now.
+- **Tailwind v4 drives `translate-*` through the `translate` property, not `transform`.**
+  A `transition-[…]` that names `transform` therefore does not cover it and the value
+  jumps. Read the generated stylesheet for the property that is actually set, rather
+  than the one the utility name suggests.
 - **`<MotionConfig reducedMotion="user">` at the app root is mandatory.** The
   `prefers-reduced-motion` CSS block does not stop `motion`, which animates through
   JS-set inline styles. Without it the accessibility promise in `Design.md` is false.

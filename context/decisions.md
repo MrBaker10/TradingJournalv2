@@ -1211,3 +1211,42 @@ History-Tabelle noch hier:
 für keine Firma gepflegt. Das ist **kein Blocker** — der Parser aus S11 liest beide Labels
 bereits, die Spalten bleiben bis dahin `NULL`, und die Seite sagt „Website not recorded"
 bzw. „Never verified". Sobald die Datei gepflegt wird, greift es ohne Codeänderung.
+
+## 2026-09-14 — Fix: Kalender-Hover als CSS statt motion — fix/calendar-hover-lift — c4d314a
+
+**Gebaut.** Der 2px-Hub auf Kalendertagen mit Einträgen funktioniert. Er stand seit S8 als
+`whileHover={total ? { y: -2 } : undefined}` im `motion.div` der Zelle und kam dort
+nachweislich nie an — drei Diagnoseversuche in der Designrunde blieben ohne Ursache.
+
+**Dateien.** `src/components/dashboard/pnl-calendar.tsx`, `context/coding-standards.md`.
+
+**Regeln.** Die richtige Frage war nicht, warum `motion` nicht anspringt, sondern warum
+`motion` überhaupt zuständig war. `Design.md` §5 teilt die Arbeit ausdrücklich auf:
+„Hover, Fokus, Farb- und Randwechsel bleiben CSS-Transitions. `motion` übernimmt nur das
+Aufklappen von Zeilen und Aufklappern, den Streak-Bump und den Aufbau von Kalender und
+Score beim Laden." Ein Hover-Hub ist ein Hover. Er hätte nie `whileHover` sein dürfen.
+
+Der Aufbau beim Laden (`initial`/`animate`) bleibt bei `motion` — der steht in derselben
+Aufzählung auf der anderen Seite.
+
+**Entschieden unterwegs.**
+
+1. **Der Hub ist `hover:-translate-y-0.5` auf dem inneren Element**, bedingt gesetzt: nur
+   Tage mit Einträgen tragen die Klasse, leere nicht. Das ersetzt die `total`-Prüfung, die
+   vorher in `whileHover` steckte, und hält die Regel „Anheben bedeutet klickbar" an
+   derselben Stelle wie die Farbe.
+2. **Die Transition nennt `translate`, nicht `transform`.** Tailwind v4 setzt
+   `-translate-y-*` über die CSS-Property `translate` — im erzeugten Stylesheet steht
+   `translate: var(--tw-translate-x) var(--tw-translate-y)`. Mein erster Wurf nannte
+   `transform` und hätte den Hub hart springen lassen. Beide Punkte stehen jetzt in
+   `coding-standards.md` unter Motion.
+3. **`Design.md` §4.8 bleibt unverändert.** Der Abschnitt beschrieb das Verhalten von
+   Anfang an richtig; abgewichen ist nur die Umsetzung. Es gab nichts zu korrigieren, nur
+   etwas zu erfüllen.
+
+**Offen geblieben.** Die visuelle Abnahme lief über Sascha, nicht über Messung. Drei
+Messversuche lieferten Startwerte statt Hover-Werte; erst ein Screenshot zeigte, dass die
+Seite unter dem Cursor weggescrollt war und die Maus die Zelle längst verlassen hatte.
+Belegt ist per DOM und erzeugtem Stylesheet: `whileHover` ist weg, die Hub-Klasse hängt
+nur an Tagen mit Einträgen, und die Hover-Regel steht mit höherer Spezifität nach der
+Idle-Regel. Ob es sich richtig anfühlt, hat ein Mensch entschieden.
