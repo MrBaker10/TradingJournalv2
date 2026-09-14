@@ -114,6 +114,17 @@ commit that changes nothing else.
   functions), not the Relational Query Builder. Drizzle 1.0 rewrites the RQB and this
   keeps the future upgrade small.
 - Aggregate in SQL. Do not pull rows into TypeScript to sum them.
+- **A `sql<T>` template asserts the return type, it does not check it.** Postgres hands a
+  `timestamptz` back from a raw template as a **string**, while the same column read
+  through a Drizzle column comes back as a `Date`. `string > Date` then coerces both
+  toward number, the string becomes `NaN`, and every comparison is silently false.
+  Compare two columns **in SQL**, where both sides are typed. Cost one real bug in the
+  dashboard streak bump — see `decisions.md`, Designrunde 1.
+- **Drizzle qualifies a column reference inside a `where` clause, but not inside a select
+  list.** A correlated subquery in a select list renders `where "user_id" = "id"`, which
+  postgres reads as two columns of the same table and happily matches the wrong rows.
+  Bind the value as a parameter instead of correlating, or spell the identifier out
+  against an alias.
 - Every table that holds user data has `user_id`. Every query filters on it.
 - An `account_id` coming from the client is checked against the current user before
   use, in exactly the same way as a trade id. Accounts are a permission boundary, not
