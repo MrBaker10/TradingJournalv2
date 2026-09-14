@@ -116,6 +116,26 @@ export const hasRealAccount = sql<boolean>`exists (
   where ${tradeAccounts.tradeId} = ${trades.id} and ${accounts.isPractice} = false
 )`;
 
+/**
+ * Visibility of one trade while a single account is selected.
+ *
+ * A taken trade shows when it is assigned to that account. A **missed setup
+ * always shows**: it carries no account at all — `src/domain/trades.ts` only
+ * requires one when `taken = true` — so there is nothing to match it against,
+ * and Design.md §4.9 calls it an equal entry, not a lesser kind.
+ *
+ * This used to be an inner join on `trade_accounts`, which silently dropped
+ * every missed setup the moment an account was selected. The "all accounts"
+ * branch had the rule right; this one had forgotten it. Found in review.
+ */
+export function isVisibleForAccount(accountId: number) {
+  return sql<boolean>`(${trades.taken} = false or exists (
+    select 1 from ${tradeAccounts}
+    where ${tradeAccounts.tradeId} = ${trades.id}
+      and ${tradeAccounts.accountId} = ${accountId}
+  ))`;
+}
+
 // One JSON array of the accounts a trade is assigned to, built with a
 // correlated subquery so the outer query still returns one row per trade —
 // no GROUP BY, no separate round trip per row.
@@ -325,15 +345,13 @@ async function queryTradeRows(
             sql`(${trades.taken} = false or (${trades.taken} = true and ${hasRealAccount}))`,
           ),
         )
-      : baseQuery
-          .innerJoin(
-            tradeAccounts,
-            and(
-              eq(tradeAccounts.tradeId, trades.id),
-              eq(tradeAccounts.accountId, input.selectedAccountId),
-            ),
-          )
-          .where(and(ownership, ...input.conditions));
+      : baseQuery.where(
+          and(
+            ownership,
+            ...input.conditions,
+            isVisibleForAccount(input.selectedAccountId),
+          ),
+        );
 
   const rawRows = await query
     .orderBy(...input.orderBy)

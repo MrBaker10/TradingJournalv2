@@ -1,12 +1,17 @@
-import { eq, sql, TransactionRollbackError } from "drizzle-orm";
+import { and, eq, sql, TransactionRollbackError } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { calculatePnl, type PnlInput } from "../../../domain/pnl.ts";
 import { dollarsToCents } from "../../../lib/money.ts";
 import { db } from "../../index.ts";
+import { accounts } from "../../schema/accounts.ts";
 import { instruments } from "../../schema/instruments.ts";
-import { trades } from "../../schema/trades.ts";
+import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
-import { rMultipleSortKey, tradePnlCents } from "../trades.ts";
+import {
+  isVisibleForAccount,
+  rMultipleSortKey,
+  tradePnlCents,
+} from "../trades.ts";
 
 // Test-only symbol, never committed (every fixture runs inside a rolled-back
 // transaction) — distinctive enough that it can't collide with a seeded
@@ -362,5 +367,95 @@ describe("tradePnlCents (SQL, run against real Postgres) vs calculatePnl (pnl.ts
       pointValue: 50,
     };
     expect(await evaluateSqlPnlCents(fixture)).toBeNull();
+  });
+});
+
+// Design.md §4.9 and project-structure.md: a missed setup carries no account
+// at all, so selecting one must not make it disappear. It used to: the
+// single-account branch of queryTradeRows inner-joined trade_accounts, and a
+// row with no join partner is a row that is gone.
+describe("isVisibleForAccount", () => {
+  async function visibleTradeIds(select: "own" | "other"): Promise<string[]> {
+    let labels: string[] = [];
+
+    try {
+      await db.transaction(async (tx) => {
+        const [user] = await tx
+          .insert(users)
+          .values({
+            username: "account-visibility-fixture",
+            displayName: "Account Visibility",
+            timezone: "UTC",
+          })
+          .returning({ id: users.id });
+
+        const [mine, theirs] = await tx
+          .insert(accounts)
+          .values([
+            { userId: user.id, name: "Mine", sortOrder: 0 },
+            { userId: user.id, name: "Theirs", sortOrder: 1 },
+          ])
+          .returning({ id: accounts.id });
+
+        const [instrument] = await tx
+          .insert(instruments)
+          .values({
+            symbol: "TEST-ACCOUNT-VISIBILITY",
+            name: "Throwaway test instrument",
+            pointValue: "50",
+            tickSize: "0.25",
+          })
+          .returning({ id: instruments.id });
+
+        const base = {
+          userId: user.id,
+          tradeDate: "2026-01-01",
+          instrumentId: instrument.id,
+          entryTime: "09:00",
+          direction: "long",
+          entryPrice: "100",
+        };
+
+        const [taken] = await tx
+          .insert(trades)
+          .values({ ...base, taken: true, contracts: 1, notes: "taken" })
+          .returning({ id: trades.id });
+        await tx
+          .insert(trades)
+          .values({ ...base, taken: false, notes: "missed" });
+
+        // Only the taken trade gets an account — a missed setup cannot have one.
+        await tx
+          .insert(tradeAccounts)
+          .values({ tradeId: taken.id, accountId: mine.id });
+
+        const rows = await tx
+          .select({ notes: trades.notes })
+          .from(trades)
+          .where(
+            and(
+              eq(trades.userId, user.id),
+              isVisibleForAccount(select === "own" ? mine.id : theirs.id),
+            ),
+          );
+
+        labels = rows.map((row) => row.notes ?? "").sort();
+        tx.rollback();
+      });
+    } catch (error) {
+      if (!(error instanceof TransactionRollbackError)) throw error;
+    }
+
+    return labels;
+  }
+
+  it("shows the missed setup alongside a trade on the selected account", async () => {
+    expect(await visibleTradeIds("own")).toEqual(["missed", "taken"]);
+  });
+
+  it("still shows the missed setup when another account is selected", async () => {
+    // The taken trade drops out — it belongs to a different account. The
+    // missed setup stays, because it belongs to none.
+    expect(await visibleTradeIds("other")).toEqual(["missed"]);
   });
 });
