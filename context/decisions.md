@@ -1186,3 +1186,28 @@ Win-Rate- und R-Zahl ausgeschlossen sind — der Fix ändert nur die Liste, kein
 **Offen geblieben.** Der Fehler stammt aus S5 und lief seither mit. Ob andere Stellen
 dieselbe Annahme treffen — dass jeder Trade mindestens eine Kontozuweisung hat — ist
 nicht systematisch geprüft.
+
+## 2026-09-14 — Phase-0-Block aus current-feature.md entfernt — main — noch nicht committet
+
+**Gebaut.** Nichts. Aufräumen der Arbeitsdatei.
+
+**Warum.** `current-feature.md` ist laut eigener Kopfzeile eine Datei mit kurzer
+Lebensdauer. Der Phase-0-Block stand dort seit dem ersten Tag, alle drei Punkte waren
+abgehakt, Phase 1 ist abgeschlossen — und ein Satz darin war seit S11 schlicht falsch
+(„blocks S11 only"; S11 ist gebaut und war nie blockiert).
+
+**Was der Block sagte**, weil P0.1 sonst nirgends festgehalten ist — weder in der
+History-Tabelle noch hier:
+
+- `context/Design.md` geschrieben und abgestimmt.
+- **P0.1 — `PropFirmsData.md` bereinigt:** Alle 15 Überschriften parsen jetzt als
+  `## Name`; zuvor stand dort `##Name` ohne Leerzeichen. Vier Blöcke hatten ihren
+  Firmennamen verloren (BluSky, Legends Trading, TradeDay, The Trading Pit) und tragen
+  ihn wieder in der Überschrift. Der Rest der Datei ist byte-identisch geblieben.
+- P0.2 — Projekt gescaffoldet, Befehlsliste in `CLAUDE.md` mit der echten
+  `package.json` abgeglichen.
+
+**Offen geblieben.** `website` und `last_verified_at` sind in `PropFirmsData.md` weiterhin
+für keine Firma gepflegt. Das ist **kein Blocker** — der Parser aus S11 liest beide Labels
+bereits, die Spalten bleiben bis dahin `NULL`, und die Seite sagt „Website not recorded"
+bzw. „Never verified". Sobald die Datei gepflegt wird, greift es ohne Codeänderung.

@@ -20,16 +20,6 @@ Two different lists, do not mix them up:
 
 **Nothing in progress.**
 
-### Phase 0 — before the first line of code
-
-- [x] `context/Design.md` written and agreed
-- [x] `PropFirmsData.md` cleaned up: 15 headings now parse as `## Name`, the four
-      nameless blocks (BluSky, Legends Trading, TradeDay, The Trading Pit) carry their
-      name in the heading. Rest of the file byte-identical. Website URLs and
-      `last_verified_at` are still absent from the file — open, blocks S11 only.
-- [x] P0.2 Scaffold the project and reconcile the command list in `CLAUDE.md` with the
-      real `package.json`
-
 ---
 
 ## Feature: _(none)_
