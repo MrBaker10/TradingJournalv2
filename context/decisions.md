@@ -1055,3 +1055,134 @@ unplatzierbaren Zeile statt ein Feld fallen zu lassen, und ein `null`-Feld rende
 7. Altfund aus S8/S9 weiterhin offen und im Review erneut gesehen: `dailyNotes` und
    `badges` fehlen im `schema`-Objekt in `src/db/index.ts`. Folgenlos, solange nirgends
    `db.query.*` benutzt wird.
+
+## 2026-09-14 — Designrunde 1: Dashboard — feature/dashboard-calm-surfaces — 41d2ce7
+
+**Gebaut.** Das Dashboard reagiert auf Bedienung und drängt sich nicht mehr auf. Icon-
+Kacheln und Save-Button tragen eine ruhige Prozessfläche statt Neon, jede ruhende Fläche
+antwortet auf den Zeiger, der Streak-Bump und die Meilenstein-Karte aus §6 existieren
+erstmals, und das Speichern eines Plans erzeugt einen Toast. Vorher leuchteten Icons und
+Button heller als die Zahlen, und außer dem Kalender reagierte nichts auf die Maus.
+
+**Dateien.** `src/app/globals.css` (sieben Tokens plus Sonner-Transition-Override),
+`src/components/dashboard/` (progress-tiles, plan-card, pnl-calendar, metric-cell, neu:
+streak-bump, milestone-card), `src/components/ui/toast.tsx`,
+`src/components/journal/trade-row.tsx`, `src/actions/dashboard.ts`,
+`src/db/queries/dashboard.ts`, `src/db/schema/users.ts`, `src/domain/streak.ts`,
+`src/app/layout.tsx`, `src/app/(app)/dashboard/page.tsx`. Neue Tests:
+`src/db/queries/__tests__/dashboard.test.ts`, `src/app/__tests__/reduced-motion.test.ts`.
+
+**Migration.** `0009_fair_rawhide_kid.sql` fügt `users.dashboard_seen_at timestamptz` und
+`users.streak_milestone_seen integer` hinzu, beide nullable.
+
+**Regeln.** `src/domain/streak.ts` bekommt `STREAK_MILESTONES = [7, 30, 100]` und
+`pendingStreakMilestone(currentStreak, seen)`: der höchste erreichte, noch nicht gezeigte
+Meilenstein — **ohne Rückstau**. Wer 45 Tage schafft, ohne die 7er-Karte gesehen zu
+haben, bekommt 30, nicht beide nacheinander. Neun Tests in
+`src/domain/__tests__/streak.test.ts`, darunter die Kette `calculateStreak →
+pendingStreakMilestone` über sieben echte Handelstage mit übersprungenem Samstag und auf
+Montag gefaltetem Sonntag. Streak, Consistency und Badges selbst unverändert.
+
+**Entschieden unterwegs.**
+
+1. **Die ruhige Prozessfläche (§4.14) ist das Kalender-Rezept in Blau.** `.30 → .08`
+   Deckkraft und ein 1px-Inset-Rand bei `.45` sind zeichengleich mit `--gradient-day-win`
+   und `--shadow-day-win`. Dass beide dieselbe Rezeptur tragen, ist der Punkt: eine
+   ruhige Fläche sieht überall gleich ruhig aus, unabhängig von ihrer Farbe.
+2. **Nur das Dashboard wurde umgestellt.** Die übrigen zehn `--gradient-info`-Stellen —
+   primärer Button überall, Sidebar, Badge-Grid, Score-Balken — bleiben laut. Bewusster
+   Zwischenstand, um die neue Tonalität an einer Seite zu beurteilen, bevor sie sich über
+   das Projekt legt. `Design.md` §4.2 hält ihn fest, damit er nicht als Schlamperei
+   durchgeht. Sichtbare Folge: `milestone-card.tsx` ist ruhig, `unlocked-card.tsx` auf
+   Progress ist laut — dieselbe Belohnungsart aus §6 in zwei Tonalitäten.
+3. **Das Icon auf der ruhigen Kachel ist cyan, nicht weiß.** Auf der nun dunklen Fläche
+   wäre Weiß der hellste Punkt gewesen — das Problem verschoben statt gelöst.
+4. **Hover hebt nur an, was klickbar ist.** Kalenderzellen mit Einträgen und Trade-Zeilen
+   heben sich um 2px; Metrik-Zellen, Fortschritts-Kacheln und leere Kalendertage hellen
+   nur auf. Der Hub ist in diesem Projekt das Zeichen für Klickbarkeit, und eine Fläche
+   anzuheben, die auf einen Klick nicht reagiert, ist ein Versprechen ohne Deckung.
+5. **Sonner statt Eigenbau**, 2.0.8, exakt gepinnt in `package.json` und
+   `coding-standards.md`. `coding-standards.md` sah Sonner seit P0.2 vor; die
+   `peerDependencies` akzeptieren React 19. Die beiden Zeiten aus §4.11 (240 ms rein,
+   300 ms raus) stehen als CSS-Override in `globals.css`, über Spezifität statt
+   `!important`, weil Sonner sein Stylesheet zur Laufzeit injiziert und sonst nach
+   Quellreihenfolge gewinnen würde.
+6. **Nur die zwei Dashboard-Auslöser** sind angeschlossen. Trade und Missed Setup sitzen
+   unter `/journal/new` und brauchen einen Streak-Wert, den `createTrade` heute nicht
+   zurückgibt. Eigener Slice.
+7. **Gemerkt wird in der DB, nicht in der Session.** `Design.md` §6 schrieb „einmalig für
+   eine Session"; gebaut ist „einmalig je Meilenstein" über `users.streak_milestone_seen`,
+   wie die Badge-Karte auf Progress seit S9 über `users.badges_seen_at`. Eine
+   Session-Merkung hätte dieselbe Karte in jedem neuen Tab erneut gezeigt. §6 ist
+   entsprechend korrigiert.
+8. **Der Bump-Vergleich liegt in SQL** — und zwar ohne Korrelation, mit gebundener
+   User-ID. Zwei Fallen lagen darin, beide im Review gefunden:
+   - In TypeScript verglich er einen **String** gegen ein `Date`. Postgres liefert die
+     Subquery als Text, `>` wandelt beide Richtung Zahl, der String wird `NaN`, und jeder
+     Vergleich ist `false`. Der Bump feuerte damit nur, solange die Spalte `NULL` war —
+     genau einmal pro Nutzer, für immer. Das `sql<Date | null>` im Template hatte eine
+     Form behauptet, die nichts geprüft hat.
+   - Die korrelierte SQL-Variante rendert in einer **Select-Liste** unqualifiziert:
+     `where "user_id" = "id"`, was Postgres als `trades.user_id = trades.id` las.
+     Drizzle qualifiziert in einer `where`-Klausel, in einer Select-Liste nicht.
+   Beides ist durch fünf Integrationstests abgedeckt, von denen vier die Spalte
+   **setzen** — der `NULL`-Kurzschluss hatte den Fehler zuvor verdeckt.
+9. **`markStreakMilestoneSeen()` nimmt keine Argumente.** Eine frühere Fassung nahm den
+   Meilenstein vom Client und prüfte nur, dass es 7, 30 oder 100 war — womit ein
+   handgemachter Aufruf 100 hätte speichern und jede künftige Karte verstummen lassen
+   können. Der Server kennt den Streak selbst. `src/schemas/dashboard.ts` entfiel dadurch
+   und wurde nach Rückfrage gelöscht.
+10. **Reduced Motion ist durch einen Test gesichert, nicht durch einen Blick.**
+    `src/app/__tests__/reduced-motion.test.ts` prüft, dass der
+    `prefers-reduced-motion`-Block alle drei Deklarationen inklusive `!important` trägt
+    und dass `<MotionConfig reducedMotion="user">` an der Wurzel steht. Genau die Zeile
+    `animation-iteration-count` fehlte bis zum 13.09., und ohne sie dreht ein Spinner
+    hunderttausendmal pro Sekunde statt zu stoppen. Ein DevTools-Häkchen prüft einmal,
+    ein Test prüft immer.
+11. **`notifyProcess` bleibt neben `ToastViewport`.** Im Review als Vermischung von
+    Komponente und Funktion notiert, nach Prüfung zurückgezogen: `src/lib/` und
+    `src/hooks/` enthalten kein einziges `.tsx`, der Umzug hätte also ein neues Muster
+    eingeführt, um ein bestehendes aufzuräumen.
+12. **§4.3 stimmte schon vorher nicht.** Der Satz „der Streak-Tile ist das einzige
+    animierte Element im Dashboard" war bereits falsch, seit der Kalender sich beim Laden
+    aufbaut. Korrigiert.
+
+**Offen geblieben.**
+1. Ob die ruhige Fläche projektweit wird, entscheidet die nächste Designrunde. Bis dahin
+   tragen die beiden Belohnungskarten aus §6 unterschiedliche Tonalitäten.
+2. Der grüne Erfolgszustand des Save-Buttons (§4.2) und der Toast (§6) feuern beide beim
+   Speichern. Beides ist so vorgeschrieben; der Klickpfad wurde damit abgenommen.
+3. Wie sich Reduced Motion **anfühlt**, hat niemand geprüft — der Test sichert nur, dass
+   beide Mechanismen vorhanden und vollständig sind.
+4. Der 2px-Hub der Kalenderzellen aus S8 (`whileHover` in `pnl-calendar.tsx`) kommt
+   nachweislich nie an. Drei Diagnoseversuche blieben ohne Ursache; das Farb-Hover
+   daneben funktioniert. Eigener `fix/`-Branch.
+5. Der Slice enthält einen Fremdeingriff, der in einen **eigenen `fix:`-Commit** gehört:
+   `src/db/queries/trades.ts` und seine zwei neuen Tests. Siehe den folgenden Block.
+
+## 2026-09-14 — Fix: Missed Setups bei gewähltem Konto — feature/dashboard-calm-surfaces — 9e416ad
+
+**Gebaut.** Missed Setups verschwanden aus Journal und „Recent trades", sobald im
+Kontoschalter ein Konto gewählt war. Gemessen: mit „Main" 7 Zeilen ohne Missed Setup, mit
+„All accounts" 9 mit zweien. Jetzt liefern beide 9.
+
+**Dateien.** `src/db/queries/trades.ts` (`isVisibleForAccount`),
+`src/db/queries/__tests__/trades.test.ts` (zwei Tests).
+
+**Regeln.** `queryTradeRows` machte im Einzelkonto-Zweig einen `innerJoin` auf
+`trade_accounts`. Ein Missed Setup hat **null** Kontozuweisungen — `src/domain/trades.ts`
+verlangt ein Konto nur bei `taken = true` — und eine Zeile ohne Join-Partner ist eine
+Zeile, die weg ist. Der „All accounts"-Zweig hatte die Regel richtig
+(`taken = false or ...`), dieser hatte sie vergessen. Ersetzt durch ein `exists`-Prädikat
+nach dem Vorbild von `hasRealAccount`, abgedeckt vom Index `trade_accounts_unique`.
+
+**Entschieden unterwegs.** **Ein Missed Setup erscheint bei jeder Kontoauswahl**, weil es
+zu keinem Konto gehört. Für den Einzelkonto-Fall stand das nirgends geschrieben; es ist
+die Lesart, die der „All accounts"-Zweig seit S5 hat und die `Design.md` §4.9 verlangt
+(„verpasste Setups werden nicht kleiner, blasser oder weiter unten dargestellt"). Zwei
+Tests halten es fest. Die Regel bleibt unberührt, dass Missed Setups aus jeder P&L-,
+Win-Rate- und R-Zahl ausgeschlossen sind — der Fix ändert nur die Liste, keine Kennzahl.
+
+**Offen geblieben.** Der Fehler stammt aus S5 und lief seither mit. Ob andere Stellen
+dieselbe Annahme treffen — dass jeder Trade mindestens eine Kontozuweisung hat — ist
+nicht systematisch geprüft.
