@@ -57,6 +57,13 @@
       "when": 1789250922472,
       "tag": "0007_charming_jackpot",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789370561634,
+      "tag": "0008_graceful_kronos",
+      "breakpoints": true
     }
   ]
 }

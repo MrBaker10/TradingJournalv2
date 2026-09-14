@@ -13,7 +13,8 @@
     "db:seed": "node --env-file=.env.local src/db/seed.ts",
     "db:seed:instruments": "node --env-file=.env.local src/db/seed-instruments.ts",
     "db:seed:trade-tags": "node --env-file=.env.local src/db/seed-trade-tags.ts",
-    "db:seed:badges": "node --env-file=.env.local src/db/seed-badges.ts"
+    "db:seed:badges": "node --env-file=.env.local src/db/seed-badges.ts",
+    "db:seed:propfirms": "node --env-file=.env.local src/db/seed-propfirms.ts"
   },
   "dependencies": {
     "@date-fns/tz": "1.5.0",
