@@ -16,6 +16,7 @@ commit that changes nothing else.
 | Zod / RHF / resolvers | 4.5.4 / 7.87.0 / 5.9.1 |
 | Recharts | 3.10.1 |
 | motion (ex framer-motion) | 13.2.0 |
+| Sonner (Toasts) | 2.0.8 |
 | Biome | 2.5.12 |
 | Vitest / Playwright | 4.1.11 / 1.63.0 |
 | pnpm | 12.3.4 |

@@ -9,6 +9,7 @@ import {
   type InlineMessageTone,
 } from "@/components/ui/inline-message";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
+import { notifyProcess } from "@/components/ui/toast";
 import { PLAN_HINT_LENGTH } from "@/schemas/daily-notes";
 
 interface PlanCardProps {
@@ -82,6 +83,15 @@ export function PlanCard({ premarketPlan, eodReview }: PlanCardProps) {
     }
     setSuccess(true);
     setTimeout(() => setSuccess(false), SUCCESS_HOLD_MS);
+
+    // Design.md §6 lists "plan saved" and "day reviewed" as two triggers; this
+    // card writes both in one go, so it raises one toast that says which of
+    // them happened. The text names the process consequence, never money.
+    notifyProcess(
+      review.trim().length > 0
+        ? "Plan and review saved · both count towards consistency"
+        : "Plan saved · counts towards plan adherence",
+    );
   }
 
   const feedback = planFeedback(plan, planError);
@@ -168,10 +178,15 @@ export function PlanCard({ premarketPlan, eodReview }: PlanCardProps) {
         <button
           type="submit"
           disabled={loading || success}
-          className={`relative h-11 w-full rounded-ctl text-sm font-medium text-fg shadow-[var(--shadow-button-primary)] ${
+          // Idle uses the calm surface from Design.md §4.14 — full width, 44px
+          // and the only action on the card carry it without a halo. Success
+          // keeps the loud gradient on purpose: §4.2 calls it the one place
+          // green may glow, because it confirms an action, and against the
+          // quieter idle state it now reads more clearly, not less.
+          className={`relative h-11 w-full rounded-ctl text-sm font-medium text-fg ${
             success
-              ? "bg-[image:var(--gradient-success)]"
-              : "bg-[image:var(--gradient-info)]"
+              ? "bg-[image:var(--gradient-success)] shadow-[var(--shadow-button-primary)]"
+              : "bg-[image:var(--gradient-info-soft)] shadow-[var(--shadow-info-soft)]"
           }`}
         >
           <span

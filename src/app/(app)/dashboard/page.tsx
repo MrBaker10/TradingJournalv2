@@ -1,4 +1,5 @@
 import { MetricPanel } from "@/components/dashboard/metric-panel";
+import { MilestoneCard } from "@/components/dashboard/milestone-card";
 import { PlanCard } from "@/components/dashboard/plan-card";
 import { PnlCalendar } from "@/components/dashboard/pnl-calendar";
 import { ProgressTiles } from "@/components/dashboard/progress-tiles";
@@ -7,6 +8,7 @@ import { listUserBadges } from "@/db/queries/badges";
 import { getDailyNote } from "@/db/queries/daily-notes";
 import {
   type DayTotal,
+  getDashboardRewardState,
   getMonthCountMetrics,
   getMonthDayTotals,
   getMonthMoneyMetrics,
@@ -20,7 +22,7 @@ import {
   SCORE_WEIGHTS,
   tradingDaysElapsed,
 } from "@/domain/consistency";
-import { calculateStreak } from "@/domain/streak";
+import { calculateStreak, pendingStreakMilestone } from "@/domain/streak";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { monthKeyOf, todayInTimeZone } from "@/lib/time";
 
@@ -64,6 +66,7 @@ export default async function DashboardPage() {
     userBadges,
     note,
     recentTrades,
+    rewards,
   ] = await Promise.all([
     getMonthMoneyMetrics(scope, month),
     getMonthCountMetrics(scope, month),
@@ -73,6 +76,7 @@ export default async function DashboardPage() {
     listUserBadges(user.id),
     getDailyNote(user.id, today),
     listRecentTrades(user.id, user.selectedAccountId, RECENT_TRADES_LIMIT),
+    getDashboardRewardState(user.id),
   ]);
 
   const streak = calculateStreak(streakDays, today, user.timezone);
@@ -88,6 +92,13 @@ export default async function DashboardPage() {
       : Math.round(
           (score.showingUp / SCORE_WEIGHTS.showingUp) * elapsedTradingDays,
         );
+
+  // Which milestone is due is a streak rule, so it lives in the domain module
+  // with the rest of them — not inline here (src/domain/streak.ts).
+  const milestone = pendingStreakMilestone(
+    streak.current,
+    rewards.milestoneSeen,
+  );
 
   const todayTotal = dayTotals.days.find((day) => day.date === today);
 
@@ -108,7 +119,10 @@ export default async function DashboardPage() {
         badgesEarned={userBadges.length}
         badgesTotal={BADGE_DEFINITIONS.length}
         hasEntriesThisMonth={scoreDays.length > 0}
+        bumpStreak={rewards.bumpStreak}
       />
+
+      <MilestoneCard milestone={milestone} />
 
       <MetricPanel
         money={money}

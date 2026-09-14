@@ -43,14 +43,16 @@ function isoDateOf(month: string, dayOfMonth: number): IsoDate {
   return `${month}-${String(dayOfMonth).padStart(2, "0")}`;
 }
 
+// The hover ring is per state rather than one shared white one, so a green day
+// stays green while the mouse is over it instead of washing out.
 function fillClass(amountCents: number): string {
   if (amountCents > 0) {
-    return "bg-[image:var(--gradient-day-win)] shadow-[var(--shadow-day-win)]";
+    return "bg-[image:var(--gradient-day-win)] shadow-[var(--shadow-day-win)] hover:shadow-[var(--shadow-day-win-hover)]";
   }
   if (amountCents < 0) {
-    return "bg-[image:var(--gradient-day-loss)] shadow-[var(--shadow-day-loss)]";
+    return "bg-[image:var(--gradient-day-loss)] shadow-[var(--shadow-day-loss)] hover:shadow-[var(--shadow-day-loss-hover)]";
   }
-  return "shadow-[var(--shadow-day-flat)]";
+  return "shadow-[var(--shadow-day-flat)] hover:shadow-[var(--shadow-day-flat-hover)]";
 }
 
 function amountClass(amountCents: number): string {
@@ -111,7 +113,13 @@ export function PnlCalendar({ month, today, days }: PnlCalendarProps) {
           const total = totals.get(date);
           const isToday = date === today;
 
-          const className = `relative flex aspect-[1/0.82] flex-col justify-between rounded-ctl p-1.5 ${fillClass(
+          // Every cell answers the mouse with a lighter surface and ring.
+          // `hover:bg-white/5` is a background-color and the fill is a
+          // background-image, so both apply — and because the fill tops out at
+          // 30% opacity, the tint reaches green and red days too. Only days
+          // with entries also lift (see whileHover below): an empty day is not
+          // a link, and lifting it would promise a click that does nothing.
+          const className = `relative flex aspect-[1/0.82] flex-col justify-between rounded-ctl p-1.5 transition-[background-color,box-shadow] duration-150 ease-[var(--ease-soft)] hover:bg-white/5 ${fillClass(
             total?.amountCents ?? 0,
           )}`;
 

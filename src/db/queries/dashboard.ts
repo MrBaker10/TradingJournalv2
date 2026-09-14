@@ -13,6 +13,7 @@ import {
   tradeScreenshots,
   trades,
 } from "../schema/trades.ts";
+import { users } from "../schema/users.ts";
 import { hasEodReview, listMonthReviewDates } from "./daily-notes.ts";
 import { hasRealAccount, rMultipleSortKey, tradePnlCents } from "./trades.ts";
 
@@ -464,4 +465,87 @@ export async function getBadgeCounters(userId: number): Promise<BadgeCounters> {
     byTheBookTrades: entries[0].byTheBookTrades,
     reviewsWritten: reviews[0].reviewsWritten,
   };
+}
+
+// --- Micro-rewards (Design.md §4.3 and §6) -------------------------------
+// Neither of these is an aggregate. They read and write the two "already
+// shown" markers on `users`, the same way badgesSeenAt works for the badge
+// card on /progress.
+
+export interface DashboardRewardState {
+  /** A trade was logged since the dashboard was last opened — bump once. */
+  bumpStreak: boolean;
+  /** Highest streak milestone whose card has been shown; null if none has. */
+  milestoneSeen: number | null;
+}
+
+/**
+ * True when a trade was logged since the dashboard was last opened.
+ *
+ * Exported as a fragment so a test can evaluate it inside a transaction
+ * against its own fixture rows, the way trades.test.ts uses `tradePnlCents`.
+ *
+ * The comparison stays in SQL, where both sides are timestamptz.
+ *
+ * It lived in TypeScript until review caught it: postgres hands the subquery
+ * back as a **string**, `dashboardSeenAt` as a Date, and `string > Date`
+ * coerces both toward number — the string becomes NaN and every comparison is
+ * false. The bump then fired only while the column was still NULL, i.e.
+ * exactly once per user, ever. Typing the template `sql<Date | null>` had
+ * asserted a shape nothing checked.
+ *
+ * `-infinity` covers the never-visited case; the outer coalesce covers the
+ * no-trades case, because max() over nothing is NULL and NULL > x is NULL.
+ */
+export function bumpStreakExpression(userId: number) {
+  // The identifiers inside the subquery are spelled out against an alias
+  // instead of interpolated. Drizzle qualifies a column reference in a WHERE
+  // clause but not in a select list, and the unqualified version rendered as
+  // `where "user_id" = "id"` — which postgres happily read as
+  // trades.user_id = trades.id and matched arbitrary rows. Binding the id as
+  // a parameter removes the correlation, and with it the ambiguity.
+  return sql<boolean>`coalesce(
+    (
+      select max(bump_trades.created_at)
+      from ${trades} as bump_trades
+      where bump_trades.user_id = ${userId}
+    ) > coalesce(${users.dashboardSeenAt}, '-infinity'::timestamptz),
+    false
+  )`;
+}
+
+export async function getDashboardRewardState(
+  userId: number,
+): Promise<DashboardRewardState> {
+  const [row] = await db
+    .select({
+      milestoneSeen: users.streakMilestoneSeen,
+      bumpStreak: bumpStreakExpression(userId),
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  // No row can only mean the session points at a user that is gone. Nothing
+  // to celebrate, and definitely nothing to invent.
+  if (!row) return { bumpStreak: false, milestoneSeen: null };
+
+  return { bumpStreak: row.bumpStreak, milestoneSeen: row.milestoneSeen };
+}
+
+export async function setDashboardSeenAt(userId: number): Promise<void> {
+  await db
+    .update(users)
+    .set({ dashboardSeenAt: sql`now()` })
+    .where(eq(users.id, userId));
+}
+
+export async function setStreakMilestoneSeen(
+  userId: number,
+  milestone: number,
+): Promise<void> {
+  await db
+    .update(users)
+    .set({ streakMilestoneSeen: milestone })
+    .where(eq(users.id, userId));
 }

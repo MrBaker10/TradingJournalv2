@@ -31,8 +31,11 @@ export function MetricCell({
   highlight = false,
 }: MetricCellProps) {
   return (
+    // Design.md §5: 150ms in, 200ms out. The surface lightens and nothing
+    // else — a metric cell is not clickable, and the lift is this project's
+    // sign for "you can press this" (same split as the calendar grid).
     <div
-      className={`flex flex-col gap-1 p-4 shadow-[var(--shadow-metric-cell)] ${
+      className={`flex flex-col gap-1 p-4 shadow-[var(--shadow-metric-cell)] transition-[background-color] duration-200 ease-[var(--ease-soft)] hover:bg-white/[0.03] hover:duration-150 ${
         highlight ? "bg-[image:var(--gradient-today)]" : ""
       }`}
     >

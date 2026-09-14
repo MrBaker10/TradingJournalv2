@@ -3,6 +3,8 @@ import {
   calculateStreak,
   countsForStreak,
   isTradingDay,
+  pendingStreakMilestone,
+  STREAK_MILESTONES,
   type StreakEntry,
   toTradingDay,
 } from "../streak.ts";
@@ -347,5 +349,90 @@ describe("calculateStreak", () => {
     expect(utc.current).toBe(4);
     expect(utc.graceDayUsed).toBe(true);
     expect(utc.graceDayDate).toBe("2026-09-09");
+  });
+});
+
+describe("pendingStreakMilestone", () => {
+  it("offers nothing below the first milestone", () => {
+    expect(pendingStreakMilestone(0, null)).toBeNull();
+    expect(pendingStreakMilestone(6, null)).toBeNull();
+  });
+
+  it("offers a milestone the day it is reached", () => {
+    expect(pendingStreakMilestone(7, null)).toBe(7);
+    expect(pendingStreakMilestone(30, 7)).toBe(30);
+    expect(pendingStreakMilestone(100, 30)).toBe(100);
+  });
+
+  it("offers nothing once that milestone has been shown", () => {
+    expect(pendingStreakMilestone(7, 7)).toBeNull();
+    expect(pendingStreakMilestone(29, 7)).toBeNull();
+    expect(pendingStreakMilestone(100, 100)).toBeNull();
+  });
+
+  it("skips straight to the highest one earned, without a backlog", () => {
+    // Never opened the dashboard, now on a 45-day streak: the card says 30,
+    // and 7 is gone for good rather than queued behind it.
+    expect(pendingStreakMilestone(45, null)).toBe(30);
+    expect(pendingStreakMilestone(120, null)).toBe(100);
+  });
+
+  it("stays quiet when the streak fell back below what was shown", () => {
+    expect(pendingStreakMilestone(3, 30)).toBeNull();
+  });
+
+  it("keeps the three milestones Design.md §6 names", () => {
+    expect(STREAK_MILESTONES).toEqual([7, 30, 100]);
+  });
+});
+
+// The chain the dashboard actually walks for the milestone card:
+// getStreakEntryDays → calculateStreak → pendingStreakMilestone. The two ends
+// are covered above and in their own suite; this is the join between them,
+// and it is the assertion that matters to a user: log seven trading days in a
+// row and the card shows up.
+describe("streak into milestone", () => {
+  // Sat 09-12 is skipped and Sun 09-13 folds onto Mon 09-14, so seven
+  // consecutive trading days ending Friday 09-18 are these:
+  const SEVEN_TRADING_DAYS = [
+    "2026-09-10",
+    "2026-09-11",
+    "2026-09-14",
+    "2026-09-15",
+    "2026-09-16",
+    "2026-09-17",
+    "2026-09-18",
+  ];
+
+  it("turns seven logged trading days into the 7-day milestone", () => {
+    const streak = calculateStreak(
+      loggedDays(SEVEN_TRADING_DAYS),
+      "2026-09-18",
+      "UTC",
+    );
+
+    expect(streak.current).toBe(7);
+    expect(pendingStreakMilestone(streak.current, null)).toBe(7);
+  });
+
+  it("offers nothing more once that card has been shown", () => {
+    const streak = calculateStreak(
+      loggedDays(SEVEN_TRADING_DAYS),
+      "2026-09-18",
+      "UTC",
+    );
+
+    expect(pendingStreakMilestone(streak.current, 7)).toBeNull();
+  });
+
+  it("offers nothing at six days", () => {
+    const streak = calculateStreak(
+      loggedDays(SEVEN_TRADING_DAYS.slice(1)),
+      "2026-09-18",
+      "UTC",
+    );
+
+    expect(streak.current).toBe(6);
+    expect(pendingStreakMilestone(streak.current, null)).toBeNull();
   });
 });

@@ -302,15 +302,31 @@ Button darf springen (L09).
 Der Erfolgszustand ist der einzige Ort, an dem Grün leuchten darf — er bestätigt
 eine Handlung, nicht einen Geldbetrag.
 
+**Offen seit Designrunde 1:** Der „Save plan"-Button im Dashboard trägt im
+Ruhezustand die ruhige Prozessfläche aus 4.14 statt `--gradient-info` und
+`--shadow-button-primary`. Alle übrigen Primärbuttons („New trade", Trade
+speichern, Konto anlegen) stehen noch auf der lauten Variante oben. Das ist ein
+bewusster Zwischenstand, kein Versehen: die neue Tonalität wird erst an einer
+Seite beurteilt, bevor sie sich über das Projekt legt. Der Erfolgszustand bleibt
+in **beiden** Varianten laut.
+
 ### 4.3 Gamification-Kacheln (Streak, Consistency, Badges)
 
 - `card-surface edge-neon`, Padding 18/20.
 - Links: `cap`-Label, Wert 26px mono mit `text-glow`, darunter Zusatzzeile in
   `--color-fg-subtle` („Longest 21d", „of 100 · 16/19 days", „Tap for criteria",
   „This month").
-- Rechts: 46px Tile, `--gradient-info`, `--shadow-neon`.
-- Der Streak-Tile ist das einzige animierte Element im Dashboard: bei einem neu
-  geloggten Trade **einmal** `scale(1) → 1.14 → 1)` über 620 ms. Kein Dauerpuls.
+- Rechts: 46px Tile, **ruhige Prozessfläche nach 4.14** — `--gradient-info-soft`,
+  `--shadow-info-soft`, Icon in `--color-cyan`. Bis zur Designrunde 1 waren das
+  `--gradient-info` und `--shadow-neon`; die Kachel überstrahlte damit den Wert,
+  den sie beschriftet.
+- Der Streak-Tile bumpt bei einem neu geloggten Trade **einmal**:
+  `scale(1) → 1.14 → 1` über 620 ms mit `--ease-soft`. Kein Dauerpuls.
+  Ausgelöst wird er über `users.dashboard_seen_at` — gebumpt wird, wenn seit dem
+  letzten Dashboard-Besuch ein Trade dazukam, und die Kachel verbucht den Bump
+  danach selbst. Bis zur Designrunde 1 stand hier, er sei „das einzige animierte
+  Element im Dashboard"; das stimmte schon davor nicht, weil der Kalender sich
+  beim Laden aufbaut und seit Designrunde 1 auch einen Hover hat.
 
 ### 4.4 Hinweisleiste (Grace Day)
 
@@ -393,8 +409,15 @@ Prop-Firm-Programm kennt, und diese Verknüpfung liegt in der Roadmap unter Futu
 - **Heute**: `inset 0 0 0 1.5px var(--color-cyan)` plus
   `0 0 22px -4px rgba(33,212,253,.75)` — unabhängig davon, ob der Tag grün, rot
   oder leer ist.
-- Hover: `translateY(-2px)`, 200 ms. Kein Tooltip-Modal; Klick öffnet die Trades
-  des Tages im Journal.
+- Hover, in zwei Stufen (Designrunde 1):
+  - **Jede** Zelle hellt Fläche und Rand auf — `hover:bg-white/5` plus der
+    Hover-Rand ihres Zustands (`--shadow-day-win-hover`, `--shadow-day-loss-hover`,
+    `--shadow-day-flat-hover`), 150 ms. Der Rand bleibt dabei in seiner Farbe:
+    ein grüner Tag wird heller grün, nicht weiß.
+  - **Nur Tage mit Einträgen** heben sich zusätzlich um `translateY(-2px)`. Ein
+    leerer Tag ist kein Link, und ihn anzuheben würde eine Reaktion versprechen,
+    die beim Klick ausbleibt.
+- Kein Tooltip-Modal; Klick öffnet die Trades des Tages im Journal.
 
 Hier ist der farbige Schein auf Geldtagen ausdrücklich erlaubt, weil er
 **Dichte** codiert und nicht Belohnung: man erkennt auf einen Blick, wie der
@@ -403,10 +426,13 @@ Monat verteilt ist. Er ist auf der Kachel, nicht auf der Zahl im Dashboard.
 ### 4.9 Trade-Zeile („Recent trades")
 
 - Zeile als eigene Fläche mit Inset-Rahmen, 10px Abstand zur nächsten.
-- Links 38px Instrument-Tile: `--gradient-info` für gehandelte Trades,
-  `--gradient-dark` für verpasste Setups. Das ist der einzige Unterschied im
-  Aufbau — verpasste Setups werden nicht kleiner, blasser oder weiter unten
-  dargestellt. Sie sind gleichwertige Einträge.
+- Links 38px Instrument-Tile, ruhige Prozessfläche nach 4.14:
+  `--gradient-info-soft` mit `--shadow-info-soft` und cyanem Symbol für
+  gehandelte Trades, `--gradient-dark-soft` mit `--shadow-dark-soft` und
+  Symbol in `--color-fg-muted` für verpasste Setups. **Beide sind gleich
+  gebaut**, die Farbe ist der einzige Unterschied — verpasste Setups werden
+  nicht kleiner, blasser oder weiter unten dargestellt. Sie sind gleichwertige
+  Einträge. Bis zur Designrunde 1 trugen beide den satten Verlauf.
 - Titelzeile: Instrument plus Tags (`short`, `loss`/`win`/`missed`, `Grade B`),
   darunter Metazeile in `--color-fg-subtle`.
 - Rechts: Betrag mono, darunter R-Multiple. Bei verpassten Setups steht dort
@@ -482,6 +508,41 @@ Beide liegen in der aufgeklappten Detailzeile, nebeneinander in einer Reihe.
 - Fehlt beides, steht dort nichts. Kein leerer Platzhalter, kein „Add screenshot"
   in der Leseansicht.
 
+### 4.14 Ruhige Prozessfläche
+
+Eingeführt in Designrunde 1, weil `--gradient-info` plus `--shadow-neon` auf dem
+Dashboard alles andere überstrahlte — die Icon-Kacheln und der Save-Button waren
+heller als die Zahlen, die sie begleiten.
+
+Das Rezept ist nicht neu erfunden, sondern von den Geldtagen der Kalender-Heatmap
+(4.8) übernommen und nur eingefärbt: **schwacher Verlauf, 1px-Inset-Rand in der
+Akzentfarbe, kein Schein nach außen.**
+
+```
+--gradient-info-soft: linear-gradient(310deg,
+                        rgba(0,117,255,.30) 0%,
+                        rgba(0,117,255,.08) 100%);
+--shadow-info-soft:   inset 0 0 0 1px rgba(33,212,253,.45);
+```
+
+Die Deckkraftwerte `.30 → .08` und der Rand bei `.45` sind zeichengleich mit
+`--gradient-day-win` und `--shadow-day-win`. Dass beide Flächen dieselbe Rezeptur
+tragen, ist der Punkt: eine ruhige Fläche sieht überall gleich ruhig aus,
+unabhängig von ihrer Farbe.
+
+**Wofür.** Flächen, die etwas *begleiten*: Icon-Kacheln, sekundäre Aktionsflächen,
+alles, was neben einem Wert steht und nicht wichtiger sein darf als er. Das Icon
+darauf steht in `--color-cyan`, nicht in Weiß — Weiß wäre auf der nun dunklen
+Fläche wieder der hellste Punkt und hätte das Problem nur verschoben.
+
+**Wofür nicht.** Der Erfolgszustand eines Buttons (4.2) und die „Heute"-Markierung
+im Kalender (4.8). Beide bestätigen oder verorten etwas und dürfen deshalb
+leuchten.
+
+**Stand.** Heute benutzt nur das Dashboard diese Fläche — die drei
+Gamification-Kacheln (4.3) und der „Save plan"-Button (4.6). Ob sie sich über das
+Projekt legt, entscheidet die nächste Runde.
+
 ---
 
 ## 5. Motion
@@ -551,7 +612,7 @@ sichtbarer Fortschritt.
 | Plan gespeichert | Toast | klein |
 | Tag reviewed | Toast + Consistency-Wert aktualisiert | klein |
 | Missed Setup geloggt | Toast, gleiche Größe wie bei einem echten Trade | klein |
-| Streak-Meilenstein (7 / 30 / 100) | Karte im Dashboard, einmalig für eine Session | mittel |
+| Streak-Meilenstein (7 / 30 / 100) | Karte im Dashboard, einmalig je Meilenstein | mittel |
 | Badge freigeschaltet | Karte plus Badge füllt sich auf Progress | mittel |
 | Profitabler Tag | **nichts** | — |
 | Grüner Monat | **nichts** | — |
@@ -562,6 +623,14 @@ Toast-Texte nennen immer die **Prozess**folge, nie Geld:
 Ein verpasstes Setup wird genauso belohnt wie ein gehandelter Trade. Das ist
 absichtlich: es ist die einzige Möglichkeit, ehrliches Journaling nicht zu
 bestrafen.
+
+**Korrigiert in Designrunde 1:** Die Meilenstein-Karte stand hier als „einmalig
+für eine Session". Gebaut ist sie als **einmalig je Meilenstein**, gemerkt in
+`users.streak_milestone_seen` — genauso wie die Badge-Karte auf Progress seit S9
+über `users.badges_seen_at` merkt. Eine Session-Merkung hätte dieselbe Karte in
+jedem neuen Tab erneut gezeigt, und das ist keine Belohnung, sondern Rauschen.
+Wer 30 erreicht, ohne die 7er-Karte je gesehen zu haben, bekommt 30 — nicht
+beides nacheinander.
 
 ---
 

@@ -128,6 +128,37 @@
   --shadow-day-flat: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   --shadow-day-today:
     inset 0 0 0 1.5px #21d4fd, 0 0 22px -4px rgba(33, 212, 253, 0.75);
+  /* Hover je Zustand, damit ein grüner Tag beim Überfahren grün bleibt statt
+     weiß zu werden. Der Rand hellt auf, die Fläche kommt aus `hover:bg-white/5`
+     in der Komponente. */
+  --shadow-day-win-hover: inset 0 0 0 1px rgba(1, 217, 140, 0.7);
+  --shadow-day-loss-hover: inset 0 0 0 1px rgba(255, 106, 106, 0.65);
+  --shadow-day-flat-hover: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+
+  /* --- Ruhige Prozessfläche (§4.14) --- */
+  /* Dasselbe Rezept wie die Geldtage darüber, nur in Blau: schwacher Verlauf
+     plus 1px-Inset-Rand, kein Schein nach außen. Prozess darf sich abheben, es
+     muss nicht leuchten. */
+  --gradient-info-soft: linear-gradient(
+    310deg,
+    rgba(0, 117, 255, 0.3) 0%,
+    rgba(0, 117, 255, 0.08) 100%
+  );
+  --shadow-info-soft: inset 0 0 0 1px rgba(33, 212, 253, 0.45);
+  /* Der neutrale Zwilling, gleiche Bauart. Für Flächen, die keine Prozessfarbe
+     tragen dürfen — etwa ein verpasstes Setup, das gleichwertig neben einem
+     gehandelten Trade steht (§4.9). */
+  --gradient-dark-soft: linear-gradient(
+    310deg,
+    rgba(58, 65, 111, 0.35) 0%,
+    rgba(58, 65, 111, 0.1) 100%
+  );
+  --shadow-dark-soft: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+
+  /* --- Toast (§4.11) --- */
+  --shadow-toast:
+    inset 0 0 0 1px rgba(33, 212, 253, 0.45),
+    0 0 30px -8px rgba(0, 117, 255, 0.7);
 
   /* --- Sidebar / Navigation (§4.1) --- */
   --color-nav-idle: rgba(255, 255, 255, 0.06);
@@ -260,4 +291,15 @@ body {
     /* biome-ignore lint/complexity/noImportantStyles: same reason as above. */
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Design.md §4.11 asks for 240ms in and 300ms out. Sonner ships one 400ms
+   transition for both directions and injects its stylesheet at runtime, so it
+   would win on source order — the extra attribute here raises specificity
+   instead, which beats it wherever the injection lands. No !important needed. */
+[data-sonner-toaster] [data-sonner-toast] {
+  transition-duration: 240ms;
+}
+[data-sonner-toaster] [data-sonner-toast][data-removed="true"] {
+  transition-duration: 300ms;
 }

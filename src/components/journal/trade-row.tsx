@@ -131,11 +131,15 @@ export function TradeRow({ trade }: TradeRowProps) {
         aria-expanded={expanded}
         className="flex w-full items-center gap-3 p-3 text-left"
       >
+        {/* Design.md §4.9 and §4.14: both tiles are built the same way — calm
+            fill plus a 1px inset ring — and only the colour differs. A missed
+            setup is not rendered smaller, paler or lower down; it is a
+            differently labelled entry, not a lesser one. */}
         <div
-          className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xs font-mono text-[11px] font-semibold text-white ${
+          className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xs font-mono text-[11px] font-semibold ${
             trade.taken
-              ? "bg-[image:var(--gradient-info)]"
-              : "bg-[image:var(--gradient-dark)]"
+              ? "bg-[image:var(--gradient-info-soft)] text-cyan shadow-[var(--shadow-info-soft)]"
+              : "bg-[image:var(--gradient-dark-soft)] text-fg-muted shadow-[var(--shadow-dark-soft)]"
           }`}
         >
           {trade.instrumentSymbol}

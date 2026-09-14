@@ -176,3 +176,31 @@ export function calculateStreak(
     graceDayDate: graceByMonth.get(thisMonth) ?? null,
   };
 }
+
+/**
+ * The streak milestones that earn the card from Design.md §6. Nothing else
+ * does — a profitable day and a green month deliberately earn nothing.
+ */
+export const STREAK_MILESTONES = [7, 30, 100] as const;
+
+/**
+ * The milestone whose card is due, or `null` when none is. `seen` is the
+ * highest milestone already shown; passing `null` means none ever was.
+ *
+ * Reaching 30 without ever having seen the 7-day card shows 30, not 7: the
+ * card celebrates where the user is, and queuing up a backlog of rewards for
+ * something they already passed would be noise, not a reward.
+ */
+export function pendingStreakMilestone(
+  currentStreak: number,
+  seen: number | null,
+): number | null {
+  const floor = seen ?? 0;
+  let due: number | null = null;
+  for (const milestone of STREAK_MILESTONES) {
+    if (milestone <= currentStreak && milestone > floor) {
+      due = milestone;
+    }
+  }
+  return due;
+}

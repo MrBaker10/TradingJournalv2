@@ -1,6 +1,7 @@
 import { MotionConfig } from "motion/react";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { ToastViewport } from "@/components/ui/toast";
 import "./globals.css";
 
 const instrumentSans = localFont({
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <MotionConfig reducedMotion="user">
           <div className="page-glow fixed inset-0 -z-10 pointer-events-none" />
           {children}
+          <ToastViewport />
         </MotionConfig>
       </body>
     </html>
