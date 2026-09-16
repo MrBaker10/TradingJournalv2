@@ -65,6 +65,12 @@ commit that changes nothing else.
 - **Do not** create `tailwind.config.ts` or `tailwind.config.js`. Those are v3.
 - Theme configuration goes in `src/app/globals.css` via `@theme`.
 - Use CSS custom properties for colours and spacing.
+- **v4 scans every file in the project, Markdown in `context/` included.** An
+  arbitrary-value utility written in prose — in a spec, a note, a comment — is
+  generated as a real rule, and if its value is a placeholder rather than a real one
+  the stylesheet fails to parse and the dev server serves a blank page. The equity
+  curve slice hit this from `current-feature.md`. Name utilities without their
+  brackets in prose.
 
 ```css
 @import "tailwindcss";
@@ -112,6 +118,28 @@ commit that changes nothing else.
   JS-set inline styles. Without it the accessibility promise in `Design.md` is false.
 - No animation without a trigger, and none that shifts layout. Only `opacity`,
   `transform`, `box-shadow`, `max-height` and colours move.
+
+## Charts
+
+- Recharts, client components only. The series arrives finished from the server; a
+  chart component does no money arithmetic of its own. The shape of the curve, its
+  axis domain and its tick values are domain logic and belong in `src/domain/**` with
+  tests, not in a `useMemo` inside the chart.
+- **A CSS variable does not resolve inside an SVG presentation attribute.**
+  `stroke="var(--color-chart-grid)"` is silently ignored, so passing a token through a
+  Recharts colour prop does nothing. Give the element a class and set the property
+  from `globals.css` instead — a CSS rule on the element beats its own presentation
+  attribute. That covers everything, including `stop-color` on a gradient stop, so
+  "no inline styles" under Styling stands without an exception. Every colour of the
+  equity curve is set that way.
+- **A gradient that has to line up with the axis uses
+  `gradientUnits="userSpaceOnUse"`** over the plot area from `usePlotArea()`. The
+  default object bounding box is the box of the *drawn shape* — for an area drawn to a
+  baseline that is not the axis, so a ratio computed against the axis lands in the
+  wrong place.
+- **Recharts animates in JavaScript.** `isAnimationActive` has to hang off
+  `useReducedMotion()`; neither `MotionConfig` nor the `prefers-reduced-motion` block
+  reaches it. Same class of mistake as the calendar hover in S8.
 
 ## Database
 

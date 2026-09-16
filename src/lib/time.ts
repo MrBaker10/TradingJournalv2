@@ -43,6 +43,14 @@ export function formatDayLabel(date: IsoDate): string {
 }
 
 /**
+ * A month as "September 2026", the header line beside a month-scoped card.
+ * UTC-anchored like `formatDayLabel`, and for the same reason.
+ */
+export function formatMonthLabel(month: MonthKey): string {
+  return format(new TZDate(`${month}-01T00:00:00Z`, "UTC"), "MMMM yyyy");
+}
+
+/**
  * First and last date of `month`, inclusive — the bounds every month-scoped
  * query filters `trade_date` against. UTC-anchored, because a date without a
  * time has no zone; the zone was already applied when `month` was derived.

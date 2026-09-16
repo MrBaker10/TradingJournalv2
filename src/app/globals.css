@@ -135,6 +135,19 @@
   --shadow-day-loss-hover: inset 0 0 0 1px rgba(255, 106, 106, 0.65);
   --shadow-day-flat-hover: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 
+  /* --- Dashboard: Equity-Kurve (§4.15) --- */
+  /* Fläche und Linie tragen die semantischen Geldfarben und wechseln an der
+     Nulllinie. Kein Cyan, kein Glow: der Verlauf ist ein Geldwert (§1, §9).
+     Raster und Achsenschrift bleiben deshalb betont neutral, damit die einzige
+     Farbe auf der Karte die Kurve selbst ist. */
+  --color-chart-grid: rgba(255, 255, 255, 0.07);
+  /* Nicht `--color-fg-subtle`: die Y-Achse trägt Geldbeträge, und §8 lässt den
+     dunkelsten Ton nur für Nebeninformationen zu, nie für Werte. */
+  --color-chart-axis: var(--color-fg-muted);
+  /* Die Nulllinie ist heller als das Raster — sie ist keine Hilfslinie, sie ist
+     die Grenze, an der die Kurve die Farbe wechselt. */
+  --color-chart-zero: rgba(255, 255, 255, 0.22);
+
   /* --- Ruhige Prozessfläche (§4.14) --- */
   /* Dasselbe Rezept wie die Geldtage darüber, nur in Blau: schwacher Verlauf
      plus 1px-Inset-Rand, kein Schein nach außen. Prozess darf sich abheben, es
@@ -302,4 +315,61 @@ body {
 }
 [data-sonner-toaster] [data-sonner-toast][data-removed="true"] {
   transition-duration: 300ms;
+}
+
+/* Design.md §4.15. Recharts setzt Farben als SVG-Presentation-Attribute
+   (`stroke="#ccc"`), und in einem Attribut ist `var(--token)` nicht erlaubt —
+   ein Token als Prop durchzureichen wäre also wirkungslos. Eine CSS-Regel auf
+   dasselbe Element schlägt das Attribut, deshalb stehen sämtliche Farben der
+   Kurve hier statt in der Komponente: Raster, Achse, Nulllinie, Cursor-Punkt
+   und die Stopps der beiden Verläufe. Damit bleibt die Regel „keine
+   Farbliterale in Komponenten" aus §2 auch für Diagramme gültig, ohne dass die
+   Komponente einen Inline-Style braucht. Die `recharts-*`-Klassen stammen aus
+   der Bibliothek und sind dort Teil der öffentlichen Oberfläche, die
+   `equity-*`-Klassen setzt die Komponente selbst. */
+.equity-chart .recharts-cartesian-grid line {
+  stroke: var(--color-chart-grid);
+}
+.equity-chart .recharts-reference-line-line {
+  stroke: var(--color-chart-zero);
+}
+.equity-chart .recharts-tooltip-cursor {
+  stroke: var(--color-chart-zero);
+}
+.equity-chart .recharts-cartesian-axis-tick-value {
+  fill: var(--color-chart-axis);
+  /* 12px ist die untere Grenze aus §8, nicht die `cap`-Größe: hier stehen
+     Beträge, keine Kapitälchen-Label. */
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+/* Geld steht in Mono mit Tabellenziffern (§3), auch auf der Achse — sonst
+   wandert das Komma zwischen zwei Rasterlinien. */
+.equity-chart .recharts-yAxis-ticks .recharts-cartesian-axis-tick-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+/* Der Punkt unter dem Cursor: Loch in der Seitenfarbe, Rand in der Farbe der
+   Nulllinie. Er markiert die Stelle, er feiert sie nicht. */
+.equity-chart .recharts-active-dot circle {
+  fill: var(--color-bg);
+  stroke: var(--color-chart-zero);
+  stroke-width: 2px;
+}
+
+/* Die Verlaufsstopps. Die Fläche nimmt den satten Ton, die Linie den helleren
+   Vordergrundton — dieselbe Aufteilung wie zwischen Kalenderkachel und Betrag
+   darauf (§4.8). Die Deckkraft bleibt als `stopOpacity` am Element, weil sie
+   eine Zahl ist und die beiden Enden eines Verlaufs sich unterscheiden. */
+.equity-chart .equity-fill-win {
+  stop-color: var(--color-success);
+}
+.equity-chart .equity-fill-loss {
+  stop-color: var(--color-danger);
+}
+.equity-chart .equity-line-win {
+  stop-color: var(--color-success-fg);
+}
+.equity-chart .equity-line-loss {
+  stop-color: var(--color-danger-fg);
 }

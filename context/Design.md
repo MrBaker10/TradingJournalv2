@@ -545,6 +545,57 @@ Projekt legt, entscheidet die nächste Runde.
 
 ---
 
+### 4.15 Equity-Kurve
+
+Der laufende Monat als kumulierte Flächenkurve, in einer `card-surface edge`-Karte
+über die volle Breite, zwischen Metrik-Tafel (4.7) und Kalenderraster (4.8). Kopf
+wie beim Kalender: `cap cap-neon` links, Monatsname in `--color-fg-subtle` rechts.
+
+**Die Kurve ist ein Geldwert.** Sie bekommt deshalb semantische Farbe und keinen
+Schein — kein Cyan, kein `text-glow`, kein Halo (1, 9). Die Ausnahme von 4.8 gilt
+hier ausdrücklich nicht: dort codiert der Schein die Dichte über den Monat und
+sitzt auf einer kleinen Kachel, hier wäre er eine Feier auf einer großen Fläche.
+
+- **Zweifarbig an der Nulllinie.** Linie in `--color-success-fg` über Null und
+  `--color-danger-fg` darunter, Fläche in `--color-success` / `--color-danger`.
+  Der Wechsel liegt exakt auf `y = 0`, nicht am Rand des gezeichneten Bereichs.
+- **Die Fläche verläuft vom Rand zur Null**, `.30 → .02` Deckkraft. Weit weg von
+  Null ist sie am kräftigsten, an der Nulllinie verschwindet sie. Gelesen wird
+  damit der Abstand zu Null, nicht die Farbe an sich. `.30` ist derselbe Startwert
+  wie bei `--gradient-day-win` und `--gradient-info-soft` (4.8, 4.14).
+- **Die Fläche liegt zwischen Kurve und Nulllinie**, nicht zwischen Kurve und
+  Rahmenunterkante. Eine Verluststrecke ist ein Loch unter der Linie, keine Säule
+  vom Boden aus.
+- **Raster** nur waagerecht, gestrichelt `3 4`, in `--color-chart-grid`. Die
+  Nulllinie ist heller (`--color-chart-zero`) — sie ist keine Hilfslinie, sondern
+  die Grenze, an der die Kurve die Farbe wechselt.
+- **Achsen** ohne eigene Linie und ohne Ticks, Beschriftung in
+  `--color-chart-axis` bei 12px. Nicht kleiner und nicht in `--color-fg-subtle`:
+  auf der Y-Achse stehen Beträge, und 8 lässt den dunkelsten Ton nur für
+  Nebeninformationen zu. Die Y-Achse steht in Mono mit Tabellenziffern, weil dort
+  Geld steht (3); die X-Achse trägt Tageslabels im Format „Sep 3".
+- **Y-Bereich** immer inklusive Null, nach außen auf runde Beträge gerundet, vier
+  Schritte. Ein Monat, der nur gestiegen ist, zeigt die Null trotzdem — sonst
+  fehlt die Linie, von der er sich entfernt hat.
+- **Hover**: senkrechte Cursorlinie in `--color-chart-zero`, ein Punkt auf der
+  Kurve (Loch in `--color-bg`, Rand in derselben Farbe) und eine kleine
+  `card-surface edge`-Fläche mit Datum, Stand und Tagesergebnis. Kein Modal, kein
+  Klickziel: der Weg zu den Trades eines Tages ist die Kalenderkachel.
+
+**Leerer Monat.** Kein leeres Achsenkreuz, sondern derselbe ruhige Satz wie unter
+„Recent trades" (4.9).
+
+**Motion.** Der Aufbau ist die Einzeichnung der Kurve beim Laden, einmal. Recharts
+animiert in JavaScript — weder `MotionConfig` noch der
+`prefers-reduced-motion`-Block in `globals.css` erreicht das, die Animation muss in
+der Komponente abgeschaltet werden (5).
+
+**Stand.** Eine Kurve, der laufende Monat, dem Kontoschalter folgend. Kurven pro
+Konto nebeneinander stehen in der Roadmap unter Future und brauchen eine eigene
+Runde — zusammen mit den Balkendiagrammen von Analytics (10).
+
+---
+
 ## 5. Motion
 
 | Moment | Dauer | Kurve |

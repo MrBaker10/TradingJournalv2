@@ -602,6 +602,18 @@ by picking a different answer while coding.
   behind the session, not only to the ones that show money. `src/app/page.tsx` stays
   static — it sits outside `(app)` and reads nothing. Reasoning: `context/decisions.md`,
   S8 and the Dynamic-Rendering fix.
+- **Chart colours come from CSS, never from a chart prop** (2026-09-16, Equity-Kurve) —
+  a CSS variable does not resolve inside an SVG presentation attribute, so handing a
+  token to a Recharts colour prop is silently ignored. Every chart colour, `stop-color`
+  on a gradient stop included, is set by a CSS rule on the element from `globals.css`;
+  a rule on the element beats its own presentation attribute. That keeps "no colour
+  literals in a component" and "no inline styles" intact for charts without an
+  exception to either. Details: `context/coding-standards.md`, Charts.
+- **A money chart never glows** (2026-09-16, Equity-Kurve) — `Design.md` §4.15 extends
+  §1 to charts: an equity or P&L curve gets the semantic colours and nothing else. The
+  calendar's exception in §4.8, where a coloured glow encodes density on a small tile,
+  does not carry over to a large plotted surface. Applies to every chart still to come,
+  Analytics included.
 
 ---
 

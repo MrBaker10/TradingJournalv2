@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatDayLabel,
+  formatMonthLabel,
   monthKeyOf,
   monthRangeOf,
   todayInTimeZone,
@@ -44,6 +45,14 @@ describe("formatDayLabel", () => {
     expect(formatDayLabel("2026-09-03")).toBe("Sep 3");
     expect(formatDayLabel("2026-01-01")).toBe("Jan 1");
     expect(formatDayLabel("2026-12-31")).toBe("Dec 31");
+  });
+});
+
+describe("formatMonthLabel", () => {
+  it("renders the month the key says, in any machine timezone", () => {
+    expect(formatMonthLabel("2026-09")).toBe("September 2026");
+    expect(formatMonthLabel("2026-01")).toBe("January 2026");
+    expect(formatMonthLabel("2026-12")).toBe("December 2026");
   });
 });
 

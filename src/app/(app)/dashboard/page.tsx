@@ -1,3 +1,4 @@
+import { EquityCurve } from "@/components/dashboard/equity-curve";
 import { MetricPanel } from "@/components/dashboard/metric-panel";
 import { MilestoneCard } from "@/components/dashboard/milestone-card";
 import { PlanCard } from "@/components/dashboard/plan-card";
@@ -22,9 +23,10 @@ import {
   SCORE_WEIGHTS,
   tradingDaysElapsed,
 } from "@/domain/consistency";
+import { buildEquitySeries } from "@/domain/equity";
 import { calculateStreak, pendingStreakMilestone } from "@/domain/streak";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { monthKeyOf, todayInTimeZone } from "@/lib/time";
+import { formatMonthLabel, monthKeyOf, todayInTimeZone } from "@/lib/time";
 
 const RECENT_TRADES_LIMIT = 5;
 
@@ -102,9 +104,14 @@ export default async function DashboardPage() {
 
   const todayTotal = dayTotals.days.find((day) => day.date === today);
 
+  // The curve is the same day series the calendar paints, summed up — not a
+  // second query. Its last point is the Net P&L in the panel above it by
+  // construction, which is the point: one number cannot disagree with itself.
+  const equity = buildEquitySeries(dayTotals.days);
+
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="page-title">Welcome back, {user.displayName}</h1>
+      <h1 className="page-title ml-2">Welcome back, {user.displayName}</h1>
 
       {/* badgesEarned comes from `user_badges`, the same source /progress
           reads. Computing it live here instead would disagree with that page
@@ -135,6 +142,8 @@ export default async function DashboardPage() {
         longestStreak={streak.longest}
         today={today}
       />
+
+      <EquityCurve series={equity} monthLabel={formatMonthLabel(month)} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <PnlCalendar month={month} today={today} days={dayTotals.days} />

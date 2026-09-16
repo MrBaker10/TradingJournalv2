@@ -31,8 +31,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         accounts={accounts}
         selectedAccountId={user.selectedAccountId}
       />
+      {/* The right padding is the scrollbar's lane. Without it the bar of this
+          own scroll container sits on the right edge of every card, and the
+          content ends flush against the screen. */}
       <main
-        className={`sticky top-6 h-[calc(100vh-48px)] min-w-0 flex-1 overflow-y-auto ${
+        className={`sticky top-6 h-[calc(100vh-48px)] min-w-0 flex-1 overflow-y-auto pr-4 ${
           selectedAccount?.isPractice ? "shadow-[var(--shadow-practice)]" : ""
         }`}
       >
