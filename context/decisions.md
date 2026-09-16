@@ -1250,3 +1250,100 @@ Seite unter dem Cursor weggescrollt war und die Maus die Zelle längst verlassen
 Belegt ist per DOM und erzeugtem Stylesheet: `whileHover` ist weg, die Hub-Klasse hängt
 nur an Tagen mit Einträgen, und die Hover-Regel steht mit höherer Spezifität nach der
 Idle-Regel. Ob es sich richtig anfühlt, hat ein Mensch entschieden.
+
+## 2026-09-16 — Equity-Kurve im Dashboard — feature/equity-curve — fd3404a
+
+**Gebaut.** `/dashboard` zeigt den laufenden Monat als kumulierte Flächenkurve zwischen
+Metrik-Tafel und Kalenderraster: laufende Summe der Tages-P&L ab Monatsanfang,
+zweifarbig an der Nulllinie, mit Tooltip aus Datum, Stand und Tagesergebnis. Dazu, als
+zweite und unabhängige Hälfte, bekommt die Hauptspalte rechts eine Rinne für den
+Scrollbalken — der lag vorher auf der Kante jeder Karte.
+
+**Dateien.** Neu: `src/domain/equity.ts` samt `__tests__/equity.test.ts` (19 Tests),
+`src/components/dashboard/equity-curve.tsx`. Geändert:
+`src/app/(app)/dashboard/page.tsx`, `src/app/(app)/layout.tsx`,
+`src/app/globals.css`, `src/lib/time.ts` samt Test, `package.json`/`pnpm-lock.yaml`
+(`recharts` 3.10.1, der Pin aus `coding-standards.md`, erstmals installiert),
+`context/Design.md` (neuer §4.15), `context/coding-standards.md`.
+
+**Regeln.** `buildEquitySeries` ist rein und rechnet ausschließlich in ganzzahligen
+Cent: laufende Summe, Y-Bereich auf runde Beträge nach außen gerundet, Tick-Werte, und
+der Nulldurchgang als Verhältnis 0–1. Die Reihe kommt aus `getMonthDayTotals`, das den
+Kontomultiplikator und den Übungskonto-Ausschluss bereits angewandt hat — das Modul
+multipliziert und filtert deshalb nichts. Ein Tag mit nur verpassten Setups kommt mit
+`amountCents: 0` an und liegt als flacher Punkt auf der Kurve: journaliert, aber ohne
+Wirkung auf die Summe. Streak, Consistency Score und Badges sind nicht berührt.
+
+**Entschieden unterwegs.**
+
+1. **Der Nulldurchgang kommt aus der eigenen Achsenarithmetik, nicht aus den
+   Recharts-Hooks.** Das offizielle Beispiel misst ihn über `useYAxisScale()` am
+   gerenderten Chart. Da die Komponente die Y-Domain selbst setzt und die Skala darüber
+   linear ist, ist `domainMax / (domainMax - domainMin)` derselbe Wert — nur ohne DOM
+   prüfbar und im Domain-Modul getestet.
+2. **Die Verläufe sind über `gradientUnits="userSpaceOnUse"` an die Plot-Fläche aus
+   `usePlotArea()` gebunden.** Die Vorgabe `objectBoundingBox` spannt den Verlauf über
+   das Kästchen der *gezeichneten Form*; die Fläche wird wegen `baseValue={0}` bis zur
+   Nulllinie gezeichnet und nicht bis zum Rahmen, also ist ihr Kästchen nicht die Achse
+   und der Farbwechsel läge daneben.
+3. **Sämtliche Diagrammfarben stehen als CSS-Regeln in `globals.css`, nicht in der
+   Komponente.** Grund ist eine harte Eigenschaft von SVG: in einem
+   Presentation-Attribut ist `var(--token)` nicht erlaubt, ein Token über eine
+   Recharts-Farb-Prop durchzureichen bleibt also wirkungslos. Eine CSS-Regel auf
+   dasselbe Element schlägt das Attribut. Das gilt auch für `stop-color` an den
+   Verlaufsstopps — die trugen zwischenzeitlich ein Inline-`style`, und
+   `coding-standards.md` hatte dafür eine Ausnahme von „No inline styles" bekommen.
+   Beides ist nach dem Review zurückgenommen: eine Projektregel aufzuweichen, weil die
+   eigene Umsetzung sonst nicht passt, ist die falsche Richtung, zumal die Ausnahme für
+   jedes künftige Diagramm gegolten hätte.
+4. **Die Achse hat eine Untergrenze und einen Sonderfall.** Schrittweite mindestens
+   $1, weil keine Achse in Bruchteilen eines Dollars beschriftet wird; ein Monat, dessen
+   Kurve die Null nie verlässt, rundet sonst auf die Domain `[0, 0]` und jede Ableitung
+   daraus teilt durch eine Spanne von null — er bekommt stattdessen einen Schritt Luft
+   nach oben und unten. Beides fanden die Tests, nicht der Browser.
+5. **Achsenbeschriftung in `--color-fg-muted` bei 12px, mit Tabellenziffern.** Der
+   erste Wurf stand in `--color-fg-subtle` bei 10,5px. `Design.md` §8 nennt diesen Ton
+   „mit 12px die untere Grenze und nur für Nebeninformationen erlaubt, nie für Werte" —
+   auf der Y-Achse stehen Beträge. Kein anderes Bauteil im Projekt setzt einen Betrag in
+   diesem Ton. Aus dem Review.
+6. **`formatMonthLabel` ist neu in `src/lib/time.ts`**, UTC-verankert wie
+   `formatDayLabel` und mitgetestet. `pnl-calendar.tsx` formatiert denselben Monatskopf
+   weiter inline mit `date-fns` — damit gibt es vorübergehend zwei Wege. Den Kalender
+   umzustellen lag außerhalb dieses Slices und ist bewusst nicht passiert.
+7. **Der rechte Rand ist 16px zusätzliches Padding in `<main>`**, keine Änderung an der
+   Seitenpolsterung. So liegt der Scrollbalken des eigenen Scroll-Containers in einer
+   Rinne statt auf dem Karteninhalt. Wirkt auf alle sieben Seiten.
+8. **`Design.md` §4.15 ist nach der Umsetzung entstanden, nicht davor.** Das ist die
+   Reihenfolge, die das Dokument eigentlich nicht haben soll; die Kurve war visuell
+   nirgends festgelegt, und eine Komponente ohne Eintrag wäre eine stille Entscheidung
+   gewesen. Der Abschnitt legt für jedes künftige Diagramm fest, dass eine Geldkurve
+   keinen Schein bekommt — die Kalender-Ausnahme aus §4.8 gilt dort ausdrücklich nicht.
+9. **Tailwind v4 scannt jede Datei im Projekt, auch Markdown in `context/`.** Eine
+   Utility mit eckigen Klammern, die als Prosa in `current-feature.md` stand, wurde als
+   echte Regel erzeugt und ließ `globals.css` nicht mehr parsen: der Dev-Server lieferte
+   eine weiße Seite, der Produktions-Build lief unbeeindruckt durch. Steht jetzt unter
+   Tailwind CSS v4.
+
+**Offen geblieben.**
+
+- **Die kumulierte Summe existiert zweimal.** `getMonthDayTotals` berechnet sie in SQL
+  (CTE `cumulative`), benutzt sie für `maxDrawdownCents` und wirft sie weg;
+  `buildEquitySeries` rechnet sie in TypeScript neu. Semantisch identisch, Risiko klein.
+  Zusammenzuführen hieße, `DayTotal` um `equityCents` zu erweitern — den Rückgabetyp, an
+  dem auch der Kalender hängt. Fällt beim Slice für die Kurven pro Konto, der die Query
+  ohnehin anfassen muss.
+- **Die X-Achse ist kategorial über Tage mit Einträgen**, eine Woche Pause sieht aus wie
+  ein Tag. Bei einem Monat mit höchstens 31 Punkten bleibt die Verzerrung begrenzt; auf
+  `/analytics` mit Quartal oder Jahr nicht mehr. Eine Datumsachse verlangt zuerst eine
+  Antwort darauf, welchen Stand ein Tag ohne Eintrag trägt — fachlich der fortgeschriebene
+  vorherige, womit der Monat an jedem Wochenende ein Plateau bekäme. Gehört zur
+  Analytics-Runde.
+- **`prefers-reduced-motion` ist verdrahtet, aber nicht unter Emulation geprüft.**
+  `isAnimationActive` hängt an `useReducedMotion()`, weil Recharts in JavaScript animiert
+  und weder `MotionConfig` noch der CSS-Block es erreicht. Die Emulation war mit den
+  vorhandenen Werkzeugen nicht auslösbar.
+- **Leerer Monat und Kontoschalter sind im Code abgedeckt, im Browser aber nie zu sehen
+  gewesen** — die Seed-Daten haben in jedem Monat Einträge und kennen nur ein Konto.
+- **Die Abnahme von §4.15 steht aus.** Der Abschnitt beschreibt die Umsetzung korrekt,
+  aber drei Punkte darin sind Festlegungen für jedes künftige Diagramm und nicht bloß
+  Beschreibung.
