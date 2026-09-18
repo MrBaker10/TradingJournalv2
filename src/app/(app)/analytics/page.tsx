@@ -1,8 +1,13 @@
 import { DimensionTable } from "@/components/analytics/dimension-table";
+import { ExitEfficiencyCard } from "@/components/analytics/exit-efficiency-card";
+import { HoldTimeCard } from "@/components/analytics/hold-time-card";
 import { MissedSetupsSection } from "@/components/analytics/missed-setups-section";
 import { RangeFilter } from "@/components/analytics/range-filter";
+import { RiskCalibrationCard } from "@/components/analytics/risk-calibration-card";
 import {
   getDimensionBreakdowns,
+  getExcursionBuckets,
+  getExecutionSummary,
   getMissedSetupBreakdowns,
 } from "@/db/queries/analytics";
 import {
@@ -52,9 +57,11 @@ export default async function AnalyticsPage({
     selectedAccountId: user.selectedAccountId,
   };
 
-  const [dimensionRows, missedRows] = await Promise.all([
+  const [dimensionRows, missedRows, execution, excursions] = await Promise.all([
     getDimensionBreakdowns(scope, range),
     getMissedSetupBreakdowns(scope, range),
+    getExecutionSummary(scope, range),
+    getExcursionBuckets(scope, range),
   ]);
 
   const byDimension = groupByDimension(dimensionRows);
@@ -78,6 +85,13 @@ export default async function AnalyticsPage({
           />
         ))}
       </div>
+
+      {/* The three execution sections sit between the dimensions and the
+          missed setups: they are about how a trade was run, not about which
+          bucket it fell into, and they touch no money figure at all. */}
+      <HoldTimeCard summary={execution} />
+      <RiskCalibrationCard summary={execution} excursions={excursions} />
+      <ExitEfficiencyCard summary={execution} />
 
       <MissedSetupsSection byDimension={missedByDimension} />
     </div>

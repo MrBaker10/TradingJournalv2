@@ -5,6 +5,12 @@ import type {
   MissedAggregateRow,
   MissedDimensionId,
 } from "../../domain/analytics.ts";
+import {
+  bucketsFor,
+  type ExcursionCount,
+  type ExcursionKind,
+  type Outcome,
+} from "../../domain/execution.ts";
 import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
 import { instruments } from "../schema/instruments.ts";
@@ -270,4 +276,239 @@ export async function getMissedSetupBreakdowns(
     .unionAll(branch("session"))
     .unionAll(branch("instrument"))
     .unionAll(branch("weekday"));
+}
+
+// --- Execution (S12b) ----------------------------------------------------
+// Hold time, risk calibration from MFE/MAE and exit efficiency from post-exit
+// MFE — the rest of project-overview.md §F.
+//
+// **Every figure below is a count aggregate.** coding-standards.md names hold
+// time and MFE/MAE explicitly: a copy-trade counts once, however many accounts
+// it ran on. Nothing here touches moneyContribution or realAccountCount, and
+// no figure in this section is a money value at all.
+//
+// Taken trades only. A missed setup has no exit and no hold time, and its
+// mfe_r is the "would-be R" of Design.md §4.9 — not an excursion.
+
+/**
+ * Minutes between entry and exit, on the user's chart clock.
+ *
+ * `entry_time` and `exit_time` are `time without time zone` and stay
+ * unconverted (coding-standards.md, Time): this subtracts two clock readings,
+ * it does not apply a zone to either.
+ *
+ * An exit **before** the entry is an overnight trade — futures run nearly
+ * around the clock, so 22:30 to 01:15 is 2h45 and not a negative duration.
+ * There is no exit date to check this against; `trades` carries one
+ * `trade_date`, so "earlier on the clock" is the only signal there is.
+ */
+const holdMinutes = sql<number | null>`(
+  case
+    when ${trades.exitTime} is null then null
+    else extract(epoch from (
+      case
+        when ${trades.exitTime} < ${trades.entryTime}
+          then (${trades.exitTime} - ${trades.entryTime}) + interval '24 hours'
+        else (${trades.exitTime} - ${trades.entryTime})
+      end
+    )) / 60
+  end
+)`;
+
+/**
+ * The share of the available move the trade kept: `r / (r + post-exit MFE)`.
+ *
+ * NULL for anything that cannot answer the question — no post-exit value, no
+ * stop price to measure R against, or a total that is zero or negative. The
+ * caller restricts it to winners on top of that; `src/domain/execution.ts`
+ * carries the same rule and its tests.
+ */
+const capturedShareExpr = sql<number | null>`(
+  case
+    when ${trades.postExitMfeR} is null then null
+    when ${rMultipleSortKey} is null then null
+    when (${rMultipleSortKey} + ${trades.postExitMfeR}) <= 0 then null
+    else ${rMultipleSortKey} / (${rMultipleSortKey} + ${trades.postExitMfeR})
+  end
+)`;
+
+/**
+ * Whether this trade has an R to express an excursion in.
+ *
+ * MFE and MAE are stored **in R**, and R is `move / (entry - stop)` — without a
+ * stop price it is not defined at all. The form takes the two fields anyway,
+ * so the filter sits here on the read side.
+ *
+ * Two existing decisions already say the same thing: `rMultipleSortKey` is NULL
+ * without a stop, so avg R has excluded these trades since S12a, and the form
+ * only offers Post-exit MFE once a stop price is set
+ * (`src/schemas/trades.ts`, superRefine). An average labelled "R" that mixes
+ * defined and undefined R is worse than one over fewer trades.
+ */
+const hasDefinedR = sql`${trades.stopPrice} is not null`;
+
+/** Winners and losers by derived P&L sign, the same split as everywhere else. */
+const outcomeKey = sql<Outcome>`(
+  case when ${tradePnlCents} > 0 then 'winner' else 'loser' end
+)::text`;
+
+const isWinner = sql`${tradePnlCents} > 0`;
+
+export interface ExecutionSummaryRow {
+  outcome: Outcome;
+  /** Average hold time in minutes; null when no trade of this outcome has an exit. */
+  holdMinutes: number | null;
+  holdTrades: number;
+  /**
+   * Average MAE and MFE **magnitude** in R.
+   *
+   * Both drop the sign, for the reason spelled out on MAE_BUCKETS: the form
+   * takes a plain number and does not say whether an excursion is typed as
+   * -0.5 or 0.5. The bucketing has always used the magnitude; the average has
+   * to agree with the bars beside it, or one card contradicts itself.
+   */
+  avgMaeR: number | null;
+  maeTrades: number;
+  avgMfeR: number | null;
+  mfeTrades: number;
+  /** Winners only; null on the loser row by construction. */
+  capturedShare: number | null;
+  capturedTrades: number;
+  /** Average post-exit MFE in R — hypothetical, never rendered as a gain. */
+  avgLeftOnTableR: number | null;
+  leftOnTableTrades: number;
+}
+
+/**
+ * **Count aggregate.** One row per outcome with every execution average, in a
+ * single statement.
+ *
+ * Grouped by outcome rather than spelled out as two sets of columns, so adding
+ * a figure means adding one column and not two. Trades without a derived P&L
+ * (no exit yet) carry no outcome and are filtered out rather than forming a
+ * third group.
+ *
+ * Each average ships with the count of trades that actually carried the value:
+ * an avg MAE over two trades is a different claim than one over two hundred,
+ * and the card says which it is.
+ */
+export async function getExecutionSummary(
+  scope: QueryScope,
+  range?: DateRange,
+  executor: ReadExecutor = db,
+): Promise<ExecutionSummaryRow[]> {
+  const rows = await executor
+    .select({
+      outcome: outcomeKey,
+      holdMinutes: sql<string | null>`avg(${holdMinutes})`,
+      holdTrades: sql<number>`count(${holdMinutes})::int`,
+      avgMaeR: sql<
+        string | null
+      >`avg(abs(${trades.maeR})) filter (where ${hasDefinedR})`,
+      maeTrades: sql<number>`count(${trades.maeR}) filter (where ${hasDefinedR})::int`,
+      avgMfeR: sql<
+        string | null
+      >`avg(abs(${trades.mfeR})) filter (where ${hasDefinedR})`,
+      mfeTrades: sql<number>`count(${trades.mfeR}) filter (where ${hasDefinedR})::int`,
+      capturedShare: sql<
+        string | null
+      >`avg(${capturedShareExpr}) filter (where ${isWinner})`,
+      capturedTrades: sql<number>`count(${capturedShareExpr}) filter (where ${isWinner})::int`,
+      avgLeftOnTableR: sql<
+        string | null
+      >`avg(${trades.postExitMfeR}) filter (where ${isWinner})`,
+      leftOnTableTrades: sql<number>`count(${trades.postExitMfeR}) filter (where ${isWinner})::int`,
+    })
+    .from(trades)
+    .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
+    .where(and(takenScope(scope, range), sql`${tradePnlCents} is not null`))
+    .groupBy(outcomeKey);
+
+  return rows.map((row) => ({
+    outcome: row.outcome,
+    holdMinutes: row.holdMinutes === null ? null : Number(row.holdMinutes),
+    holdTrades: row.holdTrades,
+    avgMaeR: row.avgMaeR === null ? null : Number(row.avgMaeR),
+    maeTrades: row.maeTrades,
+    avgMfeR: row.avgMfeR === null ? null : Number(row.avgMfeR),
+    mfeTrades: row.mfeTrades,
+    capturedShare:
+      row.capturedShare === null ? null : Number(row.capturedShare),
+    capturedTrades: row.capturedTrades,
+    avgLeftOnTableR:
+      row.avgLeftOnTableR === null ? null : Number(row.avgLeftOnTableR),
+    leftOnTableTrades: row.leftOnTableTrades,
+  }));
+}
+
+/**
+ * The bucket boundaries of src/domain/execution.ts, as a CASE expression.
+ *
+ * Generated from the same constants the labels come from, so the SQL and the
+ * axis of the card cannot drift apart. `abs()` is what makes the MAE sign
+ * irrelevant — the form does not say whether to type -0.5 or 0.5.
+ */
+function bucketIndexExpr(kind: ExcursionKind, value: SQL): SQL<number> {
+  const buckets = bucketsFor(kind);
+  const branches = buckets
+    .filter((bucket) => bucket.to !== null)
+    .map(
+      (bucket, index) => sql`when abs(${value}) < ${bucket.to} then ${index}`,
+    );
+
+  return sql<number>`(case ${sql.join(branches, sql` `)} else ${
+    buckets.length - 1
+  } end)::int`;
+}
+
+/**
+ * **Count aggregate.** How many trades of each outcome fall into each MAE and
+ * MFE bucket, in one statement.
+ *
+ * Two branches unioned rather than two round trips. Buckets with no trade
+ * simply do not come back; `buildExcursionRows` fills the gaps, because a
+ * missing bar is part of the distribution's shape.
+ */
+export async function getExcursionBuckets(
+  scope: QueryScope,
+  range?: DateRange,
+  executor: ReadExecutor = db,
+): Promise<ExcursionCount[]> {
+  const where = and(
+    takenScope(scope, range),
+    sql`${tradePnlCents} is not null`,
+  );
+
+  // The bucket index is computed in a subquery and grouped by its alias in the
+  // outer select, rather than repeating the CASE in both places. Postgres
+  // matches a GROUP BY expression to a select expression syntactically, and
+  // Drizzle binds each boundary as a fresh parameter — the two copies render
+  // as $2 and $13 and stop looking like the same expression, which costs a
+  // "must appear in the GROUP BY clause" error. Same family as the
+  // qualification trap in coding-standards.md, Database.
+  function branch(kind: ExcursionKind, column: SQL) {
+    const rows = executor
+      .select({
+        outcome: outcomeKey.as("outcome"),
+        bucketIndex: bucketIndexExpr(kind, column).as("bucket_index"),
+      })
+      .from(trades)
+      .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
+      .where(and(where, sql`${column} is not null`, hasDefinedR))
+      .as(`${kind}_rows`);
+
+    return executor
+      .select({
+        kind: sql<ExcursionKind>`${kind}::text`,
+        outcome: rows.outcome,
+        bucketIndex: rows.bucketIndex,
+        trades: sql<number>`count(*)::int`,
+      })
+      .from(rows)
+      .groupBy(rows.outcome, rows.bucketIndex);
+  }
+
+  return branch("mae", sql`${trades.maeR}`).unionAll(
+    branch("mfe", sql`${trades.mfeR}`),
+  );
 }

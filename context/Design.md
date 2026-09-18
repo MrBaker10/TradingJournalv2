@@ -660,9 +660,75 @@ das einzige Primitiv, und keine Zeile führt irgendwohin — der Weg zu den Trad
 Dimension ist der Journal-Filter, nicht ein Drilldown von hier.
 
 **Stand.** Elf Dimensionen, ein Zeitraum, dem Kontoschalter folgend. Haltedauer,
-Risikokalibrierung und Exit-Effizienz kommen in S12b und bekommen vermutlich eine
-andere Form als eine Bucket-Tabelle — spätestens dann ist die eigene Runde aus 10
-fällig.
+Risikokalibrierung und Exit-Effizienz sind seit S12b da und stehen in 4.17 — sie
+haben die Bucket-Tabelle behalten, nur mit anderen Spalten. Die eigene Runde aus 10
+steht weiter aus.
+
+**Das Zeilen-Layout liegt inzwischen vierfach im Code** (4.16 zweimal, 4.17 zweimal):
+Kopfzeile mit `border-white/8`, Zeilen mit `divide-white/6`, Label links `truncate`,
+Zahlen rechts in Mono bei 13px. Die Festlegungen stimmen überein, aber sie stehen
+nicht an einem Ort. Zusammengezogen wird beim CSV-Import, der die fünfte Tabelle
+mitbringt — dann gibt es fünf echte Fälle statt vier plus einer Vermutung.
+
+---
+
+### 4.17 Execution-Auswertungen
+
+Die drei Abschnitte aus S12b, unter den elf Dimensionskarten und über den Missed
+Setups: **Hold time**, **Risk calibration**, **Exit efficiency**. Sie beantworten
+nicht, *welcher* Bucket zahlt, sondern *wie* ein Trade gefahren wurde. Aufbau,
+Karten und Zeilen sind die aus 4.16 — was hier steht, sind die Unterschiede.
+
+**Keine Geldzahl, nirgends.** Auf diesen drei Abschnitten steht kein einziger Betrag.
+Alles ist ein R-Vielfaches, eine Dauer oder eine Anzahl. Das ist keine Sparsamkeit,
+sondern die Trennlinie: Ausführungsqualität ist Prozess, und Prozess wird hier nicht
+in Geld gemessen.
+
+**Die Farbregel folgt daraus** und ist der Grund, warum dieser Abschnitt überhaupt
+nötig ist:
+
+- **Balken tragen Neon** (`ValueBar tone="process"`), wie die Consistency-Balken in
+  4.3 und die Missed-Setups in 4.16. Eine Verteilung ist ein Prozesswert.
+- **Der erfasste Anteil leuchtet** (`text-glow`). Er sagt, wie gut ausgeführt wurde,
+  nicht wie viel verdient — derselbe Wertetyp wie der Consistency Score.
+- **Alles Hypothetische bleibt weiß.** MFE, Post-exit MFE und das entgangene R sind
+  Beträge, die nie realisiert wurden. 4.9 verbietet für den „would-be R" einer
+  verpassten Position ausdrücklich Grün, und hier gilt dasselbe: `text-fg`, kein
+  Erfolgs-Ton, keine semantische Farbe. **Ein nicht verdienter Gewinn wird nie
+  eingefärbt wie ein verdienter.**
+- Und weil nichts davon Geld ist, taucht auch `--color-success` / `--color-danger`
+  in keinem der drei Abschnitte auf.
+
+**Hold time** ist eine Karte mit zwei Zeilen, Gewinner und Verlierer, je mit
+Durchschnittsdauer und Trade-Anzahl. Die Dauer steht als `1h 35m`, unter einer Stunde
+als `40m` — auf ganze Minuten gerundet, weil die Eingabe eine Chart-Uhr war und eine
+Sekundenangabe eine Genauigkeit behaupten würde, die es nie gab. Weder Zeile ist
+eingefärbt: länger halten ist für sich genommen weder gut noch schlecht.
+
+**Risk calibration** sind vier Karten im Zweierraster — MAE und MFE, je nach Gewinnern
+und Verlierern getrennt. Kopfzeile trägt den Mittelwert plus „avg over n": ein
+Mittelwert über zwei Trades ist eine andere Aussage als einer über zweihundert, und
+die Karte sagt, welche. Darunter fünf Bucket-Zeilen mit Anzahl, Anteil und Balken.
+**Leere Buckets bleiben stehen** — die Form der Verteilung ist der Befund, und eine
+fehlende Zeile würde die Lücke verbergen, die sie zeigen soll.
+
+**Exit efficiency** ist eine Karte mit zwei Zahlen nebeneinander: der erfasste Anteil
+in Prozent (leuchtend) und das entgangene R (weiß). Nur Gewinner, und nur Trades mit
+einem eingetragenen Post-exit MFE.
+
+**Leerzustände** stehen je Karte und sagen, *warum* nichts da ist — „No post-exit MFE
+recorded in this range. It is a manual field and only appears when a trade has a stop
+price." Das ist wichtiger als sonst, weil alle drei Abschnitte auf optionalen
+Handeingaben beruhen: eine leere Karte heißt hier meistens „nicht erfasst", nicht
+„nicht passiert".
+
+Eine zweite Ursache kommt dazu: **ein Trade ohne Stop-Preis liefert keine Excursion**,
+weil MFE und MAE in R angegeben sind und R ohne Stop nicht definiert ist. Die MAE- und
+MFE-Karten können also leer bleiben, obwohl Werte eingetippt wurden. Das ist dieselbe
+Linie, die avg R in 4.16 schon zieht.
+
+**Stand.** Gebaut, nicht entworfen — derselbe Vorbehalt wie 4.16. Mit diesem Abschnitt
+ist §F vollständig.
 
 ---
 

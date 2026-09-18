@@ -4,13 +4,21 @@ import type {
   DimensionAggregateRow,
   MissedAggregateRow,
 } from "../../../domain/analytics.ts";
+import {
+  bucketIndexOf,
+  type ExcursionCount,
+  type Outcome,
+} from "../../../domain/execution.ts";
 import { db } from "../../index.ts";
 import { accounts } from "../../schema/accounts.ts";
 import { instruments } from "../../schema/instruments.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
 import {
+  type ExecutionSummaryRow,
   getDimensionBreakdowns,
+  getExcursionBuckets,
+  getExecutionSummary,
   getMissedSetupBreakdowns,
 } from "../analytics.ts";
 import type { QueryScope } from "../scope.ts";
@@ -35,6 +43,12 @@ interface FixtureTrade {
   exitPrice?: string;
   stopPrice?: string;
   tradeDate?: string;
+  /** Chart clock. An exit earlier than the entry is an overnight trade. */
+  entryTime?: string;
+  exitTime?: string;
+  mfeR?: string;
+  maeR?: string;
+  postExitMfeR?: string;
 }
 
 interface Fixture {
@@ -48,6 +62,8 @@ interface Fixture {
 interface Result {
   dimensions: DimensionAggregateRow[];
   missed: MissedAggregateRow[];
+  execution: ExecutionSummaryRow[];
+  excursions: ExcursionCount[];
 }
 
 async function run(fixture: Fixture): Promise<Result> {
@@ -99,13 +115,17 @@ async function run(fixture: Fixture): Promise<Result> {
             instrumentId: instrument.id,
             taken,
             contracts: taken ? 1 : null,
-            entryTime: "09:00",
+            entryTime: fixtureTrade.entryTime ?? "09:00",
+            exitTime: taken ? (fixtureTrade.exitTime ?? "09:30") : null,
             direction: "long",
             entryPrice: "100",
             exitPrice: taken ? (fixtureTrade.exitPrice ?? "110") : null,
             stopPrice: fixtureTrade.stopPrice ?? null,
             setupType: fixtureTrade.setupType ?? null,
             session: fixtureTrade.session ?? null,
+            mfeR: fixtureTrade.mfeR ?? null,
+            maeR: fixtureTrade.maeR ?? null,
+            postExitMfeR: fixtureTrade.postExitMfeR ?? null,
           })
           .returning({ id: trades.id });
 
@@ -131,6 +151,8 @@ async function run(fixture: Fixture): Promise<Result> {
       result = {
         dimensions: await getDimensionBreakdowns(scope, undefined, tx),
         missed: await getMissedSetupBreakdowns(scope, undefined, tx),
+        execution: await getExecutionSummary(scope, undefined, tx),
+        excursions: await getExcursionBuckets(scope, undefined, tx),
       };
 
       tx.rollback();
@@ -393,5 +415,322 @@ describe("getMissedSetupBreakdowns", () => {
         candidate.dimension === "session" && candidate.bucket === "London",
     );
     expect(row?.missed).toBe(1);
+  });
+});
+
+// --- Execution (S12b) ----------------------------------------------------
+// The fixture instrument has point value 50, every trade enters at 100. With
+// a stop at 95 the risk is 5 points, so an exit at 110 is +2R and an exit at
+// 95 is -1R. Those two numbers are what the expectations below are built on.
+
+function outcomeRow(
+  rows: ExecutionSummaryRow[],
+  outcome: Outcome,
+): ExecutionSummaryRow | undefined {
+  return rows.find((row) => row.outcome === outcome);
+}
+
+describe("getExecutionSummary", () => {
+  describe("hold time", () => {
+    it("measures the clock difference in minutes", async () => {
+      const { execution } = await run({
+        accounts: { Live: false },
+        trades: [
+          { on: ["Live"], entryTime: "09:00", exitTime: "09:30" },
+          { on: ["Live"], entryTime: "10:00", exitTime: "11:30" },
+        ],
+      });
+
+      const winners = outcomeRow(execution, "winner");
+      expect(winners?.holdTrades).toBe(2);
+      expect(winners?.holdMinutes).toBe(60);
+    });
+
+    it("reads an exit before the entry as an overnight trade", async () => {
+      // 22:30 to 01:15 is 2h45, not a negative duration and not 21 hours.
+      const { execution } = await run({
+        accounts: { Live: false },
+        trades: [{ on: ["Live"], entryTime: "22:30", exitTime: "01:15" }],
+      });
+
+      expect(outcomeRow(execution, "winner")?.holdMinutes).toBe(165);
+    });
+
+    it("keeps winners and losers apart", async () => {
+      const { execution } = await run({
+        accounts: { Live: false },
+        trades: [
+          { on: ["Live"], entryTime: "09:00", exitTime: "09:30" },
+          {
+            on: ["Live"],
+            exitPrice: "90",
+            entryTime: "14:00",
+            exitTime: "14:15",
+          },
+        ],
+      });
+
+      expect(outcomeRow(execution, "winner")?.holdMinutes).toBe(30);
+      expect(outcomeRow(execution, "loser")?.holdMinutes).toBe(15);
+    });
+
+    it("counts a copy-trade once, not once per account", async () => {
+      // coding-standards.md: hold time and MFE/MAE are count aggregates.
+      const { execution } = await run({
+        accounts: { A: false, B: false, C: false },
+        trades: [
+          { on: ["A", "B", "C"], entryTime: "09:00", exitTime: "09:30" },
+        ],
+      });
+
+      expect(outcomeRow(execution, "winner")?.holdTrades).toBe(1);
+    });
+  });
+
+  describe("risk calibration", () => {
+    it("averages MAE by magnitude, whichever sign was typed", async () => {
+      const { execution } = await run({
+        accounts: { Live: false },
+        trades: [
+          { on: ["Live"], stopPrice: "95", maeR: "-0.30", mfeR: "2.50" },
+          { on: ["Live"], stopPrice: "95", maeR: "0.20", mfeR: "1.50" },
+        ],
+      });
+
+      const winners = outcomeRow(execution, "winner");
+      expect(winners?.avgMaeR).toBeCloseTo(0.25, 10);
+      expect(winners?.avgMfeR).toBeCloseTo(2.0, 10);
+      expect(winners?.maeTrades).toBe(2);
+    });
+
+    it("averages MFE by magnitude too, so the number agrees with its bars", async () => {
+      // Found in review: the bucketing always used abs(), the average did not.
+      // A negative MFE then sat in the 2–3R bar while the average read -2.50R,
+      // and one card contradicted itself.
+      const { execution, excursions } = await run({
+        accounts: { Live: false },
+        trades: [{ on: ["Live"], stopPrice: "95", mfeR: "-2.50" }],
+      });
+
+      expect(outcomeRow(execution, "winner")?.avgMfeR).toBeCloseTo(2.5, 10);
+      expect(excursions.find((row) => row.kind === "mfe")?.bucketIndex).toBe(
+        bucketIndexOf("mfe", 2.5),
+      );
+    });
+
+    it("counts only the trades that carry a value", async () => {
+      const { execution } = await run({
+        accounts: { Live: false },
+        trades: [
+          { on: ["Live"], stopPrice: "95", maeR: "0.50" },
+          { on: ["Live"] },
+          { on: ["Live"] },
+        ],
+      });
+
+      const winners = outcomeRow(execution, "winner");
+      expect(winners?.maeTrades).toBe(1);
+      expect(winners?.avgMaeR).toBeCloseTo(0.5, 10);
+      expect(winners?.holdTrades).toBe(3);
+    });
+
+    it("ignores an excursion on a trade without a stop price", async () => {
+      // MFE and MAE are stored in R, and R needs a stop to be defined at all.
+      // avg R has excluded these trades since S12a; these figures now agree.
+      const { execution } = await run({
+        accounts: { Live: false },
+        trades: [
+          { on: ["Live"], stopPrice: "95", maeR: "0.20" },
+          { on: ["Live"], maeR: "0.90", mfeR: "3.00" },
+        ],
+      });
+
+      const winners = outcomeRow(execution, "winner");
+      expect(winners?.maeTrades).toBe(1);
+      expect(winners?.avgMaeR).toBeCloseTo(0.2, 10);
+      expect(winners?.mfeTrades).toBe(0);
+      // The trade itself still counts everywhere it has a defined figure.
+      expect(winners?.holdTrades).toBe(2);
+    });
+
+    it("has no average when nothing carried a value", async () => {
+      const { execution } = await run({
+        accounts: { Live: false },
+        trades: [{ on: ["Live"] }],
+      });
+
+      expect(outcomeRow(execution, "winner")?.avgMaeR).toBeNull();
+      expect(outcomeRow(execution, "winner")?.maeTrades).toBe(0);
+    });
+  });
+
+  describe("exit efficiency", () => {
+    it("averages the captured share over winners", async () => {
+      // +2R giving back 1R is 2/3; +1R giving back 1R is 1/2.
+      const { execution } = await run({
+        accounts: { Live: false },
+        trades: [
+          {
+            on: ["Live"],
+            exitPrice: "110",
+            stopPrice: "95",
+            postExitMfeR: "1.00",
+          },
+          {
+            on: ["Live"],
+            exitPrice: "105",
+            stopPrice: "95",
+            postExitMfeR: "1.00",
+          },
+        ],
+      });
+
+      const winners = outcomeRow(execution, "winner");
+      expect(winners?.capturedShare).toBeCloseTo((2 / 3 + 1 / 2) / 2, 6);
+      expect(winners?.capturedTrades).toBe(2);
+      expect(winners?.avgLeftOnTableR).toBeCloseTo(1.0, 10);
+    });
+
+    it("leaves losers out of both figures", async () => {
+      const { execution } = await run({
+        accounts: { Live: false },
+        trades: [
+          {
+            on: ["Live"],
+            exitPrice: "90",
+            stopPrice: "95",
+            postExitMfeR: "1.00",
+          },
+        ],
+      });
+
+      const losers = outcomeRow(execution, "loser");
+      expect(losers?.capturedShare).toBeNull();
+      expect(losers?.capturedTrades).toBe(0);
+      expect(losers?.avgLeftOnTableR).toBeNull();
+    });
+
+    it("has no share without a stop price to measure R against", async () => {
+      const { execution } = await run({
+        accounts: { Live: false },
+        trades: [{ on: ["Live"], exitPrice: "110", postExitMfeR: "1.00" }],
+      });
+
+      expect(outcomeRow(execution, "winner")?.capturedTrades).toBe(0);
+    });
+  });
+
+  it("excludes missed setups, which have no exit and no excursion", async () => {
+    const { execution } = await run({
+      accounts: { Live: false },
+      trades: [
+        { on: ["Live"], entryTime: "09:00", exitTime: "09:30" },
+        { on: [], taken: false, mfeR: "1.80" },
+      ],
+    });
+
+    expect(outcomeRow(execution, "winner")?.holdTrades).toBe(1);
+    expect(outcomeRow(execution, "winner")?.mfeTrades).toBe(0);
+  });
+
+  it("follows the practice filter like every other figure", async () => {
+    const { execution } = await run({
+      accounts: { Live: false, Demo: true },
+      trades: [
+        { on: ["Live"], stopPrice: "95", maeR: "0.20" },
+        { on: ["Demo"], stopPrice: "95", maeR: "0.90" },
+      ],
+    });
+
+    expect(outcomeRow(execution, "winner")?.avgMaeR).toBeCloseTo(0.2, 10);
+    expect(outcomeRow(execution, "winner")?.maeTrades).toBe(1);
+  });
+});
+
+describe("getExcursionBuckets", () => {
+  it("buckets MAE by magnitude against the domain boundaries", async () => {
+    const { excursions } = await run({
+      accounts: { Live: false },
+      trades: [
+        { on: ["Live"], stopPrice: "95", maeR: "-0.30" },
+        { on: ["Live"], stopPrice: "95", maeR: "0.20" },
+        { on: ["Live"], stopPrice: "95", maeR: "1.40" },
+      ],
+    });
+
+    const mae = excursions.filter((row) => row.kind === "mae");
+    const byIndex = Object.fromEntries(
+      mae.map((row) => [row.bucketIndex, row.trades]),
+    );
+    expect(byIndex[0]).toBe(1); // 0.20
+    expect(byIndex[1]).toBe(1); // 0.30
+    expect(byIndex[4]).toBe(1); // 1.40
+  });
+
+  it("agrees with bucketIndexOf on a boundary value", async () => {
+    // The SQL CASE is generated from the same constants; this pins the pair.
+    const { excursions } = await run({
+      accounts: { Live: false },
+      trades: [
+        { on: ["Live"], stopPrice: "95", maeR: "0.25" },
+        { on: ["Live"], stopPrice: "95", mfeR: "1.00" },
+      ],
+    });
+
+    const mae = excursions.find((row) => row.kind === "mae");
+    const mfe = excursions.find((row) => row.kind === "mfe");
+    expect(mae?.bucketIndex).toBe(bucketIndexOf("mae", 0.25));
+    expect(mfe?.bucketIndex).toBe(bucketIndexOf("mfe", 1.0));
+  });
+
+  it("splits the two kinds and the two outcomes", async () => {
+    const { excursions } = await run({
+      accounts: { Live: false },
+      trades: [
+        { on: ["Live"], stopPrice: "95", maeR: "0.20", mfeR: "2.50" },
+        {
+          on: ["Live"],
+          exitPrice: "90",
+          stopPrice: "95",
+          maeR: "1.20",
+          mfeR: "0.40",
+        },
+      ],
+    });
+
+    expect(
+      excursions.find((row) => row.kind === "mae" && row.outcome === "winner")
+        ?.bucketIndex,
+    ).toBe(0);
+    expect(
+      excursions.find((row) => row.kind === "mae" && row.outcome === "loser")
+        ?.bucketIndex,
+    ).toBe(4);
+    expect(
+      excursions.find((row) => row.kind === "mfe" && row.outcome === "winner")
+        ?.bucketIndex,
+    ).toBe(3);
+    expect(
+      excursions.find((row) => row.kind === "mfe" && row.outcome === "loser")
+        ?.bucketIndex,
+    ).toBe(0);
+  });
+
+  it("leaves a stopless trade out of the distribution too", async () => {
+    const { excursions } = await run({
+      accounts: { Live: false },
+      trades: [{ on: ["Live"], maeR: "0.20", mfeR: "2.50" }],
+    });
+
+    expect(excursions).toEqual([]);
+  });
+
+  it("returns nothing for a trade without excursion values", async () => {
+    const { excursions } = await run({
+      accounts: { Live: false },
+      trades: [{ on: ["Live"] }],
+    });
+
+    expect(excursions).toEqual([]);
   });
 });
