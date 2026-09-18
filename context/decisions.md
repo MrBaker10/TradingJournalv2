@@ -1449,3 +1449,113 @@ ist Chart-Uhr. avg R mittelt über die Trades mit Stop-Preis, nicht über alle.
   nur mit vorübergehend gesenkter Grenze zu sehen. Mit echten Daten ungeprüft.
 - **Leerer Zustand einer Dimension und der Leerzustand des Missed-Abschnitts** sind im
   Code abgedeckt, im Browser aber nie aufgetreten.
+
+## 2026-09-18 — S12b Execution-Auswertungen — feature/analytics-execution — 44447c5
+
+**Gebaut.** `/analytics` beantwortet jetzt auch die drei Fragen zur Ausführung, die
+`project-overview.md` §F nur beim Namen nannte: **Haltedauer** (Gewinner und Verlierer
+getrennt), **Risikokalibrierung** als MAE/MFE-Verteilung je Ergebnis, und
+**Exit-Effizienz** aus dem manuellen Post-exit-MFE. Drei eigene Abschnitte unter den
+elf Dimensionskarten, über den Missed Setups. Damit ist §F vollständig; in Phase 1
+fehlt nur noch der CSV-Import.
+
+**Dateien.** Domain: `src/domain/execution.ts` (20 Tests, vor der ersten Query grün).
+Queries: der Execution-Block in `src/db/queries/analytics.ts` mit
+`getExecutionSummary` und `getExcursionBuckets`, je ein Statement; der Fixture-Harness
+in `src/db/queries/__tests__/analytics.test.ts` kann jetzt Zeiten und Excursion-Werte,
+17 neue Tests. UI: `src/components/analytics/{hold-time-card,risk-calibration-card,
+exit-efficiency-card}.tsx` und zwei Queries mehr in `src/app/(app)/analytics/page.tsx`.
+`Design.md` §4.17 neu, §4.16 fortgeschrieben.
+
+**Migration.** Keine. `mfe_r`, `mae_r`, `post_exit_mfe_r`, `entry_time` und `exit_time`
+existieren seit S4 — der Slice liest nur, was nie ausgewertet wurde.
+
+**Regeln.** Alles hier ist Zählaggregat: `tradePnlCents` dient als Vorzeichentest und
+Null-Prüfung, nie als Summand, und kein `moneyContribution` kommt vor. Nur
+`taken = true`. Scope, Zeitraum und Übungsfilter laufen unverändert über `scopeWhere`.
+Auf den drei Abschnitten steht keine einzige Geldzahl.
+
+**Entschieden unterwegs.**
+
+- **Die drei Kennzahlen waren nirgends definiert.** §F nennt „hold time, risk
+  calibration from MFE/MAE, exit efficiency from post-exit MFE" und hört da auf; weder
+  `Design.md` noch dieses Dokument sagten, wie gerechnet wird. Die vier Festlegungen
+  unten sind deshalb im `load` getroffen worden, nicht aus einem Dokument übernommen.
+- **Risikokalibrierung ist die klassische MAE-Studie:** wie weit gingen die Gewinner
+  gegen dich, wie weit liefen die Verlierer für dich. Die erste Hälfte beantwortet „wie
+  viel Stop brauche ich wirklich", die zweite „wie viel gebe ich zurück". Vier Karten,
+  je Mittelwert plus Fünf-Bucket-Verteilung.
+- **Exit-Effizienz ist `r / (r + post-exit MFE)`, nur über Gewinner.** Ein Verlust hat
+  keine Effizienz, und der Nenner würde eine erfinden; bei `r + post <= 0` ist der Wert
+  `null` statt 0. Daneben das entgangene R absolut.
+- **Ein Ausstieg vor dem Einstieg ist eine Nacht, keine negative Dauer**, gerechnet als
+  plus 24 Stunden. Futures laufen fast rund um die Uhr. Es gibt kein Ausstiegsdatum,
+  gegen das man das prüfen könnte — `trades` trägt ein `trade_date`, also ist „früher
+  auf der Uhr" das einzige Signal, das da ist.
+- **MAE und MFE zählen über den Betrag.** `src/schemas/trades.ts` nimmt `z.number()`
+  und das Formular sagt nicht, ob `-0.5` oder `0.5` zu tippen ist — ohne `abs()` hinge
+  die ganze Auswertung an einer Eingabegewohnheit. Das galt zuerst nur fürs Bucketing;
+  **das Review fand, dass der MFE-Mittelwert daneben das Vorzeichen noch las**, ein
+  negatives MFE also im 2–3R-Balken saß und gleichzeitig als −2,50R gemittelt wurde.
+  Seitdem gilt `abs()` für beide, mit eigenem Test.
+- **Ohne Stop-Preis zählt keine Excursion.** MFE und MAE sind in R gespeichert, und R
+  ist ohne Stop nicht definiert — das Formular nimmt die Felder trotzdem an. Mittelwert
+  und Verteilung filtern deshalb auf `stop_price is not null` (`hasDefinedR` in
+  `analytics.ts`). Das schließt an zwei bestehende Entscheidungen an, statt eine dritte
+  zu erfinden: `rMultipleSortKey` ist ohne Stop NULL, avg R aus S12a übergeht solche
+  Trades also längst, und Post-exit MFE erscheint im Formular erst, wenn ein Stop
+  gesetzt ist (`superRefine` in `src/schemas/trades.ts`). Ein Mittelwert mit der Einheit
+  R, der definierte und undefinierte R vermischt, ist schlechter als einer über weniger
+  Trades. Betraf bei der Einführung null Datensätze — reine Definitionsschärfe. Zwei
+  Tests, und die Fixtures der Excursion-Tests tragen den Stop-Preis jetzt sichtbar je
+  Trade, statt ihn in einem Default zu verstecken.
+- **Die Bucket-Grenzen stehen genau einmal.** Die SQL-`CASE` wird aus `MAE_BUCKETS` /
+  `MFE_BUCKETS` generiert, und ein Test hält das Ergebnis gegen `bucketIndexOf` — SQL
+  und Achsenbeschriftung können nicht auseinanderlaufen.
+- **Leere Buckets bleiben stehen**, leere Missed-Buckets nicht. Bei einer Verteilung
+  ist die Lücke der Befund; bei „wo zögere ich" ist eine Nullzeile die Antwort auf eine
+  Frage, die niemand gestellt hat.
+- **Hypothetisches wird nie grün.** MFE, Post-exit MFE und das entgangene R sind
+  Beträge, die nie realisiert wurden. §4.9 verbietet das für den „would-be R" einer
+  verpassten Position; §4.17 zieht die Regel jetzt ausdrücklich auf jede nicht
+  realisierte Zahl. Der erfasste Anteil dagegen leuchtet — er misst Ausführung, nicht
+  Ertrag.
+- **`getExecutionSummary` liefert eine Zeile pro Ergebnis**, nicht die eine Zeile, die
+  der Spec beschrieb. Ein `GROUP BY` über das Ergebnis spart die doppelte Spaltenliste;
+  ein Statement bleibt es. Abweichung vom Spec-Wortlaut, nicht von seiner Absicht.
+- **Der Bucket-Index wird in einer Subquery berechnet und außen über seinen Alias
+  gruppiert.** Die direkte Fassung scheiterte an Postgres: Drizzle bindet jede
+  Bucket-Grenze als eigenen Parameter, dieselbe `CASE` rendert in der Select-Liste als
+  `$2…$10` und in `GROUP BY` als `$13…$21`, und Postgres vergleicht syntaktisch — das
+  kostet ein `must appear in the GROUP BY clause`. Dieselbe Familie wie die
+  Qualifizierungs-Falle, die seit Designrunde 1 in `coding-standards.md` steht.
+
+**Offen geblieben.**
+
+- **Das Zeilen-Layout liegt vierfach im Code** — `dimension-table`,
+  `missed-setups-section`, `hold-time-card` und `risk-calibration-card` bauen dieselbe
+  Kopfzeile, denselben `divide-y`-Block und dieselbe Label-links-Zahlen-rechts-Zeile.
+  Sieben Design-Festlegungen (`border-white/8`, `divide-white/6`, 13px Mono,
+  `tabular-nums`, `truncate`, `shrink-0`, `py-2`), viermal getippt. Entschieden:
+  **jetzt nicht auflösen.** Zwei der vier stammen aus S12a und sind gemerged, ein
+  Auszug wäre also kein Execution-Commit mehr; und vier Kopien sind die Zahl, bei der
+  man das Muster erkennt, aber noch nicht bezahlt. Zusammengezogen wird beim
+  CSV-Import, der mit seiner Vorschautabelle die fünfte mitbringt — dann gibt es fünf
+  echte Fälle statt vier plus einer Vermutung darüber, was die fünfte braucht. Die
+  Form dann: kleine Primitiven (`TableHead`, `TableRows`, `TableRow`) ohne
+  Spaltenkonfiguration, **keine** `DataTable` mit `columns`-Prop — die vier Karten
+  unterscheiden sich in Balken, Aufklapper und Zahlentonart genug, dass eine
+  Konfigurationssprache schwerer zu lesen wäre als das Markup, das sie ersetzt.
+- **Die Beschriftung des MAE-Felds ist ungeklärt.** Rechnerisch ist das Vorzeichen
+  durch `abs()` erledigt — beide Schreibweisen liefern dasselbe Ergebnis, und `abs()`
+  bleibt auch künftig das Netz. Was fehlt, ist dass der Nutzer weiß, was erwartet wird:
+  das Feld heißt nur „MAE (R)" und `src/schemas/trades.ts` nimmt `z.number()` ohne
+  Einschränkung. **Entschieden: ein eigener kleiner `fix:`-Slice am Formular**, der die
+  Konvention an das Feld schreibt. Nicht hier, weil er `new-trade-form.tsx` anfasst und
+  einen eigenen Klickpfad braucht.
+- **Neun reine Testtrades liegen jetzt im Dev-Journal** (drei aus S12a, vier aus
+  diesem Slice, zwei ältere). Sie verschieben jede Zahl auf Dashboard, Analytics und
+  Progress; die Haltedauer-Karte zeigt deshalb 45m über zwölf Gewinner statt der
+  isolierten 95m aus dem Spec. Die im Klickpfad geprüften Zahlen sind die, die nur an
+  den vier neuen Trades hängen. **Bewusst stehen gelassen** — es ist eine
+  Entwicklungsdatenbank, und einen Lösch-Pfad für Trades hat die App ohnehin nicht.
