@@ -1,5 +1,5 @@
 import { TZDate } from "@date-fns/tz";
-import { format, lastDayOfMonth } from "date-fns";
+import { format, lastDayOfMonth, subDays } from "date-fns";
 import type { IsoDate } from "../domain/streak.ts";
 
 // The user's timezone (`users.timezone`) decides every calendar boundary:
@@ -61,4 +61,26 @@ export function monthRangeOf(month: MonthKey): { from: IsoDate; to: IsoDate } {
     from: format(firstOfMonth, "yyyy-MM-dd"),
     to: format(lastDayOfMonth(firstOfMonth), "yyyy-MM-dd"),
   };
+}
+
+/**
+ * The date range behind a range-filter preset, resolved against the user's own
+ * "today" — which is why it lives here and not in the client component: a
+ * preset is a calendar boundary, and calendar boundaries are the user's zone
+ * (coding-standards.md, Time).
+ *
+ * "Last 30 days" includes today, so it starts 29 days back. `null` is "All
+ * time", the default, which filters `trade_date` not at all.
+ */
+export function rangeForPreset(
+  preset: string | undefined,
+  today: IsoDate,
+): { from: IsoDate; to: IsoDate } | null {
+  if (preset === "month") return monthRangeOf(monthKeyOf(today));
+
+  const days = preset === "30d" ? 30 : preset === "90d" ? 90 : null;
+  if (days === null) return null;
+
+  const end = new TZDate(`${today}T00:00:00Z`, "UTC");
+  return { from: format(subDays(end, days - 1), "yyyy-MM-dd"), to: today };
 }

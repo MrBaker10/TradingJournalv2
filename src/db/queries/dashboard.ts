@@ -1,13 +1,11 @@
-import { and, eq, gte, lte, type SQL, sql } from "drizzle-orm";
+import { and, eq, gte, lte, sql } from "drizzle-orm";
 import type { ScoreDay, ScoreEntry } from "../../domain/consistency.ts";
 import type { IsoDate } from "../../domain/streak.ts";
 import { monthRangeOf } from "../../lib/time.ts";
 import { db } from "../index.ts";
-import { accounts } from "../schema/accounts.ts";
 import { dailyNotes } from "../schema/daily-notes.ts";
 import { instruments } from "../schema/instruments.ts";
 import {
-  tradeAccounts,
   tradeConfluences,
   tradeLinks,
   tradeScreenshots,
@@ -15,6 +13,14 @@ import {
 } from "../schema/trades.ts";
 import { users } from "../schema/users.ts";
 import { hasEodReview, listMonthReviewDates } from "./daily-notes.ts";
+import {
+  moneyContribution,
+  moneyWeight,
+  type QueryScope,
+  ratioCents,
+  scopeConditions,
+  toNumber,
+} from "./scope.ts";
 import { hasRealAccount, rMultipleSortKey, tradePnlCents } from "./trades.ts";
 
 // Every figure on the dashboard comes from this file, and every exported
@@ -22,94 +28,11 @@ import { hasRealAccount, rMultipleSortKey, tradePnlCents } from "./trades.ts";
 // by the assigned real accounts) or a **count aggregate** (does not). Getting
 // that wrong misstates P&L silently — coding-standards.md, Money.
 //
-// Scope, in one place so no query invents its own:
-//
-// - "All accounts" means all accounts with is_practice = false. The practice
-//   filter sits inside realAccountCount and hasRealAccount and runs before
-//   anything is summed.
-// - A selected account is the only code path allowed to read practice data,
-//   and it never multiplies: the per-account value is the figure.
-// - A missed setup carries no account at all (src/domain/trades.ts) and no
-//   P&L. It is therefore in scope in both modes, and drops out of every money
-//   sum on its own because tradePnlCents is NULL for it.
-// - Streak, consistency score and badges see real accounts only
-//   (project-structure.md), so their queries take no selected account and do
-//   not follow the switcher.
+// The account scope itself — the practice filter, the multiplier and the
+// per-account branch — lives in ./scope.ts, shared with the analytics queries.
 
-export interface DashboardScope {
-  userId: number;
-  /** `users.selected_account_id`. null = "All accounts" = all real accounts. */
-  selectedAccountId: number | null;
-}
-
-// The money multiplier from src/domain/accounts.ts, in SQL because the
-// aggregation runs in the database: how many real accounts this trade was
-// copy-traded onto. is_practice = false is the first thing it filters.
-const realAccountCount = sql<number>`(
-  select count(*)::int
-  from ${tradeAccounts}
-  join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
-  where ${accounts.isPractice} = false
-    and ${tradeAccounts.tradeId} = ${trades.id}
-)`;
-
-function assignedToAccount(accountId: number): SQL<boolean> {
-  return sql<boolean>`exists (
-    select 1 from ${tradeAccounts}
-    where ${tradeAccounts.tradeId} = ${trades.id}
-      and ${tradeAccounts.accountId} = ${accountId}
-  )`;
-}
-
-/**
- * The rows a dashboard figure is allowed to see: this user's entries in the
- * date range, with taken trades narrowed to the selected scope and missed
- * setups always included, since they belong to no account by design.
- */
-function scopeConditions(
-  scope: DashboardScope,
-  range: { from: IsoDate; to: IsoDate },
-): SQL[] {
-  const inScope =
-    scope.selectedAccountId === null
-      ? hasRealAccount
-      : assignedToAccount(scope.selectedAccountId);
-
-  return [
-    eq(trades.userId, scope.userId),
-    gte(trades.tradeDate, range.from),
-    lte(trades.tradeDate, range.to),
-    sql`(${trades.taken} = false or ${inScope})`,
-  ];
-}
-
-/** One trade's contribution to a money figure, in integer cents. */
-function moneyContribution(scope: DashboardScope): SQL<number> {
-  return scope.selectedAccountId === null
-    ? sql<number>`(${tradePnlCents} * ${realAccountCount})`
-    : sql<number>`${tradePnlCents}`;
-}
-
-/**
- * How many times this trade lands in a money figure: the denominator that
- * belongs to the numerator above. A copy-trade on three real accounts adds
- * three times to the sum and three to this, so an average stays the average
- * of one execution on one account.
- */
-function moneyWeight(scope: DashboardScope): SQL<number> {
-  return scope.selectedAccountId === null
-    ? sql<number>`${realAccountCount}`
-    : sql<number>`1`;
-}
-
-function toNumber(value: unknown): number {
-  return Number(value ?? 0);
-}
-
-/** Integer cents in, integer cents out — never a fraction of a cent. */
-function ratioCents(totalCents: number, weight: number): number | null {
-  return weight > 0 ? Math.round(totalCents / weight) : null;
-}
+/** The dashboard's name for the shared scope. Same shape, same rules. */
+export type DashboardScope = QueryScope;
 
 export interface MonthMoneyMetrics {
   netPnlCents: number;

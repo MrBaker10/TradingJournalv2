@@ -186,6 +186,19 @@ Non-negotiable, because this is a P&L tool:
   trade on three accounts contributes three times to net P&L and once to trades logged.
   Getting this wrong misstates P&L silently, so every aggregate query states which of
   the two it is, and `src/domain/accounts.ts` owns the multiplier.
+- **Multiply exactly once.** The rule above says *that* money multiplies, not *what*
+  does the multiplying. Two things can, and only one of them may:
+  - the **expression**, when the query groups by something other than the account —
+    `moneyContribution()` in `src/db/queries/scope.ts` multiplies by
+    `realAccountCount`;
+  - the **join**, when the query joins `trade_accounts` and groups by account. Each
+    trade already produces one row per assigned account there, so that branch sums the
+    **unmultiplied** per-trade value.
+
+  Doing both squares the figure: a three-account copy-trade lands nine times. Before
+  writing a per-account aggregate, decide which of the two multiplies and say so in the
+  function's header. Worked example and its test: `getDimensionBreakdowns` in
+  `src/db/queries/analytics.ts`, pinned by `__tests__/analytics.test.ts`.
 - **Every combined query filters `accounts.is_practice = false` first**, and the money
   multiplier counts real assigned accounts only. This applies to money, counts,
   calendar, equity curve, streak, consistency and badges alike. A practice

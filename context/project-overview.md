@@ -614,6 +614,17 @@ by picking a different answer while coding.
   calendar's exception in §4.8, where a coloured glow encodes density on a small tile,
   does not carry over to a large plotted surface. Applies to every chart still to come,
   Analytics included.
+- **A grouping that fans out per account is itself the multiplier** (2026-09-18, S12a) —
+  the money rule stays "multiply by the assigned real accounts", with one mechanical
+  exception: when a query joins `trade_accounts` and groups by account, each trade
+  already contributes one row per account, so that branch sums the **unmultiplied**
+  per-trade P&L. Applying the multiplier on top counts a three-account copy-trade nine
+  times. The rule is not "By account is special" but "multiply exactly once" — whoever
+  writes the next per-account aggregate has to decide which of the two does it, the
+  `JOIN` or the expression. First and so far only case:
+  `getDimensionBreakdowns` in `src/db/queries/analytics.ts`, pinned by
+  `src/db/queries/__tests__/analytics.test.ts`. The shared scope helpers live in
+  `src/db/queries/scope.ts`. Details: `context/decisions.md`, S12a.
 
 ---
 

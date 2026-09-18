@@ -596,6 +596,76 @@ Runde — zusammen mit den Balkendiagrammen von Analytics (10).
 
 ---
 
+### 4.16 Analytics-Dimensionstabelle
+
+Entstanden in S12a, aus den vorhandenen Primitiven gebaut — wie die Progress-Seite in
+S9 und mit demselben Vorbehalt: **tragfähig, aber nicht entworfen.** Abschnitt 10
+nennt die Balkendiagramme von Analytics ausdrücklich als eigene Runde. Was hier steht,
+beschreibt die Umsetzung und hält die Festlegungen fest, die sie nötig gemacht hat.
+
+**Die Karte.** Eine `card-surface edge`-Karte je Dimension, Kopf `cap cap-neon`
+(„By setup type"), darunter bei Bedarf eine Hinweiszeile in `--color-fg-subtle`.
+Elf Karten in einem zweispaltigen Raster mit `items-start` — eine Dimension mit zwei
+Buckets darf nicht auf die Höhe einer mit zwanzig gezogen werden, das liest sich wie
+eine Karte, die ihre Daten verloren hat.
+
+**Die Zeile.** Bucket links, vier Zahlen rechts in Mono mit Tabellenziffern: Trades,
+Win, Net P&L, Avg R. Darunter ein 3px-Balken über die volle Zeilenbreite. Ein Bucket
+ohne Wert steht als „Not set" kursiv in `--color-fg-subtle` und sortiert immer ans
+Ende — es ist die Abwesenheit eines Wertes, kein Wert, der die anderen geschlagen hat.
+
+**Der Balken ist die Stelle, an der 1 zur Regel wird.** Er kommt aus einer einzigen
+Komponente (`src/components/ui/value-bar.tsx`), und die entscheidet die Farbe, nicht
+der Aufrufer:
+
+- `tone="gain"` / `tone="loss"` — **Geld.** `--color-success` / `--color-danger`,
+  flach. Kein Verlauf, kein Schein, keine Feier auf dem besten Bucket. Skaliert gegen
+  den größten **Absolutwert** der Dimension, damit der schlechteste und der beste
+  Bucket vergleichbar schwer gezeichnet werden.
+- `tone="process"` — **Prozess.** `--gradient-info`, dieselbe Füllung wie die
+  Consistency-Balken in 4.3. Benutzt von den Missed Setups unten.
+
+Die Breite läuft über einundzwanzig feste Klassen in Fünf-Prozent-Schritten, nicht
+über einen Inline-Style. „No inline styles" ist hart, und Tailwind erzeugt nur
+Klassen, die es im Quelltext sieht. Auf 3px ist der Unterschied zwischen zwei
+Schritten ohnehin unsichtbar, und die genaue Zahl steht daneben.
+
+**Acht Zeilen, dann ein Aufklapper.** „Stunde" hat bis zu 24 Buckets, „Confluence"
+rund 30 — elf Karten in voller Länge sind keine Seite. Sichtbar sind acht, der Rest
+hängt hinter „Show all (n)" im 260ms-Aufklapper aus 5. **Abgeschnitten wird nichts:**
+„nichts verschwindet lautlos" gilt hier wie beim Übungskonto-Zähler im Journal.
+
+**Missed Setups** stehen als eigener Abschnitt unter den elf Karten, mit
+`cap cap-neon`-Überschrift und vier Karten in `cap`. Sie tragen **keine einzige
+Geldzahl** — nur Anzahl und Anteil. Ihr Balken ist Prozess und darf deshalb Neon
+tragen: ein Missed Setup speist Streak und Badges und fasst kein Geld an. Dass er
+genau so aussieht wie ein Score-Balken, ist die Aussage, nicht ein Versehen.
+
+**Der Anteil hat einen erklärungsbedürftigen Nenner**, und die Erklärung steht auf
+dem Schirm statt in diesem Dokument: ein Missed Setup trägt kein Konto, ist also in
+jeder Kontoauswahl sichtbar, während die genommenen Trades daneben gefiltert sind.
+Auf einem kleinen Konto liest sich daraus sonst schnell eine Quote, die es nicht gibt.
+Eine Zeile unter der Abschnittsüberschrift sagt das (7).
+
+**Zeitraumfilter.** `card-surface edge` über der ganzen Seite, Von/Bis plus vier
+Presets in der Chip-Optik der Journal-Filter. Die Datumsfelder sind **uncontrolled**:
+ein `type="date"` feuert sein Change-Event mit leerem Wert, solange das Datum halb
+getippt ist, und ein Rückschreiben dieses Wertes setzt den Datumseditor des Browsers
+mitten in der Eingabe zurück. Ein `key` auf dem Feld erzwingt den Remount, wenn ein
+Preset den Zeitraum löscht — das braucht der Journal-Filter nicht, weil dort niemand
+außer dem Feld selbst die Daten ändert.
+
+**Kein Diagramm.** Auf dieser Seite läuft kein Recharts. Der waagerechte Balken ist
+das einzige Primitiv, und keine Zeile führt irgendwohin — der Weg zu den Trades einer
+Dimension ist der Journal-Filter, nicht ein Drilldown von hier.
+
+**Stand.** Elf Dimensionen, ein Zeitraum, dem Kontoschalter folgend. Haltedauer,
+Risikokalibrierung und Exit-Effizienz kommen in S12b und bekommen vermutlich eine
+andere Form als eine Bucket-Tabelle — spätestens dann ist die eigene Runde aus 10
+fällig.
+
+---
+
 ## 5. Motion
 
 | Moment | Dauer | Kurve |
@@ -759,8 +829,11 @@ Die fünf Punkte dieses Abschnitts sind abgearbeitet:
 Offen bleiben zwei, weil sie Gestaltung und nicht Entscheidung sind:
 
 - **Analytics und Prop Firm Rules** sind hier nicht auf Komponentenebene
-  beschrieben. Die Balkendiagramme, die Filter-Chips und die Regel-Detailtabelle
-  brauchen eine eigene Runde, sobald das Dashboard steht.
+  entworfen. Analytics ist seit S12a in 4.16 beschrieben — aber beschrieben, nicht
+  entworfen: die Dimensionstabelle ist aus vorhandenen Primitiven gebaut und nie
+  gegen die anderen Screens gehalten. Die Regel-Detailtabelle der Prop Firm Rules
+  fehlt weiterhin ganz. Beide brauchen dieselbe eigene Runde wie die Progress-Seite
+  unten.
 - **Die Progress-Seite** ist hier nur über 4.3 (Gamification-Kacheln) und 4.4
   (Grace-Day-Leiste) abgedeckt. Für die Aufschlüsselung des Consistency Score in
   seine vier Teilwerte und für das Raster der zwölf Badges gibt es keine Vorgabe.

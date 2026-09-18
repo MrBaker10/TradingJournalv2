@@ -4,6 +4,7 @@ import {
   formatMonthLabel,
   monthKeyOf,
   monthRangeOf,
+  rangeForPreset,
   todayInTimeZone,
 } from "../time.ts";
 
@@ -82,6 +83,42 @@ describe("monthRangeOf", () => {
     expect(monthRangeOf("2028-02")).toEqual({
       from: "2028-02-01",
       to: "2028-02-29",
+    });
+  });
+});
+
+describe("rangeForPreset", () => {
+  it("has no range at all for All time", () => {
+    expect(rangeForPreset(undefined, "2026-09-16")).toBeNull();
+    expect(rangeForPreset("all", "2026-09-16")).toBeNull();
+    expect(rangeForPreset("nonsense", "2026-09-16")).toBeNull();
+  });
+
+  it("counts today as one of the last 30 days", () => {
+    expect(rangeForPreset("30d", "2026-09-16")).toEqual({
+      from: "2026-08-18",
+      to: "2026-09-16",
+    });
+  });
+
+  it("counts today as one of the last 90 days", () => {
+    expect(rangeForPreset("90d", "2026-09-16")).toEqual({
+      from: "2026-06-19",
+      to: "2026-09-16",
+    });
+  });
+
+  it("crosses a year boundary without drifting", () => {
+    expect(rangeForPreset("30d", "2027-01-05")).toEqual({
+      from: "2026-12-07",
+      to: "2027-01-05",
+    });
+  });
+
+  it("spans the calendar month the day belongs to", () => {
+    expect(rangeForPreset("month", "2026-09-16")).toEqual({
+      from: "2026-09-01",
+      to: "2026-09-30",
     });
   });
 });
