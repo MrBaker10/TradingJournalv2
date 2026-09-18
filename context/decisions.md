@@ -1347,3 +1347,105 @@ Wirkung auf die Summe. Streak, Consistency Score und Badges sind nicht berührt.
 - **Die Abnahme von §4.15 steht aus.** Der Abschnitt beschreibt die Umsetzung korrekt,
   aber drei Punkte darin sind Festlegungen für jedes künftige Diagramm und nicht bloß
   Beschreibung.
+
+## 2026-09-18 — S12a Analytics-Dimensionen — feature/analytics-dimensions — ec803ad
+
+**Gebaut.** `/analytics` zeigt die elf Dimensionen aus `project-overview.md` §F — Konto,
+Setup-Typ, Entry-Modell, Session, Instrument, Wochentag, Stunde, Confluence,
+Gefühlslage, Ausführungsnote, Fehler — je mit Trades, Win Rate, Netto-P&L und avg R,
+dazu einen Missed-Setups-Abschnitt ohne eine einzige Geldzahl. Zeitraum über Von/Bis
+plus vier Presets, Default „Alles", alles in `searchParams`. Die Seite folgt dem
+Kontoschalter wie Dashboard und Journal.
+
+S12 ist bewusst geteilt: Haltedauer, Risikokalibrierung aus MFE/MAE und Exit-Effizienz
+aus Post-exit MFE sind **S12b** und standen in diesem Branch unter „Do not build".
+
+**Dateien.** Domain: `src/domain/analytics.ts` (26 Tests, vor der ersten Query grün).
+Queries: `src/db/queries/analytics.ts` — `getDimensionBreakdowns` als *ein*
+`UNION ALL` über elf `GROUP BY`, `getMissedSetupBreakdowns` über vier; dazu
+`src/db/queries/__tests__/analytics.test.ts` mit 16 Tests gegen echtes Postgres.
+UI: `src/components/analytics/{dimension-table,missed-setups-section,range-filter}.tsx`,
+`src/lib/analytics/href.ts`, `src/app/(app)/analytics/page.tsx`.
+`Design.md` §4.16 neu, §10 fortgeschrieben.
+
+Außerhalb des Scope, beides aus dem Review: `src/components/ui/value-bar.tsx` mit
+`score-breakdown.tsx` als zweitem Aufrufer, und `src/lib/search-params.ts` mit
+`journal/href.ts` als zweitem Aufrufer. Dazu `rangeForPreset` in `src/lib/time.ts`.
+
+**Migration.** Keine. Keine neue Tabelle, keine neue Spalte, keine neue Abhängigkeit.
+
+**Regeln.** Geldaggregat ist allein `netPnlCents`; `trades`, `wins`, `rSum` und `rCount`
+sind Zählaggregate. Übungskonten fallen vor jeder Summe raus, das allein gewählte Konto
+ist der einzige Pfad zu ihren Zahlen und multipliziert nie. Missed Setups sind
+`taken = false`, aus jeder Geldspalte draußen und bei gewähltem Konto trotzdem sichtbar,
+weil sie kein Konto tragen. `entry_time` bleibt unkonvertiert — die Stunden-Dimension
+ist Chart-Uhr. avg R mittelt über die Trades mit Stop-Preis, nicht über alle.
+
+**Entschieden unterwegs.**
+
+- **„Nach Konto" summiert unmultipliziert.** Der Join über `trade_accounts` fächert den
+  Trade selbst je Konto auf, die Gruppierung *ist* dort also schon der Multiplikator.
+  Zusätzlich `moneyContribution` zu benutzen hätte einen Drei-Konten-Copy-Trade neunfach
+  gezählt. Die einzige Stelle im Projekt, an der ein Geldaggregat bewusst nicht
+  multipliziert — deshalb steht die Begründung im Kopf von `analytics.ts` und ein Test
+  darauf.
+- **Ein `UNION ALL` statt elf Round-Trips**, verkettet über `.unionAll()` statt
+  `unionAll(a, b, ...rest)`: die variadische Form verlangt ein Tupel, ein per `map`
+  gebautes Array ist keins. `GROUPING SETS` scheidet aus, weil drei Dimensionen eigene
+  Joins brauchen.
+- **Confluence und Fehler über LEFT JOIN**, damit ein Trade ohne Tag als „Not set"
+  auftaucht statt aus der Tabelle zu fallen. Ein Trade mit drei Confluences steht in drei
+  Zeilen — die Spalte „Trades" summiert sich dort nicht auf die Gesamtzahl, und die Karte
+  sagt das.
+- **Wochentag zeigt sieben Buckets.** Die Sonntag-auf-Montag-Regel steht unter „Streak"
+  und gilt dem Zählen von Logging-Tagen, nicht der Frage, wann gehandelt wurde.
+- **„Not set" ist eine eigene Zeile am Ende**, nicht ein weggelassener Bucket — sonst
+  kommen die Anteile nicht auf 100 %, und eine Dimension, die niemand pflegt, ist selbst
+  ein Befund. In den Missed Setups umgekehrt: Buckets mit null Verpassten fallen raus,
+  weil der Abschnitt „wo zögere ich" beantwortet.
+- **Acht Zeilen je Karte, Rest hinter „Show all (n)".** Abgeschnitten wird nichts.
+- **Der Anteil im Missed-Abschnitt hat einen scope-abhängigen Nenner**, weil ein Missed
+  Setup kein Konto trägt und deshalb in jeder Auswahl mitzählt, während die genommenen
+  Trades daneben gefiltert sind. Auf einem kleinen Konto liest sich daraus sonst eine
+  Quote, die es nicht gibt. Gelöst als Microcopy unter der Überschrift, nicht als
+  Umbau der Regel.
+- **Der Missed-Balken trägt Neon.** Ein Missed Setup speist Streak und Badges und fasst
+  kein Geld an, ist also Prozess (§1). Dass er genauso aussieht wie ein Score-Balken, ist
+  die Aussage. Seit dem `ValueBar`-Auszug ist das erzwungen statt behauptet.
+- **`ReadExecutor`** — ein optionaler Lese-Parameter auf beiden Query-Funktionen, den
+  Produktion nie setzt. Die Alternative wäre gewesen, die Geldregeln gegen echtes
+  Postgres *nicht* zu testen oder Fixture-Daten in die Dev-Datenbank zu schreiben.
+  Erste Transaktionsnaht in `src/db/queries/`; `src/actions/*` reichen `tx` schon länger
+  herum.
+- **Datumsfelder sind uncontrolled, mit `key`.** Ein `type="date"` feuert Change mit
+  leerem Wert, solange das Datum halb getippt ist; ein controlled Feld schreibt das
+  zurück und setzt den Datumseditor mitten in der Eingabe zurück. Der `key` erzwingt den
+  Remount, wenn ein Preset den Zeitraum löscht — das braucht `journal-filters.tsx` nicht,
+  weil dort niemand außer dem Feld selbst die Daten ändert.
+- **Presets werden auf dem Server aufgelöst**, nicht im Browser: ein Preset ist eine
+  Kalendergrenze, und die gehört in die Zeitzone des Nutzers. Deshalb `range=30d` in der
+  URL und `rangeForPreset` neben `monthRangeOf`, statt fertiger Daten aus der
+  Client-Komponente.
+- **Zwei Duplikate aufgelöst, die dieser Slice selbst erzeugt hat** (aus dem Review):
+  `FILL_WIDTHS` lag danach dreimal im Projekt, jetzt einmal in
+  `src/components/ui/value-bar.tsx`, das auch die Farbregel aus §1 trägt;
+  `buildAnalyticsHref` war `buildJournalHref` mit anderem Basispfad, beide laufen jetzt
+  über `buildHref` in `src/lib/search-params.ts`.
+
+**Offen geblieben.**
+
+- **Die elf Zweige scannen `trades` elfmal**, und `realAccountCount` ist in zehn davon
+  eine korrelierte Subquery pro Zeile. Für ein persönliches Journal über
+  `trades_user_date_idx` unkritisch und derselbe Ausdruck, den das Dashboard schon fährt.
+  Fällt auf, wenn ein Nutzer je fünfstellig viele Trades hat.
+- **§4.16 ist beschrieben, nicht entworfen.** Wie bei der Progress-Seite nach S9: aus
+  vorhandenen Primitiven gebaut und nie gegen die anderen Screens gehalten. Die eigene
+  Runde aus §10 steht weiter aus und wird spätestens mit S12b fällig, dessen drei
+  Auswertungen vermutlich keine Bucket-Tabelle sind.
+- **`ReadExecutor` ist eine Testnaht im Produktionscode.** Bewusst so entschieden, aber
+  wenn das Muster sich über `src/db/queries/` ausbreitet, gehört es einmal grundsätzlich
+  entschieden statt slice-weise.
+- **Keine Dimension hatte in den Seed-Daten mehr als acht Buckets**, der Aufklapper war
+  nur mit vorübergehend gesenkter Grenze zu sehen. Mit echten Daten ungeprüft.
+- **Leerer Zustand einer Dimension und der Leerzustand des Missed-Abschnitts** sind im
+  Code abgedeckt, im Browser aber nie aufgetreten.
