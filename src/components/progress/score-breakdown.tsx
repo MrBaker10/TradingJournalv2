@@ -1,3 +1,4 @@
+import { ValueBar } from "@/components/ui/value-bar";
 import type { ConsistencyScore } from "@/domain/consistency";
 import { SCORE_WEIGHTS } from "@/domain/consistency";
 
@@ -48,52 +49,6 @@ function partsOf(score: ConsistencyScore): Part[] {
   ];
 }
 
-// Twenty-one static width classes instead of one inline style: "no inline
-// styles" is a hard rule in coding-standards.md, and Tailwind only emits
-// classes it can actually see in the source. Five-percent steps are
-// indistinguishable on a 1.5px bar, and the exact number stands next to it.
-const FILL_WIDTHS = [
-  "w-[0%]",
-  "w-[5%]",
-  "w-[10%]",
-  "w-[15%]",
-  "w-[20%]",
-  "w-[25%]",
-  "w-[30%]",
-  "w-[35%]",
-  "w-[40%]",
-  "w-[45%]",
-  "w-[50%]",
-  "w-[55%]",
-  "w-[60%]",
-  "w-[65%]",
-  "w-[70%]",
-  "w-[75%]",
-  "w-[80%]",
-  "w-[85%]",
-  "w-[90%]",
-  "w-[95%]",
-  "w-[100%]",
-];
-
-function Bar({ earned, possible }: { earned: number; possible: number }) {
-  const share = possible === 0 ? 0 : earned / possible;
-  const step = Math.round(Math.min(Math.max(share, 0), 1) * 20);
-
-  return (
-    <div
-      className="h-1.5 w-full overflow-hidden rounded-full bg-bar-track"
-      // The exact value sits next to the bar as text; announcing the bar too
-      // would only repeat it.
-      aria-hidden="true"
-    >
-      <div
-        className={`h-full rounded-full bg-[image:var(--gradient-info)] ${FILL_WIDTHS[step]}`}
-      />
-    </div>
-  );
-}
-
 export function ScoreBreakdown({
   score,
   loggedDays,
@@ -128,7 +83,11 @@ export function ScoreBreakdown({
                     <span className="text-fg-subtle"> / {part.possible}</span>
                   </span>
                 </div>
-                <Bar earned={part.earned} possible={part.possible} />
+                <ValueBar
+                  ratio={part.possible === 0 ? 0 : part.earned / part.possible}
+                  tone="process"
+                  size="md"
+                />
                 <span className="text-[11.5px] text-fg-subtle">
                   {part.hint}
                 </span>
