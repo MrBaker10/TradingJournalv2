@@ -9,7 +9,8 @@ import {
   insertImportedTrades,
   listMatchCandidates,
   removeUntouchedTrades,
-  updateImportedTrade,
+  type TradeUpdate,
+  updateImportedTrades,
 } from "@/db/queries/import";
 import { matchRows } from "@/domain/import/match";
 import {
@@ -204,6 +205,7 @@ export async function commitImport(
       });
 
       const toInsert: ImportedTrade[] = [];
+      const toUpdate: TradeUpdate[] = [];
 
       for (const [index, outcome] of outcomes.entries()) {
         const row = rows[index];
@@ -211,12 +213,10 @@ export async function commitImport(
         if (outcome.kind === "skip") continue;
 
         if (outcome.kind === "update") {
-          await updateImportedTrade(
-            tx,
-            user.id,
-            outcome.tradeId,
-            outcome.values,
-          );
+          // Collected, not written yet: the updates go out grouped by the
+          // fields they touch, so a file of 500 closed positions costs one
+          // statement rather than 500.
+          toUpdate.push({ tradeId: outcome.tradeId, values: outcome.values });
           continue;
         }
 
@@ -252,6 +252,7 @@ export async function commitImport(
         });
       }
 
+      await updateImportedTrades(tx, user.id, toUpdate);
       await insertImportedTrades(tx, toInsert, accountId);
 
       return { ...preview.counters, batchId };

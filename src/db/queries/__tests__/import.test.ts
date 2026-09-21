@@ -1,4 +1,11 @@
-import { and, eq, sql, TransactionRollbackError } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  sql,
+  TransactionRollbackError,
+} from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../index.ts";
 import { accounts } from "../../schema/accounts.ts";
@@ -18,7 +25,7 @@ import {
   listImportBatches,
   listMatchCandidates,
   removeUntouchedTrades,
-  updateImportedTrade,
+  updateImportedTrades,
 } from "../import.ts";
 
 // Test-only symbol; every fixture runs inside a rolled-back transaction, so
@@ -350,7 +357,7 @@ describe("insertImportedTrades", () => {
   });
 });
 
-describe("updateImportedTrade", () => {
+describe("updateImportedTrades", () => {
   it("fills in the exit and leaves the notes alone", async (ctx) => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 
@@ -375,12 +382,19 @@ describe("updateImportedTrade", () => {
         .set({ notes: "held it through the news", grade: "B" })
         .where(eq(trades.id, id));
 
-      await updateImportedTrade(fixture.tx, fixture.userId, id, {
-        exitTime: "09:45",
-        exitPrice: 20050,
-        points: 50,
-        result: "Win",
-      });
+      const written = await updateImportedTrades(fixture.tx, fixture.userId, [
+        {
+          tradeId: id,
+          values: {
+            exitTime: "09:45",
+            exitPrice: 20050,
+            points: 50,
+            result: "Win",
+          },
+        },
+      ]);
+
+      expect(written).toBe(1);
 
       const [row] = await fixture.tx
         .select({
@@ -412,9 +426,13 @@ describe("updateImportedTrade", () => {
         fixture.accountId,
       );
 
-      await updateImportedTrade(fixture.tx, fixture.userId + 9999, id, {
-        contracts: 99,
-      });
+      const written = await updateImportedTrades(
+        fixture.tx,
+        fixture.userId + 9999,
+        [{ tradeId: id, values: { contracts: 99 } }],
+      );
+
+      expect(written).toBe(0);
 
       const [row] = await fixture.tx
         .select({ contracts: trades.contracts })
@@ -422,6 +440,127 @@ describe("updateImportedTrade", () => {
         .where(eq(trades.id, id));
 
       expect(row.contracts).toBe(2);
+    });
+  });
+
+  it("writes every row of a batch that shares one set of fields", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      const batchId = await newBatch(fixture);
+      const ids = await insertImportedTrades(
+        fixture.tx,
+        [20000, 20100, 20200].map((entryPrice) =>
+          importedTrade(fixture, batchId, {
+            entryPrice,
+            exitTime: null,
+            exitPrice: null,
+            points: null,
+            result: null,
+          }),
+        ),
+        fixture.accountId,
+      );
+
+      const written = await updateImportedTrades(
+        fixture.tx,
+        fixture.userId,
+        ids.map((id, index) => ({
+          tradeId: id,
+          values: {
+            exitTime: "09:45",
+            exitPrice: 20500 + index,
+            points: 10 + index,
+            result: "Win" as const,
+          },
+        })),
+      );
+
+      expect(written).toBe(3);
+
+      const rows = await fixture.tx
+        .select({ id: trades.id, exitPrice: trades.exitPrice })
+        .from(trades)
+        .where(inArray(trades.id, ids))
+        .orderBy(asc(trades.id));
+
+      // Each row keeps its own value: one statement, not one value for all.
+      expect(rows.map((row) => row.exitPrice)).toEqual([
+        "20500.0000",
+        "20501.0000",
+        "20502.0000",
+      ]);
+    });
+  });
+
+  it("keeps updates with different field sets apart", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      const batchId = await newBatch(fixture);
+      const [closing, renaming] = await insertImportedTrades(
+        fixture.tx,
+        [
+          importedTrade(fixture, batchId, {
+            entryPrice: 20000,
+            exitTime: null,
+            exitPrice: null,
+            points: null,
+            result: null,
+          }),
+          importedTrade(fixture, batchId, { entryPrice: 20100 }),
+        ],
+        fixture.accountId,
+      );
+
+      // Two signatures: one closes a position, the other corrects the size.
+      const written = await updateImportedTrades(fixture.tx, fixture.userId, [
+        {
+          tradeId: closing,
+          values: { exitTime: "09:45", exitPrice: 20050, result: "Win" },
+        },
+        { tradeId: renaming, values: { contracts: 7 } },
+      ]);
+
+      expect(written).toBe(2);
+
+      const rows = await fixture.tx
+        .select({
+          id: trades.id,
+          contracts: trades.contracts,
+          exitPrice: trades.exitPrice,
+          result: trades.result,
+        })
+        .from(trades)
+        .where(inArray(trades.id, [closing, renaming]))
+        .orderBy(asc(trades.id));
+
+      // The closing row keeps its contracts, the resized one keeps its exit:
+      // a field outside an update's own set is never touched by it.
+      expect(rows[0]).toMatchObject({
+        contracts: 2,
+        exitPrice: "20050.0000",
+        result: "Win",
+      });
+      // 20050 is the fixture's exit; the resize never named exitPrice, so it
+      // still stands.
+      expect(rows[1]).toMatchObject({ contracts: 7, exitPrice: "20050.0000" });
+    });
+  });
+
+  it("does nothing when there is nothing to write", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      expect(await updateImportedTrades(fixture.tx, fixture.userId, [])).toBe(
+        0,
+      );
+      // An outcome with an empty value set must not produce a statement at all.
+      expect(
+        await updateImportedTrades(fixture.tx, fixture.userId, [
+          { tradeId: 1, values: {} },
+        ]),
+      ).toBe(0);
     });
   });
 });

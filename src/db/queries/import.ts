@@ -1,6 +1,10 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { MatchableTrade } from "../../domain/import/match.ts";
-import type { BrokerValues } from "../../domain/import/outcome.ts";
+import {
+  BROKER_OWNED_FIELDS,
+  type BrokerOwnedField,
+  type BrokerValues,
+} from "../../domain/import/outcome.ts";
 import type { TradeDirection } from "../../domain/pnl.ts";
 import { db } from "../index.ts";
 import { importBatches } from "../schema/import-batches.ts";
@@ -188,34 +192,134 @@ export async function insertImportedTrades(
  * among them: the import sets it when it creates a trade and never on an
  * update.
  */
-export async function updateImportedTrade(
+/**
+ * The column each broker-owned field writes to, and the type its parameter has
+ * to carry into a `VALUES` list.
+ *
+ * Keyed by `BrokerOwnedField`, so the identifiers that reach the statement can
+ * only ever come from that const — never from a key of the incoming object.
+ */
+const UPDATABLE_COLUMN: Record<
+  BrokerOwnedField,
+  { column: string; type: string }
+> = {
+  tradeDate: { column: "trade_date", type: "date" },
+  instrumentId: { column: "instrument_id", type: "integer" },
+  direction: { column: "direction", type: "text" },
+  contracts: { column: "contracts", type: "integer" },
+  entryTime: { column: "entry_time", type: "time" },
+  exitTime: { column: "exit_time", type: "time" },
+  entryPrice: { column: "entry_price", type: "numeric(12,4)" },
+  exitPrice: { column: "exit_price", type: "numeric(12,4)" },
+  points: { column: "points", type: "numeric(12,4)" },
+  result: { column: "result", type: "text" },
+};
+
+/** Numbers destined for a `numeric` column go in as strings, never as floats. */
+function parameterFor(values: BrokerValues, field: BrokerOwnedField): unknown {
+  const value = values[field];
+  if (value === undefined) return null;
+  return UPDATABLE_COLUMN[field].type.startsWith("numeric")
+    ? String(value)
+    : value;
+}
+
+/** One trade and the broker-owned fields this import wants to write on it. */
+export interface TradeUpdate {
+  tradeId: number;
+  values: BrokerValues;
+}
+
+/**
+ * The fields an update touches, in the fixed order of `BROKER_OWNED_FIELDS`.
+ * Two updates that touch the same fields share a statement.
+ */
+function signatureOf(values: BrokerValues): BrokerOwnedField[] {
+  return BROKER_OWNED_FIELDS.filter((field) => values[field] !== undefined);
+}
+
+/**
+ * Writes the broker-owned side of several matched trades.
+ *
+ * **One statement per distinct set of changed fields**, not one per trade. A
+ * file whose rows all close an open position — the ordinary case — therefore
+ * costs a single round trip however many rows it has, instead of one each.
+ *
+ * The `SET` list stays narrow on purpose: only the fields that actually
+ * differ are named. Writing all ten and letting the unchanged ones pass
+ * through would mean an import could overwrite a field it never read, and the
+ * rule that an import fills gaps but never makes them would hang on the
+ * values in a `VALUES` list rather than on the shape of the statement.
+ *
+ * The user id sits in the `where`, not only in a check beforehand: ownership
+ * is re-verified by the statement that writes.
+ */
+export async function updateImportedTrades(
   tx: Tx,
   userId: number,
-  tradeId: number,
-  values: BrokerValues,
-): Promise<void> {
-  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  updates: TradeUpdate[],
+): Promise<number> {
+  const groups = new Map<string, TradeUpdate[]>();
+  for (const update of updates) {
+    const fields = signatureOf(update.values);
+    if (fields.length === 0) continue;
 
-  if (values.tradeDate !== undefined) patch.tradeDate = values.tradeDate;
-  if (values.instrumentId !== undefined)
-    patch.instrumentId = values.instrumentId;
-  if (values.direction !== undefined) patch.direction = values.direction;
-  if (values.contracts !== undefined) patch.contracts = values.contracts;
-  if (values.entryTime !== undefined) patch.entryTime = values.entryTime;
-  if (values.exitTime !== undefined) patch.exitTime = values.exitTime;
-  if (values.entryPrice !== undefined)
-    patch.entryPrice = String(values.entryPrice);
-  if (values.exitPrice !== undefined)
-    patch.exitPrice = String(values.exitPrice);
-  if (values.points !== undefined) patch.points = String(values.points);
-  if (values.result !== undefined) patch.result = values.result;
+    const key = fields.join(",");
+    const group = groups.get(key);
+    if (group === undefined) {
+      groups.set(key, [update]);
+    } else {
+      group.push(update);
+    }
+  }
 
-  // The user id is part of the where clause, not just checked beforehand:
-  // ownership is re-verified in the statement that writes.
-  await tx
-    .update(trades)
-    .set(patch)
-    .where(and(eq(trades.id, tradeId), eq(trades.userId, userId)));
+  let written = 0;
+
+  for (const [key, group] of groups) {
+    const fields = key.split(",") as BrokerOwnedField[];
+    const columns = fields.map((field) => UPDATABLE_COLUMN[field].column);
+
+    const assignments = sql.join(
+      columns.map((column) => sql`${sql.raw(column)} = v.${sql.raw(column)}`),
+      sql`, `,
+    );
+
+    // Every tuple carries its casts. Postgres would infer them from the first
+    // row alone, but a list whose first row happens to be all-null would then
+    // decide the types for the rest.
+    const tuples = sql.join(
+      group.map(
+        (update) =>
+          sql`(${sql.join(
+            [
+              sql`${update.tradeId}::integer`,
+              ...fields.map(
+                (field) =>
+                  sql`${parameterFor(update.values, field)}::${sql.raw(
+                    UPDATABLE_COLUMN[field].type,
+                  )}`,
+              ),
+            ],
+            sql`, `,
+          )})`,
+      ),
+      sql`, `,
+    );
+
+    const alias = sql.raw(["id", ...columns].join(", "));
+
+    const rows = await tx.execute<{ id: number }>(sql`
+      update trades t
+      set updated_at = now(), ${assignments}
+      from (values ${tuples}) as v(${alias})
+      where t.id = v.id and t.user_id = ${userId}
+      returning t.id
+    `);
+
+    written += [...rows].length;
+  }
+
+  return written;
 }
 
 /**
@@ -345,20 +449,4 @@ export async function removeUntouchedTrades(
   }
 
   return [...removed].length;
-}
-
-/** Ownership check for a batch id coming from the client. */
-export async function getOwnedImportBatch(
-  userId: number,
-  batchId: number,
-  executor: ReadExecutor = db,
-): Promise<{ id: number } | null> {
-  const [batch] = await executor
-    .select({ id: importBatches.id })
-    .from(importBatches)
-    .where(and(eq(importBatches.id, batchId), eq(importBatches.userId, userId)))
-    .orderBy(desc(importBatches.id))
-    .limit(1);
-
-  return batch ?? null;
 }
