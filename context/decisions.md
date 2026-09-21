@@ -1669,3 +1669,68 @@ Nutzeruhr je Trade-Datum zusammen (13 Tests).
 - Der Fix an der Archiv-Liste in `/settings` liegt als eigener Commit `e03ae5f`
   daneben: `archived_at` wurde in der Laufzeitzone formatiert statt in der des Nutzers.
   Fremder Slice, deshalb nicht im Import-Commit.
+
+---
+
+## 2026-09-21 — S13 Nachtrag: Review, Klickpfad, Update-Bündelung — feature/trade-import — 20b092d, 8616a36
+
+Ergänzt den S13-Block oben. Der bleibt unverändert stehen; zwei seiner Punkte unter
+**Offen geblieben** sind inzwischen erledigt, ein dritter kam hinzu.
+
+**Gebaut.** Das Review nach der siebenteiligen Checkliste ist nachgeholt worden, der
+Klickpfad ebenfalls. Daraus drei Commits: der Archiv-Fix (`e03ae5f`, schon im S13-Block
+genannt), ein `refactor:` an der Preisarithmetik und ein `perf:` am Schreibpfad.
+
+**Erledigt aus dem S13-Block.**
+
+- **Der Klickpfad ist gelaufen.** Konto über `/settings` anlegen, `/journal` → Import,
+  Datei wählen (42 Round Trips aus 104 Zeilen), Konto, Vorschau (42 · 0 · 0 · 0, erste
+  Zeile `MNQ long 2 · 2026-08-13 · 17:57 · — · new`), bestätigen („Imported 42 · updated
+  0 · 0 already in your journal were skipped."), Batch-Liste („Fills (1).csv · Main ·
+  Sep 21 · fills · Remove 42 of 42"), Journal mit Session und semantischer P&L-Farbe,
+  dieselbe Datei erneut (0 · 0 · 42), Undo über die zweistufige Bestätigung, Dashboard
+  zurück auf null. Keine Konsolenmeldung auf keinem Schritt. Das `17:57` im Browser ist
+  die Bestätigung von E1 und E2 im echten Rendering.
+- **Die N+1-Schleife bei den Updates ist weg.** Siehe unten.
+
+**Entschieden unterwegs.**
+
+- **Die Preis-Skala lag fünffach im Code.** `pnl.ts` exportiert jetzt `toScaledPrice`
+  und `fromScaledPrice`; `fills`, `normalize`, `match` und `outcome` benutzen sie. Vier
+  Literale `10_000` waren vier Definitionen davon, was ein Preis ist.
+- **`derivePoints` rechnete in Float und rundete danach**, während `pnl.ts` dieselbe
+  Subtraktion vollständig in BigInt fuhr. Kein Fehler bei Indexpreisen, aber zwei
+  Methoden für eine Sache. Jetzt eine.
+- **`Comparison<T>.value` ist `NonNullable`.** „Ein Import reißt nie eine Lücke" hing an
+  einem `if` und einem `as never`; ein durchgerutschtes `null` wäre als Text `"null"` in
+  einer `numeric`-Spalte gelandet. Die Regel steht jetzt im Typ.
+- **Updates gehen gebündelt raus, ein Statement je Feldsignatur** (`updateImportedTrades`
+  statt `updateImportedTrade`), über eine `VALUES`-Liste auf die Trade-ID gejoint.
+  Gemessen: 200 geschlossene Positionen kosten **ein** UPDATE statt 200, und alle 200
+  behalten ihren eigenen Exit-Preis. Die `SET`-Liste nennt weiterhin nur die Felder, die
+  sich unterscheiden — alle zehn zu schreiben wäre einfacher gewesen, dann hinge die
+  Lücken-Regel aber am Inhalt der `VALUES`-Liste statt an der Form des Statements.
+  Spaltennamen kommen ausschließlich aus `UPDATABLE_COLUMN`, getippt über
+  `BrokerOwnedField`, und jedes Tupel trägt seine eigenen Casts, weil Postgres sie sonst
+  aus der ersten Zeile ableitet und eine zufällig leere erste Zeile die Typen für alle
+  folgenden entschiede.
+- **`getOwnedImportBatch` war toter Code** und ist mit der Umschreibung derselben Datei
+  entfallen. Der Batch-Besitz wird in den schreibenden Anweisungen selbst geprüft.
+- **Punkt 4 der Review-Checkliste widersprach E1.** Er verlangte, die Nutzerzone gelte
+  „ausschließlich für Econ-Events". Korrigiert in
+  `.claude/skills/feature-review/SKILL.md` — **die Datei ist gitignored**, die Korrektur
+  liegt also nur lokal und fehlt nach einem frischen Clone.
+
+**Offen geblieben.**
+
+- **„Import 0 trades" ist klickbar**, wenn die Vorschau nur Skips meldet. Der Knopf tut
+  nichts Schädliches — `commitImport` kehrt früh zurück —, sollte aber `disabled` sein.
+  Aus dem Klickpfad gefunden, eigener kleiner `fix:`.
+- **Das „Add account"-Formular bleibt im Hintergrund-Tab bei Opacity 0.** `motion`
+  treibt die Animation nicht voran, solange der Tab unsichtbar ist. Betrifft
+  Automatisierung, nicht einen Nutzer im fokussierten Tab. S3-Code, nicht angefasst.
+- **Nach dem Perf-Umbau nur skriptgeprüft:** offene Restposition, unbekanntes Symbol,
+  Übungskonto. Der Update-Pfad — der einzige, den der Umbau berührt — lief end-to-end
+  durch die echten Actions.
+- Round-Trip- und TradingView-Erkennung sowie die Tabellen-Extraktion stehen weiter aus,
+  unverändert gegenüber dem S13-Block.
