@@ -23,7 +23,7 @@
 
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
-import type { TradeDirection } from "../pnl.ts";
+import { fromScaledPrice, type TradeDirection, toScaledPrice } from "../pnl.ts";
 import type { FillColumns } from "./detect.ts";
 import type {
   ImportFill,
@@ -38,9 +38,6 @@ export interface InstrumentRef {
   symbol: string;
   tickSize: number;
 }
-
-/** numeric(12,4), the same fixed point the rest of the project prices in. */
-const PRICE_SCALE = 10_000;
 
 /**
  * A futures contract month: one letter from the standard set plus the year.
@@ -234,11 +231,13 @@ function resolveInstrument(
  * and a price that is not on the grid is not a price the market ever traded.
  */
 function snapToTick(price: number, tickSize: number): number {
-  const tick = Math.round(tickSize * PRICE_SCALE);
-  if (tick <= 0) return price;
+  const tick = toScaledPrice(tickSize);
+  if (tick <= BigInt(0)) return price;
 
-  const scaled = Math.round(price * PRICE_SCALE);
-  return (Math.round(scaled / tick) * tick) / PRICE_SCALE;
+  // Half-up at the stored precision. Prices are validated positive, so the
+  // truncating BigInt division is a floor and the added half rounds up.
+  const scaled = toScaledPrice(price);
+  return fromScaledPrice(((scaled + tick / BigInt(2)) / tick) * tick);
 }
 
 /**

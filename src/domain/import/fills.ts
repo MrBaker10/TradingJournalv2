@@ -10,17 +10,15 @@
 // `normalize.ts`, which is the module that knows the instruments table. What
 // comes out here is still a `RawTrade`.
 
-import type { TradeDirection } from "../pnl.ts";
+import { fromScaledPrice, type TradeDirection, toScaledPrice } from "../pnl.ts";
 import type { ImportFill, RawTrade } from "./types.ts";
 
-// Matches numeric(12,4), the same reasoning as in pnl.ts: a weighted average
-// over several fills is arithmetic on prices, and prices are never floats.
-// The sum runs in BigInt and the division back to a plain number happens once,
-// at the end.
-const PRICE_SCALE = 10_000;
+// A weighted average over several fills is arithmetic on prices, so it runs
+// at the stored precision: the sum accumulates in BigInt and the division back
+// to a plain number happens once, at the end.
 
 interface Leg {
-  /** Sum of price * quantity, scaled by PRICE_SCALE. */
+  /** Sum of price * quantity, at the stored price precision. */
   notional: bigint;
   quantity: number;
   fillIds: string[];
@@ -42,8 +40,7 @@ function emptyLeg(): Leg {
 }
 
 function addToLeg(leg: Leg, price: number, quantity: number, fill: ImportFill) {
-  const scaled = BigInt(Math.round(price * PRICE_SCALE));
-  leg.notional += scaled * BigInt(quantity);
+  leg.notional += toScaledPrice(price) * BigInt(quantity);
   leg.quantity += quantity;
   leg.fillIds.push(fill.fillId);
   leg.lastTime = fill.entryTime;
@@ -59,7 +56,7 @@ function averagePrice(leg: Leg): number | null {
 
   const denominator = BigInt(leg.quantity);
   const rounded = (leg.notional + denominator / BigInt(2)) / denominator;
-  return Number(rounded) / PRICE_SCALE;
+  return fromScaledPrice(rounded);
 }
 
 /**

@@ -21,6 +21,7 @@
 // would write one trade's exit onto the other — corrupting a trade that was
 // already correct.
 
+import { toScaledPrice } from "../pnl.ts";
 import type { ExistingTrade } from "./outcome.ts";
 import type { NormalizedTrade } from "./types.ts";
 
@@ -30,10 +31,8 @@ export interface MatchableTrade extends ExistingTrade {
 }
 
 // numeric(12,4): two prices that store identically must key identically.
-const PRICE_SCALE = 10_000;
-
-function scaled(price: number): number {
-  return Math.round(price * PRICE_SCALE);
+function scaled(price: number): bigint {
+  return toScaledPrice(price);
 }
 
 /**

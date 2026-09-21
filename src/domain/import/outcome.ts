@@ -15,7 +15,7 @@
 //   postgres is `numeric(12,4)` and a time is `HH:MM:SS`; comparing either as
 //   it arrives against what the file wrote reports changes that are not real.
 
-import type { TradeDirection } from "../pnl.ts";
+import { fromScaledPrice, type TradeDirection, toScaledPrice } from "../pnl.ts";
 import type { NormalizedTrade } from "./types.ts";
 
 /** Matches `resultEnum` in src/schemas/trades.ts. */
@@ -79,11 +79,8 @@ export type RowOutcome =
       values: BrokerValues;
     };
 
-// numeric(12,4), the precision every price column in this project uses.
-const PRICE_SCALE = 10_000;
-
-function atStoredPrecision(price: number): number {
-  return Math.round(price * PRICE_SCALE);
+function atStoredPrecision(price: number): bigint {
+  return toScaledPrice(price);
 }
 
 /**
@@ -106,11 +103,12 @@ export function derivePoints(
   exitPrice: number | null,
 ): number | null {
   if (exitPrice === null) return null;
-  const points =
-    direction === "long" ? exitPrice - entryPrice : entryPrice - exitPrice;
-  // Back to the four decimals the column stores, so float noise from the
-  // subtraction never reaches postgres.
-  return Math.round(points * PRICE_SCALE) / PRICE_SCALE;
+
+  // Subtracted at the stored precision, not as floats: the same arithmetic
+  // pnl.ts runs, so points derived here and P&L derived there cannot drift.
+  const entry = toScaledPrice(entryPrice);
+  const exit = toScaledPrice(exitPrice);
+  return fromScaledPrice(direction === "long" ? exit - entry : entry - exit);
 }
 
 /**
@@ -131,25 +129,35 @@ export function deriveResult(points: number | null): TradeResult | null {
   return "Breakeven";
 }
 
-interface Comparison {
+/**
+ * One field's verdict. `value` is `NonNullable` on purpose: a null must not be
+ * able to reach the UPDATE, where it would be stringified into a numeric
+ * column as the text "null". The rule that an import never makes a gap is
+ * enforced by `compare` below — the type is what stops a later edit from
+ * quietly undoing it.
+ */
+interface Comparison<T> {
   field: BrokerOwnedField;
   changed: boolean;
-  value: BrokerValues[BrokerOwnedField];
+  value: NonNullable<T> | undefined;
 }
 
-function compare<T>(
+/** Everything a broker-owned field can hold. */
+type ComparedValue = string | number | TradeDirection | TradeResult;
+
+function compare<T extends ComparedValue>(
   field: BrokerOwnedField,
   incoming: T | null,
   current: T | null,
   equals: (a: T, b: T) => boolean,
-): Comparison {
+): Comparison<T> {
   // An import fills gaps and never makes them: nothing to say about a field
   // this file does not carry.
   if (incoming === null) {
     return { field, changed: false, value: undefined };
   }
   const changed = current === null || !equals(incoming, current);
-  return { field, changed, value: changed ? (incoming as never) : undefined };
+  return { field, changed, value: changed ? incoming : undefined };
 }
 
 const sameNumber = (a: number, b: number) => a === b;
@@ -178,7 +186,7 @@ export function decideOutcome(
     incoming.exitPrice,
   );
 
-  const comparisons: Comparison[] = [
+  const comparisons: Comparison<ComparedValue>[] = [
     compare("tradeDate", incoming.tradeDate, existing.tradeDate, sameString),
     compare(
       "instrumentId",
