@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  calendarDateOf,
   formatDayLabel,
   formatMonthLabel,
   monthKeyOf,
@@ -31,6 +32,21 @@ describe("todayInTimeZone", () => {
 
   it("uses the current instant when none is passed", () => {
     expect(todayInTimeZone("UTC")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe("calendarDateOf", () => {
+  // 22:30 UTC is already the next day in Berlin. An import batch created then
+  // has to be listed under the day the trader experienced, not under UTC's.
+  const lateEvening = new Date("2026-09-21T22:30:00Z");
+
+  it("reads an instant in the user's zone", () => {
+    expect(calendarDateOf(lateEvening, "Europe/Berlin")).toBe("2026-09-22");
+  });
+
+  it("gives the same instant a different date in another zone", () => {
+    expect(calendarDateOf(lateEvening, "UTC")).toBe("2026-09-21");
+    expect(calendarDateOf(lateEvening, "America/New_York")).toBe("2026-09-21");
   });
 });
 

@@ -25,7 +25,20 @@ export function todayInTimeZone(
   timeZone: string,
   now: Date = new Date(),
 ): IsoDate {
-  return format(new TZDate(now, timeZone), "yyyy-MM-dd");
+  return calendarDateOf(now, timeZone);
+}
+
+/**
+ * The calendar date an instant falls on, read in the user's zone.
+ *
+ * For an audit column like `created_at`, which is a `timestamptz` and
+ * therefore a point in time rather than a date. Which day that point belongs
+ * to is a question only a zone can answer, and the zone is the user's —
+ * reading it in the machine's would move an entry made late in the evening to
+ * the wrong day.
+ */
+export function calendarDateOf(instant: Date, timeZone: string): IsoDate {
+  return format(new TZDate(instant, timeZone), "yyyy-MM-dd");
 }
 
 /** The month a date belongs to. Pure string work — a date has no zone. */
