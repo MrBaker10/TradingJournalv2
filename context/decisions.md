@@ -1559,3 +1559,113 @@ Auf den drei Abschnitten steht keine einzige Geldzahl.
   isolierten 95m aus dem Spec. Die im Klickpfad geprüften Zahlen sind die, die nur an
   den vier neuen Trades hängen. **Bewusst stehen gelassen** — es ist eine
   Entwicklungsdatenbank, und einen Lösch-Pfad für Trades hat die App ohnehin nicht.
+
+---
+
+## 2026-09-21 — S13 CSV-Import (vorgemerkt als S10b) — feature/trade-import — 5aab3c5
+
+**Gebaut.** Eine Fill-Datei von der Prop-Plattform landet als Trades im Journal, und
+dieselbe Datei darf beliebig oft erneut laufen: bekannte Zeilen werden übersprungen,
+geänderte aktualisiert, und jede Handarbeit am Trade — Notiz, Setup, Grade, Screenshot,
+Tag — überlebt das unangetastet. Jeder Import ist ein Batch und lässt sich rückgängig
+machen. Damit ist Phase 1 inhaltlich vollständig.
+
+**Dateien.** Domain: `src/domain/import/` mit `types`, `detect`, `normalize`, `fills`,
+`match`, `outcome`, `session` — je mit Testdatei, 62 Tests. Lib: `src/lib/csv/parse.ts`
+(RFC 4180, Delimiter-Erkennung, BOM, eingebettete Zeilenumbrüche) und `calendarDateOf`
+in `src/lib/time.ts`. Queries: `src/db/queries/import.ts` mit dem Tier-1/Tier-2-Lookup,
+der Batch-Liste und `removeUntouchedTrades`, 21 Tests gegen echtes Postgres. Actions:
+`previewImport`, `commitImport`, `undoImportBatch` in `src/actions/import.ts`, Zod in
+`src/schemas/import.ts`. UI: `src/app/(app)/journal/import/page.tsx` und die sechs
+Komponenten unter `src/components/import/`. `Design.md` §4.18 neu.
+
+**Migration.** `0010_tiresome_mockingbird` — Tabelle `import_batches`, dazu
+`trades.import_batch_id` (nullable, `null` heißt handgetippt) und
+`trades.broker_trade_key` mit Index auf `(user_id, broker_trade_key)`. Schemaänderung
+und Migration liegen im selben Commit.
+
+**Regeln.** `detect.ts` erkennt die Dateiform allein an der Kopfzeile und wirft mit den
+gefundenen Headern im Klartext (7 Tests). `normalize.ts` besitzt die **Uhr** — es ist
+die einzige Stelle im Projekt, die einen Broker-Zeitstempel konvertiert — und das
+**Instrument**: Symbolauflösung gegen die Instrumententabelle und Tick-Rundung, erster
+Leser von `instruments.tick_size` (17 Tests). `fills.ts` paart FIFO je **Kontrakt** in
+Zeitstempelreihenfolge, mit mengengewichtetem Durchschnittspreis in BigInt.
+`match.ts` hält die zweiphasige Paarung, `outcome.ts` die Schreibfreigabe: die
+Update-Menge wird ausschließlich aus der broker-eigenen Liste gebaut, ein nutzereigenes
+Feld kann gar nicht in ein UPDATE geraten. `session.ts` führt die NY-Fenster und die
+Nutzeruhr je Trade-Datum zusammen (13 Tests).
+
+**Entschieden unterwegs.**
+
+- **Die Chart-Uhr ist die Zeitzone, in der der Trader sitzt**, geführt in
+  `users.timezone`. Das stand in keinem Dokument: `CLAUDE.md` nannte `entry_time` die
+  „Chart-Uhr", ohne zu sagen, welche Zone das ist. Die Beispieldatei erzwang die
+  Antwort, weil sie zwei Zeitspalten hat und keine davon die NY-Uhr ist. **Betrifft
+  das ganze Projekt** — steht jetzt in `CLAUDE.md` und im `Time`-Abschnitt von
+  `coding-standards.md`; der Eintrag in die Decisions-Liste von `project-overview.md`
+  ist vorgeschlagen, nicht vorgenommen.
+- **Der Import liest die UTC-Spalte, nicht die lokale.** Die lokale Spalte der Datei
+  zeigt die Anzeigeeinstellung der Broker-Plattform — bei dieser Datei zufällig Berlin —
+  und kann sich ändern, ohne dass die Datei es sagt. Umgerechnet wird **einmal**, an
+  der Dateigrenze. `trade_date` und `entry_time` stammen aus demselben umgerechneten
+  Zeitpunkt: ein Fill um 23:30 UTC ist in Berlin der Folgetag, und ein Datum, das der
+  Uhrzeit daneben widerspricht, ist schlimmer als beide Varianten.
+- **Die Session-Fenster bleiben New Yorker Zeiten und wandern je Trade-Datum in die
+  Nutzerzone.** Die Namen benennen echte Markt-Sessions. Je Datum, weil New York und
+  Europa an verschiedenen Tagen umstellen: meist sechs Stunden Versatz, drei Wochen im
+  März und eine Ende Oktober fünf. Ein fester Versatz hätte die Grenzfälle still
+  verschoben, zwei Tests halten sie fest.
+- **`users.timezone` ist jetzt `Europe/Berlin`** statt `UTC`. Ein Feld in `/settings`
+  kommt mit Phase 2 — in Phase 1 gibt es genau einen Nutzer, und ein Formular dafür
+  wäre eine Fläche ohne Nutzen.
+- **MGC im Instrumenten-Seeder**, Punktwert 10, Tick 0.10. Ohne ihn fielen 10 der 42
+  Round Trips der Beispieldatei als unbekanntes Symbol heraus. Die beiden Zahlen
+  stammen aus der Kontraktspezifikation, nicht aus der Datei — der einzige Wert in
+  diesem Slice, der nicht aus den Daten kommt.
+- **`detect.ts` erkennt vorerst nur die Fill-Form.** Round-Trip- und
+  TradingView-Header stehen in keinem Dokument, und ein Erkenner gegen geratene
+  Spaltennamen wäre ein Erkenner gegen eine Vermutung. Beide kommen als eigene
+  Funktionen dazu, sobald echte Exporte vorliegen; `ImportShape` trägt alle drei Namen
+  bereits.
+- **`fills.ts` gruppiert über den Kontrakt, nicht über das Instrument.** Die
+  Beispieldatei enthält MNQU6 und MNQZ6 nebeneinander. Würde die Symbolauflösung vor
+  der Paarung laufen, liefe eine September-Position gegen einen Dezember-Fill. Die
+  Reihenfolge parse → fills → normalize ist deshalb nicht vertauschbar.
+- **`RawTrade.sourceRow` stand hart auf `0`.** Ein Round Trip nennt jetzt die Zeile
+  seines Eröffnungs-Fills — ohne das hätte die Vorschau auf keine Zeile zeigen können.
+- **Ein `db.execute<Row>()`-Generic ist eine ungeprüfte Behauptung.** `created_at` war
+  als `Date` deklariert und kam als `string`: ein rohes Statement trägt keinen
+  Drizzle-Column-Mapper. Typecheck, 470 Tests und Build waren grün, und die Batch-Liste
+  stürzte beim ersten Rendern mit Inhalt ab. `coding-standards.md` hatte den Fall für
+  `sql<T>` bereits seit Designrunde 1 — die Regel ist jetzt um `db.execute` erweitert,
+  der Mapper wandelt wie `dashboard.ts` mit `new Date(...)`, und der Query-Test nennt
+  `createdAt` ausdrücklich. Die eigentliche Lücke war die Prüfung: alle Kontrollen
+  liefen gegen eine **leere** Batch-Liste.
+- **Die fünfte Kopie des Zeilen-Layouts bleibt stehen.** S12b hatte die Extraktion nach
+  `TableHead`/`TableRows`/`TableRow` diesem Slice zugewiesen. Sie ist auf Ansage in
+  einen eigenen `refactor:`-Slice verschoben worden, weil sie vier gemergte, untestete
+  Karten anfasst und in diesem Commit ohne Netz liefe. `Design.md` §4.16 bleibt
+  unverändert; §4.18 trägt die Korrektur.
+- **Undo bestätigt in sich selbst**, zweiter Klick auf denselben Knopf, kein
+  `window.confirm` — ein modaler Dialog blockiert jedes weitere Browser-Ereignis.
+
+**Offen geblieben.**
+
+- **Der Klickpfad im Browser ist ungeprüft.** Die Chrome-Extension war die ganze
+  Session nicht verbunden. Geprüft wurde stattdessen über gerenderte Seiten per HTTP
+  und über die echten Server-Actions gegen die Datenbank: Import (42 neu), Wiederholung
+  (42 Skip), offene Restposition, Update mit erhaltener Notiz und Setup, Undo mit
+  „Remove 41 of 42", unbekanntes Symbol. Die vier Wizard-Schritte sind als Interaktion
+  nie angefasst worden.
+- **Round-Trip- und TradingView-Erkennung fehlen**, bis die Exporte vorliegen.
+- **Die Tabellen-Extraktion** aus S12b steht weiter aus, jetzt mit fünf echten Fällen
+  statt vier.
+- **Die Beispieldatei deckt nicht alles ab:** keine offene Restposition (dafür wurde
+  eine gekürzte Kopie gebaut), kein Dezimalkomma, nur ein Konto, keine P&L-Spalte.
+- **Die Entwicklungsdatenbank ist auf Ansage geleert worden** — alle Trades, Konten,
+  Daily Notes und Badges. Das kehrt die Entscheidung aus S12b um, die Testtrades stehen
+  zu lassen. Stammdaten (Instrumente, Tags, Badge-Definitionen, Prop-Firmen) und der
+  Seed-Nutzer stehen. `pnpm db:seed` würde ein Default-Konto „Main" neu anlegen.
+- Der Fix an der Archiv-Liste in `/settings` liegt als eigener Commit `e03ae5f`
+  daneben: `archived_at` wurde in der Laufzeitzone formatiert statt in der des Nutzers.
+  Fremder Slice, deshalb nicht im Import-Commit.
