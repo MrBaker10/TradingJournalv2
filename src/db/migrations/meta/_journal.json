@@ -71,6 +71,13 @@
       "when": 1789387674387,
       "tag": "0009_fair_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789763480824,
+      "tag": "0010_tiresome_mockingbird",
+      "breakpoints": true
     }
   ]
 }

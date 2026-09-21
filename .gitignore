@@ -12,3 +12,4 @@ next-env.d.ts
 .pnpm-debug.log*
 .claude/
 /storage/uploads
+/tmp

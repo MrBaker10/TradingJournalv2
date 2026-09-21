@@ -732,6 +732,81 @@ ist §F vollständig.
 
 ---
 
+### 4.18 Import-Flow
+
+Vier Schritte auf einer Route (`/journal/import`): Datei → Konto → Vorschau → Ergebnis.
+Das erste mehrstufige UI des Projekts; es gab kein Muster zum Abschauen, deshalb steht
+hier, was festgelegt wurde.
+
+**Der Einstieg.** Ein zweiter Knopf neben „New trade" in `/journal`, in der ruhigen
+Prozessfläche aus 4.14 (`--gradient-info-soft`, `--shadow-info-soft`). Importieren ist
+die seltenere Handlung und darf den lauten Primärknopf nicht doppeln. Keine Karte in
+`/settings` — dort liegt der Export, aber der Import gehört dorthin, wo die Trades sind.
+
+**Die Schrittanzeige** ist eine Zeile aus vier Kapitälchen-Labels mit 1px-Strichen
+dazwischen. Der aktuelle Schritt trägt `cap-neon`, erledigte `text-fg-muted`, kommende
+`text-fg-subtle`. **Kein Fortschrittsbalken:** ein Balken behauptet einen Anteil, und
+vier Schritte sind kein Anteil. Der Fortschritt ist hier auch kein Prozesswert im Sinn
+von §1 — er misst nichts, er verortet nur.
+
+**Schritt 1** ist eine gestrichelte Ablagefläche (`border-white/12 border-dashed`, auf
+Hover `border-cyan/35`) über einem Textfeld zum Einfügen. Darunter steht in
+`text-fg-subtle`, dass die Datei im Browser gelesen wird und nicht hochgeladen — das ist
+kein technisches Detail, sondern der Grund, warum hier kein Ladebalken kommt.
+
+**Schritt 2** sind Konto-Chips im Muster von `account-multi-select`, aber einfach
+wählbar. Übungskonten stehen in einer eigenen Gruppe unter der Überschrift „Practice",
+tragen die Bernsteinkante (`border-practice/40`, Hover `bg-practice-dim`) und darunter
+den Satz, dass ihre Trades aus jeder kombinierten Zahl fallen. Die Bernsteinfarbe ist
+hier dieselbe Warnung wie der Randstreifen am `<main>` (4.13): die Zahlen dieses Kontos
+sehen aus wie echtes Geld.
+
+**Die Vorschautabelle.** Vier Zähler über der Tabelle — New, Update, Skip, Invalid —
+als `cap`-Label mit 19px-Monozahl. Die Tabelle selbst folgt dem Zeilen-Layout aus 4.16:
+Kopfzeile `border-white/8`, Zeilen `divide-white/6`, Label links `truncate`, Zahlen
+rechts in Mono bei 13px mit `tabular-nums`. Unter jeder Zeile steht Zeilennummer und
+Grund in 11.5px.
+
+Das Urteil je Zeile ist ein Prozesswert und trägt Farbe nach §1: `new` in Cyan,
+`update` in Weiß, `skip` in `text-fg-subtle`. **Die Spalte „File P&L" bleibt farblos.**
+Sie zeigt die P&L, die die Datei behauptet, zum Vergleich — geschrieben wird sie nie,
+das Journal rechnet jede P&L selbst. Eine Zahl, die nicht übernommen wird, darf nicht
+aussehen wie eine verdiente; das ist dieselbe Linie, die 4.17 für alles Hypothetische
+zieht.
+
+Ungültige Zeilen stehen in einer eigenen Karte darunter, Grund in `text-danger-fg`,
+Zeilennummer rechts. Sie blockieren den Rest der Datei nicht, und die Karte sagt das.
+
+**Schritt 4** ist ein Satz, kein Konfetti: „Imported 42 · updated 0 · 0 already in your
+journal were skipped." Keine Farbe auf den Zahlen. Ein Import ist Buchhaltung — §1 hält
+das Grün für einen Tag zurück, der gut gehandelt wurde, nicht für einen, der erfolgreich
+eingelesen wurde.
+
+**Die Batch-Liste** steht dauerhaft unter dem Wizard, auf jedem Schritt. Je Zeile
+Dateiname, Konto, Datum und Form, rechts der Knopf „Remove 41 of 42". **Die zwei Zahlen
+sind der Punkt:** die erste sagt, was verschwindet, die Differenz, was bleibt, weil
+daran gearbeitet wurde. Der Knopf ist der erste Löschpfad für Trades im Projekt und
+fragt deshalb in sich selbst nach — ein zweiter Klick auf „Click again to remove",
+**kein `window.confirm`**, das jedes weitere Browser-Ereignis blockieren würde. Die
+Kante wird dabei rot (`border-danger-fg/60`), gefüllt wird sie nicht: rot als Fläche
+ist in diesem Projekt ein Verlust, nicht eine Warnung.
+
+**Wofür nicht.** Keine Zeile in der Vorschau ist editierbar, es gibt kein
+Spalten-Mapping und keinen Fortschritt über mehrere Dateien. Wer eine Spalte anders
+haben will, ändert sie im Export.
+
+**Stand.** §4.5 kannte den Import bisher nur als Beispiel für einen disabled-Zustand
+(„Locked — imported from CSV"); dieser Abschnitt ist der erste, der den Screen
+beschreibt. Gebaut, nicht entworfen — derselbe Vorbehalt wie 4.16 und 4.17.
+
+Die Vorschautabelle ist die **fünfte** Kopie des Zeilen-Layouts. 4.16 hatte die
+Zusammenführung für diesen Slice angekündigt; sie ist auf Ansage in einen eigenen
+`refactor:`-Slice verschoben worden, weil sie vier gemergte, untestete Karten anfasst
+und in diesem Commit ohne Netz liefe. 4.16 bleibt unverändert stehen, diese Zeile
+korrigiert die Zuordnung.
+
+---
+
 ## 5. Motion
 
 | Moment | Dauer | Kurve |

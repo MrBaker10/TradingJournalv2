@@ -14,7 +14,11 @@ export default async function SettingsPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="page-title">Settings</h1>
-      <AccountsManager active={active} archived={archived} />
+      <AccountsManager
+        active={active}
+        archived={archived}
+        timeZone={user.timezone}
+      />
       <div className="max-w-4xl">
         <ExportCard />
       </div>

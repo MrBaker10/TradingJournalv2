@@ -42,6 +42,7 @@ const FUTURES = [
     pointValue: "5",
     tickSize: "0.10",
   },
+  { symbol: "MGC", name: "Micro Gold", pointValue: "10", tickSize: "0.10" },
 ];
 
 async function seed() {

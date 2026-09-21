@@ -4,6 +4,7 @@ import { ArchiveRestore, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { hardDeleteAccount, unarchiveAccount } from "@/actions/accounts";
 import { InlineMessage } from "@/components/ui/inline-message";
+import { calendarDateOf, formatDayLabel } from "@/lib/time";
 
 const CONFIRM_TIMEOUT_MS = 3000;
 
@@ -15,9 +16,10 @@ export interface ArchivedAccountData {
 
 interface ArchivedAccountRowProps {
   account: ArchivedAccountData;
+  timeZone: string;
 }
 
-function ArchivedAccountRow({ account }: ArchivedAccountRowProps) {
+function ArchivedAccountRow({ account, timeZone }: ArchivedAccountRowProps) {
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -60,7 +62,8 @@ function ArchivedAccountRow({ account }: ArchivedAccountRowProps) {
         <div className="flex flex-1 flex-col">
           <span className="truncate text-sm text-fg-muted">{account.name}</span>
           <span className="text-xs text-fg-subtle">
-            Archived {account.archivedAt.toLocaleDateString()}
+            Archived{" "}
+            {formatDayLabel(calendarDateOf(account.archivedAt, timeZone))}
           </span>
         </div>
         <button
@@ -93,16 +96,25 @@ function ArchivedAccountRow({ account }: ArchivedAccountRowProps) {
 
 interface ArchivedAccountsListProps {
   accounts: ArchivedAccountData[];
+  /** `archived_at` is an instant; the day it falls on is the user's to decide. */
+  timeZone: string;
 }
 
-export function ArchivedAccountsList({ accounts }: ArchivedAccountsListProps) {
+export function ArchivedAccountsList({
+  accounts,
+  timeZone,
+}: ArchivedAccountsListProps) {
   if (accounts.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-2">
       <span className="cap">Archived</span>
       {accounts.map((account) => (
-        <ArchivedAccountRow key={account.id} account={account} />
+        <ArchivedAccountRow
+          key={account.id}
+          account={account}
+          timeZone={timeZone}
+        />
       ))}
     </div>
   );

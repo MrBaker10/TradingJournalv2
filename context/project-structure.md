@@ -43,7 +43,7 @@ src/
     globals.css               # Tailwind v4 @theme lives here
   components/
     ui/                       # shadcn primitives
-    dashboard/  journal/  analytics/  progress/
+    dashboard/  journal/  analytics/  progress/  import/
     prop-firms/  econ/  settings/    # econ/ is Phase 2
   domain/                     # pure, tested, no DB
     pnl.ts
@@ -52,14 +52,20 @@ src/
     consistency.ts
     badges.ts
     import/
-      detect.ts               # round-trip vs fills vs TradingView
-      normalize.ts
+      types.ts                # the shapes every import module passes around
+      detect.ts               # round-trip vs fills vs TradingView (fills only, so far)
+      normalize.ts            # UTC -> the trader's clock, symbol -> instrument, tick
+      fills.ts                # FIFO pairing per contract
+      match.ts                # tier 1 broker key, tier 2 entry side
+      outcome.ts              # skip / update / new, and what an update may write
+      session.ts              # NY windows, read on the trader's clock
   db/
     schema/                   # one file per area
     queries/                  # one file per area
     migrations/
     index.ts                  # client
     seed.ts                   # local user + default account
+    seed-instruments.ts       # ten futures plus MGC
     seed-propfirms.ts         # idempotent upsert from PropFirmsData.md
   actions/                    # server actions, one file per feature
   schemas/                    # Zod, shared with forms

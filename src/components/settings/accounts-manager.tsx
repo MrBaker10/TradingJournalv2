@@ -11,9 +11,14 @@ import { ArchivedAccountsList } from "@/components/settings/archived-accounts-li
 interface AccountsManagerProps {
   active: AccountRowData[];
   archived: ArchivedAccountData[];
+  timeZone: string;
 }
 
-export function AccountsManager({ active, archived }: AccountsManagerProps) {
+export function AccountsManager({
+  active,
+  archived,
+  timeZone,
+}: AccountsManagerProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   return (
@@ -44,7 +49,7 @@ export function AccountsManager({ active, archived }: AccountsManagerProps) {
           />
         </div>
       </div>
-      <ArchivedAccountsList accounts={archived} />
+      <ArchivedAccountsList accounts={archived} timeZone={timeZone} />
     </div>
   );
 }

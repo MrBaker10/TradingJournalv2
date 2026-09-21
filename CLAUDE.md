@@ -86,8 +86,11 @@ These are the mistakes that are easy to make here and expensive to find later.
 - **Missed setups are `trades.taken = false`.** They feed streak and badges and are
   excluded from every P&L, win rate and R figure. Not a second table.
 - **Chart-clock times are never converted.** `entry_time` and `exit_time` are
-  `time without time zone`. Only econ events and audit columns are `timestamptz`, and
-  the user's stored timezone applies to econ events alone.
+  `time without time zone` and carry the clock the trader sits in front of.
+  `users.timezone` says which clock that is; it is never applied to the stored value.
+  Only econ events and audit columns are `timestamptz`. An import converts a broker's
+  UTC timestamp exactly once, at the file boundary in `src/domain/import/normalize.ts`,
+  and the value is a chart-clock time from then on.
 - **Nothing is shared, ever.** No public route, no share token, no read-only view, no
   leaderboard, no raffle. Every page and action sits behind a session and filters by
   the current user. An unauthenticated route is a bug.

@@ -67,12 +67,22 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="page-title">Trade Journal</h1>
-        <Link
-          href="/journal/new"
-          className="flex h-10 items-center rounded-ctl bg-[image:var(--gradient-info)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-button-primary)]"
-        >
-          New trade
-        </Link>
+        <div className="flex items-center gap-2">
+          {/* The quiet process surface of Design.md §4.14: a secondary action
+              that stands next to the primary one without competing with it. */}
+          <Link
+            href="/journal/import"
+            className="flex h-10 items-center rounded-ctl bg-[image:var(--gradient-info-soft)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-info-soft)]"
+          >
+            Import
+          </Link>
+          <Link
+            href="/journal/new"
+            className="flex h-10 items-center rounded-ctl bg-[image:var(--gradient-info)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-button-primary)]"
+          >
+            New trade
+          </Link>
+        </div>
       </div>
 
       <JournalFilters

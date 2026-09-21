@@ -156,6 +156,13 @@ commit that changes nothing else.
   toward number, the string becomes `NaN`, and every comparison is silently false.
   Compare two columns **in SQL**, where both sides are typed. Cost one real bug in the
   dashboard streak bump — see `decisions.md`, Designrunde 1.
+- **The row generic of `db.execute<Row>()` asserts just as blindly.** A raw statement
+  carries no Drizzle column mapper, so a `timestamptz` arrives as a string whatever the
+  generic claims. Declare it `string` there and convert in the mapper with
+  `new Date(...)`, the way `dashboard.ts` does for `loggedAt`. A `Date` that is really a
+  string passes typecheck, tests and build, and fails on the first render that calls a
+  `Date` method on it. Cost a second real bug, in the import batch list — see
+  `decisions.md`, S13.
 - **Drizzle qualifies a column reference inside a `where` clause, but not inside a select
   list.** A correlated subquery in a select list renders `where "user_id" = "id"`, which
   postgres reads as two columns of the same table and happily matches the wrong rows.
@@ -211,11 +218,18 @@ Non-negotiable, because this is a P&L tool:
 - The user's timezone lives on `users` and decides every **calendar boundary**: what
   "today" and "this month" mean for streak, consistency score and badges, and when a
   trade's 48h logging window closes. Econ events render in it too.
-- It is never applied to `entry_time` / `exit_time`. Those are the user's chart clock
-  and stay unconverted.
-- `entry_time` / `exit_time` are `time without time zone`. This is the user's chart
-  clock and is **never** converted to another timezone.
-- Econ events and audit columns are `timestamptz`.
+- `entry_time` / `exit_time` are `time without time zone` and are **never** converted.
+  `users.timezone` names the clock they are on — the zone the trader sits in — but is
+  never applied to the stored value.
+- A timestamp that arrives on another clock is converted **once, at the boundary**, and
+  is a chart-clock time from then on. The import does this in
+  `src/domain/import/normalize.ts`; nothing downstream converts again.
+- Market sessions are New York times and are read against the user's clock **per trade
+  date**, because the two zones change to summer time on different days
+  (`src/domain/import/session.ts`).
+- Econ events and audit columns are `timestamptz`. An audit column is an instant, not a
+  date: which calendar day it falls on is a question only a zone answers, and the zone
+  is the user's — `calendarDateOf` in `src/lib/time.ts`.
 - Formatting with `date-fns` and `@date-fns/tz`. No ad-hoc `Date` arithmetic.
 
 ## Domain logic

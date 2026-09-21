@@ -11,6 +11,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { accounts } from "./accounts.ts";
+import { importBatches } from "./import-batches.ts";
 import { instruments } from "./instruments.ts";
 import { users } from "./users.ts";
 
@@ -50,6 +51,16 @@ export const trades = pgTable(
     felt: text("felt"),
     byTheBook: boolean("by_the_book"),
     notes: text("notes"),
+    // null = logged by hand. Set for every row an import writes, so a batch
+    // can be undone without touching manual trades (current-feature.md).
+    importBatchId: integer("import_batch_id").references(
+      () => importBatches.id,
+    ),
+    // The broker's own identifier for this trade: a trade/order id from a
+    // round-trip export, or a hash over the sorted fill ids that make up the
+    // round trip. null when the file carries no stable id, which is the
+    // normal case for a TradingView list — tier 2 handles those.
+    brokerTradeKey: text("broker_trade_key"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -60,6 +71,9 @@ export const trades = pgTable(
   (table) => [
     index("trades_user_date_idx").on(table.userId, table.tradeDate),
     index("trades_user_taken_idx").on(table.userId, table.taken),
+    // Tier 1 of the duplicate check reads exactly this pair.
+    index("trades_user_broker_key_idx").on(table.userId, table.brokerTradeKey),
+    index("trades_import_batch_idx").on(table.importBatchId),
   ],
 );
 

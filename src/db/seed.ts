@@ -9,14 +9,14 @@ async function seed() {
     .values({
       username: "local",
       displayName: "Local User",
-      timezone: "UTC",
+      timezone: "Europe/Berlin",
       currencyDisplay: "USD",
     })
     .onConflictDoUpdate({
       target: users.username,
       set: {
         displayName: "Local User",
-        timezone: "UTC",
+        timezone: "Europe/Berlin",
         currencyDisplay: "USD",
       },
     })
