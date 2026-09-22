@@ -1734,3 +1734,67 @@ genannt), ein `refactor:` an der Preisarithmetik und ein `perf:` am Schreibpfad.
   durch die echten Actions.
 - Round-Trip- und TradingView-Erkennung sowie die Tabellen-Extraktion stehen weiter aus,
   unverändert gegenüber dem S13-Block.
+
+## 2026-09-22 — Dashboard-Zeitraum — feature/dashboard-range — 2d68415
+
+**Gebaut.** Die Equity-Kurve im Dashboard läuft jetzt vom ersten Trade bis heute statt
+über den laufenden Monat, mit Monatslabels samt Jahr auf der X-Achse. Der P&L-Kalender
+blättert über `?month=YYYY-MM` zwischen Monaten, begrenzt auf den Monat des ersten
+Trades und den laufenden Monat. Metrik-Tafel, Streak und Score bleiben beim laufenden
+Monat.
+
+**Dateien.** `src/db/queries/dashboard.ts` (`getMonthDayTotals` → `getDayTotals` mit
+optionaler Range), `src/domain/equity.ts` (`monthTicks`), `src/lib/time.ts`
+(`shiftMonth`, `formatMonthTickLabel`, `formatDateWithYear`),
+`src/lib/dashboard/href.ts` (neu), `src/app/(app)/dashboard/page.tsx`,
+`src/components/dashboard/equity-curve.tsx`, `src/components/dashboard/pnl-calendar.tsx`,
+`context/Design.md` §4.8 und §4.15.
+
+**Regeln.**
+
+- **Die Kurve summiert über den ganzen übergebenen Zeitraum, ohne Neustart an der
+  Monatsgrenze.** Lebt in `buildEquitySeries`, abgesichert durch „carries the sum across
+  a month boundary". Der Test „ends on the month's net P&L" heißt jetzt „ends on the net
+  P&L of the whole stretch" — der Erwartungswert ist derselbe, nur die Aussage passt
+  zum neuen Zeitraum.
+- **Eine Monatsmarke je Monat, auf einem tatsächlich gezeichneten Datum.**
+  `firstDayOfEachMonth` in `equity.ts`, abgesichert durch die fünf Tests unter „the
+  month marks": einschließlich Jahreswechsel und „picks a date that is really on the
+  curve".
+- Geldregeln über mehrere Monate (Multiplikator, Übungskonten, ein gewähltes Konto,
+  Drawdown ab Null) sind erstmals für `getDayTotals` gegen echtes Postgres getestet:
+  zehn Fälle in `dashboard.test.ts`.
+
+**Entschieden unterwegs.**
+
+- **`?month` wird auf 01–12 geprüft, nicht nur auf zwei Ziffern.** `2026-13` passte auf
+  das lockere Muster, machte aus `monthRangeOf` ein Invalid Date und brachte die Seite
+  mit einem 500 herunter.
+- **Der laufende Monat schreibt keinen URL-Parameter.** „Jetzt" ist kein Zustand, der
+  synchron gehalten werden muss. `buildHref` lässt ein `undefined` weg.
+- **Der Monats-Drawdown bleibt eine eigene Abfrage** (`getDayTotals(scope,
+  monthRangeOf(month))`) und wird nicht aus der Gesamtreihe herausgeschnitten. Er misst
+  ab dem Höchststand oder Null *innerhalb* des Monats; ein Ausschnitt der Gesamtreihe
+  würde den Höchststand des Vormonats mitschleppen. Die Kalendertage dagegen sind ein
+  Ausschnitt der Gesamtreihe, keine dritte Abfrage.
+- **Die Monatsmarken wählt die Domain, nicht Recharts.** Recharts würde jeden Punkt
+  beschriften und „Aug 2026" zwanzigmal drucken. Liegt die ganze Reihe in einem Monat,
+  schaltet die Achse auf Tageslabels zurück.
+- **Kurvenkopf „13 Aug 2026 — today"** über `formatDateWithYear`, der Zeitraum
+  beschreibt sich aus dem ersten Punkt der Reihe, ohne eigene Abfrage.
+- **`ReadExecutor` in `dashboard.ts`** als Test-Naht für die Transaktion mit Rollback,
+  nach dem Muster von `analytics.ts` und `import.ts`, lokal mit eigenem `Pick`. Den Typ
+  zusammenzulegen wäre ein eigener Refactor.
+- **Außerhalb des Scope:** `firstValue` lag identisch in `analytics/page.tsx`,
+  `journal/page.tsx` und `lib/prop-firms/href.ts` und wäre auf der Dashboard-Seite ein
+  viertes Mal entstanden. Er steht jetzt einmal in `src/lib/search-params.ts` neben
+  `buildHref`. Kein Verhalten geändert; im Review als Scope-Abweichung gemeldet und im
+  Branch belassen.
+
+**Offen geblieben.**
+
+- **Ein `?month` außerhalb des Bereichs wird nicht begrenzt.** `2099-01` oder ein Monat
+  vor dem ersten Trade zeigt ein leeres Raster mit nur einer aktiven Richtung. Kein
+  Absturz (200), aber auch keine Begrenzung auf die Grenzen. Aus dem Review, nicht
+  entschieden.
+- `ReadExecutor` existiert jetzt dreimal mit verschiedenem `Pick`.
