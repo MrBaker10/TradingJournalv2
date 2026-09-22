@@ -1907,3 +1907,91 @@ behält seine Daten.
   Screenshots liegen weiterhin auf lokaler Platte.
 - **`pnpm build` bei laufendem `pnpm dev`** ließ den Dev-Server mit einem alten
   `auth.ts`-Modul weiterlaufen. Erst ein Neustart half.
+
+## 2026-09-22 — P2.2 Neon + Vercel — feature/neon-vercel — b59dc13
+
+**Gebaut.** Die Datenbank läuft auf Neon, die App auf Vercel. Neon-Projekt
+`tradingjournal` (`restless-hat-06633519`) in aws-eu-central-1 mit PG 18. Main trägt
+Production: Migrationen 0000–0013 und die Referenz-Seeds (Instruments, Trade-Tags,
+Badges, Prop Firms), aber keinen Nutzer. Der feste Branch `preview` trägt alle
+Preview-Deployments. Er ist von Main abgezweigt und hat zusätzlich den Demo-User
+`local`. Das Vercel-Projekt `sascha-backers-projects/tradingjournal` läuft in fra1 und
+hat fünf Variablen in Production und vier in Preview. Die Secrets sind pro Umgebung neu
+erzeugt und wurden nie ausgegeben. Klickpfad auf der Preview:
+Login → Dashboard → neuer Trade → Journal → Settings. Keine Konsolenmeldung, kein
+Runtime-Fehler.
+
+**Dateien.** `src/db/index.ts` (`prepare: false`), `src/lib/env.ts`
+(`DATABASE_URL_DIRECT`, `VERCEL_URL`, `VERCEL_BRANCH_URL`, alle optional),
+`drizzle.config.ts` (direkte URL, wenn gesetzt), `src/lib/auth/trusted-origins.ts` mit
+Test, `src/lib/auth/auth.ts` (`trustedOrigins`), `vercel.json` (`regions: ["fra1"]`),
+`.vercelignore`. Doku: `CLAUDE.md` (Neon-Befehle), `coding-standards.md`
+(Postgres-Zeile).
+
+**Entschieden unterwegs.**
+- **Frankfurt statt iad1.** Das Vercel-Projekt stand auf iad1. Wichtig ist, dass
+  Function und DB in derselben Region stehen, und Frankfurt liegt beim Nutzer. Die
+  Region steht in `vercel.json` und nicht in `vercel.ts`, weil `vercel.ts` die neue
+  Dependency `@vercel/config` bräuchte.
+- **`prepare: false` gilt überall**, auch lokal. Neons Pooler arbeitet im
+  Transaction-Mode, eine Prepared Statement bleibt an einer Server-Verbindung hängen,
+  und die nächste Query landet auf einer anderen. Eine Weiche für lokal würde zwei
+  Pfade bedeuten, die sich unterschiedlich verhalten. Der Preis ist ein erneutes Parsen
+  pro Statement.
+- **Gepoolt zur Laufzeit, direkt für Migrationen.** Die App liest nur `DATABASE_URL`,
+  auf Neon ist das die `-pooler`-URL. `DATABASE_URL_DIRECT` liest nur drizzle-kit, weil
+  eine Migration eine Session braucht. Lokal fehlt die Variable, und der Fallback nimmt
+  `DATABASE_URL`. Die Seeds laufen über den Pool, weil sie `src/db/index.ts` benutzen,
+  und funktionieren damit.
+- **`channel_binding=require` aus den Neon-URLs gestrichen**, nur `sslmode=require`
+  bleibt. postgres.js reicht unbekannte Query-Parameter als Server-Parameter weiter.
+  Den Parameter hätte es also dem Server geschickt, statt ihn selbst auszuwerten.
+  Geprüft, dass die Verbindung ohne ihn steht, nicht, dass sie mit ihm scheitern
+  würde.
+- **Neon-URLs lokal in eigenen Dateien.** `.env.neon.production` und
+  `.env.neon.preview` sind gitignored, Modus 600. Sie werden als zweites `--env-file`
+  hinter `.env.local` geladen, und Node lässt die spätere Datei gewinnen. Vor dem
+  ersten Lauf wurde der Host ausgegeben und geprüft, dass wirklich Neon getroffen wird.
+  Das `db:*`-Script mit fest verdrahtetem `.env.local` bleibt unverändert, für Neon
+  kommt kein eigenes Script dazu. Die Befehle stehen in `CLAUDE.md`.
+- **`trustedOrigins` exakt, ohne Wildcard.** `deploymentOrigins` macht aus
+  `VERCEL_URL` und `VERCEL_BRANCH_URL` eine `https`-Liste. Jede Preview vertraut damit
+  nur sich selbst, nicht allen Deployments im Scope. `BETTER_AUTH_URL` ist auch in
+  Preview die Production-URL, weil die Preview-Origin über diese Liste hereinkommt.
+  Dass die Liste wirklich greift, belegt der Login: Better Auths `validateFormCsrf`
+  erzwingt die Origin-Prüfung, sobald `Sec-Fetch-*`-Header da sind, und Chrome sendet
+  sie.
+- **Der Demo-User nur auf `preview`**, damit Previews ohne Registrierung testbar sind.
+  Das Passwort ist dasselbe `DEMO_USER_PASSWORD` aus `.env.local`. Die Preview steht
+  zusätzlich hinter der Deployment Protection von Vercel.
+- **Leak beim ersten Preview-Deploy.** `vercel deploy` aus dem Working Tree liest
+  `.gitignore` nicht, und eine `.vercelignore` gab es nicht. Hochgeladen wurden damit
+  `.env.neon.*` mit dem Neon-Passwort, `tmp/import-samples/Fills (1).csv` und
+  `.claude/`. `.env.local` schließt Vercel selbst aus. Behoben so: das Deployment
+  gelöscht, das Passwort von `neondb_owner` auf beiden Branches zurückgesetzt, lokale
+  Dateien und beide Vercel-`DATABASE_URL` aktualisiert, `.vercelignore` angelegt.
+  Deren Muster sind am Root verankert: der erste Versuch mit einem nackten `storage/`
+  schloss auch `src/lib/storage` aus und ließ den Build scheitern. **Regel:** Vor
+  jedem `vercel deploy` aus dem Working Tree die Dateiliste des Deployments auf `.env*`
+  prüfen.
+- **`vercel link` schreibt in `.env.local`.** Es hängt einen Block mit
+  `VERCEL_OIDC_TOKEN` an und lässt die übrigen Werte stehen. `vercel env pull` würde
+  die Datei dagegen mit dem Stand der Development-Umgebung überschreiben, und die ist
+  leer. Deshalb nie `vercel env pull`.
+- **Die Vercel-Variablen sind vom Typ Secret**, der Standard der CLI. Sie lassen sich
+  also nicht zurücklesen. Zum Ändern gibt es `vercel env update`.
+
+**Offen geblieben.**
+- **Production ist noch nicht verifiziert.** Der Merge nach `main` löst den ersten
+  grünen Production-Build aus. Danach registrierst sich Sascha, `REGISTRATION_OPEN`
+  geht auf `false`, es folgt ein Redeploy, und `/register` muss abgewiesen werden.
+- **Die App verbindet sich als `neondb_owner`**, also als Eigentümerin der Datenbank
+  mit DDL-Rechten. Eine eigene App-Rolle mit weniger Rechten wäre ein eigener
+  Hardening-Punkt.
+- **Screenshots scheitern auf Vercel.** Das ist die bekannte Lücke, `LocalDiskStorage`
+  schreibt ins schreibgeschützte Dateisystem. R2 ist ein eigener Slice.
+- **Eine neue Migration muss von Hand auf beide Neon-Branches.** Nichts erinnert daran
+  oder erzwingt es.
+- **Das Datumsfeld in `/journal/new`** war beim Klickpfad leer, deshalb kam
+  „Invalid date“. Nicht geprüft, ob das lokal genauso ist. Mit diesem Slice hat es
+  nichts zu tun.
