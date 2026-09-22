@@ -1798,3 +1798,112 @@ optionaler Range), `src/domain/equity.ts` (`monthTicks`), `src/lib/time.ts`
   Absturz (200), aber auch keine Begrenzung auf die Grenzen. Aus dem Review, nicht
   entschieden.
 - `ReadExecutor` existiert jetzt dreimal mit verschiedenem `Pick`.
+
+## 2026-09-22 — P2.1 Better Auth — feature/better-auth — aa4efdf
+
+**Gebaut.** Die App hat jetzt eine Anmeldung. Man meldet sich mit Nutzername und Passwort
+an und bei aktivierter Zwei-Faktor-Anmeldung zusätzlich mit einem TOTP-Code oder
+Backup-Code. Registrierung, Passwortwechsel, 2FA und Kontolöschung stehen in `/settings`,
+abmelden kann man über die Sidebar. Ohne Session ist nur `/login`, `/register` und
+`/api/auth/*` erreichbar. Bisher gab `getCurrentUser()` jedem den geseedeten Nutzer
+`local` zurück. Der ist jetzt der Demo-User mit Passwort aus `DEMO_USER_PASSWORD` und
+behält seine Daten.
+
+**Dateien.** `src/lib/auth/auth.ts` (Better-Auth-Konfiguration),
+`src/lib/auth/get-current-user.ts` (Session statt Seed-User, gleiche Signatur),
+`src/proxy.ts`, `src/app/api/auth/[...all]/route.ts`, `src/db/schema/auth.ts`,
+`src/db/schema/users.ts`, `src/app/(auth)/*`, `src/components/auth/*`,
+`src/components/settings/{security-section,password-card,two-factor-card,totp-qr,delete-account-card}.tsx`,
+`src/db/seed.ts`, `src/lib/env.ts`, `context/Design.md` §4.19.
+
+**Migration.**
+- **0011** (erzeugt, von Hand ergänzt): `users` bekommt `email`, `email_verified`,
+  `image`, `two_factor_enabled`, `display_username` und `updated_at`. Neu sind
+  `auth_sessions`, `auth_accounts`, `auth_verifications` und `auth_two_factors`, alle mit
+  Integer-Identity. Die Fremdschlüssel von `accounts`, `trades`, `daily_notes`,
+  `user_badges` und `import_batches` auf `users` bekommen `ON DELETE CASCADE`. Von Hand
+  ergänzt ist der Nachtrag der E-Mail für bestehende Nutzer, bevor `NOT NULL` greift.
+  drizzle-kit hätte die Spalte sofort `NOT NULL` angelegt.
+- **0012** (erzeugt): löscht `users.password_hash` und `users.totp_secret`. Die Trennung
+  von 0011 hat einen Grund: Bei hinzugefügten und gelöschten Spalten in einem Schritt
+  fragt drizzle-kit interaktiv, ob es Umbenennungen sind.
+- **0013** (handgeschrieben): `trade_accounts_account_id_accounts_id_fk` wird `DEFERRABLE
+  INITIALLY DEFERRED`. drizzle-kit kann das nicht ausdrücken, der Snapshot kennt es
+  deshalb nicht. Das schadet nicht, weil drizzle-kit Aufschiebbarkeit nicht vergleicht.
+  Ein Hinweis steht als Kommentar in `src/db/schema/trades.ts`.
+
+**Regeln.** `src/domain/**` ist nicht berührt. Durch Tests abgesichert:
+- Die Kaskade beim Löschen eines Nutzers erreicht jede Tabelle, und ein Konto mit
+  zugewiesenen Trades lässt sich weiterhin nicht löschen
+  (`src/db/queries/__tests__/user-deletion.test.ts`, gegen echtes Postgres).
+- Die Formulargrenzen entsprechen denen von Better Auth (`src/schemas/__tests__/auth.test.ts`).
+- Die Platzhalter-E-Mail wird kleingeschrieben
+  (`src/lib/auth/__tests__/placeholder-email.test.ts`).
+- Das TOTP-Label enthält nie `users.invalid` (`src/lib/auth/__tests__/totp-label.test.ts`).
+
+**Entschieden unterwegs.**
+- **Version 1.7.5 statt des Pins 1.7.3**, auf Anweisung. Dazu `uqr` 0.1.3 für den
+  QR-Code: keine Abhängigkeiten, Typen mitgeliefert. `qrcode` hätte yargs und pngjs
+  mitgezogen.
+- **`users` ist Better Auths Nutzertabelle**, mit Integer-IDs über `generateId:
+  "serial"`. Alle bestehenden Fremdschlüssel bleiben. Better Auth gibt IDs als String
+  zurück, `getCurrentUser()` wandelt sie einmal mit `Number()` um.
+- **Better Auths „account" heißt hier `auth_accounts`**, damit eine Zugangszeile nie mit
+  einem Handelskonto in `accounts` verwechselt wird.
+- **Keine E-Mail.** Better Auth 1.7.5 verlangt sie trotzdem als eindeutiges Pflichtfeld.
+  Gespeichert wird `<username>@users.invalid`. Das setzt ein `databaseHooks`-Hook
+  serverseitig, was auch immer der Client schickt. `.invalid` ist nach RFC 2606
+  reserviert.
+- **Der TOTP-Kontoname** ist in Better Auth fest `user.email`. Vor dem QR-Code wird er
+  durch den Nutzernamen ersetzt (`totp-label.ts`), sonst stünde der Platzhalter in der
+  Authenticator-App.
+- **Löschen nur mit Passwort**, erzwungen über einen `hooks.before` auf `/delete-user`.
+  Ohne ihn akzeptiert Better Auth eine Session, die jünger als einen Tag ist.
+- **Kaskade statt Löschfunktion.** Meine erste Annahme, NO ACTION werde erst am Ende des
+  Statements geprüft, war falsch: Der Test scheiterte an `trade_accounts → accounts`.
+  Entschieden wurde `DEFERRABLE INITIALLY DEFERRED` (0013). Der Schlüssel hat bewusst
+  keine Kaskade, damit das Löschen eines Kontos nicht still seine Zuweisungen mitnimmt.
+- **Screenshots beim Löschen.** `beforeDelete` liest die Storage-Schlüssel, `afterDelete`
+  entfernt die Dateien, nachdem die Zeile weg ist. Die Kaskade nimmt die
+  Screenshot-Zeilen mit, deshalb müssen die Schlüssel vorher gelesen werden.
+- **Registrierung** ist über `REGISTRATION_OPEN` steuerbar. Nur der exakte Wert `"true"`
+  öffnet sie, eine vergessene Variable schließt sie also. `disableSignUp` sperrt den
+  Endpunkt, nicht nur den Screen.
+- **Session 7 Tage**, einmal am Tag verlängert (Standard von Better Auth). **2FA ist
+  optional** pro Nutzer. Die Backup-Codes werden einmal angezeigt und gelten beim Login.
+  **`/`** leitet auf `/dashboard`, ohne Session schickt `proxy.ts` vorher auf `/login`.
+- **`proxy.ts` prüft die volle Session**, nicht nur das Cookie. Der Proxy läuft in
+  Next 16 auf Node, die Datenbank ist dort erreichbar. `/api/*` antwortet ohne Session
+  mit 401 statt einer Weiterleitung. Jede Seite, Action und Route prüft trotzdem erneut
+  über `getCurrentUser()`, laut Next-Doku ist der Proxy keine Berechtigungsgrenze.
+- **`getCurrentUser` in Reacts `cache()`** (aus dem Review): Layout und Seite teilen sich
+  eine Session-Abfrage pro Request.
+- **`/api/uploads` GET** prüft zusätzlich, dass der Schlüssel dem angemeldeten Nutzer
+  gehört. Eine weitergegebene signierte URL reicht nicht mehr.
+- **`/is-username-available` ist abgeschaltet** (aus dem Review). Sonst hätte jeder ohne
+  Anmeldung prüfen können, welche Nutzernamen existieren.
+- **Nur TOTP.** `twoFactor.enable` wird mit `method: "totp"` aufgerufen. Die Methode
+  „otp" würde Codes per Mail oder SMS verschicken.
+- **Klickpfad-Korrektur:** Nach „Set up" war nicht erkennbar, dass nach dem Passwort der
+  QR-Code kommt. Die Karte sagt jetzt „Step 1 of 2 … Step 2 of 2", der Button heißt
+  „Show QR code".
+- **Außerhalb des Scope:** Die Test-Fixtures in `analytics`, `dashboard` und
+  `trades.test.ts` bekommen nur die neue Pflichtspalte `email`, keine Assertion ist
+  geändert.
+
+**Offen geblieben.**
+- **`SubmitButton` und `AuthField`** (`src/components/auth/`) doppeln den Button und die
+  Feldklassen aus `account-create-form.tsx`. `GHOST_BUTTON` in `two-factor-card.tsx`
+  doppelt die Klassen der Export-Karte. Die Komponenten werden auch in Settings benutzt,
+  gehören also eher nach `components/ui`. Das Zusammenlegen ist ein eigener
+  `refactor:`-Slice.
+- **Scheitert `afterDelete`** beim Entfernen der Dateien, ist der Nutzer schon gelöscht.
+  Die Karte meldet dann trotzdem „Nothing was removed". Auf lokaler Platte ist das
+  praktisch ausgeschlossen, mit R2 muss es gelöst werden.
+- **Formulare validieren beim Absenden**, nicht live beim Tippen wie in `Design.md`
+  §4.5. Das ist dasselbe Muster wie in `account-create-form`.
+- **Für den Neon/Vercel-Slice:** `BETTER_AUTH_URL` deckt nur eine Domain ab.
+  Preview-Deployments brauchen `trustedOrigins`, sonst scheitert die Origin-Prüfung.
+  Screenshots liegen weiterhin auf lokaler Platte.
+- **`pnpm build` bei laufendem `pnpm dev`** ließ den Dev-Server mit einem alten
+  `auth.ts`-Modul weiterlaufen. Erst ein Neustart half.
