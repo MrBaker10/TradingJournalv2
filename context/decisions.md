@@ -1995,3 +1995,32 @@ Test, `src/lib/auth/auth.ts` (`trustedOrigins`), `vercel.json` (`regions: ["fra1
 - **Das Datumsfeld in `/journal/new`** war beim Klickpfad leer, deshalb kam
   „Invalid date“. Nicht geprüft, ob das lokal genauso ist. Mit diesem Slice hat es
   nichts zu tun.
+
+## 2026-09-22 — Production befristet offen für Testnutzer — kein Slice
+
+**Warum.** Production dient für eine begrenzte Zeit als Testumgebung: Freunde
+registrieren sich selbst, legen Fake-Trades an und geben Feedback. Niemand nutzt es
+produktiv, die Datenbank wird am Ende geleert. `REGISTRATION_OPEN` bleibt deshalb
+vorerst `true` statt direkt nach der ersten Registrierung zuzugehen.
+
+**Rückweg.** Neon-Snapshot `pre-friends-test` (`snap-calm-poetry-b1jljetn`) vom Branch
+`main`, angelegt bevor sich der erste Nutzer registriert hat. Zustand: Migrationen
+0000–0013 und die Referenz-Seeds, null Nutzer. Ein Snapshot und nicht Point-in-time,
+weil `history_retention_seconds` auf 21600 steht — sechs Stunden reichen für eine
+Testphase über Tage nicht.
+
+**Ende der Testphase.** Entweder Restore des Snapshots oder `delete from users` gegen
+`main`; alle acht Nutzer-FKs stehen auf `ON DELETE CASCADE`, die Referenzdaten hängen
+nicht an `users` und überleben beides. Der Unterschied: der Restore setzt auch die
+Identity-Sequenzen zurück. Danach `REGISTRATION_OPEN` auf `false`, Redeploy, und prüfen,
+dass `/register` abweist. *Enddatum offen.*
+
+**Bekannte Lücke für die Tester.** Screenshots scheitern in Production, weil
+`LocalDiskStorage` ins schreibgeschützte Dateisystem schreibt. `storage.put` läuft vor
+dem `insert`, es bleibt also keine verwaiste Zeile in `trade_screenshots` zurück. Die
+Tester werden vorgewarnt, R2 bleibt ein eigener Slice.
+
+**Damit erledigt.** Der Punkt „Production ist noch nicht verifiziert" aus P2.2.
+
+**Offen.** Kein `robots.txt` und kein Meta-`noindex` im Projekt, während `/register`
+offen steht. Bewusst nicht angefasst.
