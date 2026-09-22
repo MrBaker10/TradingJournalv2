@@ -32,7 +32,7 @@ describe("buildEquitySeries", () => {
       ]);
     });
 
-    it("ends on the month's net P&L", () => {
+    it("ends on the net P&L of the whole stretch", () => {
       const input = days(
         ["2026-09-01", 12345],
         ["2026-09-04", -9876],
@@ -43,6 +43,36 @@ describe("buildEquitySeries", () => {
       const series = buildEquitySeries(input);
 
       expect(series.points.at(-1)?.equityCents).toBe(net);
+    });
+
+    it("carries the sum across a month boundary", () => {
+      // The dashboard passes the whole history, so the accumulator must not
+      // reset anywhere: August has to still be in the September figures.
+      const series = buildEquitySeries(
+        days(
+          ["2026-08-20", 40000],
+          ["2026-08-28", -15000],
+          ["2026-09-03", 20000],
+        ),
+      );
+
+      expect(series.points.map((point) => point.equityCents)).toEqual([
+        40000, 25000, 45000,
+      ]);
+    });
+
+    it("keeps the axis readable over a stretch of many months", () => {
+      const series = buildEquitySeries(
+        Array.from({ length: 14 }, (_, index) => ({
+          date: `2026-${String((index % 12) + 1).padStart(2, "0")}-0${(index % 9) + 1}`,
+          amountCents: index % 2 === 0 ? 25000 : -10000,
+        })),
+      );
+
+      expect(series.ticksCents.length).toBeGreaterThanOrEqual(3);
+      expect(series.ticksCents.length).toBeLessThanOrEqual(7);
+      expect(series.domainCents[0]).toBeLessThanOrEqual(0);
+      expect(series.domainCents[1]).toBeGreaterThanOrEqual(0);
     });
 
     it("sorts the days before summing", () => {
@@ -92,13 +122,13 @@ describe("buildEquitySeries", () => {
       ]);
     });
 
-    it("returns no points for a month with no entries", () => {
+    it("returns no points when there are no entries", () => {
       expect(buildEquitySeries([]).points).toEqual([]);
     });
   });
 
   describe("the axis", () => {
-    it("spans zero even when the month only ever rose", () => {
+    it("spans zero even when the curve only ever rose", () => {
       const series = buildEquitySeries(
         days(["2026-09-01", 31000], ["2026-09-02", 9000]),
       );
@@ -224,5 +254,61 @@ describe("buildEquitySeries", () => {
       expect(large.ticksCents.length).toBeGreaterThanOrEqual(3);
       expect(large.ticksCents.length).toBeLessThanOrEqual(7);
     });
+  });
+});
+
+describe("the month marks", () => {
+  it("names the first traded day of each month", () => {
+    const series = buildEquitySeries(
+      days(
+        ["2026-08-20", 1],
+        ["2026-08-28", 1],
+        ["2026-09-03", 1],
+        ["2026-09-04", 1],
+        ["2026-10-01", 1],
+      ),
+    );
+
+    // One mark per month, not one per point: the axis would otherwise print
+    // "Aug 2026" for every August day it draws.
+    expect(series.monthTicks).toEqual([
+      "2026-08-20",
+      "2026-09-03",
+      "2026-10-01",
+    ]);
+  });
+
+  it("gives a single-month series one mark", () => {
+    // One entry is how the chart knows it may use day marks instead.
+    const series = buildEquitySeries(
+      days(["2026-09-03", 1], ["2026-09-04", 1], ["2026-09-30", 1]),
+    );
+
+    expect(series.monthTicks).toEqual(["2026-09-03"]);
+  });
+
+  it("crosses a year boundary without merging December into January", () => {
+    const series = buildEquitySeries(
+      days(["2026-12-28", 1], ["2027-01-04", 1]),
+    );
+
+    expect(series.monthTicks).toEqual(["2026-12-28", "2027-01-04"]);
+  });
+
+  it("has no marks without points", () => {
+    expect(buildEquitySeries([]).monthTicks).toEqual([]);
+  });
+
+  it("picks a date that is really on the curve", () => {
+    // The mark sits on a plotted point, so the chart never interpolates a
+    // position for it.
+    const series = buildEquitySeries(
+      days(["2026-08-20", 1], ["2026-09-17", 1]),
+    );
+    const plotted = new Set(series.points.map((point) => point.date));
+
+    for (const tick of series.monthTicks) {
+      expect(plotted.has(tick)).toBe(true);
+    }
   });
 });

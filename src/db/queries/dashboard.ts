@@ -14,6 +14,7 @@ import {
 import { users } from "../schema/users.ts";
 import { hasEodReview, listMonthReviewDates } from "./daily-notes.ts";
 import {
+  type DateRange,
   moneyContribution,
   moneyWeight,
   type QueryScope,
@@ -136,6 +137,12 @@ export async function getMonthCountMetrics(
   };
 }
 
+/**
+ * Lets a test run this read inside a rolled-back transaction, the same seam
+ * analytics.ts uses. Production passes none.
+ */
+export type ReadExecutor = Pick<typeof db, "select" | "with" | "$with">;
+
 export interface DayTotal {
   date: IsoDate;
   /** Money aggregate: multiplied by the real accounts of each trade. */
@@ -144,9 +151,9 @@ export interface DayTotal {
   entryCount: number;
 }
 
-export interface MonthDayTotals {
+export interface DayTotals {
   days: DayTotal[];
-  /** Money aggregate: the month's largest peak-to-trough fall, >= 0. */
+  /** Money aggregate: the largest peak-to-trough fall over `range`, >= 0. */
   maxDrawdownCents: number;
 }
 
@@ -158,18 +165,23 @@ export interface MonthDayTotals {
  * A day with nothing but missed setups is a real row with a zero amount: it
  * was journaled, and the calendar shows journaling.
  *
- * The drawdown runs over the month's own cumulative P&L and measures from the
- * higher of the running peak and zero, so a month that only ever falls has a
- * drawdown equal to its loss rather than none at all.
+ * `range` bounds the read. **Omitting it means the whole history**, which is
+ * what the equity curve asks for — the series then starts at the first trade
+ * by construction, with no separate query for that date.
+ *
+ * The drawdown runs over the cumulative P&L of whatever range was asked for
+ * and measures from the higher of the running peak and zero, so a stretch
+ * that only ever falls has a drawdown equal to its loss rather than none.
  */
-export async function getMonthDayTotals(
+export async function getDayTotals(
   scope: DashboardScope,
-  month: string,
-): Promise<MonthDayTotals> {
+  range?: DateRange,
+  executor: ReadExecutor = db,
+): Promise<DayTotals> {
   const contribution = moneyContribution(scope);
 
-  const dayTotals = db.$with("day_totals").as(
-    db
+  const dayTotals = executor.$with("day_totals").as(
+    executor
       .select({
         day: trades.tradeDate,
         amountCents: sql<string>`coalesce(sum(${contribution}), 0)::bigint`.as(
@@ -179,12 +191,12 @@ export async function getMonthDayTotals(
       })
       .from(trades)
       .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
-      .where(and(...scopeConditions(scope, monthRangeOf(month))))
+      .where(and(...scopeConditions(scope, range)))
       .groupBy(trades.tradeDate),
   );
 
-  const cumulative = db.$with("cumulative").as(
-    db
+  const cumulative = executor.$with("cumulative").as(
+    executor
       .select({
         day: dayTotals.day,
         amountCents: dayTotals.amountCents,
@@ -197,8 +209,8 @@ export async function getMonthDayTotals(
       .from(dayTotals),
   );
 
-  const withPeak = db.$with("with_peak").as(
-    db
+  const withPeak = executor.$with("with_peak").as(
+    executor
       .select({
         day: cumulative.day,
         amountCents: cumulative.amountCents,
@@ -211,7 +223,7 @@ export async function getMonthDayTotals(
       .from(cumulative),
   );
 
-  const rows = await db
+  const rows = await executor
     .with(dayTotals, cumulative, withPeak)
     .select({
       day: withPeak.day,

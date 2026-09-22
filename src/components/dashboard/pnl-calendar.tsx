@@ -2,15 +2,25 @@
 
 import { TZDate } from "@date-fns/tz";
 import { format, getDate, getDay, subDays } from "date-fns";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { DayTotal } from "@/db/queries/dashboard";
 import type { IsoDate } from "@/domain/streak";
+import {
+  buildDashboardHref,
+  type DashboardSearchParams,
+} from "@/lib/dashboard/href";
 import { buildJournalHref } from "@/lib/journal/href";
 import { formatCents } from "@/lib/money";
-import { monthRangeOf } from "@/lib/time";
+import { monthRangeOf, shiftMonth } from "@/lib/time";
 
 interface PnlCalendarProps {
+  /** The running month on the user's clock — paging forward stops here. */
+  currentMonth: string;
+  /** Month of the first trade; paging back stops here. null = no trades. */
+  firstTradeMonth: string | null;
   /** `YYYY-MM`, the running month in the user's own timezone. */
   month: string;
   today: IsoDate;
@@ -75,19 +85,57 @@ function ariaLabel(date: IsoDate, total: DayTotal): string {
 // one exception to "money does not glow": on the tile it encodes density
 // across the month, not reward, and the figure in the metric panel stays
 // plain. Today is ringed in cyan whether it is green, red or empty.
-export function PnlCalendar({ month, today, days }: PnlCalendarProps) {
+export function PnlCalendar({
+  month,
+  today,
+  days,
+  currentMonth,
+  firstTradeMonth,
+}: PnlCalendarProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const range = monthRangeOf(month);
   const leadingBlanks = getDay(dayOf(range.from));
   const daysInMonth = getDate(dayOf(range.to));
   const totals = new Map(days.map((day) => [day.date, day]));
 
+  // Paging stops where the data does: forward at the running month, back at
+  // the month of the first trade. Without that the arrows would walk into
+  // empty grids for ever and promise something that is not there.
+  const canGoBack = firstTradeMonth !== null && month > firstTradeMonth;
+  const canGoForward = month < currentMonth;
+
+  function goTo(target: string) {
+    const current = Object.fromEntries(
+      searchParams.entries(),
+    ) as DashboardSearchParams;
+    // The running month writes no parameter — see buildDashboardHref.
+    router.push(
+      buildDashboardHref(current, {
+        month: target === currentMonth ? undefined : target,
+      }),
+    );
+  }
+
   return (
     <section className="card-surface edge flex flex-col gap-3 p-5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="cap cap-neon">P&amp;L calendar</h2>
-        <span className="text-fg-subtle text-xs">
-          {format(dayOf(range.from), "MMMM yyyy")}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <MonthStep
+            direction="back"
+            disabled={!canGoBack}
+            onClick={() => goTo(shiftMonth(month, -1))}
+          />
+          <span className="min-w-[8.5rem] text-center text-fg-subtle text-xs">
+            {format(dayOf(range.from), "MMMM yyyy")}
+          </span>
+          <MonthStep
+            direction="forward"
+            disabled={!canGoForward}
+            onClick={() => goTo(shiftMonth(month, 1))}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-7 gap-2">
@@ -187,5 +235,33 @@ export function PnlCalendar({ month, today, days }: PnlCalendarProps) {
         })}
       </div>
     </section>
+  );
+}
+
+/**
+ * One step through the months. A quiet control: the calendar beside it is the
+ * loud thing on this card, and an arrow that competed with the coloured tiles
+ * would pull the eye away from the month it is there to show.
+ */
+function MonthStep({
+  direction,
+  disabled,
+  onClick,
+}: {
+  direction: "back" | "forward";
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const Icon = direction === "back" ? ChevronLeft : ChevronRight;
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={direction === "back" ? "Previous month" : "Next month"}
+      className="flex h-7 w-7 items-center justify-center rounded-xs text-fg-subtle transition-colors duration-150 hover:text-fg disabled:pointer-events-none disabled:opacity-30"
+    >
+      <Icon className="h-4 w-4" aria-hidden="true" />
+    </button>
   );
 }

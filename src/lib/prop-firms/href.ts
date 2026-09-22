@@ -3,16 +3,14 @@
 // src/lib/journal/href.ts does the same job for /journal but hardcodes that
 // path, so this is its own helper rather than a generalisation of it.
 
+import { firstValue } from "../search-params.ts";
+
 export const MAX_COMPARE = 3;
 
 export interface PropFirmsState {
   search: string;
   tags: string[];
   compare: number[];
-}
-
-function firstValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
 }
 
 function allValues(value: string | string[] | undefined): string[] {

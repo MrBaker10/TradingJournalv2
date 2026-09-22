@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   calendarDateOf,
+  formatDateWithYear,
   formatDayLabel,
   formatMonthLabel,
+  formatMonthTickLabel,
   monthKeyOf,
   monthRangeOf,
   rangeForPreset,
+  shiftMonth,
   todayInTimeZone,
 } from "../time.ts";
 
@@ -136,5 +139,45 @@ describe("rangeForPreset", () => {
       from: "2026-09-01",
       to: "2026-09-30",
     });
+  });
+});
+
+describe("shiftMonth", () => {
+  it("steps forward and backward inside a year", () => {
+    expect(shiftMonth("2026-09", 1)).toBe("2026-10");
+    expect(shiftMonth("2026-09", -1)).toBe("2026-08");
+    expect(shiftMonth("2026-09", 0)).toBe("2026-09");
+  });
+
+  it("crosses the year boundary in both directions", () => {
+    expect(shiftMonth("2026-12", 1)).toBe("2027-01");
+    expect(shiftMonth("2027-01", -1)).toBe("2026-12");
+  });
+
+  it("steps by more than one month", () => {
+    expect(shiftMonth("2026-09", 5)).toBe("2027-02");
+    expect(shiftMonth("2026-09", -9)).toBe("2025-12");
+  });
+
+  it("lands on a real month when the source month is longer", () => {
+    // Anchored on the first of the month, so a 31-day month stepping into a
+    // 30-day one cannot clamp into the wrong month.
+    expect(shiftMonth("2026-01", 1)).toBe("2026-02");
+    expect(shiftMonth("2026-03", -1)).toBe("2026-02");
+  });
+});
+
+describe("formatMonthTickLabel", () => {
+  it("names the month and the year", () => {
+    // The X axis of a curve spanning more than one month: "Sep 3" would leave
+    // the reader guessing which year it belongs to.
+    expect(formatMonthTickLabel("2026-09-03")).toBe("Sep 2026");
+    expect(formatMonthTickLabel("2026-01-31")).toBe("Jan 2026");
+  });
+});
+
+describe("formatDateWithYear", () => {
+  it("names the day, the month and the year", () => {
+    expect(formatDateWithYear("2026-08-13")).toBe("13 Aug 2026");
   });
 });

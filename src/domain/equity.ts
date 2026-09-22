@@ -1,7 +1,7 @@
 import type { IsoDate } from "./streak.ts";
 
-// The equity curve of one month: the running sum of the daily P&L, plus the
-// numbers the axis needs to draw itself.
+// The equity curve: the running sum of the daily P&L over whatever stretch
+// the caller hands over, plus the numbers the axis needs to draw itself.
 //
 // Contract:
 //
@@ -9,16 +9,20 @@ import type { IsoDate } from "./streak.ts";
 //   running sum is the only money arithmetic here and it stays in integers;
 //   the only floats this module produces are `zeroOffset`, which is a ratio,
 //   and nothing else.
-// - The caller owns scope. The days come from `getMonthDayTotals`, which has
-//   already applied the account multiplier and the practice filter, so this
-//   module multiplies nothing and filters nothing.
-// - The accumulator starts at 0 on the first day of the series, never at a
-//   balance carried in from the previous month. This is a month's curve, the
-//   same window as every other figure on the dashboard, so its last point is
-//   the month's Net P&L by construction.
+// - The caller owns scope **and window**. The days come from `getDayTotals`,
+//   which has already applied the account multiplier, the practice filter and
+//   any date range, so this module multiplies nothing, filters nothing and
+//   knows nothing about how long the stretch is.
+// - The accumulator starts at 0 on the first day it is given, never at a
+//   balance carried in. The dashboard passes the whole history, so the last
+//   point is the all-time result — deliberately **not** the Net P&L in the
+//   metric panel, which is the running month. Two questions, two numbers.
+// - There is no gap filling. One point per day that was journaled, drawn
+//   evenly spaced: an equity curve counts trading days, and stretching
+//   weekends out as flat runs would add length without information.
 // - A day with nothing but missed setups arrives with `amountCents: 0`. It is
-//   a real point on the curve — the month was journaled that day — and it
-//   simply does not move the line.
+//   a real point on the curve — that day was journaled — and it simply does
+//   not move the line.
 
 /** One day's money total, the shape `DayTotal` from the dashboard queries has. */
 export interface EquityDay {
@@ -41,6 +45,15 @@ export interface EquitySeries {
   /** The tick values, ascending, evenly spaced, always including 0. */
   ticksCents: number[];
   /**
+   * Where a month mark belongs on the X axis: the first plotted date of each
+   * month the series touches.
+   *
+   * Chosen here rather than left to the chart, which would label every point
+   * and print "Aug 2026" twenty times in a row. One entry means the whole
+   * series sits in one month, and the axis can use day marks instead.
+   */
+  monthTicks: IsoDate[];
+  /**
    * Where the zero line sits between the top (0) and the bottom (1) of the
    * plot area. The two-tone gradient splits exactly there, which is why it is
    * computed from the domain rather than measured off the rendered chart: it
@@ -61,7 +74,7 @@ const TARGET_STEPS = 4;
  */
 const MIN_STEP_CENTS = 100;
 
-/** The step a month that never left zero gets, so its axis reads $-50 / $0 / $50. */
+/** The step a stretch that never left zero gets, so its axis reads $-50 / $0 / $50. */
 const FLAT_STEP_CENTS = 5000;
 
 /**
@@ -85,7 +98,7 @@ function niceStepCents(rangeCents: number): number {
 }
 
 /**
- * The running month as a curve.
+ * The day series as a curve.
  *
  * Days are sorted here rather than trusted to arrive sorted: a running sum
  * over unordered rows is not a wrong curve, it is a meaningless one, and an
@@ -100,7 +113,7 @@ export function buildEquitySeries(days: EquityDay[]): EquitySeries {
     return { date: day.date, amountCents: day.amountCents, equityCents };
   });
 
-  // Zero is always in the domain. A month that only ever lost still has to
+  // Zero is always in the domain. A stretch that only ever lost still has to
   // show the line it fell away from, and the two-tone fill needs the split to
   // exist even when the curve never reaches it.
   let min = 0;
@@ -118,7 +131,7 @@ export function buildEquitySeries(days: EquityDay[]): EquitySeries {
   let domainMin = Math.floor(min / step) * step;
   let domainMax = Math.ceil(max / step) * step;
 
-  // A month whose curve never leaves zero — every day journaled, nothing taken
+  // A stretch whose curve never leaves zero — every day journaled, nothing taken
   // — rounds to [0, 0]. That is not an axis, and every offset derived from it
   // divides by zero. It gets one step of room on each side instead.
   if (domainMin === 0 && domainMax === 0) {
@@ -135,6 +148,31 @@ export function buildEquitySeries(days: EquityDay[]): EquitySeries {
     points,
     domainCents: [domainMin, domainMax],
     ticksCents,
+    monthTicks: firstDayOfEachMonth(points),
     zeroOffset: domainMax / (domainMax - domainMin),
   };
+}
+
+/**
+ * The first plotted date of each month, in order.
+ *
+ * `points` is already sorted, so one pass is enough — and using a date that
+ * is actually in the series keeps the mark on a real tick position instead of
+ * somewhere the chart has to interpolate.
+ */
+function firstDayOfEachMonth(points: EquityPoint[]): IsoDate[] {
+  const ticks: IsoDate[] = [];
+  let lastMonth: string | null = null;
+
+  for (const point of points) {
+    // A month key is the first seven characters of an ISO date. No zone is
+    // involved: the date was already resolved in the user's own.
+    const month = point.date.slice(0, 7);
+    if (month !== lastMonth) {
+      ticks.push(point.date);
+      lastMonth = month;
+    }
+  }
+
+  return ticks;
 }

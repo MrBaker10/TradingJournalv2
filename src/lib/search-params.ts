@@ -28,3 +28,17 @@ export function buildHref(
   const query = params.toString();
   return query ? `${path}?${query}` : path;
 }
+
+/**
+ * The first value of a search parameter, or undefined.
+ *
+ * Next hands a repeated parameter over as an array (`?a=1&a=2`). Every page
+ * that reads one wants the same thing from that: the first, or nothing. It
+ * lives beside `buildHref` so the pair that writes and the one that reads a
+ * query string stay in one file.
+ */
+export function firstValue(
+  value: string | string[] | undefined,
+): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}

@@ -11,15 +11,12 @@ import {
 } from "@/db/queries/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import type { JournalSearchParams } from "@/lib/journal/href";
+import { firstValue } from "@/lib/search-params";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 interface JournalPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-function firstValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
 }
 
 function parseDate(value: string | undefined): string | undefined {

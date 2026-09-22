@@ -1,5 +1,5 @@
 import { TZDate } from "@date-fns/tz";
-import { format, lastDayOfMonth, subDays } from "date-fns";
+import { addMonths, format, lastDayOfMonth, subDays } from "date-fns";
 import type { IsoDate } from "../domain/streak.ts";
 
 // The user's timezone (`users.timezone`) decides every calendar boundary:
@@ -61,6 +61,36 @@ export function formatDayLabel(date: IsoDate): string {
  */
 export function formatMonthLabel(month: MonthKey): string {
   return format(new TZDate(`${month}-01T00:00:00Z`, "UTC"), "MMMM yyyy");
+}
+
+/**
+ * A date as "Sep 2026" — the X-axis mark of a curve that spans more than one
+ * month, where `formatDayLabel` would print "Sep 3" and leave the reader
+ * guessing which year it belongs to.
+ */
+export function formatMonthTickLabel(date: IsoDate): string {
+  return format(new TZDate(`${date}T00:00:00Z`, "UTC"), "MMM yyyy");
+}
+
+/**
+ * A date as "13 Aug 2026", used where a range names its own start.
+ * UTC-anchored like the other formatters here.
+ */
+export function formatDateWithYear(date: IsoDate): string {
+  return format(new TZDate(`${date}T00:00:00Z`, "UTC"), "d MMM yyyy");
+}
+
+/**
+ * `month` moved by `delta` months, negative for backwards.
+ *
+ * UTC-anchored like everything else here: a month key carries no zone, and
+ * the zone was already applied when it was derived. Going through the first
+ * of the month keeps January and December from wrapping wrongly — `addMonths`
+ * on the 31st would otherwise clamp into the wrong month.
+ */
+export function shiftMonth(month: MonthKey, delta: number): MonthKey {
+  const firstOfMonth = new TZDate(`${month}-01T00:00:00Z`, "UTC");
+  return format(addMonths(firstOfMonth, delta), "yyyy-MM");
 }
 
 /**

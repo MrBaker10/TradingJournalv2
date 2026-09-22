@@ -18,16 +18,13 @@ import {
   groupMissedByDimension,
 } from "@/domain/analytics";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { firstValue } from "@/lib/search-params";
 import { rangeForPreset, todayInTimeZone } from "@/lib/time";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 interface AnalyticsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-function firstValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
 }
 
 function parseDate(value: string | undefined): string | undefined {

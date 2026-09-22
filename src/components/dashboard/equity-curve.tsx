@@ -15,12 +15,14 @@ import {
 } from "recharts";
 import type { EquityPoint, EquitySeries } from "@/domain/equity";
 import { formatCents } from "@/lib/money";
-import { formatDayLabel } from "@/lib/time";
+import {
+  formatDateWithYear,
+  formatDayLabel,
+  formatMonthTickLabel,
+} from "@/lib/time";
 
 interface EquityCurveProps {
   series: EquitySeries;
-  /** `YYYY-MM`, for the month label in the card header. */
-  monthLabel: string;
 }
 
 // A little air at the top so the curve's peak does not touch the card edge.
@@ -155,22 +157,37 @@ function EquityTooltip({ active, payload }: TooltipContentProps) {
  * equity line. The whole series arrives finished from the page; nothing here
  * adds, multiplies or divides money.
  */
-export function EquityCurve({ series, monthLabel }: EquityCurveProps) {
+export function EquityCurve({ series }: EquityCurveProps) {
   // Recharts animates in JavaScript, so neither MotionConfig nor the
   // prefers-reduced-motion block in globals.css reaches it. The build-in has
   // to be switched off by hand.
   const prefersReducedMotion = useReducedMotion();
 
+  // The range names itself out of the series — the first point is the first
+  // day that was traded, so no separate query for "when did this start".
+  const firstDate = series.points[0]?.date;
+
+  // "Sep 3" on an axis covering more than one month leaves the reader guessing
+  // the year, so a multi-month series gets month marks — and those have to be
+  // chosen, or Recharts labels every point and prints "Aug 2026" twenty times.
+  // Both come out of the series (src/domain/equity.ts), which is where they
+  // can be tested.
+  const spansMonths = series.monthTicks.length > 1;
+
   return (
     <section className="card-surface edge flex flex-col gap-3 p-5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="cap cap-neon">Equity curve</h2>
-        <span className="text-fg-subtle text-xs">{monthLabel}</span>
+        <span className="text-fg-subtle text-xs">
+          {firstDate === undefined
+            ? ""
+            : `${formatDateWithYear(firstDate)} — today`}
+        </span>
       </div>
 
       {series.points.length === 0 ? (
         <p className="py-10 text-center text-fg-subtle text-sm">
-          Nothing logged this month yet. The curve starts with the first entry.
+          Nothing logged yet. The curve starts with your first entry.
         </p>
       ) : (
         <div className="equity-chart h-60">
@@ -182,7 +199,10 @@ export function EquityCurve({ series, monthLabel }: EquityCurveProps) {
 
               <XAxis
                 dataKey="date"
-                tickFormatter={formatDayLabel}
+                ticks={spansMonths ? series.monthTicks : undefined}
+                tickFormatter={
+                  spansMonths ? formatMonthTickLabel : formatDayLabel
+                }
                 tickLine={false}
                 axisLine={false}
                 minTickGap={20}

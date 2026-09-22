@@ -419,6 +419,23 @@ Prop-Firm-Programm kennt, und diese Verknüpfung liegt in der Roadmap unter Futu
     die beim Klick ausbleibt.
 - Kein Tooltip-Modal; Klick öffnet die Trades des Tages im Journal.
 
+**Monatswechsel.** Im Kopf, beidseitig des Monatsnamens, zwei stille Pfeile in
+`--color-fg-subtle`, auf Hover `--color-fg` — 28px, kein Rahmen, keine Fläche. Das
+Raster daneben ist das Laute auf dieser Karte; ein auffälliger Pfeil zöge den Blick von
+dem Monat weg, den er zeigen soll.
+
+- **Vorwärts endet beim laufenden Monat, rückwärts beim Monat des ersten Trades.**
+  Beide Enden sind deaktiviert statt unsichtbar, damit die Karte nicht die Form
+  wechselt. Ohne Trades sind beide aus.
+- Der gewählte Monat steht als `?month=YYYY-MM` in der URL und übersteht damit einen
+  Reload; der laufende Monat schreibt keinen Parameter, weil „jetzt" kein Zustand ist,
+  der synchron gehalten werden muss.
+- **Nur das Raster wandert.** Metrik-Tafel, Consistency Score und Streak bleiben auf
+  dem laufenden Monat: die obere Hälfte des Dashboards beantwortet „wie läuft es
+  gerade", und eine Tafel, die dem Blättern stillschweigend folgt, beantwortet das
+  nicht mehr. Der Kalender ist damit das Stöberwerkzeug, der Rest der Seite der Stand.
+- Der Cyan-Ring von „heute" trifft in anderen Monaten einfach nicht zu.
+
 Hier ist der farbige Schein auf Geldtagen ausdrücklich erlaubt, weil er
 **Dichte** codiert und nicht Belohnung: man erkennt auf einen Blick, wie der
 Monat verteilt ist. Er ist auf der Kachel, nicht auf der Zahl im Dashboard.
@@ -547,9 +564,14 @@ Projekt legt, entscheidet die nächste Runde.
 
 ### 4.15 Equity-Kurve
 
-Der laufende Monat als kumulierte Flächenkurve, in einer `card-surface edge`-Karte
-über die volle Breite, zwischen Metrik-Tafel (4.7) und Kalenderraster (4.8). Kopf
-wie beim Kalender: `cap cap-neon` links, Monatsname in `--color-fg-subtle` rechts.
+Die **ganze Handelshistorie** als kumulierte Flächenkurve, vom ersten Trade bis heute,
+in einer `card-surface edge`-Karte über die volle Breite, zwischen Metrik-Tafel (4.7)
+und Kalenderraster (4.8). Kopf wie beim Kalender: `cap cap-neon` links, rechts in
+`--color-fg-subtle` der Zeitraum statt eines Monatsnamens — „13 Aug 2026 — today".
+
+**Der letzte Punkt ist bewusst nicht die Zahl der Tafel darüber.** Die Tafel zeigt den
+laufenden Monat, die Kurve alles. Das sind zwei Fragen, und zwei verschiedene Zahlen
+sind hier die richtige Antwort — nicht ein Widerspruch.
 
 **Die Kurve ist ein Geldwert.** Sie bekommt deshalb semantische Farbe und keinen
 Schein — kein Cyan, kein `text-glow`, kein Halo (1, 9). Die Ausnahme von 4.8 gilt
@@ -573,26 +595,35 @@ sitzt auf einer kleinen Kachel, hier wäre er eine Feier auf einer großen Fläc
   `--color-chart-axis` bei 12px. Nicht kleiner und nicht in `--color-fg-subtle`:
   auf der Y-Achse stehen Beträge, und 8 lässt den dunkelsten Ton nur für
   Nebeninformationen zu. Die Y-Achse steht in Mono mit Tabellenziffern, weil dort
-  Geld steht (3); die X-Achse trägt Tageslabels im Format „Sep 3".
+  Geld steht (3).
+- **Die X-Achse richtet sich nach dem, was gezeichnet ist.** Liegen alle Punkte in
+  einem Monat, trägt sie Tageslabels „Sep 3"; sobald die Reihe über eine Monatsgrenze
+  geht, Monatslabels „Sep 2026". Ein Tageslabel ohne Jahr ist über mehrere Jahre
+  mehrdeutig, und bei zweihundert Punkten ohnehin nicht lesbar.
+- **Keine Lückenfüllung.** Ein Punkt je Tag, an dem etwas eingetragen wurde, gleich
+  weit auseinander. Eine Equity-Kurve zählt Handelstage; Wochenenden und Feiertage als
+  flache Strecken auszurollen gäbe der Kurve Länge ohne Information.
 - **Y-Bereich** immer inklusive Null, nach außen auf runde Beträge gerundet, vier
-  Schritte. Ein Monat, der nur gestiegen ist, zeigt die Null trotzdem — sonst
-  fehlt die Linie, von der er sich entfernt hat.
+  Schritte. Eine Kurve, die nur gestiegen ist, zeigt die Null trotzdem — sonst
+  fehlt die Linie, von der sie sich entfernt hat.
 - **Hover**: senkrechte Cursorlinie in `--color-chart-zero`, ein Punkt auf der
   Kurve (Loch in `--color-bg`, Rand in derselben Farbe) und eine kleine
   `card-surface edge`-Fläche mit Datum, Stand und Tagesergebnis. Kein Modal, kein
   Klickziel: der Weg zu den Trades eines Tages ist die Kalenderkachel.
 
-**Leerer Monat.** Kein leeres Achsenkreuz, sondern derselbe ruhige Satz wie unter
-„Recent trades" (4.9).
+**Noch nichts eingetragen.** Kein leeres Achsenkreuz, sondern derselbe ruhige Satz wie
+unter „Recent trades" (4.9) — auf den ersten Eintrag bezogen, nicht auf den Monat.
 
 **Motion.** Der Aufbau ist die Einzeichnung der Kurve beim Laden, einmal. Recharts
 animiert in JavaScript — weder `MotionConfig` noch der
 `prefers-reduced-motion`-Block in `globals.css` erreicht das, die Animation muss in
 der Komponente abgeschaltet werden (5).
 
-**Stand.** Eine Kurve, der laufende Monat, dem Kontoschalter folgend. Kurven pro
-Konto nebeneinander stehen in der Roadmap unter Future und brauchen eine eigene
-Runde — zusammen mit den Balkendiagrammen von Analytics (10).
+**Stand.** Eine Kurve über die ganze Historie, dem Kontoschalter folgend. Der
+Zeitraum ist fest; ein Umschalter (1M/3M/YTD) ist bewusst nicht gebaut, solange
+niemand ihn vermisst. Kurven pro Konto nebeneinander stehen weiterhin in der Roadmap
+unter Future und brauchen eine eigene Runde — zusammen mit den Balkendiagrammen von
+Analytics (10).
 
 ---
 

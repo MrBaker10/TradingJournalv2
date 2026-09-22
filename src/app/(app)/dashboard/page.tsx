@@ -10,8 +10,8 @@ import { getDailyNote } from "@/db/queries/daily-notes";
 import {
   type DayTotal,
   getDashboardRewardState,
+  getDayTotals,
   getMonthCountMetrics,
-  getMonthDayTotals,
   getMonthMoneyMetrics,
   getMonthScoreDays,
   getStreakEntryDays,
@@ -26,9 +26,19 @@ import {
 import { buildEquitySeries } from "@/domain/equity";
 import { calculateStreak, pendingStreakMilestone } from "@/domain/streak";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { formatMonthLabel, monthKeyOf, todayInTimeZone } from "@/lib/time";
+import { firstValue } from "@/lib/search-params";
+import { monthKeyOf, monthRangeOf, todayInTimeZone } from "@/lib/time";
 
 const RECENT_TRADES_LIMIT = 5;
+
+/**
+ * `?month=YYYY-MM`, the calendar's own state. Anything else is ignored.
+ *
+ * The month part is pinned to 01–12 rather than to two digits: `2026-13`
+ * looks like a month key, makes an Invalid Date out of `monthRangeOf`, and
+ * took the page down with a 500 while the pattern still said "close enough".
+ */
+const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 // Best and worst day are a pick from the day series the calendar already
 // carries, not a second aggregate: the summing happened in SQL, and asking
@@ -47,13 +57,30 @@ function extremeDay(
   return found;
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await getCurrentUser();
 
   // Every calendar boundary on this page is the user's own, never the
   // server's (coding-standards.md, Time).
   const today = todayInTimeZone(user.timezone);
   const month = monthKeyOf(today);
+
+  // The calendar pages on its own. Everything else on this page — the metric
+  // panel, the consistency score, the streak — stays on the running month,
+  // because the top of the dashboard answers "how is it going right now" and
+  // a panel that silently followed the calendar would stop answering it.
+  // The client only ever writes the YYYY-MM token; it is resolved and
+  // validated here, against the user's own clock.
+  const requestedMonth = firstValue((await searchParams).month);
+  const calendarMonth =
+    requestedMonth !== undefined && MONTH_PATTERN.test(requestedMonth)
+      ? requestedMonth
+      : month;
+
   const scope = {
     userId: user.id,
     selectedAccountId: user.selectedAccountId,
@@ -62,7 +89,8 @@ export default async function DashboardPage() {
   const [
     money,
     counts,
-    dayTotals,
+    monthTotals,
+    allTotals,
     streakDays,
     scoreDays,
     userBadges,
@@ -72,7 +100,8 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     getMonthMoneyMetrics(scope, month),
     getMonthCountMetrics(scope, month),
-    getMonthDayTotals(scope, month),
+    getDayTotals(scope, monthRangeOf(month)),
+    getDayTotals(scope),
     getStreakEntryDays(user.id),
     getMonthScoreDays(user.id, month),
     listUserBadges(user.id),
@@ -102,12 +131,25 @@ export default async function DashboardPage() {
     rewards.milestoneSeen,
   );
 
-  const todayTotal = dayTotals.days.find((day) => day.date === today);
+  const todayTotal = monthTotals.days.find((day) => day.date === today);
 
-  // The curve is the same day series the calendar paints, summed up — not a
-  // second query. Its last point is the Net P&L in the panel above it by
-  // construction, which is the point: one number cannot disagree with itself.
-  const equity = buildEquitySeries(dayTotals.days);
+  // The curve runs from the first trade to today, so its last point is the
+  // all-time result and **not** the Net P&L in the panel above it — that one
+  // is the running month. Two different questions, deliberately two numbers.
+  const equity = buildEquitySeries(allTotals.days);
+
+  // The calendar's month is a slice of the series the curve already has, not
+  // a third query: picking the days of one month out of an ordered array is
+  // a filter, not an aggregate, so "aggregate in SQL" stays intact.
+  const calendarDays = allTotals.days.filter((day) =>
+    day.date.startsWith(calendarMonth),
+  );
+
+  // How far the calendar may page. Forward stops at the running month;
+  // backward stops at the month of the first trade, which is the first point
+  // of the curve — no query of its own.
+  const firstTradeMonth =
+    equity.points.length === 0 ? null : monthKeyOf(equity.points[0].date);
 
   return (
     <div className="flex flex-col gap-6">
@@ -134,19 +176,25 @@ export default async function DashboardPage() {
       <MetricPanel
         money={money}
         counts={counts}
-        bestDay={extremeDay(dayTotals.days, (a, b) => a > b)}
-        worstDay={extremeDay(dayTotals.days, (a, b) => a < b)}
+        bestDay={extremeDay(monthTotals.days, (a, b) => a > b)}
+        worstDay={extremeDay(monthTotals.days, (a, b) => a < b)}
         todayAmountCents={todayTotal?.amountCents ?? 0}
-        maxDrawdownCents={dayTotals.maxDrawdownCents}
+        maxDrawdownCents={monthTotals.maxDrawdownCents}
         currentStreak={streak.current}
         longestStreak={streak.longest}
         today={today}
       />
 
-      <EquityCurve series={equity} monthLabel={formatMonthLabel(month)} />
+      <EquityCurve series={equity} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <PnlCalendar month={month} today={today} days={dayTotals.days} />
+        <PnlCalendar
+          month={calendarMonth}
+          today={today}
+          days={calendarDays}
+          currentMonth={month}
+          firstTradeMonth={firstTradeMonth}
+        />
         <PlanCard
           premarketPlan={note?.premarketPlan ?? null}
           eodReview={note?.eodReview ?? null}
