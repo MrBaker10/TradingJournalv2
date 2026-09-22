@@ -8,7 +8,10 @@ import * as instruments from "./schema/instruments.ts";
 import * as trades from "./schema/trades.ts";
 import * as users from "./schema/users.ts";
 
-const client = postgres(env.DATABASE_URL);
+// On Neon, DATABASE_URL is the pooled connection (PgBouncer in transaction
+// mode). A prepared statement lives on one server connection, and the pooler
+// hands the next query to another one, so postgres.js must not prepare.
+const client = postgres(env.DATABASE_URL, { prepare: false });
 
 export const db = drizzle(client, {
   schema: {

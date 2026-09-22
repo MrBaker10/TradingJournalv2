@@ -558,7 +558,9 @@ by picking a different answer while coding.
 - **Prop firm rules** — idempotent seeder from `PropFirmsData.md`, not a migration.
 - **Post-exit MFE** — separate manual field, shown only when a stop price is set.
 - **CSV export** — the whole journal every time, with account and `is_practice` columns.
-- **Storage and DB hosting** — Cloudflare R2 and Neon in phase 2.
+- **Storage and DB hosting** — Cloudflare R2 and Neon in phase 2. Neon project `tradingjournal` in
+  aws-eu-central-1 (PG 18), Vercel functions in fra1; previews run against the fixed Neon
+  branch `preview` (2026-09-22, P2.2).
 - **Account ↔ prop firm link** — deferred to Future, no column in Phase 1.
 - **Sharing** — dropped entirely, including the leaderboard and the raffle.
   Single-owner journal, self-contained feedback loop.

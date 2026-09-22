@@ -6,6 +6,7 @@ export default defineConfig({
   schema: "./src/db/schema/*",
   out: "./src/db/migrations",
   dbCredentials: {
-    url: env.DATABASE_URL,
+    // Migrations take the direct connection on Neon; locally there is only one.
+    url: env.DATABASE_URL_DIRECT ?? env.DATABASE_URL,
   },
 });

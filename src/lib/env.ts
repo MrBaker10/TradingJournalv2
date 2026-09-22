@@ -2,6 +2,10 @@ import * as z from "zod";
 
 const envSchema = z.object({
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+  // Neon's direct (unpooled) connection. Only drizzle-kit reads it: migrations
+  // need a session, which the transaction-mode pooler behind DATABASE_URL does
+  // not keep. Unset locally, where DATABASE_URL is already direct.
+  DATABASE_URL_DIRECT: z.url({ protocol: /^postgres(ql)?$/ }).optional(),
   // Signs screenshot URLs (src/lib/uploads/signed-url.ts) so a raw storage
   // key alone is never enough to fetch a file from /api/uploads.
   UPLOAD_SIGNING_SECRET: z.string().min(32),
@@ -18,6 +22,10 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((value) => value === "true"),
+  // Set by Vercel on every deployment (hostnames, no scheme); unset locally.
+  // Feed Better Auth's trustedOrigins (src/lib/auth/trusted-origins.ts).
+  VERCEL_URL: z.string().optional(),
+  VERCEL_BRANCH_URL: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

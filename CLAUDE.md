@@ -68,6 +68,20 @@ until the Accounts slice. `test:e2e`, `db:seed:propfirms` and `job:*` still don'
 they land with the slice that creates their target (Playwright, the prop-firm seeder,
 the cron handlers respectively).
 
+**Neon (P2.2).** Production runs on Neon `tradingjournal` (aws-eu-central-1, PG 18),
+Vercel functions in `fra1`. Previews use the Neon branch `preview`. The Neon URLs live
+in the gitignored `.env.neon.production` and `.env.neon.preview` (`DATABASE_URL` pooled,
+`DATABASE_URL_DIRECT` direct). The `db:*` scripts only read `.env.local`; against Neon,
+load the Neon file second so it wins, and check the host first:
+
+```bash
+node --env-file=.env.local --env-file=.env.neon.production ./node_modules/drizzle-kit/bin.cjs migrate
+node --env-file=.env.local --env-file=.env.neon.production src/db/seed-propfirms.ts
+```
+
+A new migration goes to both Neon branches. Never run `vercel env pull` — it writes
+into `.env.local`.
+
 Verification gates before any commit, in order: `pnpm typecheck`, `pnpm test`,
 `pnpm build`, then click through the affected screens.
 

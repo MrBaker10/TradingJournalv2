@@ -14,6 +14,7 @@ import { users } from "../../db/schema/users.ts";
 import { env } from "../env.ts";
 import { deleteUserFiles, listUserStorageKeys } from "./delete-user-files.ts";
 import { placeholderEmail } from "./placeholder-email.ts";
+import { deploymentOrigins } from "./trusted-origins.ts";
 
 const DAY_SECONDS = 60 * 60 * 24;
 
@@ -32,6 +33,8 @@ const pendingFileDeletes = new Map<string, string[]>();
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
+  // A preview deployment's own hostname, beside BETTER_AUTH_URL.
+  trustedOrigins: deploymentOrigins(env),
   telemetry: { enabled: false },
   // Answers "does this username exist?" to anyone, signed in or not. The
   // login deliberately does not (one message for both cases), and nothing in

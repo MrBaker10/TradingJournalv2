@@ -9,7 +9,7 @@ commit that changes nothing else.
 | Next.js | 16.3.4 (App Router) |
 | React | 19.2.8 |
 | TypeScript | 7.0.2 |
-| PostgreSQL | 18.x — lokal 18.4 (DBngin), Ziel 18.6, Neon wählt in Phase 2 selbst |
+| PostgreSQL | 18.x — lokal 18.4 (DBngin), Neon 18 in aws-eu-central-1 (seit P2.2) |
 | Drizzle ORM / Kit | 0.45.2 / 0.31.10 |
 | Better Auth | 1.7.5 (phase 2; installed with P2.1, 1.7.3 was the pre-install pin) |
 | uqr (TOTP QR code) | 0.1.3 |
