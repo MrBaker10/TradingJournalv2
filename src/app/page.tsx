@@ -1,7 +1,7 @@
+import { redirect } from "next/navigation";
+
+// There is no front page. Signed in, the journal starts at the dashboard;
+// signed out, src/proxy.ts has already sent the request to /login.
 export default function Home() {
-  return (
-    <div className="flex flex-1 items-center justify-center">
-      <p>Trading Journal</p>
-    </div>
-  );
+  redirect("/dashboard");
 }

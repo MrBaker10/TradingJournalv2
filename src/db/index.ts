@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { env } from "../lib/env.ts";
 import * as accounts from "./schema/accounts.ts";
+import * as auth from "./schema/auth.ts";
 import * as importBatches from "./schema/import-batches.ts";
 import * as instruments from "./schema/instruments.ts";
 import * as trades from "./schema/trades.ts";
@@ -14,6 +15,7 @@ export const db = drizzle(client, {
     ...users,
     ...instruments,
     ...accounts,
+    ...auth,
     ...importBatches,
     ...trades,
   },

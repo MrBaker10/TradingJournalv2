@@ -21,7 +21,7 @@ export const trades = pgTable(
     id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
     userId: integer("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     tradeDate: date("trade_date").notNull(),
     instrumentId: integer("instrument_id")
       .notNull()
@@ -84,6 +84,10 @@ export const tradeAccounts = pgTable(
     tradeId: integer("trade_id")
       .notNull()
       .references(() => trades.id, { onDelete: "cascade" }),
+    // No cascade: an account with trades is archived, never deleted. The
+    // key is DEFERRABLE INITIALLY DEFERRED (hand-written migration 0013, not
+    // expressible here) so deleting a user can cascade through `trades`
+    // before the check runs.
     accountId: integer("account_id")
       .notNull()
       .references(() => accounts.id),

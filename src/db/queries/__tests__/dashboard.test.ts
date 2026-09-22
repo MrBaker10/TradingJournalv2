@@ -53,6 +53,7 @@ async function evaluateBump(scenario: Scenario): Promise<boolean | null> {
         .insert(users)
         .values({
           username: "bump-fixture",
+          email: "bump-fixture@users.invalid",
           displayName: "Bump Fixture",
           timezone: "UTC",
           dashboardSeenAt: scenario.seenAt,
@@ -163,6 +164,7 @@ describe("setStreakMilestoneSeen", () => {
           .insert(users)
           .values({
             username: "milestone-write-fixture",
+            email: "milestone-write-fixture@users.invalid",
             displayName: "Milestone Write",
             timezone: "UTC",
           })
@@ -240,6 +242,7 @@ async function totalsFor(fixture: TotalsFixture): Promise<DayTotals> {
         .insert(users)
         .values({
           username: "day-totals-fixture",
+          email: "day-totals-fixture@users.invalid",
           displayName: "Day Totals Fixture",
           timezone: "UTC",
         })

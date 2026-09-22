@@ -384,6 +384,7 @@ describe("isVisibleForAccount", () => {
           .insert(users)
           .values({
             username: "account-visibility-fixture",
+            email: "account-visibility-fixture@users.invalid",
             displayName: "Account Visibility",
             timezone: "UTC",
           })

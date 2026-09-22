@@ -1,0 +1,12 @@
+-- Hand-written: drizzle-kit cannot express DEFERRABLE.
+--
+-- Deleting a user cascades to `accounts` and to `trades` (0011). Postgres
+-- runs the account cascade first, and an immediate check on this key then
+-- finds `trade_accounts` rows still pointing at the account — the ones the
+-- trade cascade is about to remove. Deferring the check to the end of the
+-- transaction lets both cascades finish first.
+--
+-- The rule the key enforces is unchanged: a transaction that deletes an
+-- account while trades are still assigned to it fails at commit. An account
+-- with trades is archived, never deleted.
+ALTER TABLE "trade_accounts" ALTER CONSTRAINT "trade_accounts_account_id_accounts_id_fk" DEFERRABLE INITIALLY DEFERRED;

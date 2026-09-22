@@ -75,6 +75,7 @@ async function run(fixture: Fixture): Promise<Result> {
         .insert(users)
         .values({
           username: "analytics-fixture",
+          email: "analytics-fixture@users.invalid",
           displayName: "Analytics Fixture",
           timezone: "UTC",
         })

@@ -240,7 +240,13 @@ users                (id, username UNIQUE, display_name, discord_username,
                       timezone, currency_display,
                       selected_account_id NULL,   -- remembered account selector,
                                                    -- NULL = "All accounts"
-                      password_hash, totp_secret, created_at)
+                      email UNIQUE,   -- placeholder <username>@users.invalid,
+                                      -- never shown, never mailed (P2.1)
+                      display_username, email_verified, image,
+                      two_factor_enabled, created_at, updated_at)
+                      -- also Better Auth's user table; credentials and TOTP
+                      -- live in auth_accounts / auth_two_factors, sessions in
+                      -- auth_sessions (src/db/schema/auth.ts)
 
 accounts             (id, user_id, name, sort_order,
                       is_default_for_new_trades BOOLEAN,
@@ -625,6 +631,22 @@ by picking a different answer while coding.
   `getDimensionBreakdowns` in `src/db/queries/analytics.ts`, pinned by
   `src/db/queries/__tests__/analytics.test.ts`. The shared scope helpers live in
   `src/db/queries/scope.ts`. Details: `context/decisions.md`, S12a.
+- **Auth data model** (2026-09-22, P2.1) — `users` is Better Auth's user table, with
+  integer ids (`generateId: "serial"`). `password_hash` and `totp_secret` are gone
+  (migration 0012): the password hash lives in `auth_accounts`, the encrypted TOTP
+  secret and backup codes in `auth_two_factors`, sessions in `auth_sessions`. The app
+  has no email; Better Auth requires one, so `users.email` holds the placeholder
+  `<username>@users.invalid`, set server-side, never shown and never mailed. Better
+  Auth's "account" is a credential, hence the `auth_` prefix — it is never a trading
+  account. Details: `context/decisions.md`, P2.1.
+- **Deleting a user is a cascade** (2026-09-22, P2.1) — every foreign key onto
+  `users.id` carries `ON DELETE CASCADE`, so account deletion is one DELETE and nothing
+  is left behind. **A new table with a `user_id` needs the cascade too.** The one key
+  without it is `trade_accounts → accounts`, on purpose: an account with trades is
+  archived, never deleted. That key is `DEFERRABLE INITIALLY DEFERRED` (hand-written
+  migration 0013), so the user cascade can remove the assignments through `trades`
+  before the check runs; a plain account delete with trades still fails at commit.
+  Pinned by `src/db/queries/__tests__/user-deletion.test.ts`.
 
 ---
 

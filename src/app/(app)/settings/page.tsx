@@ -1,5 +1,6 @@
 import { AccountsManager } from "@/components/settings/accounts-manager";
 import { ExportCard } from "@/components/settings/export-card";
+import { SecuritySection } from "@/components/settings/security-section";
 import { listAllAccountsForSettings } from "@/db/queries/accounts";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 
@@ -21,6 +22,12 @@ export default async function SettingsPage() {
       />
       <div className="max-w-4xl">
         <ExportCard />
+      </div>
+      <div className="max-w-4xl">
+        <SecuritySection
+          username={user.displayUsername ?? user.username}
+          twoFactorEnabled={user.twoFactorEnabled}
+        />
       </div>
     </div>
   );

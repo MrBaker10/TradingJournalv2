@@ -3,10 +3,11 @@
 import { LogOut } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Fragment } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { Fragment, useTransition } from "react";
 import type { SwitcherAccount } from "@/components/shell/account-switcher";
 import { AccountSwitcher } from "@/components/shell/account-switcher";
+import { authClient } from "@/lib/auth/auth-client";
 import { navItems } from "./nav-items";
 
 interface SidebarProps {
@@ -21,6 +22,17 @@ export function Sidebar({
   selectedAccountId,
 }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isSigningOut, startSignOut] = useTransition();
+
+  // No confirmation: signing out loses nothing (Design.md §4.19).
+  function signOut() {
+    startSignOut(async () => {
+      await authClient.signOut();
+      router.replace("/login");
+      router.refresh();
+    });
+  }
 
   return (
     <aside className="card-surface edge sticky top-6 flex h-[calc(100vh-48px)] w-[260px] shrink-0 flex-col overflow-y-auto">
@@ -91,6 +103,8 @@ export function Sidebar({
         <button
           type="button"
           aria-label="Sign out"
+          onClick={signOut}
+          disabled={isSigningOut}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xs text-fg-muted transition-colors hover:bg-nav-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-[var(--color-cyan)] focus-visible:outline-offset-2"
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />

@@ -11,7 +11,8 @@ commit that changes nothing else.
 | TypeScript | 7.0.2 |
 | PostgreSQL | 18.x — lokal 18.4 (DBngin), Ziel 18.6, Neon wählt in Phase 2 selbst |
 | Drizzle ORM / Kit | 0.45.2 / 0.31.10 |
-| Better Auth | 1.7.3 (phase 2) |
+| Better Auth | 1.7.5 (phase 2; installed with P2.1, 1.7.3 was the pre-install pin) |
+| uqr (TOTP QR code) | 0.1.3 |
 | Tailwind CSS | 4.3.3 |
 | Zod / RHF / resolvers | 4.5.4 / 7.87.0 / 5.9.1 |
 | Recharts | 3.10.1 |

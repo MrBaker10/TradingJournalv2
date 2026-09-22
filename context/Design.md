@@ -836,6 +836,62 @@ Zusammenführung für diesen Slice angekündigt; sie ist auf Ansage in einen eig
 und in diesem Commit ohne Netz liefe. 4.16 bleibt unverändert stehen, diese Zeile
 korrigiert die Zuordnung.
 
+### 4.19 Anmeldung, Registrierung und Sicherheit
+
+Die ersten Screens außerhalb von `(app)`: Login und Registrierung sind die einzigen
+Seiten, die ohne Session erreichbar sind (`proxy.ts`). Sie haben **keine Sidebar**. Das
+Journal beginnt erst hinter dem Login, und eine Sidebar mit sieben Punkten, von denen
+keiner erreichbar ist, wäre ein Versprechen ohne Inhalt.
+
+**Aufbau.** Eine einzelne `card-surface edge`-Karte, 400px breit, horizontal und
+vertikal mittig auf dem `page-glow`-Hintergrund. Oben die Marke aus 4.1 (28px-Tile mit
+`--gradient-info` und `--shadow-neon`, Wortmarke in `cap`), darunter der Titel in
+`page-title`. Kein `edge-neon`: Anmelden ist weder Prozess noch Geld (§1).
+
+- Felder nach 4.5, Label über dem Feld, Meldungszeile von Anfang an da.
+- Ein Primärbutton über die volle Kartenbreite, mit den fünf Zuständen aus 4.2. Der
+  Erfolgszustand entfällt: nach dem Anmelden folgt sofort das Dashboard, ein grüner
+  Haken davor wäre eine Feier ohne Anlass.
+- Unter dem Button ein Satz in `--color-fg-subtle` mit Link in `--color-cyan` zur
+  jeweils anderen Seite. Ist die Registrierung geschlossen, entfällt der Link auf
+  „Create account", und `/register` sagt in einem Satz, dass hier keine neuen Konten
+  angelegt werden.
+
+**Der Code-Schritt.** Ist 2FA aktiv, ersetzt ein zweiter Zustand derselben Karte das
+Formular: ein Feld „Authentication code" in Mono mit Tabellenziffern,
+`inputmode="numeric"`, `autocomplete="one-time-code"`. Darunter ein Textlink „Use a
+backup code instead", der dasselbe Feld auf einen Backup-Code umstellt. **Keine zweite
+Seite**, weil ein Zurück-Klick sonst mitten im Login landet.
+
+**Fehler** stehen in der Meldungszeile unter dem Passwortfeld, nie unter dem
+Nutzernamen: „Username or password is wrong." ist ein Satz für beide Fälle. Wer den
+Satz nach Feldern aufteilt, verrät, welche Nutzernamen es gibt.
+
+**Settings, Abschnitt „Security".** Drei Karten in `card-surface edge` unter dem
+Export, im Muster der Export-Karte (Titel `text-sm font-medium`, Erklärung in
+`--color-fg-subtle`, Aktion rechts):
+
+- **Profile** zeigt den Nutzernamen als Text in Mono, nicht als Feld. Ein Feld, das
+  deaktiviert ist, fragt „warum darf ich nicht?"; ein Text sagt, dass es so ist.
+- **Password** klappt ein Formular mit drei Feldern auf (aktuelles, neues,
+  Wiederholung). Erfolg ist der grüne Button-Zustand aus 4.2, keine Toast-Meldung.
+- **Two-factor authentication** zeigt „On" oder „Off" als `cap`. Einrichten öffnet
+  in derselben Karte: Passwort bestätigen → QR-Code (dunkle Module in `--color-bg` auf
+  weißer Fläche, 176px — invertierte Codes erkennt nicht jede Authenticator-App) mit dem Schlüssel darunter in Mono zum Abtippen →
+  Code eingeben. Danach erscheinen die Backup-Codes **genau einmal** als Raster in
+  Mono mit dem Satz, dass sie nur jetzt sichtbar sind. Kein Download, kein Druck —
+  die Karte sagt, sie abzuschreiben.
+- **Delete account** steht zuletzt und getrennt. Der Button ist ghost mit
+  `text-danger-fg`, das Passwortfeld erscheint erst nach dem ersten Klick, gelöscht
+  wird mit einem zweiten, der „Delete account and all data" heißt — dieselbe
+  zweistufige Bestätigung wie „Remove" in 4.18, kein `window.confirm`. Die Kante wird
+  dabei rot (`border-danger-fg/60`), gefüllt wird sie nicht.
+
+**Sidebar.** Der Sign-out-Button aus 4.1 bekommt seine Funktion. Kein Bestätigungsdialog:
+Abmelden verliert nichts.
+
+**Stand.** Gebaut, nicht entworfen — derselbe Vorbehalt wie 4.16 bis 4.18.
+
 ---
 
 ## 5. Motion

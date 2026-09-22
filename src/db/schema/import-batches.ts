@@ -14,7 +14,7 @@ export const importBatches = pgTable(
     id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
     userId: integer("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     accountId: integer("account_id")
       .notNull()
       .references(() => accounts.id),

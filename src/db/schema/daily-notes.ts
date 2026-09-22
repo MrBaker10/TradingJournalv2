@@ -23,7 +23,7 @@ export const dailyNotes = pgTable(
     id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
     userId: integer("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     noteDate: date("note_date").notNull(),
     premarketPlan: text("premarket_plan"),
     eodReview: text("eod_review"),

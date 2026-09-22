@@ -567,3 +567,20 @@ export async function countExistingMistakeTags(ids: number[]): Promise<number> {
     .where(inArray(mistakeTags.id, ids));
   return rows.length;
 }
+
+/**
+ * Every screenshot storage key the user owns. Read by account deletion before
+ * the user row goes: the cascade removes the screenshot rows, and without the
+ * keys the files would stay on disk with nothing pointing at them.
+ */
+export async function listScreenshotKeysForUser(
+  userId: number,
+): Promise<string[]> {
+  const rows = await db
+    .select({ storageKey: tradeScreenshots.storageKey })
+    .from(tradeScreenshots)
+    .innerJoin(trades, eq(tradeScreenshots.tradeId, trades.id))
+    .where(eq(trades.userId, userId));
+
+  return rows.map((row) => row.storageKey);
+}

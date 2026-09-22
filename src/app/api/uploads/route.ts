@@ -82,6 +82,14 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // A valid signature proves the URL was issued, not to whom. Keys carry
+  // their owner (`screenshots/<userId>/…`, see POST above), so a signed URL
+  // passed on to another signed-in user still returns nothing.
+  const user = await getCurrentUser();
+  if (!key.startsWith(`screenshots/${user.id}/`)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const data = await storage.get(key);
   if (!data) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

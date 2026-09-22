@@ -26,7 +26,7 @@ export const userBadges = pgTable(
     id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
     userId: integer("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     badgeDefId: integer("badge_def_id")
       .notNull()
       .references(() => badgeDefs.id),

@@ -1,25 +1,42 @@
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { cache } from "react";
 import { db } from "../../db/index.ts";
 import { users } from "../../db/schema/users.ts";
-
-const SEEDED_USERNAME = "local";
+import { auth } from "./auth.ts";
 
 /**
- * Phase 1: no session, no auth. Returns the single user `pnpm db:seed` creates.
- * Phase 2 swaps this implementation for Better Auth; the signature stays the same.
+ * The signed-in user's `users` row — the only way to the current user
+ * (coding-standards.md, "Auth and storage seams").
+ *
+ * Phase 2: reads the Better Auth session. Without one it redirects to
+ * /login, so no page, Server Action or route handler behind it ever runs
+ * for nobody; proxy.ts turns most such requests away earlier, but this is
+ * the check that holds when a matcher misses. The signature is the same as
+ * in phase 1, and so is the row it returns.
+ *
+ * Wrapped in React's `cache`, so the layout and the page of one request share
+ * one session lookup instead of doing their own. The cache lives for that
+ * request only; nothing carries over to the next one.
  */
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) {
+    redirect("/login");
+  }
+
+  // Better Auth hands integer ids over as strings (generateId: "serial").
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.username, SEEDED_USERNAME))
+    .where(eq(users.id, Number(session.user.id)))
     .limit(1);
 
+  // A session whose user is gone: deleted in another tab, say. Same answer.
   if (!user) {
-    throw new Error(
-      `Seeded user '${SEEDED_USERNAME}' not found. Run "pnpm db:seed" first.`,
-    );
+    redirect("/login");
   }
 
   return user;
-}
+});

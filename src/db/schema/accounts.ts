@@ -23,7 +23,7 @@ export const accounts = pgTable(
     id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
     userId: integer("user_id")
       .notNull()
-      .references((): AnyPgColumn => users.id),
+      .references((): AnyPgColumn => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     sortOrder: integer("sort_order").notNull(),
     isDefaultForNewTrades: boolean("is_default_for_new_trades")
