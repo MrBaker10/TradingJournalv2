@@ -649,6 +649,15 @@ by picking a different answer while coding.
   migration 0013), so the user cascade can remove the assignments through `trades`
   before the check runs; a plain account delete with trades still fails at commit.
   Pinned by `src/db/queries/__tests__/user-deletion.test.ts`.
+- **A `minimumReleaseAgeExclude` entry means the supply-chain guard was bypassed**
+  (2026-09-23, P2.2 Storage) — when `pnpm add` writes into that list in
+  `pnpm-workspace.yaml`, the package was too freshly published for pnpm's minimum
+  release age and pnpm excused it rather than refusing. That is not noise to commit
+  along: pick a version that has already aged past the window and reset the file, so
+  the guard stays sharp for every later install too. Found with
+  `@aws-sdk/client-s3@3.1138.0`, four hours old, which pulled 19 exclusions with it;
+  `3.1132.0` installs with none. The rule is about any dependency, not this one.
+  Reasoning: `context/decisions.md`, the P2.2 Storage entry.
 
 ---
 

@@ -2024,3 +2024,69 @@ Tester werden vorgewarnt, R2 bleibt ein eigener Slice.
 
 **Offen.** Kein `robots.txt` und kein Meta-`noindex` im Projekt, während `/register`
 offen steht. Bewusst nicht angefasst.
+
+## 2026-09-23 — P2.2 Storage auf R2 — feature/storage-r2 — 145c1db
+
+**Gebaut.** Screenshots liegen in Produktion in einem privaten Cloudflare-R2-Bucket
+statt auf der Platte der Function. Hinter dem bestehenden `StorageAdapter` steht eine
+zweite Implementierung, davor eine Weiche über `STORAGE_DRIVER`. Kein Aufrufer des
+Uploads ändert sich: `signed-url.ts`, `src/app/api/uploads/route.ts` und die drei
+Screenshot-Komponenten sind im Diff nicht enthalten. Klickpfad lokal gegen den echten
+Bucket gelaufen — Trade mit Screenshot angelegt, Anzeige, Lightbox, zweiter Screenshot
+über den Stift, beide gelöscht; danach meldet `ListObjectsV2` null Objekte. Keine
+Konsolenmeldung.
+
+**Dateien.** `src/lib/storage/r2.ts` (neu), `src/lib/storage/index.ts` (Weiche),
+`src/lib/storage/types.ts` und `local-disk.ts` (`deleteMany`),
+`src/lib/auth/delete-user-files.ts`, `src/lib/env.ts`,
+`src/lib/storage/__tests__/index.test.ts` (neu, 19 Tests), `package.json`
+(`@aws-sdk/client-s3` 3.1132.0), `context/coding-standards.md`.
+
+**Entschieden unterwegs.**
+- **Die signierte URL bleibt die eigene der App, keine von S3.** Der Bucket ist privat,
+  die Credentials bleiben auf dem Server, und `/api/uploads` prüft Session, HMAC und
+  Key-Präfix, bevor es die Bytes streamt. Presigned URLs hätten den Aufrufer geändert
+  und den Besitzcheck aus der Kette genommen. Preis: jedes Bild läuft durch die
+  Function statt direkt aus R2.
+- **`STORAGE_DRIVER` explizit statt aus den R2-Variablen abgeleitet.** Eine vergessene
+  Variable in Produktion soll den Start abbrechen, nicht still auf das
+  schreibgeschützte Dateisystem zurückfallen. Nebeneffekt, der den Slice erst
+  verifizierbar machte: R2 ließ sich lokal prüfen, statt erst im Deployment.
+- **`R2_ENDPOINT` ist der volle Host, keine Account-ID.** Ein Bucket mit Jurisdiktion
+  ist nur über seinen eigenen Host erreichbar (`<id>.eu.r2.cloudflarestorage.com`); aus
+  Teilen zusammengebaut hätte der Code festgeschrieben, welche Jurisdiktionen es gibt.
+  Der Bucket liegt in der EU-Jurisdiktion.
+- **SDK-Version bewusst nicht die neueste.** `3.1138.0` war vier Stunden alt, pnpms
+  Mindest-Release-Frist hätte es blockiert und schrieb stattdessen 19 Ausnahmen in
+  `pnpm-workspace.yaml`. Stattdessen `3.1132.0` (acht Tage alt), das ohne jede Ausnahme
+  durchgeht. **Regel:** Schreibt `pnpm add` etwas in `minimumReleaseAgeExclude`, ist das
+  kein Rauschen, sondern der umgangene Supply-Chain-Schutz — eine gereifte Version
+  nehmen statt die Ausnahme mitzucommitten.
+- **`deleteMany` am Interface, nach dem Review ergänzt.** Der Wechsel Platte → Netzwerk
+  macht aus N Dateisystemoperationen N HTTP-Requests, und die Zahl der Screenshots eines
+  Nutzers ist unbegrenzt; die Kontolöschung wäre gegen das Function-Timeout gelaufen,
+  und scheitert sie, ist der Nutzer schon gelöscht (P2.1). Gegen R2 ein
+  `DeleteObjectsCommand` je 1000 Keys, gemessen ein Call statt zwölf. Das ist die eine
+  Stelle, an der der Slice doch einen Aufrufer anfasst — bewusst, und `delete-user-files.ts`
+  stand nie auf der „Do not build"-Liste.
+- **Teilfehler eines Batch-Deletes werden geworfen.** S3 antwortet auch dann 200, wenn
+  einzelne Keys scheitern; ohne den Blick in `Errors` bliebe eine Datei still liegen.
+- **Die Konfiguration ist ein Typ, kein Cast.** `createStorage` nimmt eine
+  unterschiedene Union, damit ein Aufruf mit `r2` ohne Credentials am Compiler scheitert
+  statt an einem `endpoint: undefined` zur Laufzeit. Der Test, der diesen Fall abfing,
+  konnte dafür entfallen.
+- **`requestChecksumCalculation` nicht gesetzt.** R2 unterstützt CRC-64/NVME seit Juli
+  2025, die alte Inkompatibilität ist erledigt. Käme doch ein `400 BadDigest`, ist das
+  die erste Spur.
+
+**Offen geblieben.**
+- **Die HMAC-Negativprobe ist im laufenden Server nicht isolierbar.** Eine manipulierte
+  `/api/uploads`-Signatur liefert 401 vom Proxy, weil der Session-Gate vorher greift;
+  dass die Signaturprüfung selbst 403 gibt, belegt nur `signed-url.test.ts`.
+- **Production ist noch nicht geprüft.** Der Klickpfad dort steht nach dem Deploy aus,
+  und `STORAGE_DRIVER=r2` samt den vier Variablen muss in Vercel für Production und
+  Preview gesetzt werden.
+- **`get` lädt das Objekt vollständig in den Speicher** (`transformToByteArray`), wie
+  `readFile` vorher. Bei 8 MB Upload-Limit unkritisch, aber kein Streaming.
+- **Verwaiste Objekte räumt weiterhin niemand auf.** Stand schon im Spec unter „Do not
+  build" und bleibt es.
