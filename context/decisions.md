@@ -2083,10 +2083,49 @@ Konsolenmeldung.
 - **Die HMAC-Negativprobe ist im laufenden Server nicht isolierbar.** Eine manipulierte
   `/api/uploads`-Signatur liefert 401 vom Proxy, weil der Session-Gate vorher greift;
   dass die Signaturprüfung selbst 403 gibt, belegt nur `signed-url.test.ts`.
-- **Production ist noch nicht geprüft.** Der Klickpfad dort steht nach dem Deploy aus,
-  und `STORAGE_DRIVER=r2` samt den vier Variablen muss in Vercel für Production und
-  Preview gesetzt werden.
+- ~~**Production ist noch nicht geprüft.**~~ Erledigt am 23.09.2026, siehe den Nachtrag
+  unten.
 - **`get` lädt das Objekt vollständig in den Speicher** (`transformToByteArray`), wie
   `readFile` vorher. Bei 8 MB Upload-Limit unkritisch, aber kein Streaming.
 - **Verwaiste Objekte räumt weiterhin niemand auf.** Stand schon im Spec unter „Do not
   build" und bleibt es.
+
+## 2026-09-23 — P2.2 Nachtrag: R2 in Vercel scharf geschaltet — kein Branch, kein Commit
+
+**Gemacht.** Reine Konfiguration, kein Code. `STORAGE_DRIVER=r2`, `R2_ENDPOINT` und
+`R2_BUCKET` als Config, `R2_ACCESS_KEY_ID` und `R2_SECRET_ACCESS_KEY` als Secret — alle
+fünf für Production **und** Preview. Werte über stdin aus `.env.local` übergeben, nicht
+über `--value`, damit kein Secret in der Prozessliste steht. Danach Redeploy desselben
+Commits.
+
+**Verifiziert in Production**, Klickpfad auf `tradingjournal-gamma-three.vercel.app`:
+Trade mit Screenshot angelegt → Objekt `screenshots/3/1/…jpg` im Bucket, 2,7 KB PNG
+serverseitig zu 9,5 KB JPEG konvertiert; Thumbnail und Lightbox laden über
+`/api/uploads` (200 im Log); zweiter Screenshot über den Stift; beide gelöscht →
+`ListObjectsV2` meldet wieder null Objekte. Keine Konsolenmeldung, nur 200er im
+Server-Log, kein `BadDigest`.
+
+**Entschieden unterwegs.**
+- **Preview teilt sich den Bucket mit Production.** Bewusst, weil die Preview-DB eine
+  Neon-Branch der Production-Daten ist und dieselben Storage-Keys trägt — Preview zeigt
+  damit echte Screenshots. **Preis:** ein in Preview gelöschter Trade löscht das Objekt
+  auch für Production. Wer das nicht will, braucht einen zweiten Bucket samt eigenem
+  Token, nicht bloß eine zweite Variable.
+- **Die drei unkritischen Variablen bleiben Config, nicht Secret.** Ein Secret lässt
+  sich nicht zurücklesen; `STORAGE_DRIVER`, `R2_ENDPOINT` und `R2_BUCKET` will man beim
+  nächsten Fehler ohne Cloudflare-Login sehen können. Nur die Credentials sind Secret.
+
+**Nebenbefund, der Production blockiert hat.** `/register` gab „couldn't create the
+account". Ursache war nicht R2: `BETTER_AUTH_URL` zeigte auf einen anderen Host als den
+aufgerufenen, und `trustedOrigins` ist `baseURL` plus `VERCEL_URL`/`VERCEL_BRANCH_URL`
+(`src/lib/auth/trusted-origins.ts`) — der Alias war in keiner der drei enthalten, also
+403 „Invalid origin" auf `/api/auth/sign-up/email`. `BETTER_AUTH_URL` (Production) zeigt
+jetzt auf `https://tradingjournal-gamma-three.vercel.app`. **Regel:** `BETTER_AUTH_URL`
+muss exakt der Host sein, unter dem die Seite tatsächlich aufgerufen wird; kommt später
+eine eigene Domain, muss sie hier mit.
+
+**Offen.** Die beiden projektgebundenen Production-Hosts
+(`…-sascha-backers-projects.vercel.app`, `…-git-main-…`) antworten 401, stehen also
+hinter Deployment Protection. Für die Freunde-Runde ist `tradingjournal-gamma-three`
+die einzige brauchbare URL — eine eigene Domain ist damit nicht dringend, aber der
+saubere Weg.
