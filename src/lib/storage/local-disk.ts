@@ -25,4 +25,11 @@ export class LocalDiskStorage implements StorageAdapter {
   async delete(key: string): Promise<void> {
     await rm(join(UPLOAD_ROOT, key), { force: true });
   }
+
+  // On disk there is nothing to batch: the files are local and `rm` is cheap.
+  async deleteMany(keys: string[]): Promise<void> {
+    for (const key of keys) {
+      await this.delete(key);
+    }
+  }
 }
