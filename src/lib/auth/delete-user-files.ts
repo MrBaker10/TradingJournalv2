@@ -10,7 +10,7 @@ export function listUserStorageKeys(userId: number): Promise<string[]> {
 }
 
 export async function deleteUserFiles(keys: string[]): Promise<void> {
-  for (const key of keys) {
-    await storage.delete(key);
-  }
+  // One call, not one per file: against R2 every delete is an HTTP request,
+  // and the number of screenshots a user has is unbounded.
+  await storage.deleteMany(keys);
 }

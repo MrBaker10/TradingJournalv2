@@ -256,6 +256,16 @@ Non-negotiable, because this is a P&L tool:
 - File access goes through the storage interface in `src/lib/storage/`. Local disk in
   development, Cloudflare R2 in production. Screenshots are private and served through
   signed URLs only.
+- **`STORAGE_DRIVER` picks the adapter**, `local` or `r2`, defaulting to `local`. Set it
+  to `r2` and `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET`
+  become required — a deployment that forgets one fails at startup instead of writing to
+  a read-only disk. Explicit rather than inferred so R2 can be exercised locally.
+- **The signed URL is the app's own**, not S3's: `/api/uploads?key&expires&sig`, HMAC'd
+  with `UPLOAD_SIGNING_SECRET` and reissued per render. The bucket stays private, the R2
+  credentials never leave the server, and the route checks the owner as well as the
+  signature. No presigned S3 URL and no browser-to-R2 upload.
+- `R2_ENDPOINT` is the full host, not an account id: a bucket created with a
+  jurisdiction is only reachable through its own (`<id>.eu.r2.cloudflarestorage.com`).
 
 ## External links on trades
 
