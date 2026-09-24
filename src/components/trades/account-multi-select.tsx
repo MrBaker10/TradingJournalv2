@@ -48,7 +48,8 @@ export function AccountMultiSelect({
             onClick={() => toggle(account.id)}
             className={`flex items-center gap-1.5 rounded-xs border px-2.5 py-1.5 text-sm transition-colors duration-150 disabled:opacity-60 ${
               selected
-                ? "border-cyan/50 bg-cyan-dim text-cyan"
+                ? // Same surface as the account badge on the detail page (§4.20).
+                  "border-transparent bg-[image:var(--gradient-info-soft)] text-fg shadow-[var(--shadow-info-soft)]"
                 : "border-white/12 bg-well text-fg-muted hover:border-cyan/35"
             }`}
           >

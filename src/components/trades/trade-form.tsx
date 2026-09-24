@@ -12,6 +12,7 @@ import {
   deleteTradeScreenshot,
   updateTrade,
 } from "@/actions/trades";
+import { PriceBandChart } from "@/components/journal/price-band";
 import { AccountMultiSelect } from "@/components/trades/account-multi-select";
 import { ScreenshotSlots } from "@/components/trades/screenshot-slots";
 import type { TagGroup } from "@/components/trades/tag-multi-select";
@@ -23,6 +24,7 @@ import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import type { JournalTradeRow } from "@/db/queries/trades";
 import { calculatePnl, type TradeDirection } from "@/domain/pnl";
+import type { PriceBandInput } from "@/domain/price-band";
 import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
 import { centsToDollars } from "@/lib/money";
 import { resizeAndCompressImage } from "@/lib/uploads/resize-image";
@@ -61,21 +63,53 @@ function getFieldClass(state: FieldState): string {
   return `h-10 w-full rounded-ctl border ${border} bg-well px-3 text-sm text-fg transition-colors duration-200 placeholder:text-fg-placeholder focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60`;
 }
 
+// Design.md §4.22: a required field says so in its label. The control carries
+// required itself; this only draws the mark.
+function RequiredMark() {
+  return (
+    <span className="ml-0.5 text-cyan" aria-hidden="true">
+      *
+    </span>
+  );
+}
+
+// Design.md §4.22: the form reads in named sections, in the order the detail
+// page shows the trade.
+function FormSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="card-surface edge flex flex-col gap-4 p-5">
+      <h2 className="cap cap-neon">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
 function FormField({
   label,
   htmlFor,
   error,
+  required = false,
+  className = "",
   children,
 }: {
   label: string;
   htmlFor: string;
   error?: string;
+  required?: boolean;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className={`flex flex-col gap-1 ${className}`}>
       <label htmlFor={htmlFor} className="cap">
         {label}
+        {required && <RequiredMark />}
       </label>
       {children}
       <InlineMessage message={error ?? null} />
@@ -297,6 +331,33 @@ export function TradeForm(props: TradeFormProps) {
     state.stopPrice,
     instrument,
   ]);
+
+  // Design.md §4.22: the live band. Built from what is typed so far; the
+  // realised R comes from the same calculatePnl call the bar shows.
+  const entryNumber = parseNumber(state.entryPrice);
+  const stopNumber = parseNumber(state.stopPrice);
+  const exitNumber = state.taken ? parseNumber(state.exitPrice) : undefined;
+  const bandInput: PriceBandInput | null =
+    entryNumber !== undefined &&
+    stopNumber !== undefined &&
+    entryNumber !== stopNumber
+      ? {
+          taken: state.taken,
+          entryPrice: entryNumber,
+          stopPrice: stopNumber,
+          rMultiple: state.taken ? (livePreview?.rMultiple ?? null) : null,
+          mfeR: parseNumber(state.mfeR) ?? null,
+          maeR: parseNumber(state.maeR) ?? null,
+          postExitMfeR: state.taken
+            ? (parseNumber(state.postExitMfeR) ?? null)
+            : null,
+        }
+      : null;
+  const bandPrices = {
+    stop: stopNumber ?? null,
+    entry: entryNumber ?? null,
+    exit: exitNumber ?? null,
+  };
 
   const showPostExitMfe =
     state.taken && parseNumber(state.stopPrice) !== undefined;
@@ -555,560 +616,604 @@ export function TradeForm(props: TradeFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      <div className="card-surface edge flex flex-col gap-4 p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm text-fg">Missed setup</span>
-            <span className="text-xs text-fg-subtle">
-              Nothing was executed — only the setup itself is logged.
-            </span>
+    <div className="flex flex-col gap-6">
+      {/* noValidate: `required` marks the fields for assistive tech, the
+          Zod schema stays the one validator (Design.md §4.5 — live, inline,
+          no browser bubbles). */}
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
+        <FormSection title="Trade">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm text-fg">Missed setup</span>
+              <span className="text-xs text-fg-subtle">
+                Nothing was executed — only the setup itself is logged.
+              </span>
+            </div>
+            <ToggleSwitch
+              checked={!state.taken}
+              onCheckedChange={(missed) => set("taken", !missed)}
+              disabled={loading || success}
+              ariaLabel="Missed setup"
+            />
           </div>
-          <ToggleSwitch
-            checked={!state.taken}
-            onCheckedChange={(missed) => set("taken", !missed)}
-            disabled={loading || success}
-            ariaLabel="Missed setup"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <FormField label="Date" htmlFor="tradeDate" error={errors.tradeDate}>
-            <input
-              id="tradeDate"
-              type="date"
-              value={state.tradeDate}
-              onChange={(event) => set("tradeDate", event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(
-                fieldState("tradeDate", state.tradeDate !== ""),
-              )}
-            />
-          </FormField>
-
-          <FormField
-            label="Instrument"
-            htmlFor="instrumentId"
-            error={errors.instrumentId}
-          >
-            <select
-              id="instrumentId"
-              value={state.instrumentId}
-              onChange={(event) => set("instrumentId", event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(
-                fieldState("instrumentId", state.instrumentId !== ""),
-              )}
-            >
-              <option value="">Select…</option>
-              {instruments.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.symbol} — {option.name}
-                </option>
-              ))}
-            </select>
-          </FormField>
-
-          <FormField
-            label="Direction"
-            htmlFor="direction"
-            error={errors.direction}
-          >
-            <select
-              id="direction"
-              value={state.direction}
-              onChange={(event) =>
-                set("direction", event.target.value as "" | TradeDirection)
-              }
-              disabled={loading || success}
-              className={getFieldClass(
-                fieldState("direction", state.direction !== ""),
-              )}
-            >
-              <option value="">Select…</option>
-              {directionEnum.options.map((option) => (
-                <option key={option} value={option}>
-                  {option === "long" ? "Long" : "Short"}
-                </option>
-              ))}
-            </select>
-          </FormField>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <FormField
-            label="Entry time"
-            htmlFor="entryTime"
-            error={errors.entryTime}
-          >
-            <input
-              id="entryTime"
-              type="time"
-              step={1}
-              value={state.entryTime}
-              onChange={(event) => set("entryTime", event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(
-                fieldState("entryTime", state.entryTime !== ""),
-              )}
-            />
-          </FormField>
-
-          {state.taken && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
             <FormField
-              label="Exit time"
-              htmlFor="exitTime"
-              error={errors.exitTime}
+              label="Date"
+              htmlFor="tradeDate"
+              error={errors.tradeDate}
+              required
+              className="sm:col-span-3"
             >
               <input
-                id="exitTime"
+                id="tradeDate"
+                required
+                type="date"
+                value={state.tradeDate}
+                onChange={(event) => set("tradeDate", event.target.value)}
+                disabled={loading || success}
+                className={getFieldClass(
+                  fieldState("tradeDate", state.tradeDate !== ""),
+                )}
+              />
+            </FormField>
+
+            <FormField
+              label="Instrument"
+              htmlFor="instrumentId"
+              required
+              className="sm:col-span-5"
+              error={errors.instrumentId}
+            >
+              <select
+                id="instrumentId"
+                required
+                value={state.instrumentId}
+                onChange={(event) => set("instrumentId", event.target.value)}
+                disabled={loading || success}
+                className={getFieldClass(
+                  fieldState("instrumentId", state.instrumentId !== ""),
+                )}
+              >
+                <option value="">Select…</option>
+                {instruments.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.symbol} — {option.name}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+
+            <FormField
+              label="Direction"
+              htmlFor="direction"
+              required
+              className="sm:col-span-4"
+              error={errors.direction}
+            >
+              <select
+                id="direction"
+                required
+                value={state.direction}
+                onChange={(event) =>
+                  set("direction", event.target.value as "" | TradeDirection)
+                }
+                disabled={loading || success}
+                className={getFieldClass(
+                  fieldState("direction", state.direction !== ""),
+                )}
+              >
+                <option value="">Select…</option>
+                {directionEnum.options.map((option) => (
+                  <option key={option} value={option}>
+                    {option === "long" ? "Long" : "Short"}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+          </div>
+          {state.taken && (
+            <div className="flex flex-col gap-1.5">
+              <span className="cap">
+                Accounts
+                <RequiredMark />
+              </span>
+              <AccountMultiSelect
+                accounts={accounts}
+                selectedIds={state.accountIds}
+                onChange={(ids) => set("accountIds", ids)}
+                disabled={loading || success}
+              />
+              <InlineMessage message={errors.accountIds ?? null} />
+            </div>
+          )}
+        </FormSection>
+
+        <FormSection title="Execution">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <FormField
+              label="Entry time"
+              htmlFor="entryTime"
+              required
+              error={errors.entryTime}
+            >
+              <input
+                id="entryTime"
+                required
                 type="time"
                 step={1}
-                value={state.exitTime}
-                onChange={(event) => set("exitTime", event.target.value)}
+                value={state.entryTime}
+                onChange={(event) => set("entryTime", event.target.value)}
                 disabled={loading || success}
                 className={getFieldClass(
-                  fieldState("exitTime", state.exitTime !== ""),
+                  fieldState("entryTime", state.entryTime !== ""),
                 )}
               />
             </FormField>
-          )}
 
-          {state.taken && (
-            <FormField
-              label="Contracts"
-              htmlFor="contracts"
-              error={errors.contracts}
-            >
-              <input
-                id="contracts"
-                type="number"
-                min={1}
-                step={1}
-                value={state.contracts}
-                onChange={(event) => set("contracts", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("contracts", state.contracts.trim() !== ""),
-                )}
-              />
-            </FormField>
-          )}
-        </div>
+            {state.taken && (
+              <FormField
+                label="Exit time"
+                htmlFor="exitTime"
+                required
+                error={errors.exitTime}
+              >
+                <input
+                  id="exitTime"
+                  required
+                  type="time"
+                  step={1}
+                  value={state.exitTime}
+                  onChange={(event) => set("exitTime", event.target.value)}
+                  disabled={loading || success}
+                  className={getFieldClass(
+                    fieldState("exitTime", state.exitTime !== ""),
+                  )}
+                />
+              </FormField>
+            )}
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <FormField
-            label="Entry price"
-            htmlFor="entryPrice"
-            error={errors.entryPrice}
-          >
-            <input
-              id="entryPrice"
-              type="number"
-              step="0.0001"
-              value={state.entryPrice}
-              onChange={(event) => set("entryPrice", event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(
-                fieldState("entryPrice", state.entryPrice.trim() !== ""),
-              )}
-            />
-          </FormField>
-
-          {state.taken && (
-            <FormField
-              label="Exit price"
-              htmlFor="exitPrice"
-              error={errors.exitPrice}
-            >
-              <input
-                id="exitPrice"
-                type="number"
-                step="0.0001"
-                value={state.exitPrice}
-                onChange={(event) => set("exitPrice", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("exitPrice", state.exitPrice.trim() !== ""),
-                )}
-              />
-            </FormField>
-          )}
-
-          <FormField
-            label="Stop price"
-            htmlFor="stopPrice"
-            error={errors.stopPrice}
-          >
-            <input
-              id="stopPrice"
-              type="number"
-              step="0.0001"
-              value={state.stopPrice}
-              onChange={(event) => set("stopPrice", event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(
-                fieldState("stopPrice", state.stopPrice.trim() !== ""),
-              )}
-            />
-          </FormField>
-        </div>
-
-        {state.taken && (
-          <div className="flex min-h-[52px] items-center justify-between rounded-ctl border border-white/12 bg-well px-4">
-            <span className="cap">Live P&amp;L / R</span>
-            {livePreview ? (
-              <span className="font-mono text-sm">
-                <span
-                  className={
-                    livePreview.pnlCents >= 0
-                      ? "text-success-fg"
-                      : "text-danger-fg"
-                  }
-                >
-                  {livePreview.pnlCents >= 0 ? "+" : ""}$
-                  {centsToDollars(livePreview.pnlCents).toFixed(2)}
-                </span>
-                {livePreview.rMultiple !== null && (
-                  <span className="ml-2 text-fg-muted">
-                    {livePreview.rMultiple >= 0 ? "+" : ""}
-                    {livePreview.rMultiple.toFixed(2)}R
-                  </span>
-                )}
-              </span>
-            ) : (
-              <span className="text-sm text-fg-subtle">—</span>
+            {state.taken && (
+              <FormField
+                label="Contracts"
+                htmlFor="contracts"
+                required
+                error={errors.contracts}
+              >
+                <input
+                  id="contracts"
+                  required
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={state.contracts}
+                  onChange={(event) => set("contracts", event.target.value)}
+                  disabled={loading || success}
+                  className={getFieldClass(
+                    fieldState("contracts", state.contracts.trim() !== ""),
+                  )}
+                />
+              </FormField>
             )}
           </div>
-        )}
-      </div>
-
-      <div className="card-surface edge flex flex-col gap-4 p-5">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <FormField label="Session" htmlFor="session" error={errors.session}>
-            <select
-              id="session"
-              value={state.session}
-              onChange={(event) => set("session", event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(
-                fieldState("session", state.session !== ""),
-              )}
-            >
-              <option value="">—</option>
-              {sessionEnum.options.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </FormField>
-
-          <FormField
-            label="Setup type"
-            htmlFor="setupType"
-            error={errors.setupType}
-          >
-            <select
-              id="setupType"
-              value={state.setupType}
-              onChange={(event) => set("setupType", event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(
-                fieldState("setupType", state.setupType !== ""),
-              )}
-            >
-              <option value="">—</option>
-              {setupTypeEnum.options.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </FormField>
-
-          <FormField
-            label="Entry model"
-            htmlFor="entryModel"
-            error={errors.entryModel}
-          >
-            <select
-              id="entryModel"
-              value={state.entryModel}
-              onChange={(event) => set("entryModel", event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(
-                fieldState("entryModel", state.entryModel !== ""),
-              )}
-            >
-              <option value="">—</option>
-              {entryModelEnum.options.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </FormField>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <span className="cap">Confluences</span>
-          <TagMultiSelect
-            groups={confluenceGroups}
-            selectedIds={state.confluenceTagIds}
-            onChange={(ids) => set("confluenceTagIds", ids)}
-            disabled={loading || success}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <span className="cap">Mistakes</span>
-          <TagMultiSelect
-            groups={[{ group: "", tags: mistakeTags }]}
-            selectedIds={state.mistakeTagIds}
-            onChange={(ids) => set("mistakeTagIds", ids)}
-            disabled={loading || success}
-          />
-        </div>
-      </div>
-
-      <div className="card-surface edge flex flex-col gap-4 p-5">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <FormField label="MFE (R)" htmlFor="mfeR" error={errors.mfeR}>
-            <input
-              id="mfeR"
-              type="number"
-              step="0.01"
-              value={state.mfeR}
-              onChange={(event) => set("mfeR", event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(
-                fieldState("mfeR", state.mfeR.trim() !== ""),
-              )}
-            />
-          </FormField>
-
-          <FormField label="MAE (R)" htmlFor="maeR" error={errors.maeR}>
-            <input
-              id="maeR"
-              type="number"
-              step="0.01"
-              value={state.maeR}
-              onChange={(event) => set("maeR", event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(
-                fieldState("maeR", state.maeR.trim() !== ""),
-              )}
-            />
-          </FormField>
-
-          {showPostExitMfe && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <FormField
-              label="Post-exit MFE (R)"
-              htmlFor="postExitMfeR"
-              error={errors.postExitMfeR}
+              label="Entry price"
+              htmlFor="entryPrice"
+              required
+              error={errors.entryPrice}
             >
               <input
-                id="postExitMfeR"
+                id="entryPrice"
+                required
                 type="number"
-                step="0.01"
-                value={state.postExitMfeR}
-                onChange={(event) => set("postExitMfeR", event.target.value)}
+                step="0.0001"
+                value={state.entryPrice}
+                onChange={(event) => set("entryPrice", event.target.value)}
                 disabled={loading || success}
                 className={getFieldClass(
-                  fieldState("postExitMfeR", state.postExitMfeR.trim() !== ""),
+                  fieldState("entryPrice", state.entryPrice.trim() !== ""),
+                )}
+              />
+            </FormField>
+
+            {state.taken && (
+              <FormField
+                label="Exit price"
+                htmlFor="exitPrice"
+                required
+                error={errors.exitPrice}
+              >
+                <input
+                  id="exitPrice"
+                  required
+                  type="number"
+                  step="0.0001"
+                  value={state.exitPrice}
+                  onChange={(event) => set("exitPrice", event.target.value)}
+                  disabled={loading || success}
+                  className={getFieldClass(
+                    fieldState("exitPrice", state.exitPrice.trim() !== ""),
+                  )}
+                />
+              </FormField>
+            )}
+
+            <FormField
+              label="Stop price"
+              htmlFor="stopPrice"
+              error={errors.stopPrice}
+            >
+              <input
+                id="stopPrice"
+                type="number"
+                step="0.0001"
+                value={state.stopPrice}
+                onChange={(event) => set("stopPrice", event.target.value)}
+                disabled={loading || success}
+                className={getFieldClass(
+                  fieldState("stopPrice", state.stopPrice.trim() !== ""),
+                )}
+              />
+            </FormField>
+          </div>
+          {/* Design.md §4.22: the band from the detail page, live. It needs a
+            stop, because R is undefined without one (§4.21). */}
+          {bandInput ? (
+            <PriceBandChart input={bandInput} prices={bandPrices} />
+          ) : (
+            <p className="text-fg-subtle text-xs">
+              Add a stop price to see the trade in R.
+            </p>
+          )}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <FormField label="MFE (R)" htmlFor="mfeR" error={errors.mfeR}>
+              <input
+                id="mfeR"
+                type="number"
+                step="0.01"
+                value={state.mfeR}
+                onChange={(event) => set("mfeR", event.target.value)}
+                disabled={loading || success}
+                className={getFieldClass(
+                  fieldState("mfeR", state.mfeR.trim() !== ""),
+                )}
+              />
+            </FormField>
+
+            <FormField label="MAE (R)" htmlFor="maeR" error={errors.maeR}>
+              <input
+                id="maeR"
+                type="number"
+                step="0.01"
+                value={state.maeR}
+                onChange={(event) => set("maeR", event.target.value)}
+                disabled={loading || success}
+                className={getFieldClass(
+                  fieldState("maeR", state.maeR.trim() !== ""),
+                )}
+              />
+            </FormField>
+
+            {showPostExitMfe && (
+              <FormField
+                label="Post-exit MFE (R)"
+                htmlFor="postExitMfeR"
+                error={errors.postExitMfeR}
+              >
+                <input
+                  id="postExitMfeR"
+                  type="number"
+                  step="0.01"
+                  value={state.postExitMfeR}
+                  onChange={(event) => set("postExitMfeR", event.target.value)}
+                  disabled={loading || success}
+                  className={getFieldClass(
+                    fieldState(
+                      "postExitMfeR",
+                      state.postExitMfeR.trim() !== "",
+                    ),
+                  )}
+                />
+              </FormField>
+            )}
+          </div>
+          {state.taken && (
+            <FormField
+              label="P&amp;L override"
+              htmlFor="pnlOverride"
+              error={errors.pnlOverride}
+            >
+              <input
+                id="pnlOverride"
+                type="number"
+                step="0.01"
+                placeholder="Leave empty to use the derived P&L"
+                value={state.pnlOverride}
+                onChange={(event) => set("pnlOverride", event.target.value)}
+                disabled={loading || success}
+                className={getFieldClass(
+                  fieldState("pnlOverride", state.pnlOverride.trim() !== ""),
                 )}
               />
             </FormField>
           )}
-        </div>
+        </FormSection>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <FormField label="Grade" htmlFor="grade" error={errors.grade}>
-            <select
-              id="grade"
-              value={state.grade}
-              onChange={(event) => set("grade", event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(fieldState("grade", state.grade !== ""))}
-            >
-              <option value="">—</option>
-              {gradeEnum.options.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </FormField>
-
-          <FormField label="Felt" htmlFor="felt" error={errors.felt}>
-            <select
-              id="felt"
-              value={state.felt}
-              onChange={(event) => set("felt", event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(fieldState("felt", state.felt !== ""))}
-            >
-              <option value="">—</option>
-              {feltEnum.options.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </FormField>
-
-          {state.taken && (
-            <FormField label="Result" htmlFor="result" error={errors.result}>
+        <FormSection title="Setup">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <FormField label="Session" htmlFor="session" error={errors.session}>
               <select
-                id="result"
-                value={state.result}
-                onChange={(event) => set("result", event.target.value)}
+                id="session"
+                value={state.session}
+                onChange={(event) => set("session", event.target.value)}
                 disabled={loading || success}
                 className={getFieldClass(
-                  fieldState("result", state.result !== ""),
+                  fieldState("session", state.session !== ""),
                 )}
               >
                 <option value="">—</option>
-                {resultEnum.options.map((option) => (
+                {sessionEnum.options.map((option) => (
                   <option key={option} value={option}>
                     {option}
                   </option>
                 ))}
               </select>
             </FormField>
-          )}
-        </div>
 
-        {state.taken && (
-          <FormField
-            label="P&amp;L override"
-            htmlFor="pnlOverride"
-            error={errors.pnlOverride}
-          >
-            <input
-              id="pnlOverride"
-              type="number"
-              step="0.01"
-              placeholder="Leave empty to use the derived P&L"
-              value={state.pnlOverride}
-              onChange={(event) => set("pnlOverride", event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(
-                fieldState("pnlOverride", state.pnlOverride.trim() !== ""),
-              )}
-            />
-          </FormField>
-        )}
+            <FormField
+              label="Setup type"
+              htmlFor="setupType"
+              error={errors.setupType}
+            >
+              <select
+                id="setupType"
+                value={state.setupType}
+                onChange={(event) => set("setupType", event.target.value)}
+                disabled={loading || success}
+                className={getFieldClass(
+                  fieldState("setupType", state.setupType !== ""),
+                )}
+              >
+                <option value="">—</option>
+                {setupTypeEnum.options.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </FormField>
 
-        {state.taken && (
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-fg">By the book</span>
-            <ToggleSwitch
-              checked={state.byTheBook}
-              onCheckedChange={(value) => set("byTheBook", value)}
+            <FormField
+              label="Entry model"
+              htmlFor="entryModel"
+              error={errors.entryModel}
+            >
+              <select
+                id="entryModel"
+                value={state.entryModel}
+                onChange={(event) => set("entryModel", event.target.value)}
+                disabled={loading || success}
+                className={getFieldClass(
+                  fieldState("entryModel", state.entryModel !== ""),
+                )}
+              >
+                <option value="">—</option>
+                {entryModelEnum.options.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="cap">Confluences</span>
+            <TagMultiSelect
+              groups={confluenceGroups}
+              selectedIds={state.confluenceTagIds}
+              onChange={(ids) => set("confluenceTagIds", ids)}
               disabled={loading || success}
-              ariaLabel="By the book"
             />
           </div>
-        )}
+        </FormSection>
 
-        <FormField label="Notes" htmlFor="notes" error={errors.notes}>
-          <textarea
-            id="notes"
-            rows={3}
-            value={state.notes}
-            onChange={(event) => set("notes", event.target.value)}
-            disabled={loading || success}
-            className={`${getFieldClass(
-              fieldState("notes", state.notes.trim() !== ""),
-            )} h-auto resize-none py-2`}
-          />
-        </FormField>
-      </div>
+        <FormSection title="Review">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <FormField label="Grade" htmlFor="grade" error={errors.grade}>
+              <select
+                id="grade"
+                value={state.grade}
+                onChange={(event) => set("grade", event.target.value)}
+                disabled={loading || success}
+                className={getFieldClass(
+                  fieldState("grade", state.grade !== ""),
+                )}
+              >
+                <option value="">—</option>
+                {gradeEnum.options.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </FormField>
 
-      {state.taken && (
-        <div className="card-surface edge flex flex-col gap-3 p-5">
-          <span className="cap">Accounts</span>
-          <AccountMultiSelect
-            accounts={accounts}
-            selectedIds={state.accountIds}
-            onChange={(ids) => set("accountIds", ids)}
-            disabled={loading || success}
-          />
-          <InlineMessage message={errors.accountIds ?? null} />
+            <FormField label="Felt" htmlFor="felt" error={errors.felt}>
+              <select
+                id="felt"
+                value={state.felt}
+                onChange={(event) => set("felt", event.target.value)}
+                disabled={loading || success}
+                className={getFieldClass(fieldState("felt", state.felt !== ""))}
+              >
+                <option value="">—</option>
+                {feltEnum.options.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+
+            {state.taken && (
+              <FormField label="Result" htmlFor="result" error={errors.result}>
+                <select
+                  id="result"
+                  value={state.result}
+                  onChange={(event) => set("result", event.target.value)}
+                  disabled={loading || success}
+                  className={getFieldClass(
+                    fieldState("result", state.result !== ""),
+                  )}
+                >
+                  <option value="">—</option>
+                  {resultEnum.options.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            )}
+          </div>
+          {state.taken && (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-fg">By the book</span>
+              <ToggleSwitch
+                checked={state.byTheBook}
+                onCheckedChange={(value) => set("byTheBook", value)}
+                disabled={loading || success}
+                ariaLabel="By the book"
+              />
+            </div>
+          )}
+          <div className="flex flex-col gap-1.5">
+            <span className="cap">Mistakes</span>
+            <TagMultiSelect
+              groups={[{ group: "", tags: mistakeTags }]}
+              selectedIds={state.mistakeTagIds}
+              onChange={(ids) => set("mistakeTagIds", ids)}
+              tone="neutral"
+              disabled={loading || success}
+            />
+          </div>
+          <FormField label="Notes" htmlFor="notes" error={errors.notes}>
+            <textarea
+              id="notes"
+              rows={3}
+              value={state.notes}
+              onChange={(event) => set("notes", event.target.value)}
+              disabled={loading || success}
+              className={`${getFieldClass(
+                fieldState("notes", state.notes.trim() !== ""),
+              )} h-auto resize-none py-2`}
+            />
+          </FormField>
+        </FormSection>
+
+        <FormSection title="Attachments">
+          <div className="flex flex-col gap-1.5">
+            <span className="cap">Screenshots</span>
+            <ScreenshotSlots
+              screenshots={screenshots}
+              disabled={loading || success}
+              error={screenshotError}
+              onAdd={handleAddScreenshot}
+              onRemove={handleRemoveScreenshot}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="cap">Links</span>
+            <TradeLinksInput
+              links={links}
+              disabled={loading || success}
+              onAdd={handleAddLink}
+              onRemove={handleRemoveLink}
+            />
+            <InlineMessage message={linkError ?? errors.links ?? null} />
+          </div>
+
+          {edit && (
+            <p className="text-fg-subtle text-xs">
+              Screenshots and links are saved the moment you add or remove them.
+            </p>
+          )}
+        </FormSection>
+
+        {/* Design.md §4.22: live P&L and the save button stay in reach while the
+          form scrolls. The wrapper is opaque, the card on it keeps its look. */}
+        <div className="sticky bottom-0 z-10 flex flex-col gap-1 rounded-card bg-bg">
+          <div className="card-surface edge flex flex-wrap items-center justify-between gap-4 px-5 py-4">
+            <div className="flex items-baseline gap-2 font-mono tabular-nums">
+              {!state.taken ? (
+                <span className="font-sans text-fg-subtle text-sm">
+                  Missed setup — no P&amp;L
+                </span>
+              ) : livePreview ? (
+                <>
+                  {/* §1: money gets a semantic colour and nothing else. */}
+                  <span
+                    className={`font-bold text-[21px] ${
+                      livePreview.pnlCents >= 0
+                        ? "text-success-fg"
+                        : "text-danger-fg"
+                    }`}
+                  >
+                    {livePreview.pnlCents >= 0 ? "+" : ""}$
+                    {centsToDollars(livePreview.pnlCents).toFixed(2)}
+                  </span>
+                  {livePreview.rMultiple !== null && (
+                    <span className="text-fg-muted text-sm">
+                      {livePreview.rMultiple >= 0 ? "+" : ""}
+                      {livePreview.rMultiple.toFixed(2)}R
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="font-bold text-[21px] text-fg-subtle">—</span>
+              )}
+            </div>
+            <button
+              type="submit"
+              disabled={loading || success}
+              className={`relative h-11 min-w-[11rem] rounded-ctl px-5 text-sm font-medium text-fg shadow-[var(--shadow-button-primary)] ${
+                success
+                  ? "bg-[image:var(--gradient-success)]"
+                  : "bg-[image:var(--gradient-info)]"
+              }`}
+            >
+              <span
+                className={`inline-flex items-center justify-center transition-opacity duration-200 ease-linear ${
+                  loading || success ? "opacity-0" : "opacity-100"
+                }`}
+              >
+                {edit
+                  ? "Save changes"
+                  : state.taken
+                    ? "Log trade"
+                    : "Log missed setup"}
+              </span>
+              <span
+                className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ease-linear ${
+                  loading ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <PendingIndicator label="Saving…" />
+              </span>
+              <span
+                className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200 ease-linear ${
+                  success ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <Check className="h-4 w-4" aria-hidden="true" />
+                {successSummary}
+              </span>
+            </button>
+          </div>
+          <InlineMessage message={errors.form ?? null} />
         </div>
-      )}
-
-      <div className="card-surface edge flex flex-col gap-4 p-5">
-        <div className="flex flex-col gap-1.5">
-          <span className="cap">Screenshots</span>
-          <ScreenshotSlots
-            screenshots={screenshots}
-            disabled={loading || success}
-            error={screenshotError}
-            onAdd={handleAddScreenshot}
-            onRemove={handleRemoveScreenshot}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <span className="cap">Links</span>
-          <TradeLinksInput
-            links={links}
-            disabled={loading || success}
-            onAdd={handleAddLink}
-            onRemove={handleRemoveLink}
-          />
-          <InlineMessage message={linkError ?? errors.links ?? null} />
-        </div>
-
-        {edit && (
-          <p className="text-fg-subtle text-xs">
-            Screenshots and links are saved the moment you add or remove them.
-          </p>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <button
-          type="submit"
-          disabled={loading || success}
-          className={`relative h-11 w-full rounded-ctl text-sm font-medium text-fg shadow-[var(--shadow-button-primary)] ${
-            success
-              ? "bg-[image:var(--gradient-success)]"
-              : "bg-[image:var(--gradient-info)]"
-          }`}
-        >
-          <span
-            className={`inline-flex items-center justify-center transition-opacity duration-200 ease-linear ${
-              loading || success ? "opacity-0" : "opacity-100"
-            }`}
-          >
-            {edit
-              ? "Save changes"
-              : state.taken
-                ? "Log trade"
-                : "Log missed setup"}
-          </span>
-          <span
-            className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ease-linear ${
-              loading ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <PendingIndicator label="Saving…" />
-          </span>
-          <span
-            className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200 ease-linear ${
-              success ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <Check className="h-4 w-4" aria-hidden="true" />
-            {successSummary}
-          </span>
-        </button>
-        <InlineMessage message={errors.form ?? null} />
-      </div>
+      </form>
 
       {edit && (
         <div className="card-surface edge flex flex-col gap-3 p-5">
@@ -1134,6 +1239,6 @@ export function TradeForm(props: TradeFormProps) {
           </button>
         </div>
       )}
-    </form>
+    </div>
   );
 }

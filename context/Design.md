@@ -581,8 +581,8 @@ im Kalender (4.8). Beide bestätigen oder verorten etwas und dürfen deshalb
 leuchten.
 
 **Stand.** Benutzt vom Dashboard — die drei Gamification-Kacheln (4.3) und der
-„Save plan"-Button (4.6) — und von der Trade-Detailseite: Bearbeiten-Button und
-Badges (4.20). Ob sie sich über das übrige Projekt legt, entscheidet die nächste
+„Save plan"-Button (4.6) — von der Trade-Detailseite: Bearbeiten-Button und
+Badges (4.20) — und vom Trade-Formular: ausgewählte Chips (4.22). Ob sie sich über das übrige Projekt legt, entscheidet die nächste
 Runde.
 
 ---
@@ -985,7 +985,7 @@ Farbe: der Betrag semantisch grün oder rot, sonst nichts. Bei einem verpassten
 Setup steht „—" und darunter das would-be R in `--color-fg-subtle`, nie grün —
 4.9 und 4.17 gelten hier unverändert.
 
-**Bearbeiten.** Kein eigener Entwurf: es ist dasselbe Formular wie „New trade",
+**Bearbeiten.** Kein eigener Entwurf: es ist dasselbe Formular wie „New trade" (4.22),
 vorbefüllt, mit den Feldregeln aus 4.5 und den Buttonzuständen aus 4.2. Der
 Primärbutton heißt „Save changes", sein Erfolgszustand zeigt die neue Zahl und
 führt danach auf die Detailseite zurück.
@@ -1040,6 +1040,52 @@ stehen weiter in der Zeile „Excursion"; das Band zeigt die Form, nicht die Wer
 
 **Nicht.** Kein Hover, kein Tooltip, keine Animation. Keine Kursdaten — das Band
 zeigt ausschließlich, was am Trade eingetragen ist.
+
+
+### 4.22 Trade-Formular
+
+„New trade" und „Edit" (4.20) sind dasselbe Formular. Es liest sich in der
+Reihenfolge, in der die Detailseite den Trade zeigt — man gibt ein, wie man später
+liest.
+
+**Abschnitte.** Karten in `card-surface edge`, Titel in `cap` + `cap-neon`:
+
+- **Trade** — Missed-Schalter, Datum · Instrument · Richtung (ab `sm` auf 12 Spalten
+  3 · 5 · 4, weil das Instrument den längsten Wert trägt), darunter Accounts.
+- **Execution** — Entry- und Exit-Zeit, Kontrakte; Entry-, Exit- und Stop-Preis;
+  das Preisband aus 4.21 live; MFE, MAE, Post-exit MFE; P&L-Override.
+- **Setup** — Session, Setup-Typ, Entry-Modell, Confluences.
+- **Review** — Grade, Felt, Result, By the book, Mistakes, Notes.
+- **Attachments** — Screenshots und Links.
+
+**Pflichtfelder** tragen ein `*` in `--color-cyan` hinter dem Label und `required` am
+Feld. Das Formular hat `noValidate`: der Browser zeigt keine eigenen Blasen, die
+Zod-Validierung aus 4.5 bleibt die einzige. Welche Felder Pflicht sind, sagt allein
+`createTradeSchema`. Pflicht-Selects zeigen „Select…", optionale „—" — der
+Unterschied ist Absicht.
+
+**Chips.** Nicht gewählt: `--color-well`, 1px-Rand, `--color-fg-muted`. Gewählt:
+genau das Badge der Detailseite — Confluences und Accounts auf der blauen ruhigen
+Fläche, Mistakes auf der neutralen (4.14, 4.20). Was man anklickt, sieht aus wie das,
+was man später liest. Gruppennamen der Confluences stehen in `--color-fg-subtle`,
+12px, Normalschreibung, damit sie unter dem Feldlabel leiser sind als es.
+
+**Preisband live.** Sobald Entry und Stop gültig und verschieden sind, zeigt
+Execution das Band aus 4.21 aus den getippten Werten; das R kommt aus derselben
+`calculatePnl`-Rechnung wie die Leiste. Ohne Stop steht dort ein Satz in
+`--color-fg-subtle`, wie man es bekommt. Das Band bewegt sich nur mit der Eingabe.
+
+**Feste Leiste.** Am Ende des Formulars, `sticky` am unteren Rand des Inhaltsbereichs:
+links das Live-P&L als Metrikwert (21px 700 Mono, nur grün oder rot, kein Glow) mit
+dem R in 14px daneben, bei einem Missed Setup „Missed setup — no P&L" in
+`--color-fg-subtle`; rechts der Primärbutton aus 4.2 mit fester Mindestbreite statt
+über die ganze Breite. Die Fläche darunter ist deckend, ohne Blur (Blur-Budget, §2).
+Beim Bearbeiten steht die Löschen-Karte **unter** dem Formular, nicht zwischen Inhalt
+und Leiste.
+
+**Stand.** Gebaut nach einem Design-Review mit dem `frontend-design`-Skill. Offen:
+die Mistake-Labels sind in den Seed-Daten kleingeschrieben, die Confluences nicht;
+das ist Datenpflege, kein Layout.
 
 ---
 
