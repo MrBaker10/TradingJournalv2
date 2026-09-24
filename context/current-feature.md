@@ -18,11 +18,31 @@ Two different lists, do not mix them up:
 
 ## Status
 
-**Nothing in progress.**
+**In progress** on `feature/landing-page`.
 
 ---
 
-## Feature: _(none)_
+## Feature: Startseite und Proxy bei DB-Ausfall
+
+**Goal.** `/` zeigt eine öffentliche Startseite mit „Sign in" und „Create account",
+statt auf `/dashboard` umzuleiten. Ist die Datenbank nicht erreichbar, antwortet
+`src/proxy.ts` mit 503 statt mit einem ungefangenen `APIError: Failed to get session`.
+
+**Scope.** `src/app/page.tsx` → `src/app/(auth)/page.tsx` (erbt `force-dynamic`),
+`src/proxy.ts` (`/` öffentlich, `try/catch` um `getSession`), Ausnahme in `CLAUDE.md`
+unter „Nothing is shared, ever". Keine Migration, keine Domain-Änderung.
+
+### Do not build
+- Kein Marketing-Content, keine Feature-Liste auf `/`.
+- Kein Auto-Redirect eingeloggter Nutzer von `/` auf `/dashboard`.
+- Keine gestaltete Fehlerseite für den DB-Ausfall — Klartext reicht.
+
+### Acceptance
+- [ ] `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm lint` grün.
+- [ ] `/` zeigt beide Buttons; „Create account" nur bei `REGISTRATION_OPEN=true`.
+- [ ] DB aus, gültiges Cookie: `/dashboard` → 503-Text, `/api/*` → 503 JSON.
+- [ ] Klickpfad mit DB an: `/` → „Sign in" → Login als `local` → `/dashboard`.
+- [ ] Ohne Cookie: `/dashboard` → Redirect `/login`.
 
 <!--
 Filled by `/feature load <description>`. Shape:

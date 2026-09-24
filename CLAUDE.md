@@ -108,6 +108,8 @@ These are the mistakes that are easy to make here and expensive to find later.
 - **Nothing is shared, ever.** No public route, no share token, no read-only view, no
   leaderboard, no raffle. Every page and action sits behind a session and filters by
   the current user. An unauthenticated route is a bug.
+  The exceptions are `/login`, `/register` and the front page `/`, which shows only
+  a sign-in and a create-account button and reads no session and no data.
 - **Never fetch a user-supplied URL server-side.** Trade links are stored, validated as
   https and rendered as anchors. No server-side previews, no metadata scraping, no
   iframes. A preview image is allowed only when its address is *derived* from the link
