@@ -658,6 +658,18 @@ by picking a different answer while coding.
   `@aws-sdk/client-s3@3.1138.0`, four hours old, which pulled 19 exclusions with it;
   `3.1132.0` installs with none. The rule is about any dependency, not this one.
   Reasoning: `context/decisions.md`, the P2.2 Storage entry.
+- **Account currency** (2026-09-24, account-currency) — an account is kept in USD
+  (default) or EUR, changeable only while no trade is assigned to it. Trades stay
+  stored in USD; an import converts an amount from the account currency exactly once,
+  with the ECB reference rate of the trade date.
+- **FX rates on demand** (2026-09-24, account-currency) — rates are fetched when an
+  import needs them (`ensureFxRates`, only the missing days, upserted into
+  `fx_rates`), not by a daily job. This replaces "FX daily" under Jobs for now; a daily
+  job is not decided.
+- **FX source is frankfurter with `providers=ecb`** (2026-09-24, account-currency) —
+  the v2 API blends 98 sources and returns weekend values unless scoped to the ECB, and
+  the project specifies ECB reference rates. Reasoning: `context/decisions.md`, the
+  account-currency entry.
 
 ---
 

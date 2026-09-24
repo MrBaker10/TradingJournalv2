@@ -7,6 +7,7 @@ import { createAccount } from "@/actions/accounts";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import { ACCOUNT_CURRENCIES, type AccountCurrency } from "@/domain/fx";
 import { createAccountSchema } from "@/schemas/accounts";
 
 const SUCCESS_HOLD_MS = 800;
@@ -18,6 +19,7 @@ interface AccountCreateFormProps {
 export function AccountCreateForm({ onCreated }: AccountCreateFormProps) {
   const [name, setName] = useState("");
   const [isPractice, setIsPractice] = useState(false);
+  const [currency, setCurrency] = useState<AccountCurrency>("USD");
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<"idle" | "success">("idle");
   const [isPending, startTransition] = useTransition();
@@ -28,7 +30,11 @@ export function AccountCreateForm({ onCreated }: AccountCreateFormProps) {
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
-    const parsed = createAccountSchema.safeParse({ name, isPractice });
+    const parsed = createAccountSchema.safeParse({
+      name,
+      isPractice,
+      currency,
+    });
     if (!parsed.success) {
       setError(parsed.error.issues[0].message);
       return;
@@ -45,6 +51,7 @@ export function AccountCreateForm({ onCreated }: AccountCreateFormProps) {
         setPhase("idle");
         setName("");
         setIsPractice(false);
+        setCurrency("USD");
         setError(null);
         onCreated?.();
       }, SUCCESS_HOLD_MS);
@@ -137,6 +144,33 @@ export function AccountCreateForm({ onCreated }: AccountCreateFormProps) {
           disabled={loading || success}
           ariaLabel="Create as practice account"
         />
+      </div>
+
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          <label htmlFor="new-account-currency" className="text-sm text-fg">
+            Currency
+          </label>
+          <span className="text-xs text-fg-subtle">
+            The currency your broker reports this account in. Fixed once the
+            account has trades.
+          </span>
+        </div>
+        <select
+          id="new-account-currency"
+          value={currency}
+          onChange={(event) =>
+            setCurrency(event.target.value as AccountCurrency)
+          }
+          disabled={loading || success}
+          className="h-9 w-24 shrink-0 rounded-ctl border border-white/12 bg-well px-2 text-sm text-fg transition-colors duration-200 hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60"
+        >
+          {ACCOUNT_CURRENCIES.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
       </div>
     </form>
   );

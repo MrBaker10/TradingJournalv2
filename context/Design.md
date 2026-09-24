@@ -521,6 +521,14 @@ Kontoauszug. Deshalb:
 Der Wechsel des Kontos ist ein Farb- und Zahlenwechsel, kein Seitenwechsel: 200 ms
 Crossfade auf den Werten, das Layout bleibt stehen.
 
+**Kontowährung (Settings).** Die Kontokachel trägt die Währung als neutrales Tag in
+Mono neben „Default" auf der neutralen Fläche aus 4.20 (`--gradient-dark-soft`,
+`--shadow-dark-soft`, Schrift `--color-fg-muted`), kein Akzent — die Währung ist eine
+Eigenschaft, kein Zustand. Gewählt wird sie über ein natives `<select>` in der
+Feldoptik aus 4.22, beim Anlegen und in der Kachel. Hat das Konto Trades, ist das
+Select deaktiviert, und darunter steht „Locked — this account has trades" in
+`--color-fg-subtle`; ausgegraut ohne Begründung reicht nicht.
+
 ### 4.13 Screenshots und Links am Trade
 
 Beide liegen auf der Detailseite (4.20), je in einem eigenen Abschnitt. Seit S14

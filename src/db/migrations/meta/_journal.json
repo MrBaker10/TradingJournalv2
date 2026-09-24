@@ -99,6 +99,13 @@
       "when": 1790066527420,
       "tag": "0013_defer_trade_accounts_account_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790249901828,
+      "tag": "0014_closed_tusk",
+      "breakpoints": true
     }
   ]
 }

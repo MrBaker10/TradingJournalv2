@@ -3,19 +3,32 @@ import {
   asc,
   count,
   eq,
+  getTableColumns,
   inArray,
   isNull,
   max,
   or,
   sql,
 } from "drizzle-orm";
+import type { AccountCurrency } from "../../domain/fx.ts";
 import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
 import { tradeAccounts } from "../schema/trades.ts";
 
+/** Any trade assigned to this account — the lock on changing its currency. */
+function hasAssignedTrades() {
+  return sql`exists (
+    select 1 from ${tradeAccounts}
+    where ${tradeAccounts.accountId} = ${accounts.id}
+  )`;
+}
+
 export async function listAllAccountsForSettings(userId: number) {
   return db
-    .select()
+    .select({
+      ...getTableColumns(accounts),
+      hasTrades: hasAssignedTrades().mapWith(Boolean),
+    })
     .from(accounts)
     .where(eq(accounts.userId, userId))
     .orderBy(asc(accounts.sortOrder));
@@ -55,6 +68,37 @@ export async function countAssignedTrades(accountId: number): Promise<number> {
     .where(eq(tradeAccounts.accountId, accountId));
 
   return row.count;
+}
+
+type AccountWriter = Pick<typeof db, "update">;
+
+/**
+ * Sets an owned account's currency, but only while no trade is assigned to
+ * it. The lock sits in the statement itself rather than in a count read
+ * beforehand, so a trade assigned in between cannot slip through, and the
+ * rule is testable against Postgres without importing the server action.
+ *
+ * Returns false when nothing matched — not owned, or trades assigned.
+ */
+export async function updateAccountCurrency(
+  userId: number,
+  accountId: number,
+  currency: AccountCurrency,
+  executor: AccountWriter = db,
+): Promise<boolean> {
+  const updated = await executor
+    .update(accounts)
+    .set({ currency })
+    .where(
+      and(
+        eq(accounts.id, accountId),
+        eq(accounts.userId, userId),
+        sql`not ${hasAssignedTrades()}`,
+      ),
+    )
+    .returning({ id: accounts.id });
+
+  return updated.length > 0;
 }
 
 // Never trusts a client-supplied account id list: filters it down to ids

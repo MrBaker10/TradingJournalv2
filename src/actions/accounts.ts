@@ -8,6 +8,7 @@ import {
   getNextSortOrder,
   getOwnedAccount,
   listActiveAccountsForSwitcher,
+  updateAccountCurrency,
 } from "@/db/queries/accounts";
 import { accounts } from "@/db/schema/accounts";
 import { users } from "@/db/schema/users";
@@ -16,6 +17,7 @@ import {
   createAccountSchema,
   moveAccountSchema,
   renameAccountSchema,
+  setAccountCurrencySchema,
   setSelectedAccountSchema,
   accountIdSchema as togglePracticeAccountIdSchema,
   togglePracticeSchema,
@@ -44,6 +46,7 @@ export async function createAccount(
       sortOrder,
       isDefaultForNewTrades: false,
       isPractice: parsed.data.isPractice,
+      currency: parsed.data.currency,
     })
     .returning({ id: accounts.id });
 
@@ -252,6 +255,38 @@ export async function togglePractice(
     .update(accounts)
     .set({ isPractice: parsed.data.isPractice })
     .where(eq(accounts.id, account.id));
+
+  revalidatePath("/", "layout");
+  return { success: true, data: null };
+}
+
+export async function setAccountCurrency(
+  input: unknown,
+): Promise<ActionResult<null>> {
+  const parsed = setAccountCurrencySchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const user = await getCurrentUser();
+  const account = await getOwnedAccount(user.id, parsed.data.accountId);
+  if (!account) {
+    return { success: false, error: "Account not found" };
+  }
+
+  // The lock is re-checked inside the UPDATE itself; the disabled select in
+  // the UI is only a hint (updateAccountCurrency).
+  const updated = await updateAccountCurrency(
+    user.id,
+    account.id,
+    parsed.data.currency,
+  );
+  if (!updated) {
+    return {
+      success: false,
+      error: "This account has trades. Its currency can no longer change.",
+    };
+  }
 
   revalidatePath("/", "layout");
   return { success: true, data: null };

@@ -6,11 +6,13 @@ import {
   archiveAccount,
   moveAccount,
   renameAccount,
+  setAccountCurrency,
   setDefaultAccount,
   togglePractice,
 } from "@/actions/accounts";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import { ACCOUNT_CURRENCIES, type AccountCurrency } from "@/domain/fx";
 import { renameAccountSchema } from "@/schemas/accounts";
 
 const CONFIRM_TIMEOUT_MS = 3000;
@@ -20,6 +22,8 @@ export interface AccountRowData {
   name: string;
   isPractice: boolean;
   isDefaultForNewTrades: boolean;
+  currency: AccountCurrency;
+  hasTrades: boolean;
 }
 
 interface AccountRowProps {
@@ -99,6 +103,16 @@ export function AccountRow({ account, isFirst, isLast }: AccountRowProps) {
     });
   }
 
+  function handleCurrencyChange(next: AccountCurrency) {
+    startTransition(async () => {
+      const result = await setAccountCurrency({
+        accountId: account.id,
+        currency: next,
+      });
+      if (!result.success) setError(result.error);
+    });
+  }
+
   function handleSetDefaultClick() {
     if (!confirmingDefault) {
       setConfirmingDefault(true);
@@ -172,6 +186,9 @@ export function AccountRow({ account, isFirst, isLast }: AccountRowProps) {
                 Default
               </span>
             )}
+            <span className="rounded-xs bg-[image:var(--gradient-dark-soft)] px-1.5 py-0.5 font-mono text-fg-muted text-xs shadow-[var(--shadow-dark-soft)]">
+              {account.currency}
+            </span>
           </div>
         </div>
       </div>
@@ -185,6 +202,45 @@ export function AccountRow({ account, isFirst, isLast }: AccountRowProps) {
             disabled={isPending}
             ariaLabel="Practice account"
           />
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col">
+            <label
+              htmlFor={`account-currency-${account.id}`}
+              className="text-xs text-fg-muted"
+            >
+              Currency
+            </label>
+            {account.hasTrades && (
+              <span
+                id={`account-currency-lock-${account.id}`}
+                className="text-xs text-fg-subtle"
+              >
+                Locked — this account has trades
+              </span>
+            )}
+          </div>
+          <select
+            id={`account-currency-${account.id}`}
+            value={account.currency}
+            onChange={(event) =>
+              handleCurrencyChange(event.target.value as AccountCurrency)
+            }
+            disabled={account.hasTrades || isPending}
+            aria-describedby={
+              account.hasTrades
+                ? `account-currency-lock-${account.id}`
+                : undefined
+            }
+            className="h-9 w-24 shrink-0 rounded-ctl border border-white/12 bg-well px-2 text-sm text-fg transition-colors duration-200 hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60 disabled:hover:border-white/12"
+          >
+            {ACCOUNT_CURRENCIES.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="flex items-center justify-between">
