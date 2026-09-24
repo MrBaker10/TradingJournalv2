@@ -946,7 +946,8 @@ Darunter Karten in `card-surface edge`, in dieser Reihenfolge:
   in Sans. Die Zeilen fassen zusammen, was zusammen gelesen wird — Preise
   erzählen den Verlauf, Zeiten die Dauer. Leere Werte fehlen ganz statt „—" zu
   zeigen, eine Zeile ohne Werte fehlt auch. „Held" ist die Haltedauer aus
-  derselben SQL-Rechnung wie in 4.17, über Mitternacht plus 24 Stunden.
+  derselben SQL-Rechnung wie in 4.17, über Mitternacht plus 24 Stunden. Hat der
+  Trade einen Stop-Preis, ersetzt das Preisband aus 4.21 die Zeile „Prices".
 - **Accounts** (Badges wie unten, mit dem Practice-Marker aus 4.12),
   **Confluences** (nach Gruppe gegliedert, Gruppenname in `--color-fg-subtle`,
   darunter die Badges), **Mistakes**, **Notes** (Fließtext, Zeilenumbrüche
@@ -1007,6 +1008,38 @@ führt danach auf die Detailseite zurück.
   Mechanik wie „Delete account" in 4.19 und das Entfernen eines Screenshots.
 
 **Stand.** Gebaut, nicht entworfen — derselbe Vorbehalt wie 4.16 bis 4.19.
+
+
+### 4.21 Preisband
+
+Auf der Detailseite (4.20) in der Execution-Karte an der Stelle der Zeile
+„Prices", sobald der Trade einen Stop-Preis hat. Ohne Stop ist R nicht definiert,
+dann bleibt die Zeile.
+
+**Was es zeigt.** Eine Achse in R, nicht in Preisen: Stop bei −1R, Entry bei 0,
+Exit beim erzielten R. Long und Short sehen gleich aus — der Stop steht immer links.
+Dahinter die Spannen MAE (−|MAE| bis 0) und MFE (0 bis |MFE|), nach dem Exit der
+Post-exit-Lauf gestrichelt. MFE und MAE zählen über den Betrag wie in 4.17. Die
+Achse reicht mindestens von −1R bis +1R und wächst mit MAE, MFE, Exit und
+Post-exit; unter ihr stehen die ganzen R, bei langen Achsen ausgedünnt.
+
+**Farbe.** Nur die Strecke Entry → Exit und der Exit-Marker sind grün oder rot,
+ohne Glow (§1). MAE, MFE und Post-exit sind hypothetisch und bleiben neutral —
+`--color-fg-subtle` und `--color-fg-muted` in geringer Deckkraft (4.17). Stop in
+`--color-fg-muted`, Entry in `--color-fg`.
+
+**Verpasstes Setup.** Kein Exit, keine realisierte Strecke, kein Grün: Stop, Entry
+und die would-be-Spanne bis MFE (4.9).
+
+**Beschriftung.** Über jedem Marker Name in `--color-fg-subtle` und Preis in Mono
+`--color-fg`, 11px. Ein Label steht mittig über seinem Marker, am Rand bündig zum
+Rand. Würden sich zwei Labels überschneiden, rutscht eines eine Zeile höher. Ob sie
+sich überschneiden, hängt von der echten Breite ab — das Band misst sich deshalb
+und rechnet neu, wenn sich die Breite ändert. Die Zahlen zu MFE, MAE und Post-exit
+stehen weiter in der Zeile „Excursion"; das Band zeigt die Form, nicht die Werte.
+
+**Nicht.** Kein Hover, kein Tooltip, keine Animation. Keine Kursdaten — das Band
+zeigt ausschließlich, was am Trade eingetragen ist.
 
 ---
 

@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { LinkCard } from "@/components/journal/link-card";
+import { PriceBandChart } from "@/components/journal/price-band";
 import { ScreenshotLightbox } from "@/components/journal/screenshot-lightbox";
 import type { JournalTradeRow } from "@/db/queries/trades";
 import { formatHoldTime } from "@/domain/execution";
+import { buildPriceBand } from "@/domain/price-band";
 import { formatCents } from "@/lib/money";
 
 interface TradeDetailProps {
@@ -124,6 +126,19 @@ export function TradeDetail({ trade }: TradeDetailProps) {
       .entries(),
   ];
 
+  // Design.md §4.21: with a stop the band replaces the prices row; without
+  // one R is undefined and the plain row stays.
+  const priceBandInput = {
+    taken: trade.taken,
+    entryPrice: trade.entryPrice,
+    stopPrice: trade.stopPrice,
+    rMultiple: trade.rMultiple,
+    mfeR: trade.mfeR,
+    maeR: trade.maeR,
+    postExitMfeR: trade.postExitMfeR,
+  };
+  const hasPriceBand = buildPriceBand(priceBandInput) !== null;
+
   const hasRail =
     trade.accounts.length > 0 ||
     confluenceGroups.length > 0 ||
@@ -196,14 +211,30 @@ export function TradeDetail({ trade }: TradeDetailProps) {
       >
         <Section title="Execution" className="lg:col-start-1">
           <div className="flex flex-col divide-y divide-white/8">
-            <ExecutionRow
-              title="Prices"
-              values={[
-                { label: "Stop", value: trade.stopPrice?.toString() ?? null },
-                { label: "Entry", value: trade.entryPrice.toString() },
-                { label: "Exit", value: trade.exitPrice?.toString() ?? null },
-              ]}
-            />
+            {hasPriceBand ? (
+              <div className="flex flex-col gap-2 pb-3 sm:flex-row sm:gap-6">
+                <span className="cap w-24 shrink-0">Prices</span>
+                <div className="min-w-0 flex-1 px-1">
+                  <PriceBandChart
+                    input={priceBandInput}
+                    prices={{
+                      stop: trade.stopPrice,
+                      entry: trade.entryPrice,
+                      exit: trade.taken ? trade.exitPrice : null,
+                    }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <ExecutionRow
+                title="Prices"
+                values={[
+                  { label: "Stop", value: trade.stopPrice?.toString() ?? null },
+                  { label: "Entry", value: trade.entryPrice.toString() },
+                  { label: "Exit", value: trade.exitPrice?.toString() ?? null },
+                ]}
+              />
+            )}
             <ExecutionRow
               title="Time"
               values={[

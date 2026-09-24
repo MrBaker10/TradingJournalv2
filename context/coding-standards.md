@@ -126,6 +126,10 @@ commit that changes nothing else.
   chart component does no money arithmetic of its own. The shape of the curve, its
   axis domain and its tick values are domain logic and belong in `src/domain/**` with
   tests, not in a `useMemo` inside the chart.
+- A figure with no hover, no tooltip and no axis interaction may be hand-built SVG
+  instead of Recharts — the price band (`Design.md` §4.21) is. Give the `<svg>` no
+  `viewBox` and set positions as percentage attributes (`x="37.5%"`): text keeps its
+  size and nothing needs an inline style. Geometry still comes from `src/domain/**`.
 - **A CSS variable does not resolve inside an SVG presentation attribute.**
   `stroke="var(--color-chart-grid)"` is silently ignored, so passing a token through a
   Recharts colour prop does nothing. Give the element a class and set the property
