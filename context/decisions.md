@@ -2225,3 +2225,31 @@ Trade braucht mindestens ein Konto.
 2. Ein einzelner bestehender Link lässt sich weiterhin nicht bearbeiten, nur
    hinzufügen und entfernen. Ebenso wenig lassen sich Screenshots oder Links
    umsortieren.
+
+## 2026-09-24 — Startseite und Proxy bei DB-Ausfall — feature/landing-page — dfec8ad
+
+**Anlass.** `localhost:3000` warf `Uncaught APIError: Failed to get session`. Die
+lokale Postgres lief nicht; mit einem gültig signierten Session-Cookie fragt
+`auth.api.getSession()` im Proxy die Datenbank und wirft. `/login` lud, weil es
+öffentlich ist und keine Datenbank braucht.
+
+**Gebaut.** `/` ist eine öffentliche Startseite mit „Sign in" und „Create account"
+(letzteres nur bei `REGISTRATION_OPEN=true`, wie der Link im `LoginForm`). Die Seite
+liegt in `src/app/(auth)/page.tsx`, damit sie `force-dynamic` aus dem Layout erbt,
+und liest weder Session noch Daten. `src/proxy.ts` fängt einen Fehler aus
+`getSession` ab: Seiten bekommen 503 als Klartext, `/api/*` 503 als JSON, die Ursache
+geht ins Server-Log.
+
+**Entscheidungen.**
+- **Ein Lesefehler ist nicht „abgemeldet".** Ein Redirect nach `/login` hätte den
+  Ausfall versteckt, und der Login scheitert an derselben Datenbank.
+- **`/` ist eine bewusste Ausnahme von „Nothing is shared, ever"**, mit Sascha
+  abgestimmt und in `CLAUDE.md` benannt. Sie zeigt nichts außer zwei Links.
+- **Kein Redirect eingeloggter Nutzer von `/`.** Er bräuchte wieder einen
+  Session-Check und damit die Datenbank.
+
+**Geprüft.** Gates grün. Build auf Port 3001 gegen einen leeren DB-Port: `/` → 200,
+`/dashboard` mit gültig signiertem Cookie → 503-Text, `/api/export/trades` → 503
+JSON, ohne Cookie → Redirect `/login`, Log zeigt `ECONNREFUSED`. Im Browser führen
+beide Buttons zu `/login` und `/register`, keine Konsolenfehler. Der Login selbst ist
+nicht durchgeklickt worden.
