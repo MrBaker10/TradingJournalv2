@@ -1,0 +1,48 @@
+import { ArrowLeft, Pencil } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { TradeDetail } from "@/components/journal/trade-detail";
+import { getJournalTradeById } from "@/db/queries/trades";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
+
+interface TradeDetailPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function TradeDetailPage({
+  params,
+}: TradeDetailPageProps) {
+  // Next 16: params is a Promise (coding-standards.md).
+  const { id } = await params;
+  const tradeId = Number.parseInt(id, 10);
+  if (!Number.isInteger(tradeId) || tradeId <= 0) notFound();
+
+  const user = await getCurrentUser();
+  // Returns null for a foreign trade just as it does for a missing one, so
+  // this page cannot be used to find out which ids exist.
+  const trade = await getJournalTradeById(user.id, tradeId);
+  if (!trade) notFound();
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href="/journal"
+          className="flex items-center gap-1.5 text-fg-subtle text-sm transition-colors duration-150 hover:text-fg"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Trade Journal
+        </Link>
+        <Link
+          href={`/journal/${trade.id}/edit`}
+          className="flex h-10 items-center gap-1.5 rounded-ctl bg-[image:var(--gradient-info-soft)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-info-soft)]"
+        >
+          <Pencil className="h-3.5 w-3.5 text-cyan" aria-hidden="true" />
+          Edit
+        </Link>
+      </div>
+
+      <TradeDetail trade={trade} />
+    </div>
+  );
+}

@@ -21,12 +21,17 @@ import {
   confluenceTags,
   mistakeTags,
   tradeAccounts,
+  tradeConfluences,
   tradeLinks,
+  tradeMistakes,
   tradeScreenshots,
   trades,
 } from "../schema/trades.ts";
 
 export const JOURNAL_PAGE_SIZE = 25;
+
+/** Anything that can run a read: the shared client, or a transaction. */
+export type ReadExecutor = Pick<typeof db, "select">;
 
 export type JournalSortBy = "date" | "r";
 export type JournalSortDir = "asc" | "desc";
@@ -61,11 +66,23 @@ export interface JournalTradeLink {
   sortOrder: number;
 }
 
+export interface JournalTradeConfluence {
+  id: number;
+  group: string;
+  label: string;
+}
+
+export interface JournalTradeMistake {
+  id: number;
+  label: string;
+}
+
 export interface JournalTradeRow {
   id: number;
   tradeDate: string;
   taken: boolean;
   direction: "long" | "short";
+  instrumentId: number;
   instrumentSymbol: string;
   instrumentName: string;
   pointValue: number;
@@ -86,9 +103,17 @@ export interface JournalTradeRow {
   mfeR: number | null;
   maeR: number | null;
   postExitMfeR: number | null;
+  /**
+   * The user's manual override in dollars, as stored — not the derived P&L.
+   * `pnlCents` below is the figure to render; this one exists so the edit form
+   * can put back exactly what was typed.
+   */
+  pnlOverride: number | null;
   pnlCents: number | null;
   rMultiple: number | null;
   accounts: JournalTradeAccount[];
+  confluences: JournalTradeConfluence[];
+  mistakes: JournalTradeMistake[];
   screenshots: JournalTradeScreenshot[];
   links: JournalTradeLink[];
 }
@@ -154,6 +179,42 @@ const accountsJson = sql<JournalTradeAccount[]>`(
   from ${tradeAccounts}
   join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
   where ${tradeAccounts.tradeId} = ${trades.id}
+)`;
+
+// Same correlated-subquery shape as accountsJson, for the same reason: one
+// row per trade, no GROUP BY, no round trip per row. Ordered by tag id so the
+// badges land in seed order — the order the new-trade form offers them in.
+const confluencesJson = sql<JournalTradeConfluence[]>`(
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'id', ${confluenceTags.id},
+        'group', ${confluenceTags.group},
+        'label', ${confluenceTags.label}
+      )
+      order by ${confluenceTags.id}
+    ),
+    '[]'::jsonb
+  )
+  from ${tradeConfluences}
+  join ${confluenceTags} on ${confluenceTags.id} = ${tradeConfluences.confluenceTagId}
+  where ${tradeConfluences.tradeId} = ${trades.id}
+)`;
+
+const mistakesJson = sql<JournalTradeMistake[]>`(
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'id', ${mistakeTags.id},
+        'label', ${mistakeTags.label}
+      )
+      order by ${mistakeTags.id}
+    ),
+    '[]'::jsonb
+  )
+  from ${tradeMistakes}
+  join ${mistakeTags} on ${mistakeTags.id} = ${tradeMistakes.mistakeTagId}
+  where ${tradeMistakes.tradeId} = ${trades.id}
 )`;
 
 // Raw storage keys, not signed URLs — signing happens per-row in TypeScript
@@ -279,9 +340,31 @@ function buildOrderBy(filters: JournalFilters) {
   return [sql`${key} ${direction} nulls last`, desc(trades.id)];
 }
 
+/**
+ * Which trades a query may see, on top of the ownership filter.
+ *
+ * `"scoped"` is the list view: the account switcher decides, and with "all
+ * accounts" a trade that lives only on practice accounts drops out (it comes
+ * back through the reveal banner).
+ *
+ * `"owner"` is one trade addressed by its own id. The switcher must not reach
+ * it: a practice-only trade opened by URL has to render, or
+ * project-overview.md's "Nothing disappears silently" would break on the one
+ * page that is supposed to show everything.
+ */
+type TradeVisibility = "scoped" | "owner";
+
 interface TradeRowsQuery {
   userId: number;
+  /**
+   * Which connection to read through. Defaults to the shared client; a test
+   * passes its own transaction so the fixture rows it just inserted are
+   * visible and can be rolled back afterwards. Same affordance the import
+   * queries already carry.
+   */
+  executor?: ReadExecutor;
   selectedAccountId: number | null;
+  visibility: TradeVisibility;
   /** Extra filters on top of the ownership and visibility conditions. */
   conditions: SQL[];
   orderBy: SQL[];
@@ -299,12 +382,13 @@ interface TradeRowsQuery {
 async function queryTradeRows(
   input: TradeRowsQuery,
 ): Promise<{ rows: JournalTradeRow[]; totalCount: number }> {
-  const baseQuery = db
+  const baseQuery = (input.executor ?? db)
     .select({
       id: trades.id,
       tradeDate: trades.tradeDate,
       taken: trades.taken,
       direction: trades.direction,
+      instrumentId: trades.instrumentId,
       instrumentSymbol: instruments.symbol,
       instrumentName: instruments.name,
       pointValue: instruments.pointValue,
@@ -327,6 +411,8 @@ async function queryTradeRows(
       postExitMfeR: trades.postExitMfeR,
       pnlOverride: trades.pnlOverride,
       accounts: accountsJson,
+      confluences: confluencesJson,
+      mistakes: mistakesJson,
       screenshots: screenshotsJson,
       links: linksJson,
       totalCount: sql<number>`(count(*) over())::int`,
@@ -336,22 +422,17 @@ async function queryTradeRows(
 
   const ownership = eq(trades.userId, input.userId);
 
-  const query =
-    input.selectedAccountId === null
-      ? baseQuery.where(
-          and(
-            ownership,
-            ...input.conditions,
-            sql`(${trades.taken} = false or (${trades.taken} = true and ${hasRealAccount}))`,
-          ),
-        )
-      : baseQuery.where(
-          and(
-            ownership,
-            ...input.conditions,
-            isVisibleForAccount(input.selectedAccountId),
-          ),
-        );
+  function visibilityCondition(): SQL | undefined {
+    if (input.visibility === "owner") return undefined;
+    if (input.selectedAccountId === null) {
+      return sql`(${trades.taken} = false or (${trades.taken} = true and ${hasRealAccount}))`;
+    }
+    return isVisibleForAccount(input.selectedAccountId);
+  }
+
+  const query = baseQuery.where(
+    and(ownership, ...input.conditions, visibilityCondition()),
+  );
 
   const rawRows = await query
     .orderBy(...input.orderBy)
@@ -392,6 +473,7 @@ async function queryTradeRows(
       tradeDate: row.tradeDate,
       taken: row.taken,
       direction: row.direction as "long" | "short",
+      instrumentId: row.instrumentId,
       instrumentSymbol: row.instrumentSymbol,
       instrumentName: row.instrumentName,
       pointValue,
@@ -412,6 +494,7 @@ async function queryTradeRows(
       mfeR: row.mfeR !== null ? Number(row.mfeR) : null,
       maeR: row.maeR !== null ? Number(row.maeR) : null,
       postExitMfeR: row.postExitMfeR !== null ? Number(row.postExitMfeR) : null,
+      pnlOverride: row.pnlOverride !== null ? Number(row.pnlOverride) : null,
       pnlCents,
       rMultiple: row.taken
         ? rMultiple
@@ -419,6 +502,8 @@ async function queryTradeRows(
           ? Number(row.mfeR)
           : null,
       accounts: row.accounts,
+      confluences: row.confluences,
+      mistakes: row.mistakes,
       screenshots: row.screenshots.map((screenshot) => ({
         id: screenshot.id,
         url: createSignedUploadUrl(screenshot.storageKey),
@@ -433,10 +518,13 @@ async function queryTradeRows(
 
 export async function listJournalTrades(
   filters: JournalFilters,
+  executor: ReadExecutor = db,
 ): Promise<JournalTradesResult> {
   const { rows, totalCount } = await queryTradeRows({
     userId: filters.userId,
     selectedAccountId: filters.selectedAccountId,
+    visibility: "scoped",
+    executor,
     conditions: buildFilterConditions(filters),
     orderBy: buildOrderBy(filters),
     limit: JOURNAL_PAGE_SIZE,
@@ -445,7 +533,7 @@ export async function listJournalTrades(
 
   const hiddenPracticeCounts =
     filters.selectedAccountId === null
-      ? await listHiddenPracticeCounts(filters.userId)
+      ? await listHiddenPracticeCounts(filters.userId, executor)
       : [];
 
   return { rows, totalCount, hiddenPracticeCounts };
@@ -462,12 +550,43 @@ export async function listRecentTrades(
   const { rows } = await queryTradeRows({
     userId,
     selectedAccountId,
+    visibility: "scoped",
     conditions: [],
     orderBy: [desc(trades.tradeDate), desc(trades.id)],
     limit,
   });
 
   return rows;
+}
+
+/**
+ * One trade by its id, in the same shape the list renders.
+ *
+ * Deliberately through `queryTradeRows` rather than a query of its own: the
+ * detail page and the journal row show the same numbers, and two selects would
+ * eventually disagree about one of them.
+ *
+ * `visibility: "owner"` — the account switcher has no say here. Ownership is
+ * still the only thing that decides, and a foreign id returns null rather than
+ * an error, so the caller's `notFound()` covers both "gone" and "not yours"
+ * without telling them apart.
+ */
+export async function getJournalTradeById(
+  userId: number,
+  tradeId: number,
+  executor: ReadExecutor = db,
+): Promise<JournalTradeRow | null> {
+  const { rows } = await queryTradeRows({
+    userId,
+    selectedAccountId: null,
+    visibility: "owner",
+    executor,
+    conditions: [eq(trades.id, tradeId)],
+    orderBy: [desc(trades.id)],
+    limit: 1,
+  });
+
+  return rows[0] ?? null;
 }
 
 // Trades that are taken but assigned only to practice accounts — hidden from
@@ -477,8 +596,9 @@ export async function listRecentTrades(
 // informational count, not a money aggregate — no multiplier applies.
 async function listHiddenPracticeCounts(
   userId: number,
+  executor: ReadExecutor = db,
 ): Promise<JournalHiddenPracticeCount[]> {
-  return db
+  return executor
     .select({
       accountId: accounts.id,
       accountName: accounts.name,
@@ -505,6 +625,141 @@ export async function listConfluenceTags() {
 
 export async function listMistakeTags() {
   return db.select().from(mistakeTags).orderBy(asc(mistakeTags.id));
+}
+
+export interface ConfluenceTagGroup {
+  group: string;
+  tags: { id: number; label: string }[];
+}
+
+// The tag picker wants the six groups, not 58 flat rows. Both the new-trade
+// page and the edit page need exactly this, so the folding lives here rather
+// than being written out twice.
+export async function listConfluenceGroups(): Promise<ConfluenceTagGroup[]> {
+  const tags = await listConfluenceTags();
+
+  const grouped = new Map<string, { id: number; label: string }[]>();
+  for (const tag of tags) {
+    const existing = grouped.get(tag.group) ?? [];
+    existing.push({ id: tag.id, label: tag.label });
+    grouped.set(tag.group, existing);
+  }
+
+  return [...grouped].map(([group, groupTags]) => ({
+    group,
+    tags: groupTags,
+  }));
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Every column of a trade a write sets, assembled by the caller. */
+export type TradeWriteColumns = Omit<
+  typeof trades.$inferInsert,
+  "id" | "userId" | "createdAt" | "updatedAt"
+>;
+
+export interface TradeRelationIds {
+  accountIds: number[];
+  confluenceTagIds: number[];
+  mistakeTagIds: number[];
+}
+
+async function insertRelations(
+  tx: Tx,
+  tradeId: number,
+  relations: TradeRelationIds,
+): Promise<void> {
+  if (relations.accountIds.length > 0) {
+    await tx
+      .insert(tradeAccounts)
+      .values(
+        relations.accountIds.map((accountId) => ({ tradeId, accountId })),
+      );
+  }
+  if (relations.confluenceTagIds.length > 0) {
+    await tx.insert(tradeConfluences).values(
+      relations.confluenceTagIds.map((confluenceTagId) => ({
+        tradeId,
+        confluenceTagId,
+      })),
+    );
+  }
+  if (relations.mistakeTagIds.length > 0) {
+    await tx.insert(tradeMistakes).values(
+      relations.mistakeTagIds.map((mistakeTagId) => ({
+        tradeId,
+        mistakeTagId,
+      })),
+    );
+  }
+}
+
+/**
+ * Writes a new trade with its accounts, tags and links.
+ *
+ * Takes the transaction rather than opening one: the caller owns the
+ * boundary, which is also what lets a test run this against real Postgres and
+ * roll the whole thing back.
+ */
+export async function insertTradeWithRelations(
+  tx: Tx,
+  userId: number,
+  columns: TradeWriteColumns,
+  relations: TradeRelationIds,
+  links: { url: string; label?: string }[],
+): Promise<number> {
+  const [trade] = await tx
+    .insert(trades)
+    .values({ userId, ...columns })
+    .returning({ id: trades.id });
+
+  await insertRelations(tx, trade.id, relations);
+
+  if (links.length > 0) {
+    await tx.insert(tradeLinks).values(
+      links.map((link, index) => ({
+        tradeId: trade.id,
+        url: link.url,
+        label: link.label ?? null,
+        sortOrder: index,
+      })),
+    );
+  }
+
+  return trade.id;
+}
+
+/**
+ * Rewrites an existing trade and **replaces** its accounts and tags.
+ *
+ * Delete-then-insert, not a merge: a tag the user unticked has to disappear,
+ * and nothing else says that. All columns are written for the same reason —
+ * flipping an entry to a missed setup must clear the exit, the contracts, the
+ * result and the override rather than leave them behind a `taken = false`.
+ *
+ * `updated_at` is set by hand because the column carries a DEFAULT, not an ON
+ * UPDATE trigger. Links and screenshots are not touched here: on an existing
+ * trade both are managed row by row while the form is open.
+ */
+export async function replaceTradeWithRelations(
+  tx: Tx,
+  tradeId: number,
+  columns: TradeWriteColumns,
+  relations: TradeRelationIds,
+): Promise<void> {
+  await tx
+    .update(trades)
+    .set({ ...columns, updatedAt: new Date() })
+    .where(eq(trades.id, tradeId));
+
+  await tx.delete(tradeAccounts).where(eq(tradeAccounts.tradeId, tradeId));
+  await tx
+    .delete(tradeConfluences)
+    .where(eq(tradeConfluences.tradeId, tradeId));
+  await tx.delete(tradeMistakes).where(eq(tradeMistakes.tradeId, tradeId));
+
+  await insertRelations(tx, tradeId, relations);
 }
 
 // A tradeId from the client is only usable once it's checked against the
