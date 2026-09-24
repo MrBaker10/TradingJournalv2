@@ -12,7 +12,7 @@ import { auth } from "@/lib/auth/auth";
 // Functions").
 
 /** The only paths reachable without a session. Everything else is behind one. */
-const PUBLIC_PATHS = ["/login", "/register"];
+const PUBLIC_PATHS = ["/", "/login", "/register"];
 const PUBLIC_PREFIXES = ["/api/auth/"];
 
 function isPublic(pathname: string): boolean {
@@ -28,7 +28,28 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const session = await auth.api.getSession({ headers: request.headers });
+  let session: Awaited<ReturnType<typeof auth.api.getSession>>;
+  try {
+    session = await auth.api.getSession({ headers: request.headers });
+  } catch (error) {
+    // The session could not be read at all — in practice the database is
+    // unreachable. Not treated as "signed out": a redirect to /login would
+    // hide the outage, and signing in would fail on the same database.
+    console.error("proxy: session lookup failed", error);
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Service unavailable" },
+        { status: 503 },
+      );
+    }
+    return new NextResponse(
+      "Database unreachable. Start Postgres and reload.",
+      {
+        status: 503,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      },
+    );
+  }
   if (session) {
     return NextResponse.next();
   }
