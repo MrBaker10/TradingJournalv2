@@ -18,30 +18,127 @@ Two different lists, do not mix them up:
 
 ## Status
 
-**Nothing in progress.**
+**In progress: ftmo-import** — Spec geladen, nicht gestartet. `account-currency` ist
+gemergt (fbce7ec); Open questions 2 und 3 unten vor `start` klären.
 
 ---
 
-## Feature: _(none)_
+## Feature: ftmo-import
 
-<!--
-Filled by `/feature load <description>`. Shape:
+**Goal.** `/journal/import` erkennt neben dem Tradovate-Fill-Export jetzt auch den
+FTMO-Export (MetaTrader-Kontohistorie als CSV) und legt dessen CFD-Trades mit
+Bruchteil-Lots und der P&L aus der Datei an. Bisher bricht die Datei mit „This file was
+not recognised" ab.
 
-**Goal.** One or two sentences: what the user can do afterward that they could not
-before.
+**Scope.**
 
-**Scope.** Files and modules touched, new tables and migrations, new domain modules
-with their tests.
+- **Datenmodell.** `trades.contracts` wird `numeric(12, 4)` statt `integer` (Migration,
+  bestehende Werte bleiben erhalten). Drei CFD-Instrumente im idempotenten
+  `seed-instruments.ts`: `US100.cash` (Punktwert 1 je Lot, Tick 0.01), `US30.cash`
+  (1, 0.01), `XAUUSD` (100, 0.01). Die Punktwerte sind an der Beispieldatei
+  nachgerechnet (Punkte × Lots × Punktwert = USD-Betrag vor Umrechnung).
+- **`src/domain/pnl.ts`.** Mengen mit Nachkommastellen, weiterhin ohne
+  `number`-Arithmetik auf Geld: die Menge geht skaliert in die BigInt-Rechnung ein.
+  Property-Tests um Bruchteil-Lots erweitert.
+- **`src/domain/import/detect.ts`.** Aus einem einzigen Format wird eine Liste
+  fester Formate: `fills` (Tradovate, unverändert) und `ftmo`. Jedes Format ist ein
+  Header-Satz; genau ein Treffer oder ein Fehler, der beide Erwartungen nennt.
+  `ImportShape` bekommt `"ftmo"`.
+- **Neues Modul `src/domain/import/ftmo.ts`** (+ Test): liest eine FTMO-Zeile direkt
+  als `RawTrade` — eine Zeile ist ein Round Trip, kein Pairing. `Ticket` →
+  `brokerTradeKey` (Tier 1), `Typ` buy/sell → Richtung, `Lots` → Menge, erstes
+  `Preis` → Entry, zweites `Preis` → Exit, `Öffnen`/`Schließung` → Zeiten. Dezimalkomma.
+  Doppelter Header `Preis` wird über die Position aufgelöst, nicht über den Namen.
+- **P&L.** `Gewinn + Kommission + Swap` aus der Datei wird `pnl_override`. Die berechnete
+  P&L steht in der Vorschau daneben.
+- **Zeit.** FTMO-Zeitstempel sind Wanduhrzeit in `Europe/Berlin` (entschieden
+  2026-09-24); `normalize.ts` rechnet sie genau einmal in `users.timezone` um, wie heute
+  UTC bei Tradovate. Steht `users.timezone` auf `Europe/Berlin`, ändert sich nichts.
+- **Stop.** `SL` ist der ursprüngliche Stop (entschieden 2026-09-24): ein nachgezogener
+  Stop wäre als Exit des Trades sichtbar. Ausnahme ist ein Partial, nach dem der Stop auf
+  oder hinter den Einstieg gezogen wurde. Regel: liegt `SL` auf der Verlustseite des
+  Entry, wird er `stop_price`; liegt er auf dem Entry oder auf der Gewinnseite, oder ist
+  er leer, bleibt `stop_price` null und die Vorschau sagt „SL at or past entry — not
+  imported". In `ftmo.csv` betrifft das 5 Trades (56216322, 56144094, 56129793,
+  56128064, 56036542), einer hat keinen SL (56217015).
+- **Symbol.** CFD-Symbole haben keinen Kontraktmonat; `normalize.ts` löst `US100.cash`
+  direkt gegen `instruments.symbol` auf, ohne `CONTRACT_MONTH`-Abstreifen.
+- **Encoding.** `file-step.tsx` liest die Datei als Bytes und dekodiert UTF-8, bei
+  ungültigem UTF-8 Windows-1252 — sonst kommt `Öffnen` als `�ffnen` an und der Header
+  passt nicht.
+- **Formular.** `createTradeSchema` und das Mengenfeld in `trade-form.tsx` erlauben
+  Nachkommastellen, sonst lässt sich ein importierter FTMO-Trade nicht bearbeiten.
+  Anzeige in `trade-detail.tsx`, Journal-Zeile und CSV-Export ohne überflüssige Nullen
+  (`2` statt `2.0000`, `1.88` statt `1.8800`).
+- Tests: `detect`, `ftmo`, `normalize` (Serverzeit, CFD-Symbol, Dezimalkomma),
+  `pnl` (Bruchteil-Lots), Import-Query gegen echtes Postgres (numeric-Menge, Override).
 
 ### Do not build
-At least two concrete, neighbouring-scope exclusions.
+
+- **Keine freie Spaltenzuordnung** durch den Nutzer. Nur feste, an echten Dateien
+  gebaute Formate.
+- **Kein `.xlsx`-Import.** `tmp/import-samples/ftmo.xlsx` bleibt liegen; nur CSV.
+- Keine weiteren Formate (Round-Trip-Generic, TradingView, andere Prop Firms), auch wenn
+  `detect.ts` jetzt eine Liste ist.
+- Keine Abbildung von CFD auf Futures (`US100.cash` ≠ `NQ`), keine weiteren
+  CFD-Instrumente als die drei aus der Datei.
+- Kein neues Kontowährungsfeld und keine eigene FX-Logik — beides kommt aus
+  `account-currency`.
+- `TP` wird nicht importiert, es gibt kein Zielpreis-Feld. `Pips` und `Dauer des Trades in Sekunden` werden ignoriert.
+- Kein Umbau des Tradovate-Pfads über das Umstellen auf die Formatliste hinaus.
 
 ### Acceptance
-Browser-checkable checkboxes, including the four gates and one explicit click path.
+
+- [ ] `tmp/import-samples/ftmo.csv` wird als FTMO erkannt; die Vorschau zeigt 29 Trades
+      mit Instrument, Richtung, Lots (`1.88`, `0.05`), Entry, Exit, Zeiten und Datei-P&L.
+- [ ] `tmp/import-samples/Tradovate.csv` wird unverändert als Fill-Export erkannt und
+      ergibt dieselben Trades wie vor dem Branch.
+- [ ] Eine unbekannte Datei nennt im Fehler beide erwarteten Header-Sätze.
+- [ ] Nach dem Import zeigt Ticket 56216539 (US100.cash, sell, 15 Lots) im Journal
+      +56,76 und auf der Detailseite Menge 15; Ticket 56144094 (XAUUSD) zeigt
+      28,53 − 0,26 = 28,27.
+- [ ] Ticket 56217015 steht bei `users.timezone = Europe/Berlin` mit Einstieg 11:26:48
+      und Ausstieg 11:27:00 im Journal.
+- [ ] Ticket 56216539 hat Stop 30205,96 und damit ein R; Ticket 56128064 hat keinen Stop
+      und kein R, die Vorschau nennt den Grund.
+- [ ] Derselbe Import ein zweites Mal legt keinen Trade an (Tier 1 über `Ticket`).
+- [ ] Batch-Undo entfernt die 29 FTMO-Trades.
+- [ ] Ein FTMO-Trade lässt sich über Edit öffnen und mit `1.88` Lots speichern; ein
+      manueller Futures-Trade mit ganzen Kontrakten verhält sich wie vorher.
+- [ ] CSV-Export enthält die Bruchteil-Menge.
+- [ ] **Klickpfad:** `/journal/import` → `ftmo.csv` wählen → Konto wählen → Vorschau
+      prüfen → importieren → Ergebnis → `/journal` → Detailseite Ticket 56216539 → Edit →
+      speichern → zurück auf `/journal/import`, Batch rückgängig machen →
+      `Tradovate.csv` durchlaufen lassen. Konsole ohne neue Meldungen.
+- [ ] `pnpm typecheck`, `pnpm test`, `pnpm build` grün; Migration auf beiden
+      Neon-Branches nur nach Rückfrage.
 
 ### Open questions
-Leave empty, or list what the spec does not decide.
--->
+
+1. **Kontowährung — blockiert `start`.** Entschieden: das Konto bekommt eine Währung, der
+   `Gewinn` (EUR, 15 Lots × 4,34 Pkt = 65,10 USD, Datei 56,76) wird nach USD
+   umgerechnet, weil `project-overview.md` festlegt „Trades are stored in USD".
+   Dafür fehlen `accounts.currency`, die Tabelle `fx_rates` und der FX-Job
+   (frankfurter/ECB) — alle drei sind geplant, keiner ist gebaut. Entschieden
+   2026-09-24: eigener Slice `account-currency` vorher. Dieser Slice setzt ihn voraus
+   und rechnet `Gewinn + Kommission + Swap` mit dem ECB-Kurs des Handelstags nach USD
+   um; fehlende Kurse holt die Import-Action über `ensureFxRates` nach.
+2. **Tageskurs noch nicht veröffentlicht.** Die ECB veröffentlicht gegen 16 Uhr MEZ.
+   Wird ein Trade vorher am selben Tag importiert, liefert `rateFor` den Vortageskurs,
+   und der steht dauerhaft im Override. Abweisen, in der Vorschau markieren oder mit
+   dem Vortageskurs umrechnen? (Aus dem Review von `account-currency`.)
+3. **Anzeige in der Kontowährung — eigener Slice `display-currency` nach diesem.**
+   Nicht in diesem Branch. Entschieden 2026-09-24:
+   - **Kombinierte Sicht („All accounts"):** Sind alle echten Konten in derselben
+     Währung, wird in dieser angezeigt (nur EUR → EUR, nur USD → USD). Gibt es EUR- und
+     USD-Konten, wird in USD angezeigt.
+   - **Kurs:** Zurückgerechnet wird mit dem Kurs, mit dem beim Import nach USD
+     umgerechnet wurde (ECB-Kurs des Handelstags), damit das Ergebnis mit dem Broker
+     übereinstimmt. Das ersetzt „One daily ECB rate … applied to every figure …
+     including historical ones" in `project-overview.md` — dort beim `load` anpassen.
+   - Noch zu bestätigen beim `load`: Ein einzeln gewähltes Konto zeigt seine eigene
+     Währung, abgeleitet aus der Regel oben. Ob `users.currency_display` dann entfällt
+     oder eine andere Rolle bekommt, ist offen.
 
 ---
 
@@ -51,6 +148,7 @@ One line per merged feature. Newest at the top.
 
 | Date | Feature | Notes |
 | --- | --- | --- |
+| 2026-09-24 | Kontowährung und ECB-Kurse | Konten haben eine Währung (USD Standard, EUR), änderbar nur ohne zugewiesene Trades — die Sperre sitzt im `UPDATE` selbst. `fx_rates` plus `ensureFxRates` holen ECB-Kurse beim Import nach, kein täglicher Job; frankfurter v2 nur mit `providers=ecb`, sonst gemischte Kurse. `src/domain/fx.ts` (BigInt-Umrechnung, Vortageskurs am Wochenende, Abdeckungsregel) mit 19 Tests, 8 Query-Tests gegen Postgres. Noch kein Aufrufer — Voraussetzung für `ftmo-import`. Drei Festlegungen in `project-overview.md`. Details in `decisions.md`. |
 | 2026-09-24 | Trade-Formular neu gegliedert | `/journal/new` und Edit lesen sich in fünf benannten Abschnitten in der Reihenfolge der Detailseite (Trade · Execution · Setup · Review · Attachments), mit Pflichtmarken nach `createTradeSchema`, gewählten Chips im Badge-Look (Mistakes neutral), einer festen Leiste mit Live-P&L und Button und dem Preisband aus §4.21 live. `required` + `noValidate` statt `aria-required`, weil Biome es an Datums- und Zeitfeldern ablehnt; Zod bleibt einziger Validator. Nach einem Review mit dem `frontend-design`-Skill; Testtrades danach entfernt. Details in `decisions.md`. |
 | 2026-09-24 | Preisband auf der Trade-Detailseite | Mit Stop-Preis ersetzt ein Band auf einer R-Achse die Prices-Zeile: Stop −1R, Entry 0, Exit beim erzielten R, MAE/MFE-Spannen und Post-exit gestrichelt; nur Entry → Exit ist grün oder rot, ein Missed Setup bekommt kein Exit. `src/domain/price-band.ts` mit 19 Tests, handgebautes SVG ohne `viewBox` statt Recharts (coding-standards § Charts ergänzt). Labelzeilen nach gemessener Breite, weil ein fester Prozentabstand bei 484px überlappte. Scope-Grenze „No charts" trifft es nicht — nur eigene Eingaben. Details in `decisions.md`. |
 | 2026-09-24 | Detailseite: Badge-Schrift und Zwei-Spalten-Layout | Badge-Labels in 13px Normalschreibung statt Kapitälchen, Practice-Marker bleibt `cap`. Ab `lg` rechts eine 20rem-Spalte mit Accounts, Confluences und Mistakes; ein einziges Raster, damit die Reihenfolge unter `lg` die alte bleibt, die vierte Zeile `1fr` fängt den Überhang. Ohne rechte Abschnitte keine zweite Spalte. Details in `decisions.md`. |

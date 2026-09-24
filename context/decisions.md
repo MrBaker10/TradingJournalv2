@@ -2422,3 +2422,72 @@ vergeben.
 
 **Offen geblieben.** Mistake-Labels sind in den Seed-Daten kleingeschrieben — eigene
 Datenpflege. Der Primärbutton bleibt laut (§4.14 offen).
+
+## 2026-09-24 — Kontowährung und ECB-Kurse — feature/account-currency — fbce7ec
+
+**Gebaut.** Ein Konto hat eine Währung, USD (Standard) oder EUR, wählbar beim Anlegen
+und in der Kontokachel, gesperrt mit Begründung, sobald dem Konto ein Trade zugewiesen
+ist. Dazu die Infrastruktur, um einen Betrag mit dem ECB-Kurs eines Handelstags nach USD
+umzurechnen: Tabelle `fx_rates`, reines Rechenmodul, Adapter für frankfurter und
+`ensureFxRates`, das fehlende Kurse nachholt. Vorbereitung für `ftmo-import`, dessen
+Datei-P&L in EUR kommt, während „Trades are stored in USD" gilt. Kein Aufrufer im
+Import, keine Zahl im UI ändert sich.
+
+**Dateien.** `src/domain/fx.ts` (neu: `ACCOUNT_CURRENCIES`, `toUsdCents`, `rateFor`,
+`datesNeedingFetch`, `shiftDate`) mit `__tests__/fx.test.ts`;
+`src/lib/fx/frankfurter.ts` (neu: `parseRates`, `fetchEcbRates`) mit Test;
+`src/db/schema/fx-rates.ts` (neu), `src/db/schema/accounts.ts` (`currency` + Check);
+`src/db/queries/fx.ts` (neu: `ensureFxRates`), `src/db/queries/accounts.ts`
+(`hasTrades` in `listAllAccountsForSettings`, `updateAccountCurrency`), Query-Tests in
+`src/db/queries/__tests__/fx.test.ts`; `src/schemas/accounts.ts`,
+`src/actions/accounts.ts` (`setAccountCurrency`, `createAccount` mit Währung);
+`src/components/settings/account-create-form.tsx`, `account-row.tsx`;
+`context/Design.md` §4.12.
+
+**Migration.** `0014_closed_tusk.sql`: `fx_rates (currency, rate_date, rate_vs_usd
+numeric(12,6))` mit PK `(currency, rate_date)`; `accounts.currency text not null default
+'USD'` plus `accounts_currency_check`. Bestehende Konten werden USD. Lokal angewendet,
+Neon steht aus.
+
+**Regeln.**
+- `toUsdCents` rechnet in BigInt mit dem Kurs als Dezimal-String (höchstens sechs
+  Nachkommastellen, wie die Spalte), rundet symmetrisch vom Nullpunkt weg. Test:
+  „rounds half away from zero", „is exact where a float would drift".
+- `rateFor`: Kurs des Tages, sonst der letzte davor, höchstens 7 Tage zurück (längste
+  ECB-Lücke ist Ostern mit vier Tagen), nie vorwärts. Test: „gives a Saturday and a
+  Sunday Friday's rate", „gives up after seven days".
+- `datesNeedingFetch`: ein Tag gilt erst als abgedeckt, wenn ein Kurs an oder nach ihm
+  gespeichert ist — sonst bekäme ein Montag den Freitagskurs, nur weil der Montag noch
+  nicht abgeholt wurde. Test: „needs a day after the last stored rate, even when rateFor
+  would answer".
+- Die Währungssperre sitzt im `UPDATE … WHERE NOT EXISTS (trade_accounts …)` selbst,
+  nicht in einer vorherigen Zählung. Test gegen Postgres: „refuses once a trade is
+  assigned", „refuses an account the user does not own".
+
+**Entschieden unterwegs.**
+- **`providers=ecb` ist Pflicht.** frankfurter hat eine v2-API, die ohne Angabe 98
+  Quellen mischt und auch Wochenendwerte liefert — am 2026-09-18 1,1492 gemischt gegen
+  1,1460 ECB. Das Projekt verlangt ECB-Referenzkurse (`project-overview.md`).
+- **Externer Abruf im Request-Pfad ist hier zulässig.** Das SSRF-Verbot gilt
+  nutzergelieferten Adressen; diese ist fest im Code, nur die Datumsgrenzen sind
+  Parameter. Abgerufen wird nur, was `fx_rates` nicht beantwortet, mit 10 s Timeout,
+  danach liest alles aus der Tabelle. Entschieden von Sascha: Kurse werden beim Import
+  nachgeholt, nicht per täglichem Job.
+- **Upsert statt Insert-if-missing**, damit wiederholte oder parallele Aufrufe harmlos
+  sind und eine revidierte Quelle den gespeicherten Kurs korrigiert.
+- **`rate_vs_usd` ist `numeric(12,6)`** — neue Präzision neben (14,2) und (12,4), weil
+  ein Kurs weder Geldbetrag noch Preis ist; die ECB liefert bis zu fünf Dezimalen.
+- **Die Sperre wird in der Query-Schicht getestet, nicht über die Action**, weil Vitest
+  den `@`-Alias der Actions nicht auflöst (wie in S14).
+- **Währungs-Tag auf der neutralen Fläche aus §4.20**, nicht auf `bg-white/5` — im Review
+  korrigiert, ebenso `shiftDate` auf `TZDate` + date-fns statt eigener `Date.UTC`-Rechnung.
+- Der Workflow kennt keinen Parkplatz für einen Spec. Auf Saschas Wahl steht
+  `ftmo-import` bis zum Merge unter „Next up" in `current-feature.md`.
+
+**Offen geblieben.**
+- Migration auf den Neon-Branches `preview` und Production.
+- Klickpfad in `/settings` von Sascha abzunehmen.
+- Für `ftmo-import`: was mit einem Trade passiert, der am selben Tag importiert wird,
+  bevor die ECB den Tageskurs veröffentlicht hat — `rateFor` gibt dann den Vortageskurs.
+- Solange ein letzter angefragter Tag auf einem Wochenende nach dem letzten
+  gespeicherten Kurs liegt, fragt jeder Aufruf erneut an; harmlos, eine Anfrage.
