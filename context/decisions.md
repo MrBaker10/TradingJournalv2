@@ -2303,3 +2303,28 @@ Postgres).
 3. Als Nächstes vereinbart: D (Chip-Labels in Normalschreibung) und E (zwei Spalten
    ab `lg`) im eigenen Branch, danach F (Preisband Stop/Entry/Exit mit MFE/MAE) als
    eigenes Feature.
+
+## 2026-09-24 — Detailseite: Badge-Schrift und Zwei-Spalten-Layout — feature/trade-detail-layout — ddf1943
+
+**Gebaut.** Badge-Labels (Accounts, Confluences, Mistakes) stehen in 13px 500 in der
+Schreibweise des Nutzers statt in Kapitälchen. Ab `lg` liegt unter dem Kopf ein
+Raster: links Execution, Notes, Screenshots, Links; rechts eine 20rem-Spalte mit
+Accounts, Confluences und Mistakes.
+
+**Dateien.** `src/components/journal/trade-detail.tsx` (`chipLabel`, `Section` mit
+`className`, Raster mit `hasRail`); `context/Design.md` §4.20.
+
+**Entschieden unterwegs.**
+- **Ein Raster statt zwei Spalten-Wrapper.** Mit zwei Wrappern hätte die Reihenfolge
+  unter `lg` gewechselt (erst alles Linke, dann die Spalte). So bleibt die DOM-Reihenfolge
+  die alte einspaltige, und ab `lg` setzt `col-start` die Karten. Die rechte Spalte
+  spannt vier Zeilen, die vierte ist `1fr` und nimmt den Überhang — mit lauter
+  `auto`-Zeilen hätte Grid ihn gleichmäßig verteilt und Lücken zwischen die linken
+  Karten gerissen.
+- **Keine rechte Spalte, keine zweite Spalte.** Ohne Accounts, Confluences und
+  Mistakes (etwa ein Missed Setup ohne Tags) bekommt das Raster keine
+  Spaltendefinition.
+- **Der Practice-Marker bleibt `cap`.** Er ist ein Etikett, kein Name.
+
+**Offen geblieben.** Der Fall ohne rechte Spalte und der Practice-Marker sind nicht
+im Browser gesehen — lokal gibt es keinen Trade ohne Account und kein Übungskonto.
