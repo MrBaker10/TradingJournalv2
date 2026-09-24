@@ -580,9 +580,10 @@ Fläche wieder der hellste Punkt und hätte das Problem nur verschoben.
 im Kalender (4.8). Beide bestätigen oder verorten etwas und dürfen deshalb
 leuchten.
 
-**Stand.** Heute benutzt nur das Dashboard diese Fläche — die drei
-Gamification-Kacheln (4.3) und der „Save plan"-Button (4.6). Ob sie sich über das
-Projekt legt, entscheidet die nächste Runde.
+**Stand.** Benutzt vom Dashboard — die drei Gamification-Kacheln (4.3) und der
+„Save plan"-Button (4.6) — und von der Trade-Detailseite: Bearbeiten-Button und
+Badges (4.20). Ob sie sich über das übrige Projekt legt, entscheidet die nächste
+Runde.
 
 ---
 
@@ -929,18 +930,45 @@ Journal" mit Pfeil in `--color-fg-subtle`, rechts der Bearbeiten-Button auf der
 ruhigen Prozessfläche nach 4.14 (`--gradient-info-soft`, Stift in
 `--color-cyan`) — er begleitet den Trade, er ist nicht wichtiger als er.
 
-Darunter Karten in `card-surface edge`, je ein Abschnitt mit `cap`-Titel, in
-dieser Reihenfolge: **Kopf** (Instrument, Tags und Metazeile aus 4.9 links, der
-Betrag rechts in 18px Mono), **Execution** (das Feldraster, zwei Spalten mobil,
-vier ab `sm`; leere Felder fehlen ganz statt „—" zu zeigen), **Accounts**
-(Chips mit dem Practice-Marker aus 4.12), **Confluences** (nach Gruppe
-gegliedert, Gruppenname in `--color-fg-subtle`, darunter die Badges),
-**Mistakes**, **Notes** (Fließtext, Zeilenumbrüche bleiben), **Screenshots**,
-**Links** (beide nach 4.13). Ein Abschnitt ohne Inhalt erscheint nicht.
+Darunter Karten in `card-surface edge`, in dieser Reihenfolge:
 
-Badge und Link-Chip tragen dieselbe Rezeptur: `--gradient-inset`, 1px Inset-Rand
-über die `edge`-Utility, Label in `cap`. Confluences und Mistakes sind
-Prozessdaten und dürfen sie nach §1 tragen.
+- **Kopf** — die eine laute Stelle der Seite. Links das Instrument als
+  Seitentitel (`page-title`, 19px 700 uppercase nach §3), daneben die Tags
+  Richtung, Ergebnis und Note auf der neutralen Fläche (`--gradient-dark-soft`,
+  `--shadow-dark-soft`, `cap` in `--color-fg`); darunter Metazeile aus 4.9 und
+  Instrumentname in `--color-fg-muted`, das Datum in Mono. Rechts der Betrag in
+  26px 700 Mono, darunter das R in 14px Mono.
+- **Execution** — keine Kacheln, sondern vier Zeilen auf einer Fläche, getrennt
+  durch 1px-Linien: **Prices** (Stop, Entry, Exit), **Time** (Entry, Exit, Held),
+  **Excursion** (MFE, MAE, Post-exit MFE in R), **Process** (Contracts, Entry
+  model, Felt, By the book). Links der Zeilenname in `cap`, rechts die Werte mit
+  kleinem Label in `--color-fg-subtle` darüber, Wert 15px 600 in Mono, Freitext
+  in Sans. Die Zeilen fassen zusammen, was zusammen gelesen wird — Preise
+  erzählen den Verlauf, Zeiten die Dauer. Leere Werte fehlen ganz statt „—" zu
+  zeigen, eine Zeile ohne Werte fehlt auch. „Held" ist die Haltedauer aus
+  derselben SQL-Rechnung wie in 4.17, über Mitternacht plus 24 Stunden.
+- **Accounts** (Badges wie unten, mit dem Practice-Marker aus 4.12),
+  **Confluences** (nach Gruppe gegliedert, Gruppenname in `--color-fg-subtle`,
+  darunter die Badges), **Mistakes**, **Notes** (Fließtext, Zeilenumbrüche
+  bleiben), **Screenshots**, **Links** (beide nach 4.13).
+
+Ein Abschnitt ohne Inhalt erscheint nicht. Abschnittstitel stehen in `cap` +
+`cap-neon`, wie jedes Sektionslabel nach §3.
+
+Badges tragen die ruhigen Flächen aus 4.14, kein Schein nach außen, Label in
+`cap` mit `--color-fg`. Confluences und Accounts stehen auf der blauen
+(`--gradient-info-soft`, `--shadow-info-soft`), dieselbe wie der
+Bearbeiten-Button. **Mistakes stehen auf der neutralen** (`--gradient-dark-soft`,
+`--shadow-dark-soft`): ein Fehler ist Prozessdatum, aber nichts Verdientes, und
+in Cyan sähe er aus wie eine Belohnung. Der Link-Chip aus 4.13 bleibt auf
+`--gradient-inset` mit `edge`.
+
+**Geändert in der Designrunde der Detailseite.** Vorher trugen die Badges
+`--gradient-inset`, die Account-Chips `--color-well`, die Execution-Felder ein
+loses Raster und der Betrag 18px — die Seite hatte keinen Blickfang und wirkte
+dunkel. Ein Zwischenstand mit Execution-Kacheln wurde verworfen: acht gleiche
+Kacheln in einer Karte trennten, was zusammengehört, und liefen bei schmaler
+Breite über.
 
 Farbe: der Betrag semantisch grün oder rot, sonst nichts. Bei einem verpassten
 Setup steht „—" und darunter das would-be R in `--color-fg-subtle`, nie grün —

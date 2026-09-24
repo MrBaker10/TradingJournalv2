@@ -103,6 +103,8 @@ export interface JournalTradeRow {
   mfeR: number | null;
   maeR: number | null;
   postExitMfeR: number | null;
+  /** Entry to exit on the chart clock, overnight-aware; null without an exit. */
+  holdMinutes: number | null;
   /**
    * The user's manual override in dollars, as stored — not the derived P&L.
    * `pnlCents` below is the figure to render; this one exists so the edit form
@@ -253,6 +255,34 @@ const linksJson = sql<JournalTradeLink[]>`(
   )
   from ${tradeLinks}
   where ${tradeLinks.tradeId} = ${trades.id}
+)`;
+
+/**
+ * Minutes between entry and exit, on the user's chart clock.
+ *
+ * `entry_time` and `exit_time` are `time without time zone` and stay
+ * unconverted (coding-standards.md, Time): this subtracts two clock readings,
+ * it does not apply a zone to either.
+ *
+ * An exit **before** the entry is an overnight trade — futures run nearly
+ * around the clock, so 22:30 to 01:15 is 2h45 and not a negative duration.
+ * There is no exit date to check this against; `trades` carries one
+ * `trade_date`, so "earlier on the clock" is the only signal there is.
+ *
+ * Shared by the analytics hold-time figures and the trade detail page, so the
+ * overnight rule lives in one place.
+ */
+export const holdMinutes = sql<string | null>`(
+  case
+    when ${trades.exitTime} is null then null
+    else extract(epoch from (
+      case
+        when ${trades.exitTime} < ${trades.entryTime}
+          then (${trades.exitTime} - ${trades.entryTime}) + interval '24 hours'
+        else (${trades.exitTime} - ${trades.entryTime})
+      end
+    )) / 60
+  end
 )`;
 
 // Sort key for "R-Multiple": for a taken trade this mirrors calculatePnl in
@@ -409,6 +439,7 @@ async function queryTradeRows(
       mfeR: trades.mfeR,
       maeR: trades.maeR,
       postExitMfeR: trades.postExitMfeR,
+      holdMinutes,
       pnlOverride: trades.pnlOverride,
       accounts: accountsJson,
       confluences: confluencesJson,
@@ -494,6 +525,7 @@ async function queryTradeRows(
       mfeR: row.mfeR !== null ? Number(row.mfeR) : null,
       maeR: row.maeR !== null ? Number(row.maeR) : null,
       postExitMfeR: row.postExitMfeR !== null ? Number(row.postExitMfeR) : null,
+      holdMinutes: row.holdMinutes !== null ? Number(row.holdMinutes) : null,
       pnlOverride: row.pnlOverride !== null ? Number(row.pnlOverride) : null,
       pnlCents,
       rMultiple: row.taken

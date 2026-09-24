@@ -226,6 +226,39 @@ describe("getJournalTradeById", () => {
     expect((trade as JournalTradeRow).mistakes).toEqual([]);
   });
 
+  it("derives the hold time in minutes, overnight included", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const [sameDay, overnight] = await withFixture(async (tx, fixture) => {
+      const ids: number[] = [];
+      for (const [entryTime, exitTime] of [
+        ["09:31:00", "10:02:00"],
+        ["22:30:00", "01:15:00"],
+      ]) {
+        const [row] = await tx
+          .insert(trades)
+          .values({
+            userId: fixture.userId,
+            ...takenTradeColumns(fixture),
+            entryTime,
+            exitTime,
+          })
+          .returning({ id: trades.id });
+        await tx
+          .insert(tradeAccounts)
+          .values({ tradeId: row.id, accountId: fixture.realAccountId });
+        ids.push(row.id);
+      }
+      return Promise.all(
+        ids.map((id) => getJournalTradeById(fixture.userId, id, tx)),
+      );
+    });
+
+    expect((sameDay as JournalTradeRow).holdMinutes).toBe(31);
+    // An exit earlier on the clock is the next day, not a negative duration.
+    expect((overnight as JournalTradeRow).holdMinutes).toBe(165);
+  });
+
   it("carries instrumentId and pnlOverride for the edit form", async (ctx) => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 
