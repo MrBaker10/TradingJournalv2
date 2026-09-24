@@ -452,14 +452,25 @@ Monat verteilt ist. Er ist auf der Kachel, nicht auf der Zahl im Dashboard.
   Einträge. Bis zur Designrunde 1 trugen beide den satten Verlauf.
 - Titelzeile: Instrument plus Tags (`short`, `loss`/`win`/`missed`, `Grade B`),
   darunter Metazeile in `--color-fg-subtle`.
+- Hat der Eintrag Confluences, steht dahinter ein weiterer `cap`-Tag mit ihrer
+  **Anzahl** („3 Confluences"), nicht ihre Namen. Ausgeschrieben stünden bei
+  fünf Confluences zwei Zeilen dort, wo bei anderen eine steht, und die Liste
+  wäre nicht mehr überfliegbar. Die Badges selbst stehen auf der Detailseite
+  (4.20).
 - Rechts: Betrag mono, darunter R-Multiple. Bei verpassten Setups steht dort
   „—" und als Unterzeile „+1.80R would-be" in `--color-fg-subtle` — der
   hypothetische Wert wird nie in Grün gezeigt. Datenherkunft: `mfe_r` auf einem
   Eintrag mit `taken = false`, es gibt keine eigene Spalte dafür.
-- Screenshots und Links erscheinen erst in der aufgeklappten Detailzeile, nicht in
-  der Kopfzeile. Siehe 4.13.
-- Hover: `translateY(-1px)` plus Neon-Inset. Klick klappt die Detailzeilen an
-  ihrer Stelle auf (260 ms), die Liste fließt nicht um.
+- Screenshots und Links erscheinen nicht in der Zeile. Siehe 4.13 und 4.20.
+- **Die Zeile ist ein Link auf `/journal/[id]`.** Hover: `translateY(-1px)` plus
+  Neon-Inset, als CSS-Transition.
+
+**Geändert mit S14.** Bis dahin klappte ein Klick die Zeile an ihrer Stelle auf
+(260 ms). Das Aufklappen ist ersatzlos entfallen: die Detailzeile konnte das
+Nötige nicht mehr fassen — Confluences nach Gruppe, Mistakes, Notizen in voller
+Länge, Chart-Vorschauen und der Weg ins Bearbeiten — und zwei Orte für dieselben
+Felder hätten sich auseinanderentwickelt. „Recent trades" auf dem Dashboard
+benutzt dieselbe Komponente und verhält sich mit.
 
 ### 4.10 Schnellzugriff-Karten
 
@@ -512,18 +523,31 @@ Crossfade auf den Werten, das Layout bleibt stehen.
 
 ### 4.13 Screenshots und Links am Trade
 
-Beide liegen in der aufgeklappten Detailzeile, nebeneinander in einer Reihe.
+Beide liegen auf der Detailseite (4.20), je in einem eigenen Abschnitt. Seit S14
+nicht mehr in einer aufgeklappten Zeile — die gibt es nicht mehr.
 
 - Screenshot: 56px Vorschau-Tile, `--radius-xs`, Inset-Rahmen. Klick öffnet ein
   Lightbox-Overlay, kein neuer Tab. Maximal drei.
 - Link: Chip mit `--gradient-inset`, 1px Inset-Rand, Kapitälchen-Label aus dem
   Titel oder der Domain, davor ein 14px Icon. Beliebig viele.
-- Ein Link öffnet in einem neuen Tab, mit `rel="noopener noreferrer"`. Es gibt
-  **keine** Vorschau, kein eingebettetes Chart und kein Thumbnail von der
-  Zieladresse — das wäre ein serverseitiger Abruf einer fremden URL und ist in
-  `coding-standards.md` verboten.
+- Ein Link öffnet in einem neuen Tab, mit `rel="noopener noreferrer"`.
+- **Kein Abruf der Zieladresse, nirgends.** Keine Metadaten, kein oEmbed, kein
+  eingebettetes Chart, kein Thumbnail, das der Server holt. Das wäre ein
+  serverseitiger Abruf einer fremden URL und ist in `coding-standards.md`
+  verboten.
+- **Die eine Ausnahme, und warum sie keine ist (S14):** bei einem
+  TradingView-Snapshot (`tradingview.com/x/<id>/`) ergibt sich die Bildadresse
+  aus der Linkadresse durch eine feste Regel — Verzeichnis ist das erste Zeichen
+  der id, kleingeschrieben. Der Chip trägt dann über dem Label eine 16:9-Vorschau
+  im Seitenverhältnis des Charts. **Abgeleitet, nicht abgerufen:**
+  `snapshotImageUrl` in `src/lib/links.ts` ist reine Zeichenkettenarbeit, das
+  Bild holt der Browser über ein `<img>`, der Server sieht die Adresse nie. Das
+  Verbot oben bleibt damit unangetastet. Lädt das Bild nicht, fällt der Chip auf
+  seine Textform zurück; jeder andere Host bleibt von vornherein Text.
 - Fehlt beides, steht dort nichts. Kein leerer Platzhalter, kein „Add screenshot"
-  in der Leseansicht.
+  in der Leseansicht. **Seit S14 gilt dieser Satz wieder wörtlich:** der
+  Stift-Auslöser, den S6 als bewusste Abweichung in die Leseansicht gesetzt
+  hatte, ist verschwunden — Anhänge werden im Bearbeiten-Formular verwaltet.
 
 ### 4.14 Ruhige Prozessfläche
 
@@ -894,6 +918,60 @@ Abmelden verliert nichts.
 
 ---
 
+### 4.20 Trade-Detailseite und Bearbeiten
+
+Zwei Routen, seit S14: `/journal/[id]` liest, `/journal/[id]/edit` schreibt. Sie
+sind getrennt, weil das Nachschlagen eines Trades der häufigere Vorgang ist und
+kein offenes Formular verdient.
+
+**Detailseite.** Über dem Inhalt eine Zeile: links ein Zurück-Link „Trade
+Journal" mit Pfeil in `--color-fg-subtle`, rechts der Bearbeiten-Button auf der
+ruhigen Prozessfläche nach 4.14 (`--gradient-info-soft`, Stift in
+`--color-cyan`) — er begleitet den Trade, er ist nicht wichtiger als er.
+
+Darunter Karten in `card-surface edge`, je ein Abschnitt mit `cap`-Titel, in
+dieser Reihenfolge: **Kopf** (Instrument, Tags und Metazeile aus 4.9 links, der
+Betrag rechts in 18px Mono), **Execution** (das Feldraster, zwei Spalten mobil,
+vier ab `sm`; leere Felder fehlen ganz statt „—" zu zeigen), **Accounts**
+(Chips mit dem Practice-Marker aus 4.12), **Confluences** (nach Gruppe
+gegliedert, Gruppenname in `--color-fg-subtle`, darunter die Badges),
+**Mistakes**, **Notes** (Fließtext, Zeilenumbrüche bleiben), **Screenshots**,
+**Links** (beide nach 4.13). Ein Abschnitt ohne Inhalt erscheint nicht.
+
+Badge und Link-Chip tragen dieselbe Rezeptur: `--gradient-inset`, 1px Inset-Rand
+über die `edge`-Utility, Label in `cap`. Confluences und Mistakes sind
+Prozessdaten und dürfen sie nach §1 tragen.
+
+Farbe: der Betrag semantisch grün oder rot, sonst nichts. Bei einem verpassten
+Setup steht „—" und darunter das would-be R in `--color-fg-subtle`, nie grün —
+4.9 und 4.17 gelten hier unverändert.
+
+**Bearbeiten.** Kein eigener Entwurf: es ist dasselbe Formular wie „New trade",
+vorbefüllt, mit den Feldregeln aus 4.5 und den Buttonzuständen aus 4.2. Der
+Primärbutton heißt „Save changes", sein Erfolgszustand zeigt die neue Zahl und
+führt danach auf die Detailseite zurück.
+
+- Screenshots und Links speichern **sofort**, nicht erst beim Absenden — der
+  Trade existiert schon, und ein Bild kann eine Server Action ohnehin nicht
+  mitnehmen. Ein Satz in `--color-fg-subtle` unter den beiden Feldern sagt das,
+  damit der Unterschied nicht geraten werden muss.
+- Der Missed-Schalter bleibt bedienbar: wird umgeschaltet und gespeichert,
+  verschwinden Exit, Kontrakte, Ergebnis und Kontozuweisung.
+- Ein archiviertes Konto, auf dem dieser Trade schon liegt, steht weiter zur
+  Auswahl und trägt einen `cap`-Tag „Archived". Sonst verlöre ein Trade beim
+  Speichern stumm seine Zuweisung, und ein Trade ohne Konto ist ein Zustand, den
+  die Domain verbietet.
+- **Löschen** steht zuletzt und in einer eigenen Karte, getrennt vom
+  Speichern-Button. Ghost-Button mit `text-danger-fg`, zwei Klicks: der erste
+  macht daraus „Click again to confirm" mit roter Kante und
+  `--color-danger`-Fläche bei 15 %, der zweite löscht. Nach drei Sekunden ohne
+  zweiten Klick fällt er zurück. Kein `window.confirm`, kein Modal — dieselbe
+  Mechanik wie „Delete account" in 4.19 und das Entfernen eines Screenshots.
+
+**Stand.** Gebaut, nicht entworfen — derselbe Vorbehalt wie 4.16 bis 4.19.
+
+---
+
 ## 5. Motion
 
 | Moment | Dauer | Kurve |
@@ -904,7 +982,7 @@ Abmelden verliert nichts.
 | Farb-/Randwechsel | 200 ms | `--ease-soft` |
 | Loading-Crossfade | 200 ms | linear |
 | Erfolg halten | 800 ms | — |
-| Zeile aufklappen | 260 ms | `--ease-soft` |
+| Zeile aufklappen (Analytics, 4.16) | 260 ms | `--ease-soft` |
 | Aufklapper (Review) | 300 ms | `--ease-soft` |
 | Streak-Bump | 620 ms | `--ease-soft`, einmalig |
 | Kalender/Score-Aufbau beim Laden | 900–1300 ms | `--ease-soft`, mit 240 ms Verzögerung |

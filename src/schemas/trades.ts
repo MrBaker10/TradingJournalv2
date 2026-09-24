@@ -122,6 +122,17 @@ const tradeIdSchema = z.object({
   tradeId: z.number().int().positive(),
 });
 
+// The edit form sends the same payload the new-trade form does, so the union
+// above is reused whole rather than restated. It is nested instead of merged
+// because neither half can take another field: `createTradeSchema` is a
+// discriminated union, and `takenTradeSchema` carries a `superRefine`. One
+// validation truth (coding-standards.md), one shape to keep in step.
+export const updateTradeSchema = tradeIdSchema.extend({
+  trade: createTradeSchema,
+});
+
+export const deleteTradeSchema = tradeIdSchema;
+
 export const addTradeLinkSchema = tradeIdSchema.extend({
   url: httpsUrlSchema,
   label: z.string().trim().max(200).optional(),

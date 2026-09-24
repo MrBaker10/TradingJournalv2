@@ -1,9 +1,17 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useMemo, useState, useTransition } from "react";
-import { createTrade } from "@/actions/trades";
+import { useMemo, useRef, useState, useTransition } from "react";
+import {
+  addTradeLink,
+  createTrade,
+  deleteTrade,
+  deleteTradeLink,
+  deleteTradeScreenshot,
+  updateTrade,
+} from "@/actions/trades";
 import { AccountMultiSelect } from "@/components/trades/account-multi-select";
 import { ScreenshotSlots } from "@/components/trades/screenshot-slots";
 import type { TagGroup } from "@/components/trades/tag-multi-select";
@@ -13,6 +21,7 @@ import { TradeLinksInput } from "@/components/trades/trade-links-input";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import type { JournalTradeRow } from "@/db/queries/trades";
 import { calculatePnl, type TradeDirection } from "@/domain/pnl";
 import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
 import { centsToDollars } from "@/lib/money";
@@ -35,6 +44,7 @@ interface StagedScreenshot {
 }
 
 const SUCCESS_HOLD_MS = 1400;
+const CONFIRM_TIMEOUT_MS = 3000;
 
 type FieldState = "default" | "valid" | "invalid";
 
@@ -73,6 +83,18 @@ function FormField({
   );
 }
 
+// What the button says while it holds its success state (Design.md §4.2).
+// A missed setup has no realised figure, so it says what happened instead.
+function summaryOf(result: {
+  pnlCents: number | null;
+  rMultiple: number | null;
+}): string {
+  if (result.pnlCents === null) return "Missed setup saved";
+  const amount = `${result.pnlCents >= 0 ? "+" : ""}$${centsToDollars(result.pnlCents).toFixed(2)}`;
+  if (result.rMultiple === null) return amount;
+  return `${amount}, ${result.rMultiple >= 0 ? "+" : ""}${result.rMultiple.toFixed(2)}R`;
+}
+
 function parseNumber(value: string): number | undefined {
   if (value.trim() === "") return undefined;
   const parsed = Number(value);
@@ -89,20 +111,64 @@ interface InstrumentOption {
 interface AccountOption {
   id: number;
   name: string;
+  isPractice?: boolean;
+  isArchived?: boolean;
 }
 
-interface NewTradeFormProps {
+interface TradeFormBaseProps {
   instruments: InstrumentOption[];
   accounts: AccountOption[];
   confluenceGroups: TagGroup[];
   mistakeTags: { id: number; label: string }[];
 }
 
-const initialState = {
+/**
+ * One form for both jobs. The fields, their validation and the live P&L are
+ * identical whether a trade is being written for the first time or corrected
+ * later — duplicating them would guarantee the two drift.
+ *
+ * What genuinely differs is attachments. A new trade has no id yet, so
+ * screenshots are staged as blobs and uploaded after the insert, and links
+ * ride along in the payload. An existing trade already has an id, so both go
+ * to the server the moment they are added — the same live path the journal row
+ * used before this form took the job over.
+ */
+type TradeFormProps = TradeFormBaseProps &
+  ({ mode: "create" } | { mode: "edit"; trade: JournalTradeRow });
+
+type FormState = {
+  taken: boolean;
+  tradeDate: string;
+  instrumentId: string;
+  direction: "" | TradeDirection;
+  entryTime: string;
+  exitTime: string;
+  entryPrice: string;
+  exitPrice: string;
+  stopPrice: string;
+  contracts: string;
+  session: string;
+  setupType: string;
+  entryModel: string;
+  confluenceTagIds: number[];
+  mistakeTagIds: number[];
+  mfeR: string;
+  maeR: string;
+  postExitMfeR: string;
+  pnlOverride: string;
+  result: string;
+  grade: string;
+  felt: string;
+  byTheBook: boolean;
+  notes: string;
+  accountIds: number[];
+};
+
+const emptyState: FormState = {
   taken: true,
   tradeDate: "",
   instrumentId: "",
-  direction: "" as "" | TradeDirection,
+  direction: "",
   entryTime: "",
   exitTime: "",
   entryPrice: "",
@@ -112,8 +178,8 @@ const initialState = {
   session: "",
   setupType: "",
   entryModel: "",
-  confluenceTagIds: [] as number[],
-  mistakeTagIds: [] as number[],
+  confluenceTagIds: [],
+  mistakeTagIds: [],
   mfeR: "",
   maeR: "",
   postExitMfeR: "",
@@ -123,22 +189,72 @@ const initialState = {
   felt: "",
   byTheBook: false,
   notes: "",
-  accountIds: [] as number[],
+  accountIds: [],
 };
 
-export function NewTradeForm({
-  instruments,
-  accounts,
-  confluenceGroups,
-  mistakeTags,
-}: NewTradeFormProps) {
-  const [state, setState] = useState(initialState);
+// Every field is a controlled string, so a stored value has to come back as
+// the string the input would have held. `null` means "not filled in" and maps
+// to "" rather than "null" — the same empty the create path starts from, which
+// is what lets both modes share buildPayload unchanged.
+function stateFromTrade(trade: JournalTradeRow): FormState {
+  const numberField = (value: number | null) =>
+    value !== null ? String(value) : "";
+
+  return {
+    taken: trade.taken,
+    tradeDate: trade.tradeDate,
+    instrumentId: String(trade.instrumentId),
+    direction: trade.direction,
+    entryTime: trade.entryTime,
+    exitTime: trade.exitTime ?? "",
+    entryPrice: String(trade.entryPrice),
+    exitPrice: numberField(trade.exitPrice),
+    stopPrice: numberField(trade.stopPrice),
+    contracts: numberField(trade.contracts),
+    session: trade.session ?? "",
+    setupType: trade.setupType ?? "",
+    entryModel: trade.entryModel ?? "",
+    confluenceTagIds: trade.confluences.map((confluence) => confluence.id),
+    mistakeTagIds: trade.mistakes.map((mistake) => mistake.id),
+    mfeR: numberField(trade.mfeR),
+    maeR: numberField(trade.maeR),
+    postExitMfeR: numberField(trade.postExitMfeR),
+    pnlOverride: numberField(trade.pnlOverride),
+    result: trade.result ?? "",
+    grade: trade.grade ?? "",
+    felt: trade.felt ?? "",
+    byTheBook: trade.byTheBook ?? false,
+    notes: trade.notes ?? "",
+    accountIds: trade.accounts.map((account) => account.id),
+  };
+}
+
+export function TradeForm(props: TradeFormProps) {
+  const { instruments, accounts, confluenceGroups, mistakeTags } = props;
+  // Narrowed once so the callbacks below can read it without re-checking
+  // props.mode inside every closure.
+  const edit = props.mode === "edit" ? props : null;
+
+  const router = useRouter();
+  const [state, setState] = useState<FormState>(
+    edit ? stateFromTrade(edit.trade) : emptyState,
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successSummary, setSuccessSummary] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [links, setLinks] = useState<TradeLinkItem[]>([]);
-  const [screenshots, setScreenshots] = useState<StagedScreenshot[]>([]);
+  const [stagedLinks, setStagedLinks] = useState<TradeLinkItem[]>([]);
+  const [stagedScreenshots, setStagedScreenshots] = useState<
+    StagedScreenshot[]
+  >([]);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const confirmTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // In edit mode the server is the source of truth for both lists; in create
+  // mode nothing exists on the server yet, so the staged arrays are.
+  const screenshots = edit ? edit.trade.screenshots : stagedScreenshots;
+  const links: TradeLinkItem[] = edit ? edit.trade.links : stagedLinks;
 
   const loading = isPending;
   const success = successSummary !== null;
@@ -190,12 +306,27 @@ export function NewTradeForm({
     return filled ? "valid" : "default";
   }
 
-  function set<K extends keyof typeof initialState>(
-    key: K,
-    value: (typeof initialState)[K],
-  ) {
+  function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setState((prev) => ({ ...prev, [key]: value }));
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: "" }));
+  }
+
+  // The upload endpoint is a route handler, not a Server Action, so it does
+  // not trigger Next's own revalidation — router.refresh() re-runs the page's
+  // Server Component tree to pick the new screenshot up.
+  async function uploadScreenshot(tradeId: number, blob: Blob) {
+    const formData = new FormData();
+    formData.append("tradeId", String(tradeId));
+    formData.append("file", blob, "screenshot.jpg");
+    const response = await fetch("/api/uploads", {
+      method: "POST",
+      body: formData,
+    });
+    if (response.ok) return null;
+    const body: { error?: string } | null = await response
+      .json()
+      .catch(() => null);
+    return body?.error ?? "Could not upload that screenshot.";
   }
 
   async function handleAddScreenshot(file: File) {
@@ -205,23 +336,104 @@ export function NewTradeForm({
       );
       return;
     }
+
+    let blob: Blob;
     try {
-      const blob = await resizeAndCompressImage(file);
-      setScreenshots((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), blob, url: URL.createObjectURL(blob) },
-      ]);
-      setScreenshotError(null);
+      blob = await resizeAndCompressImage(file);
     } catch {
       setScreenshotError("Could not process that image.");
+      return;
     }
+
+    if (edit) {
+      const error = await uploadScreenshot(edit.trade.id, blob);
+      setScreenshotError(error);
+      if (!error) router.refresh();
+      return;
+    }
+
+    setStagedScreenshots((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), blob, url: URL.createObjectURL(blob) },
+    ]);
+    setScreenshotError(null);
   }
 
-  function handleRemoveScreenshot(id: string | number) {
-    setScreenshots((prev) => {
+  async function handleRemoveScreenshot(id: string | number) {
+    if (edit) {
+      const result = await deleteTradeScreenshot({
+        tradeId: edit.trade.id,
+        screenshotId: Number(id),
+      });
+      setScreenshotError(result.success ? null : result.error);
+      if (result.success) router.refresh();
+      return;
+    }
+
+    setStagedScreenshots((prev) => {
       const removed = prev.find((screenshot) => screenshot.id === id);
       if (removed) URL.revokeObjectURL(removed.url);
       return prev.filter((screenshot) => screenshot.id !== id);
+    });
+  }
+
+  async function handleAddLink(input: { url: string; label?: string }) {
+    if (edit) {
+      const result = await addTradeLink({ tradeId: edit.trade.id, ...input });
+      setLinkError(result.success ? null : result.error);
+      if (result.success) router.refresh();
+      return;
+    }
+
+    setStagedLinks((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        url: input.url,
+        label: input.label ?? null,
+      },
+    ]);
+  }
+
+  async function handleRemoveLink(id: string | number) {
+    if (edit) {
+      const result = await deleteTradeLink({
+        tradeId: edit.trade.id,
+        linkId: Number(id),
+      });
+      setLinkError(result.success ? null : result.error);
+      if (result.success) router.refresh();
+      return;
+    }
+
+    setStagedLinks((prev) => prev.filter((link) => link.id !== id));
+  }
+
+  // Two clicks, no modal — the same confirm shape the screenshot tiles use,
+  // and Design.md §4.6's rule that a decision belongs where it is made.
+  function handleDeleteClick() {
+    if (!edit) return;
+
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      if (confirmTimeout.current) clearTimeout(confirmTimeout.current);
+      confirmTimeout.current = setTimeout(
+        () => setConfirmingDelete(false),
+        CONFIRM_TIMEOUT_MS,
+      );
+      return;
+    }
+
+    if (confirmTimeout.current) clearTimeout(confirmTimeout.current);
+    setConfirmingDelete(false);
+    startTransition(async () => {
+      const result = await deleteTrade({ tradeId: edit.trade.id });
+      if (!result.success) {
+        setErrors({ form: result.error });
+        return;
+      }
+      router.push("/journal");
+      router.refresh();
     });
   }
 
@@ -244,10 +456,15 @@ export function NewTradeForm({
       notes: state.notes.trim() === "" ? undefined : state.notes,
       felt: state.felt === "" ? undefined : state.felt,
       grade: state.grade === "" ? undefined : state.grade,
-      links: links.map((link) => ({
-        url: link.url,
-        label: link.label ?? undefined,
-      })),
+      // Only the create path carries links in the payload. On an existing
+      // trade they are already rows of their own, added and removed live, and
+      // updateTrade ignores this field for exactly that reason.
+      links: edit
+        ? []
+        : stagedLinks.map((link) => ({
+            url: link.url,
+            label: link.label ?? undefined,
+          })),
     };
 
     if (!state.taken) {
@@ -283,6 +500,25 @@ export function NewTradeForm({
     }
 
     startTransition(async () => {
+      if (edit) {
+        const result = await updateTrade({
+          tradeId: edit.trade.id,
+          trade: parsed.data,
+        });
+        if (!result.success) {
+          setErrors({ form: result.error });
+          return;
+        }
+
+        setSuccessSummary(summaryOf(result.data));
+        setErrors({});
+        setTimeout(() => {
+          router.push(`/journal/${edit.trade.id}`);
+          router.refresh();
+        }, SUCCESS_HOLD_MS);
+        return;
+      }
+
       const result = await createTrade(parsed.data);
       if (!result.success) {
         setErrors({ form: result.error });
@@ -290,41 +526,30 @@ export function NewTradeForm({
       }
 
       // Screenshots can only be uploaded once the trade exists (trade_id is
-      // NOT NULL) — same /api/uploads endpoint an attach-afterward edit uses,
-      // just called right after creation instead of later.
+      // NOT NULL) — same /api/uploads endpoint the edit mode uses, just called
+      // right after creation instead of later.
       let screenshotUploadError: string | null = null;
-      for (const screenshot of screenshots) {
-        const formData = new FormData();
-        formData.append("tradeId", String(result.data.id));
-        formData.append("file", screenshot.blob, "screenshot.jpg");
-        const response = await fetch("/api/uploads", {
-          method: "POST",
-          body: formData,
-        });
-        if (!response.ok) {
+      for (const screenshot of stagedScreenshots) {
+        const uploadError = await uploadScreenshot(
+          result.data.id,
+          screenshot.blob,
+        );
+        if (uploadError) {
           screenshotUploadError =
             "Trade saved, but a screenshot failed to upload.";
         }
       }
 
-      const summary =
-        result.data.pnlCents !== null
-          ? `${result.data.pnlCents >= 0 ? "+" : ""}$${centsToDollars(result.data.pnlCents).toFixed(2)}${
-              result.data.rMultiple !== null
-                ? `, ${result.data.rMultiple >= 0 ? "+" : ""}${result.data.rMultiple.toFixed(2)}R`
-                : ""
-            }`
-          : "Missed setup logged";
-      setSuccessSummary(summary);
+      setSuccessSummary(summaryOf(result.data));
       setErrors(screenshotUploadError ? { form: screenshotUploadError } : {});
       setTimeout(() => {
-        setState(initialState);
+        setState(emptyState);
         setSuccessSummary(null);
-        for (const screenshot of screenshots) {
+        for (const screenshot of stagedScreenshots) {
           URL.revokeObjectURL(screenshot.url);
         }
-        setScreenshots([]);
-        setLinks([]);
+        setStagedScreenshots([]);
+        setStagedLinks([]);
       }, SUCCESS_HOLD_MS);
     });
   }
@@ -832,22 +1057,17 @@ export function NewTradeForm({
           <TradeLinksInput
             links={links}
             disabled={loading || success}
-            onAdd={(input) =>
-              setLinks((prev) => [
-                ...prev,
-                {
-                  id: crypto.randomUUID(),
-                  url: input.url,
-                  label: input.label ?? null,
-                },
-              ])
-            }
-            onRemove={(id) =>
-              setLinks((prev) => prev.filter((link) => link.id !== id))
-            }
+            onAdd={handleAddLink}
+            onRemove={handleRemoveLink}
           />
-          <InlineMessage message={errors.links ?? null} />
+          <InlineMessage message={linkError ?? errors.links ?? null} />
         </div>
+
+        {edit && (
+          <p className="text-fg-subtle text-xs">
+            Screenshots and links are saved the moment you add or remove them.
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -865,7 +1085,11 @@ export function NewTradeForm({
               loading || success ? "opacity-0" : "opacity-100"
             }`}
           >
-            {state.taken ? "Log trade" : "Log missed setup"}
+            {edit
+              ? "Save changes"
+              : state.taken
+                ? "Log trade"
+                : "Log missed setup"}
           </span>
           <span
             className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ease-linear ${
@@ -885,6 +1109,31 @@ export function NewTradeForm({
         </button>
         <InlineMessage message={errors.form ?? null} />
       </div>
+
+      {edit && (
+        <div className="card-surface edge flex flex-col gap-3 p-5">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-fg text-sm">Delete this trade</span>
+            <span className="text-fg-subtle text-xs">
+              Removes the entry with its accounts, tags, links and screenshots.
+              This cannot be undone.
+            </span>
+          </div>
+          <button
+            type="button"
+            disabled={loading || success}
+            onClick={handleDeleteClick}
+            className={`flex h-10 w-full items-center justify-center gap-1.5 rounded-ctl border text-sm transition-colors duration-200 disabled:opacity-60 ${
+              confirmingDelete
+                ? "border-danger-fg/60 bg-danger/15 text-danger-fg"
+                : "border-white/12 text-fg-muted hover:border-danger-fg/45 hover:text-danger-fg"
+            }`}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            {confirmingDelete ? "Click again to confirm" : "Delete trade"}
+          </button>
+        </div>
+      )}
     </form>
   );
 }

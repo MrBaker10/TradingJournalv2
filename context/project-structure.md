@@ -12,7 +12,7 @@ several self-named accounts (demo, evaluation, backtest, live) in one journal.
 | Route | Module | Core job |
 |---|---|---|
 | `/dashboard` | Dashboard | KPI cards, streak, pre-market plan, end-of-day review, P&L calendar, recent trades |
-| `/journal` | Trade Journal | List with filters incl. account, expandable rows, new trade, missed setup, CSV import |
+| `/journal` | Trade Journal | List with filters incl. account, per-trade detail page and editing, new trade, missed setup, CSV import |
 | `/analytics` | Analytics | Eleven dimensions incl. account, hold time, risk calibration, exit efficiency, missed setups |
 | `/progress` | Progress | Streak rules, consistency score, 12 badges |
 | `/prop-firms` | Prop Firm Rules | ~15 firms, 18 rule fields each, search, filter chips, compare |
@@ -27,6 +27,8 @@ src/
     (app)/                    # authenticated shell: sidebar + main
       dashboard/
       journal/
+        [id]/                 # trade detail
+          edit/               # same form as new, prefilled
         import/
       analytics/
       progress/
