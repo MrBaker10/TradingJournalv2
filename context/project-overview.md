@@ -663,8 +663,12 @@ by picking a different answer while coding.
 
 ## ❓ Open Questions
 
-None. Everything needed to start is decided; the only remaining blocker is
-`context/Design.md`.
+- **Mobile layout of the app shell.** Below roughly 500px the sidebar takes the
+  full width and squeezes the content to nothing — the shell has no mobile layout
+  at all (collapsed sidebar, drawer or bottom nav: not decided). Found on the trade
+  detail page on 2026-09-24; it affects every page behind the session, so it is a
+  slice of its own, not a fix inside a page. "Responsive web only" in
+  `project-structure.md` makes it a gap, not a scope question.
 
 New questions belong in the Open questions block of `context/current-feature.md` while
 a feature is in progress, and move up here once they affect the project as a whole.
