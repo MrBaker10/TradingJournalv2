@@ -51,13 +51,15 @@ function ExecutionRow({
 
 function Section({
   title,
+  className = "",
   children,
 }: {
   title: string;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="card-surface edge flex flex-col gap-3 p-5">
+    <div className={`card-surface edge flex flex-col gap-3 p-5 ${className}`}>
       <span className="cap cap-neon">{title}</span>
       {children}
     </div>
@@ -86,6 +88,10 @@ function Chip({
     </span>
   );
 }
+
+// Design.md §4.20: badge labels are names the user chose, so they read in
+// sentence case, not as capitals. Only the practice marker stays a `cap` tag.
+const chipLabel = "font-medium text-[13px] text-fg";
 
 // Header tags carry facts, not process: the neutral surface, readable white.
 function Tag({ children }: { children: React.ReactNode }) {
@@ -117,6 +123,11 @@ export function TradeDetail({ trade }: TradeDetailProps) {
       }, new Map<string, string[]>())
       .entries(),
   ];
+
+  const hasRail =
+    trade.accounts.length > 0 ||
+    confluenceGroups.length > 0 ||
+    trade.mistakes.length > 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -171,158 +182,175 @@ export function TradeDetail({ trade }: TradeDetailProps) {
         </div>
       </div>
 
-      <Section title="Execution">
-        <div className="flex flex-col divide-y divide-white/8">
-          <ExecutionRow
-            title="Prices"
-            values={[
-              { label: "Stop", value: trade.stopPrice?.toString() ?? null },
-              { label: "Entry", value: trade.entryPrice.toString() },
-              { label: "Exit", value: trade.exitPrice?.toString() ?? null },
-            ]}
-          />
-          <ExecutionRow
-            title="Time"
-            values={[
-              { label: "Entry", value: trade.entryTime },
-              { label: "Exit", value: trade.exitTime },
-              {
-                label: "Held",
-                value:
-                  trade.holdMinutes === null
-                    ? null
-                    : formatHoldTime(trade.holdMinutes),
-              },
-            ]}
-          />
-          <ExecutionRow
-            title="Excursion"
-            values={[
-              { label: "MFE", value: formatExcursion(trade.mfeR) },
-              { label: "MAE", value: formatExcursion(trade.maeR) },
-              {
-                label: "Post-exit MFE",
-                value: formatExcursion(trade.postExitMfeR),
-              },
-            ]}
-          />
-          <ExecutionRow
-            title="Process"
-            values={[
-              {
-                label: "Contracts",
-                value: trade.taken
-                  ? (trade.contracts?.toString() ?? null)
-                  : null,
-              },
-              { label: "Entry model", value: trade.entryModel, mono: false },
-              { label: "Felt", value: trade.felt, mono: false },
-              {
-                label: "By the book",
-                value:
-                  trade.taken && trade.byTheBook !== null
-                    ? trade.byTheBook
-                      ? "Yes"
-                      : "No"
+      {/* Design.md §4.20: from `lg` the trade reads on the left and its
+          labels sit in a narrow rail on the right. The rail spans the left
+          column's rows; the last row takes up any extra height so the left
+          cards never spread apart. Below `lg` the DOM order is the old
+          single-column order. */}
+      <div
+        className={`grid grid-cols-1 items-start gap-4 ${
+          hasRail
+            ? "lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_auto_auto_1fr]"
+            : ""
+        }`}
+      >
+        <Section title="Execution" className="lg:col-start-1">
+          <div className="flex flex-col divide-y divide-white/8">
+            <ExecutionRow
+              title="Prices"
+              values={[
+                { label: "Stop", value: trade.stopPrice?.toString() ?? null },
+                { label: "Entry", value: trade.entryPrice.toString() },
+                { label: "Exit", value: trade.exitPrice?.toString() ?? null },
+              ]}
+            />
+            <ExecutionRow
+              title="Time"
+              values={[
+                { label: "Entry", value: trade.entryTime },
+                { label: "Exit", value: trade.exitTime },
+                {
+                  label: "Held",
+                  value:
+                    trade.holdMinutes === null
+                      ? null
+                      : formatHoldTime(trade.holdMinutes),
+                },
+              ]}
+            />
+            <ExecutionRow
+              title="Excursion"
+              values={[
+                { label: "MFE", value: formatExcursion(trade.mfeR) },
+                { label: "MAE", value: formatExcursion(trade.maeR) },
+                {
+                  label: "Post-exit MFE",
+                  value: formatExcursion(trade.postExitMfeR),
+                },
+              ]}
+            />
+            <ExecutionRow
+              title="Process"
+              values={[
+                {
+                  label: "Contracts",
+                  value: trade.taken
+                    ? (trade.contracts?.toString() ?? null)
                     : null,
-                mono: false,
-              },
-            ]}
-          />
-        </div>
-      </Section>
-
-      {trade.accounts.length > 0 && (
-        <Section title="Accounts">
-          <div className="flex flex-wrap gap-1.5">
-            {trade.accounts.map((account) => (
-              <Chip key={account.id}>
-                <span className="cap text-fg">{account.name}</span>
-                {/* §4.12: the marker travels with the account wherever its
-                    numbers do. */}
-                {account.isPractice && (
-                  <span className="cap cap-practice rounded-xs px-1 py-0.5">
-                    Practice
-                  </span>
-                )}
-              </Chip>
-            ))}
+                },
+                { label: "Entry model", value: trade.entryModel, mono: false },
+                { label: "Felt", value: trade.felt, mono: false },
+                {
+                  label: "By the book",
+                  value:
+                    trade.taken && trade.byTheBook !== null
+                      ? trade.byTheBook
+                        ? "Yes"
+                        : "No"
+                      : null,
+                  mono: false,
+                },
+              ]}
+            />
           </div>
         </Section>
-      )}
 
-      {confluenceGroups.length > 0 && (
-        <Section title="Confluences">
-          <div className="flex flex-col gap-2.5">
-            {confluenceGroups.map(([group, labels]) => (
-              <div key={group} className="flex flex-col gap-1.5">
-                {group !== "" && (
-                  <span className="text-fg-subtle text-xs">{group}</span>
-                )}
+        {hasRail && (
+          <div className="flex flex-col gap-4 lg:col-start-2 lg:row-span-4 lg:row-start-1">
+            {trade.accounts.length > 0 && (
+              <Section title="Accounts">
                 <div className="flex flex-wrap gap-1.5">
-                  {labels.map((label) => (
-                    <Chip key={label}>
-                      <span className="cap text-fg">{label}</span>
+                  {trade.accounts.map((account) => (
+                    <Chip key={account.id}>
+                      <span className={chipLabel}>{account.name}</span>
+                      {/* §4.12: the marker travels with the account wherever its
+                    numbers do. */}
+                      {account.isPractice && (
+                        <span className="cap cap-practice rounded-xs px-1 py-0.5">
+                          Practice
+                        </span>
+                      )}
                     </Chip>
                   ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
+              </Section>
+            )}
 
-      {trade.mistakes.length > 0 && (
-        <Section title="Mistakes">
-          <div className="flex flex-wrap gap-1.5">
-            {trade.mistakes.map((mistake) => (
-              <Chip key={mistake.id} tone="neutral">
-                <span className="cap text-fg">{mistake.label}</span>
-              </Chip>
-            ))}
-          </div>
-        </Section>
-      )}
+            {confluenceGroups.length > 0 && (
+              <Section title="Confluences">
+                <div className="flex flex-col gap-2.5">
+                  {confluenceGroups.map(([group, labels]) => (
+                    <div key={group} className="flex flex-col gap-1.5">
+                      {group !== "" && (
+                        <span className="text-fg-subtle text-xs">{group}</span>
+                      )}
+                      <div className="flex flex-wrap gap-1.5">
+                        {labels.map((label) => (
+                          <Chip key={label}>
+                            <span className={chipLabel}>{label}</span>
+                          </Chip>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
 
-      {trade.notes && (
-        <Section title="Notes">
-          <p className="whitespace-pre-wrap text-fg-muted text-sm">
-            {trade.notes}
-          </p>
-        </Section>
-      )}
-
-      {trade.screenshots.length > 0 && (
-        <Section title="Screenshots">
-          <div className="flex flex-wrap gap-2">
-            {trade.screenshots.map((screenshot) => (
-              <button
-                key={screenshot.id}
-                type="button"
-                onClick={() => setLightboxUrl(screenshot.url)}
-                className="h-14 w-14 shrink-0 overflow-hidden rounded-xs border border-white/12 transition-transform duration-150 hover:-translate-y-px"
-              >
-                {/* biome-ignore lint/performance/noImgElement: signed storage URL, not something next/image can optimize */}
-                <img
-                  src={screenshot.url}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              </button>
-            ))}
+            {trade.mistakes.length > 0 && (
+              <Section title="Mistakes">
+                <div className="flex flex-wrap gap-1.5">
+                  {trade.mistakes.map((mistake) => (
+                    <Chip key={mistake.id} tone="neutral">
+                      <span className={chipLabel}>{mistake.label}</span>
+                    </Chip>
+                  ))}
+                </div>
+              </Section>
+            )}
           </div>
-        </Section>
-      )}
+        )}
 
-      {trade.links.length > 0 && (
-        <Section title="Links">
-          <div className="flex flex-wrap items-start gap-2">
-            {trade.links.map((link) => (
-              <LinkCard key={link.id} link={link} />
-            ))}
-          </div>
-        </Section>
-      )}
+        {trade.notes && (
+          <Section title="Notes" className="lg:col-start-1">
+            <p className="whitespace-pre-wrap text-fg-muted text-sm">
+              {trade.notes}
+            </p>
+          </Section>
+        )}
+
+        {trade.screenshots.length > 0 && (
+          <Section title="Screenshots" className="lg:col-start-1">
+            <div className="flex flex-wrap gap-2">
+              {trade.screenshots.map((screenshot) => (
+                <button
+                  key={screenshot.id}
+                  type="button"
+                  onClick={() => setLightboxUrl(screenshot.url)}
+                  className="h-14 w-14 shrink-0 overflow-hidden rounded-xs border border-white/12 transition-transform duration-150 hover:-translate-y-px"
+                >
+                  {/* biome-ignore lint/performance/noImgElement: signed storage URL, not something next/image can optimize */}
+                  <img
+                    src={screenshot.url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {trade.links.length > 0 && (
+          <Section title="Links" className="lg:col-start-1">
+            <div className="flex flex-wrap items-start gap-2">
+              {trade.links.map((link) => (
+                <LinkCard key={link.id} link={link} />
+              ))}
+            </div>
+          </Section>
+        )}
+      </div>
 
       <ScreenshotLightbox
         url={lightboxUrl}

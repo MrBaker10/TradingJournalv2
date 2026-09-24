@@ -955,8 +955,18 @@ Darunter Karten in `card-surface edge`, in dieser Reihenfolge:
 Ein Abschnitt ohne Inhalt erscheint nicht. Abschnittstitel stehen in `cap` +
 `cap-neon`, wie jedes Sektionslabel nach §3.
 
+**Ab `lg` zwei Spalten.** Der Kopf bleibt volle Breite. Darunter links der Trade —
+Execution, Notes, Screenshots, Links —, rechts eine 20rem breite Spalte mit
+Accounts, Confluences und Mistakes. Die rechte Spalte läuft über die Zeilen der
+linken, und der Überhang landet unter der letzten linken Karte, nie zwischen zwei
+Karten. Fehlen alle drei Abschnitte der rechten Spalte, nimmt die linke die volle
+Breite. Unter `lg` eine Spalte in der Reihenfolge der Aufzählung oben. Grund: auf
+Desktop stand ein einzelner Account-Chip in einer 1350px breiten Karte.
+
 Badges tragen die ruhigen Flächen aus 4.14, kein Schein nach außen, Label in
-`cap` mit `--color-fg`. Confluences und Accounts stehen auf der blauen
+13px 500 in `--color-fg` und in der Schreibweise, in der der Nutzer es angelegt hat
+— keine Kapitälchen, weil es Namen sind und §3 Kapitälchen für längere Texte
+ausschließt. Der Practice-Marker aus 4.12 bleibt ein `cap`-Tag. Confluences und Accounts stehen auf der blauen
 (`--gradient-info-soft`, `--shadow-info-soft`), dieselbe wie der
 Bearbeiten-Button. **Mistakes stehen auf der neutralen** (`--gradient-dark-soft`,
 `--shadow-dark-soft`): ein Fehler ist Prozessdatum, aber nichts Verdientes, und
