@@ -2328,3 +2328,50 @@ Accounts, Confluences und Mistakes.
 
 **Offen geblieben.** Der Fall ohne rechte Spalte und der Practice-Marker sind nicht
 im Browser gesehen — lokal gibt es keinen Trade ohne Account und kein Übungskonto.
+
+## 2026-09-24 — Preisband auf der Trade-Detailseite — feature/trade-price-band — 0d5a832
+
+**Gebaut.** Auf der Detailseite ersetzt ein Band die Zeile „Prices", sobald der
+Trade einen Stop-Preis hat: eine R-Achse mit Stop bei −1R, Entry bei 0, Exit beim
+erzielten R, dahinter MAE- und MFE-Spanne, nach dem Exit der Post-exit-Lauf
+gestrichelt. Nur Entry → Exit und der Exit-Marker sind grün oder rot. Ein Missed
+Setup bekommt kein Exit und nichts Grünes.
+
+**Dateien.** `src/domain/price-band.ts` (neu, `buildPriceBand`: Achse, Positionen,
+Ticks, Labelzeilen) mit `src/domain/__tests__/price-band.test.ts` (19 Tests);
+`src/components/journal/price-band.tsx` (neu, SVG, misst seine Breite);
+`src/components/journal/trade-detail.tsx`; `context/Design.md` §4.21 (neu) und
+Verweis in §4.20; `context/coding-standards.md` § Charts.
+
+**Regeln.** R ohne Stop ist undefiniert → kein Band (Test „returns null without a
+stop price"). MFE und MAE zählen über den Betrag wie in S12b (Test „counts MFE and
+MAE by magnitude"). Das would-be R eines Missed Setups wird nie Exit (Test
+„has no exit and nothing realised").
+
+**Entschieden unterwegs.**
+- **Scope-Grenze.** „No live market data, charts or price feeds" aus
+  `project-structure.md` trifft das Band nicht: es zeigt nur Eingaben des Trades,
+  lädt nichts und zeichnet keinen Kursverlauf. Mit Sascha abgestimmt.
+- **Achse in R statt Preis**, Band statt der Prices-Zeile, Missed Setup mit
+  would-be-Spanne — alle drei mit Sascha vor dem Start festgelegt.
+- **Handgebautes SVG statt Recharts.** Kein Hover, kein Tooltip, keine
+  Achseninteraktion. Das `<svg>` hat keine `viewBox`, Positionen stehen als
+  Prozentattribute — Text behält seine Größe, und „No inline styles" hält ohne
+  Ausnahme. `coding-standards.md` § Charts sagt das jetzt.
+- **Labelzeilen nach echter Breite.** Der erste Stand prüfte Kollisionen mit einem
+  festen Abstand in Prozent; bei 484px Bandbreite (unter `lg`) überlappten „Stop"
+  und „Entry". Jetzt bekommt `buildPriceBand` die Labelbreiten in Prozent der
+  gemessenen Breite, rechnet mit Intervallen samt Randausrichtung, und die
+  Komponente misst sich per `ResizeObserver`. Die Glyphenbreiten sind geschätzt,
+  `LABEL_GAP` fängt die Abweichung. Nachgemessen bei 1000 und 1440px Fensterbreite
+  für drei Trades: keine Überlappung, nichts über dem Rand.
+- **R-Arithmetik für Geometrie.** `buildPriceBand` rechnet mit `number` auf R —
+  aber nur Positionen fürs Zeichnen, keine Kennzahl, die angezeigt oder gespeichert
+  wird. Dieselbe Art Float wie `capturedShare` in `execution.ts`.
+
+**Offen geblieben.**
+1. Lokale Testdaten: Stops, MFE, MAE und Post-exit auf 4903 und 7448 per SQL
+   gesetzt, Missed Setup 8843 neu angelegt. Das Speichern eines Stops über das
+   Bearbeiten-Formular ist in diesem Slice nicht erneut durchgeklickt.
+2. Unter der App-Shell gibt es weiter kein mobiles Layout; das Band ist bis
+   ~470px Breite geprüft.
