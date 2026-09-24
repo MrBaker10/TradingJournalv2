@@ -2253,3 +2253,53 @@ geht ins Server-Log.
 JSON, ohne Cookie → Redirect `/login`, Log zeigt `ECONNREFUSED`. Im Browser führen
 beide Buttons zu `/login` und `/register`, keine Konsolenfehler. Der Login selbst ist
 nicht durchgeklickt worden.
+
+## 2026-09-24 — Designrunde Trade-Detailseite — feature/trade-detail-polish — 24fb826
+
+**Anlass.** Die Detailseite `/journal/[id]` aus S14 wirkte zu dunkel: Badges auf
+`--gradient-inset`, Account-Chips auf `--color-well`, Metazeile in
+`--color-fg-subtle`, Betrag in 18px. Keine Stelle der Seite zog den Blick.
+
+**Gebaut.** Der Kopf ist die eine laute Stelle: Instrument als `page-title` (`<h1>`),
+Tags auf `--gradient-dark-soft`, Betrag 26px 700 Mono, weiter nur grün/rot. Execution
+steht als vier Zeilen — Prices, Time (mit „Held"), Excursion, Process — statt als
+Feldraster. Confluences und Accounts tragen die blaue ruhige Fläche aus §4.14, Mistakes
+die neutrale. Abschnittstitel in `cap` + `cap-neon`.
+
+**Dateien.** `src/components/journal/trade-detail.tsx` (Kopf, `ExecutionRow`,
+`Chip` mit `tone`, `Tag`); `src/db/queries/trades.ts` (`holdMinutes` exportiert und in
+`queryTradeRows` selektiert, `JournalTradeRow.holdMinutes`);
+`src/db/queries/analytics.ts` (importiert `holdMinutes` statt ihn selbst zu
+definieren); `src/db/queries/__tests__/trade-detail.test.ts` (ein Test);
+`context/Design.md` §4.20 und §4.14 „Stand".
+
+**Regeln.** Die Haltedauer bleibt Chart-Uhr minus Chart-Uhr, ohne Zone, über
+Mitternacht plus 24 Stunden. Festgenagelt durch „derives the hold time in minutes,
+overnight included" in `trade-detail.test.ts` (31 und 165 Minuten gegen echtes
+Postgres).
+
+**Entschieden unterwegs.**
+- **Kachelraster verworfen.** Ein erster Zwischenstand setzte jedes Execution-Feld in
+  eine eigene Inset-Kachel. Das Design-Review mit dem `frontend-design`-Skill befand:
+  acht gleiche Kacheln in einer Karte trennen, was zusammen gelesen wird (Preise,
+  Zeiten), und liefen bei schmaler Breite über. Ersetzt durch Zeilen.
+- **Mistakes neutral statt cyan.** In der blauen Prozessfläche sah ein Fehler aus wie
+  etwas Verdientes. Mit Sascha abgestimmt.
+- **`holdMinutes` wohnt jetzt in `trades.ts`.** `analytics.ts` importiert schon aus
+  `trades.ts` (`rMultipleSortKey`, `tradePnlCents`); andersherum wäre ein Zyklus
+  entstanden. Das Generic ist dabei auf `sql<string | null>` korrigiert, weil
+  `numeric` als String ankommt. Die Erweiterung der gemeinsamen Query hat Sascha
+  gegenüber „Haltedauer weglassen" gewählt.
+- **Betrag 26px**, nicht 21px wie der Metrikwert aus §3: der Kopf ist hier der
+  Blickfang der Seite, nicht eine Zahl unter fünfzehn.
+
+**Offen geblieben.**
+1. Mistake-Chip, Missed-Kopf und `cap cap-practice` im Account-Chip sind nicht im
+   Browser gesehen — lokal gibt es keine Mistakes, keine Missed Setups und kein
+   Übungskonto.
+2. `divide-white/8` ist eine Farbangabe als Utility, wie das bestehende
+   `border-white/8` in `link-card.tsx` und `account-row.tsx`. Ein Token dafür wäre ein
+   eigener Aufräum-Slice.
+3. Als Nächstes vereinbart: D (Chip-Labels in Normalschreibung) und E (zwei Spalten
+   ab `lg`) im eigenen Branch, danach F (Preisband Stop/Entry/Exit mit MFE/MAE) als
+   eigenes Feature.
