@@ -2375,3 +2375,50 @@ MAE by magnitude"). Das would-be R eines Missed Setups wird nie Exit (Test
    Bearbeiten-Formular ist in diesem Slice nicht erneut durchgeklickt.
 2. Unter der App-Shell gibt es weiter kein mobiles Layout; das Band ist bis
    ~470px Breite geprüft.
+
+## 2026-09-24 — Trade-Formular neu gegliedert — feature/trade-form-layout — b0b0027
+
+**Anlass.** Design-Review von `/journal/new` mit dem `frontend-design`-Skill: fünf
+Karten ohne Namen und ohne erkennbare Gruppierung, ein flacher „Live P&L / R"-Balken
+als einziges lebendiges Element, eine Wand aus rund 60 gleich gewichteten Confluences,
+Mistakes im Setup-Block, das Pflichtfeld Accounts ganz unten ohne Kennzeichnung.
+
+**Gebaut.** Abschnitte Trade · Execution · Setup · Review · Attachments in der
+Reihenfolge der Detailseite; Pflichtmarken; gewählte Chips im Look der Badges der
+Detailseite (Mistakes neutral); eine feste Leiste unten mit Live-P&L als Metrikwert
+und dem Button; das Preisband aus 4.21 live in Execution; Zurück-Link auf
+`/journal/new`. Gilt für Anlegen und Bearbeiten.
+
+**Dateien.** `src/components/trades/trade-form.tsx` (`FormSection`, `RequiredMark`,
+`FormField` mit `required`/`className`, Band-Input, Leiste, Löschen-Karte außerhalb
+des `<form>`); `tag-multi-select.tsx` (`tone`, leisere Gruppennamen);
+`account-multi-select.tsx`; `src/app/(app)/journal/new/page.tsx`; `context/Design.md`
+§4.22 (neu), §4.20, §4.14.
+
+**Entschieden unterwegs.**
+- **`required` + `noValidate` statt `aria-required`.** Biome lehnt `aria-required`
+  an `date`- und `time`-Inputs ab (keine passende Rolle). Das native `required` sagt
+  es assistiver Technik an jedem Feld; `noValidate` hält die Browser-Blasen fern, so
+  bleibt Zod der einzige Validator (§4.5). Nebenwirkung: ein Schrittfehler wie 2,5
+  Kontrakte blockt nicht mehr der Browser, sondern meldet Zod.
+- **Accounts ohne `required`-Attribut.** Es ist eine Button-Gruppe; die Pflicht zeigt
+  die Marke, die Meldung kommt wie bisher aus der Validierung.
+- **Placeholder bleiben verschieden.** Im Review als Inkonsistenz genannt, beim Bauen
+  als Absicht erkannt: „Select…" bei Pflicht-Selects, „—" bei optionalen. §4.22 sagt
+  das jetzt.
+- **Leiste auf deckender `bg-bg`-Fläche statt Blur** (Blur-Budget, §2); die Fläche ist
+  genau so groß wie die Karte, damit kein flacher Streifen über dem Seitenglühen liegt.
+- Pflichtfelder gegen `createTradeSchema` abgeglichen: immer Datum, Instrument,
+  Richtung, Entry-Zeit, Entry-Preis; bei gehandelt zusätzlich Exit-Zeit, Exit-Preis,
+  Kontrakte, mindestens ein Account.
+
+**Geprüft.** Gates grün. Im Browser einen gehandelten Short mit Stop, Account,
+Confluence und Mistake angelegt (Band und Leiste live: +$100.00, +2.50R), auf der
+Detailseite geprüft, über Edit MAE geändert und gespeichert, ein Missed Setup
+angelegt (Band ohne Exit, „Missed setup — no P&L"). Bei 1000px kein horizontaler
+Überlauf, Leiste bündig am unteren Rand. Keine Konsolenmeldung. Beide Testtrades
+danach per SQL entfernt, Stand wieder 50 Trades, 0 mit Stop, 0 Missed; kein Badge
+vergeben.
+
+**Offen geblieben.** Mistake-Labels sind in den Seed-Daten kleingeschrieben — eigene
+Datenpflege. Der Primärbutton bleibt laut (§4.14 offen).
