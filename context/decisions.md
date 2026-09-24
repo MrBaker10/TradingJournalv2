@@ -2129,3 +2129,99 @@ eine eigene Domain, muss sie hier mit.
 hinter Deployment Protection. Für die Freunde-Runde ist `tradingjournal-gamma-three`
 die einzige brauchbare URL — eine eigene Domain ist damit nicht dringend, aber der
 saubere Weg.
+
+---
+
+## 2026-09-24 — S14 Trade-Detailseite und Bearbeiten — feature/trade-detail-edit — 4a3204f
+
+**Gebaut.** Ein Trade lässt sich nachträglich ändern — jedes Feld, nicht nur seine
+Anhänge. `/journal/[id]` zeigt ihn auf einer eigenen Seite, `/journal/[id]/edit`
+bearbeitet ihn im selben Formular wie „New trade", vorbefüllt, inklusive Löschen.
+Dazu zeigt das Journal endlich die Confluences und Mistakes, die seit S4 gespeichert,
+aber nie gelesen wurden, und ein TradingView-Link trägt sein Chart als Vorschau.
+
+**Dateien.** `src/app/(app)/journal/[id]/page.tsx` und `[id]/edit/page.tsx` (neu),
+`src/components/journal/trade-detail.tsx` und `link-card.tsx` (neu),
+`src/components/trades/new-trade-form.tsx` → `trade-form.tsx` mit Create-/Edit-Modus,
+`src/components/journal/trade-row.tsx` (Zeile ist jetzt ein Link),
+`src/db/queries/trades.ts` (`getJournalTradeById`, `insertTradeWithRelations`,
+`replaceTradeWithRelations`, zwei neue jsonb-Subqueries),
+`src/db/queries/accounts.ts` (`listAssignableAccounts`), `src/actions/trades.ts`
+(`updateTrade`, `deleteTrade`), `src/lib/links.ts` (`snapshotImageUrl`).
+
+**Migration.** Keine. Das Datenmodell reichte seit S4, nur gelesen wurde es nie
+vollständig.
+
+**Regeln.** `src/domain/**` unverändert. `validateTradeAccountAssignment` bekommt in
+`updateTrade` einen zweiten Aufrufer und trägt dort dieselbe Regel: ein ausgeführter
+Trade braucht mindestens ein Konto.
+
+**Entschieden unterwegs.**
+
+- **Detailseite statt aufklappender Zeile.** Mit Sascha geklärt. Die Detailzeile aus
+  §4.9 konnte nicht mehr fassen, was hingehört — Confluences nach Gruppe, Mistakes,
+  Notizen in voller Länge, Chart-Vorschauen, der Weg ins Bearbeiten. Zwei Orte für
+  dieselben Felder hätten sich auseinanderentwickelt. §4.9 ist entsprechend
+  umgeschrieben, das Aufklappen ersatzlos gestrichen, das Dashboard zieht über
+  dieselbe Komponente mit.
+- **Confluences als Zähler in der Zeile, als Badges auf der Seite.** Ausgeschrieben
+  stünden bei fünf Confluences zwei Zeilen dort, wo bei anderen eine steht.
+- **Das Link-Vorschaubild ist abgeleitet, nicht abgerufen.** Sascha wollte ein Bild
+  zum Link; `coding-standards.md` verbietet den serverseitigen Abruf einer fremden URL
+  (SSRF), `Design.md` §4.13 verbot das Thumbnail *mit dieser Begründung*. Aus
+  `tradingview.com/x/<id>/` folgt die Bildadresse aber durch eine feste Regel
+  (Verzeichnis = erstes Zeichen der id, kleingeschrieben) — `snapshotImageUrl` ist
+  reine Zeichenkettenarbeit, das Bild holt der Browser. Die Sicherheitsregel bleibt
+  damit unangetastet und wurde **nicht** geändert; §4.13 hat den eng gefassten Zusatz
+  bekommen. Die Ableitung ist am 2026-09-23 gegen den echten Host geprüft: richtig
+  abgeleitet 200 `image/png`, dieselbe id im falschen Verzeichnis 403. Drei
+  Alternativen lagen auf dem Tisch — Host-Allowlist mit Server-Abruf (hätte CLAUDE.md
+  und coding-standards.md aufgemacht, Rest-Risiko DNS-Rebinding) und „nur
+  Screenshots"; die String-Umformung bekommt das Bild ohne die Regel zu kosten.
+- **`updateTrade` schreibt alle Spalten und ersetzt die drei Join-Tabellen.** Ein
+  Teil-Update ließe beim Umschalten auf „Missed setup" Exit, Kontrakte, Ergebnis und
+  Override als Geister hinter einem `taken = false` stehen, und eine abgewählte
+  Confluence verschwände nie. `points` wird mitgerechnet, weil es eine persistierte
+  Spalte ist.
+- **Die Schreiblogik liegt in `src/db/queries/trades.ts`, nicht in der Action.**
+  Vitest löst den `@`-Alias nicht auf, Server Actions sind hier deshalb nicht
+  importierbar — deswegen gibt es im ganzen Projekt keinen Action-Test. Statt die
+  Toolchain dafür zu ändern, ist die SQL dorthin gewandert, wo
+  `coding-standards.md` sie ohnehin verortet; die Action behält Validierung,
+  Ownership und Revalidation. `insertTradeWithRelations` und
+  `replaceTradeWithRelations` nehmen die Transaktion als Parameter, damit ein Test
+  sie gegen echtes Postgres laufen lassen und zurückrollen kann.
+- **`getJournalTradeById` bekommt eine eigene Sichtbarkeit (`"owner"`).** Der
+  Listen-Zweig blendet bei „All accounts" einen Trade aus, der nur auf Übungskonten
+  liegt. Auf seiner eigenen Seite muss er trotzdem aufgehen, sonst bricht
+  „Nothing disappears silently" genau dort, wo alles zu sehen sein soll. Ownership
+  bleibt die einzige Bedingung; ein fremder Trade liefert `null`, nicht einen Fehler,
+  damit „gibt es nicht" und „gehört dir nicht" ununterscheidbar bleiben.
+- **`listAssignableAccounts` statt `listOwnedAccountIds` im Edit-Pfad.** Letztere
+  filtert archivierte Konten weg — beim Anlegen richtig, beim Bearbeiten hätte sie
+  einem alten Trade stumm die Zuweisung abgezogen, und ein Trade ohne Konto ist ein
+  verbotener Zustand. Regel: eine archivierte Zuweisung darf bleiben, nie neu
+  entstehen. Formular und Action lesen dieselbe Query, damit die angebotene und die
+  akzeptierte Menge nicht auseinanderlaufen.
+- **Links bleiben aus `updateTrade` heraus.** Auf einem existierenden Trade sind sie
+  eigene Zeilen, die live angelegt und entfernt werden; sie aus der Payload zu
+  ersetzen hätte gelöscht, was der Nutzer in diesem Formular nie angefasst hat.
+  Screenshots können eine Server Action ohnehin nicht mitnehmen.
+- **Der Stift-Auslöser aus S6 ist verschwunden.** Damit ist der seit S6 offene
+  Widerspruch zu §4.13 („kein ‚Add screenshot' in der Leseansicht") erledigt: die
+  Leseansicht hat keinen mehr, Anhänge werden im Bearbeiten-Formular verwaltet.
+
+**Offen geblieben.**
+
+1. **`CLAUDE.md`, Abschnitt „Traps", ist noch nicht angepasst.** Dort steht „No
+   previews, no metadata scraping, no iframes" — mit der abgeleiteten Vorschau stimmt
+   der erste Halbsatz nicht mehr wörtlich, die Regel dahinter schon. Vorschlag an
+   Sascha, den Satz um „no server-side preview" zu schärfen; nicht selbst entschieden.
+2. Der Klickpfad für einen praxis-only Trade über seine direkte URL ist im Browser
+   nicht gelaufen — in der lokalen Datenbank gibt es kein Übungskonto. Die Regel ist
+   stattdessen als Query-Test gegen echtes Postgres festgenagelt
+   (`trade-detail.test.ts`), zusammen mit dem Gegenstück, dass derselbe Trade in
+   `listJournalTrades` fehlt.
+3. Ein einzelner bestehender Link lässt sich weiterhin nicht bearbeiten, nur
+   hinzufügen und entfernen. Ebenso wenig lassen sich Screenshots oder Links
+   umsortieren.
