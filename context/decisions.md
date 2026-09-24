@@ -2207,21 +2207,21 @@ Trade braucht mindestens ein Konto.
   eigene Zeilen, die live angelegt und entfernt werden; sie aus der Payload zu
   ersetzen hätte gelöscht, was der Nutzer in diesem Formular nie angefasst hat.
   Screenshots können eine Server Action ohnehin nicht mitnehmen.
+- **`CLAUDE.md` unter „Traps" ist geschärft, nicht aufgeweicht.** Der Satz sagt jetzt
+  „no server-side previews" und benennt die eine erlaubte Form samt Begründung:
+  ableiten ist kein Abrufen, und alles, was eine Anfrage vom Server braucht, um
+  herauszufinden, worauf ein Link zeigt, bleibt verboten. Mit Sascha abgestimmt.
 - **Der Stift-Auslöser aus S6 ist verschwunden.** Damit ist der seit S6 offene
   Widerspruch zu §4.13 („kein ‚Add screenshot' in der Leseansicht") erledigt: die
   Leseansicht hat keinen mehr, Anhänge werden im Bearbeiten-Formular verwaltet.
 
 **Offen geblieben.**
 
-1. **`CLAUDE.md`, Abschnitt „Traps", ist noch nicht angepasst.** Dort steht „No
-   previews, no metadata scraping, no iframes" — mit der abgeleiteten Vorschau stimmt
-   der erste Halbsatz nicht mehr wörtlich, die Regel dahinter schon. Vorschlag an
-   Sascha, den Satz um „no server-side preview" zu schärfen; nicht selbst entschieden.
-2. Der Klickpfad für einen praxis-only Trade über seine direkte URL ist im Browser
+1. Der Klickpfad für einen praxis-only Trade über seine direkte URL ist im Browser
    nicht gelaufen — in der lokalen Datenbank gibt es kein Übungskonto. Die Regel ist
    stattdessen als Query-Test gegen echtes Postgres festgenagelt
    (`trade-detail.test.ts`), zusammen mit dem Gegenstück, dass derselbe Trade in
    `listJournalTrades` fehlt.
-3. Ein einzelner bestehender Link lässt sich weiterhin nicht bearbeiten, nur
+2. Ein einzelner bestehender Link lässt sich weiterhin nicht bearbeiten, nur
    hinzufügen und entfernen. Ebenso wenig lassen sich Screenshots oder Links
    umsortieren.

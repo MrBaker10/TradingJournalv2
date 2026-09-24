@@ -109,7 +109,11 @@ These are the mistakes that are easy to make here and expensive to find later.
   leaderboard, no raffle. Every page and action sits behind a session and filters by
   the current user. An unauthenticated route is a bug.
 - **Never fetch a user-supplied URL server-side.** Trade links are stored, validated as
-  https and rendered as anchors. No previews, no metadata scraping, no iframes.
+  https and rendered as anchors. No server-side previews, no metadata scraping, no
+  iframes. A preview image is allowed only when its address is *derived* from the link
+  by a pure string rule and loaded by the browser — `snapshotImageUrl` in
+  `src/lib/links.ts`, `Design.md` §4.13. Deriving is not fetching; anything that needs
+  a request from the server to find out what a link points at stays forbidden.
 - **Domain logic stays pure.** `src/domain/**` has no DB client and no `next/*` imports,
   and every module ships with Vitest coverage in the same commit.
 - **Aggregate in SQL**, not by pulling rows into TypeScript.
