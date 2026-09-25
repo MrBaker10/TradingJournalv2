@@ -136,7 +136,7 @@ describe("buildEquitySeries", () => {
       const [min, max] = series.domainCents;
       expect(min).toBe(0);
       expect(max).toBeGreaterThanOrEqual(40000);
-      expect(series.zeroOffset).toBe(1);
+      expect(series.baselineOffset).toBe(1);
     });
 
     it("spans zero even when the month only ever fell", () => {
@@ -147,7 +147,7 @@ describe("buildEquitySeries", () => {
       const [min, max] = series.domainCents;
       expect(max).toBe(0);
       expect(min).toBeLessThanOrEqual(-40000);
-      expect(series.zeroOffset).toBe(0);
+      expect(series.baselineOffset).toBe(0);
     });
 
     it("puts the zero crossing between the edges when the month crossed", () => {
@@ -155,8 +155,8 @@ describe("buildEquitySeries", () => {
         days(["2026-09-01", 40000], ["2026-09-02", -80000]),
       );
 
-      expect(series.zeroOffset).toBeGreaterThan(0);
-      expect(series.zeroOffset).toBeLessThan(1);
+      expect(series.baselineOffset).toBeGreaterThan(0);
+      expect(series.baselineOffset).toBeLessThan(1);
     });
 
     it("reads the zero crossing straight off the domain", () => {
@@ -165,7 +165,7 @@ describe("buildEquitySeries", () => {
       );
 
       const [min, max] = series.domainCents;
-      expect(series.zeroOffset).toBeCloseTo(max / (max - min), 10);
+      expect(series.baselineOffset).toBeCloseTo(max / (max - min), 10);
     });
 
     it("gives a flat month a real axis instead of [0, 0]", () => {
@@ -176,7 +176,7 @@ describe("buildEquitySeries", () => {
       const [min, max] = series.domainCents;
       expect(min).toBeLessThan(0);
       expect(max).toBeGreaterThan(0);
-      expect(series.zeroOffset).toBe(0.5);
+      expect(series.baselineOffset).toBe(0.5);
     });
 
     it("gives an empty month a real axis too", () => {
@@ -310,5 +310,94 @@ describe("the month marks", () => {
     for (const tick of series.monthTicks) {
       expect(plotted.has(tick)).toBe(true);
     }
+  });
+});
+
+describe("buildEquitySeries — starting balance", () => {
+  const START = 5_000_000; // $50,000
+
+  it("starts the running sum at the balance", () => {
+    const series = buildEquitySeries(
+      days(["2026-09-01", 31000], ["2026-09-02", -30000]),
+      START,
+    );
+
+    expect(series.startCents).toBe(START);
+    expect(series.points.map((point) => point.equityCents)).toEqual([
+      5_031_000, 5_001_000,
+    ]);
+    // A day's own total is not touched by the balance.
+    expect(series.points.map((point) => point.amountCents)).toEqual([
+      31000, -30000,
+    ]);
+  });
+
+  it("keeps the start in the domain instead of zero", () => {
+    const rising = buildEquitySeries(
+      days(["2026-09-01", 31000], ["2026-09-02", 9000]),
+      START,
+    );
+    const [min, max] = rising.domainCents;
+    expect(min).toBe(START);
+    expect(max).toBeGreaterThanOrEqual(START + 40000);
+    // Zero is far below and has no business on this axis.
+    expect(min).toBeGreaterThan(0);
+    expect(rising.baselineOffset).toBe(1);
+  });
+
+  it("puts the starting line at the bottom edge of a curve that only fell", () => {
+    const series = buildEquitySeries(
+      days(["2026-09-01", -31000], ["2026-09-02", -9000]),
+      START,
+    );
+    expect(series.domainCents[1]).toBe(START);
+    expect(series.baselineOffset).toBe(0);
+  });
+
+  it("reads the starting line straight off the domain", () => {
+    const series = buildEquitySeries(
+      days(["2026-09-01", 40000], ["2026-09-02", -80000]),
+      START,
+    );
+    const [min, max] = series.domainCents;
+    expect(series.baselineOffset).toBeCloseTo((max - START) / (max - min), 10);
+    expect(series.baselineOffset).toBeGreaterThan(0);
+    expect(series.baselineOffset).toBeLessThan(1);
+  });
+
+  it("keeps the ticks on round amounts around the start", () => {
+    const series = buildEquitySeries(
+      days(["2026-09-01", 40000], ["2026-09-02", -80000]),
+      START,
+    );
+    const step = series.ticksCents[1] - series.ticksCents[0];
+    expect(series.ticksCents).toContain(START);
+    for (const tick of series.ticksCents) expect(tick % step).toBe(0);
+  });
+
+  it("gives a flat curve at an uneven start a real axis", () => {
+    const series = buildEquitySeries(
+      days(["2026-09-01", 0], ["2026-09-02", 0]),
+      5_012_345,
+    );
+    const [min, max] = series.domainCents;
+    expect(min).toBeLessThan(5_012_345);
+    expect(max).toBeGreaterThan(5_012_345);
+    expect(series.baselineOffset).toBeGreaterThan(0);
+    expect(series.baselineOffset).toBeLessThan(1);
+  });
+
+  it("is exactly today's series without a balance", () => {
+    const input = days(
+      ["2026-09-01", 40000],
+      ["2026-09-02", -80000],
+      ["2026-09-03", 12345],
+    );
+    expect(buildEquitySeries(input, 0)).toEqual(buildEquitySeries(input));
+    expect(buildEquitySeries(input).startCents).toBe(0);
+  });
+
+  it("rejects a balance that is not whole cents", () => {
+    expect(() => buildEquitySeries([], 100.5)).toThrow(RangeError);
   });
 });

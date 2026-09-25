@@ -28,30 +28,48 @@ interface EquityCurveProps {
 // A little air at the top so the curve's peak does not touch the card edge.
 const CHART_MARGIN = { top: 8, right: 8, bottom: 0, left: 8 };
 // Room for "-$8,000.00" at 12px mono. Sized for the label, not guessed: a
-// narrower axis clips the widest tick instead of wrapping it.
-const Y_AXIS_WIDTH = 84;
+// narrower axis clips the widest tick instead of wrapping it. A starting
+// balance makes the labels longer ("$150,000.00"), so the width grows with
+// the widest tick at the advance of a 12px mono digit.
+const Y_AXIS_MIN_WIDTH = 84;
+const MONO_12PX_ADVANCE = 7.3;
+const Y_AXIS_PADDING = 12;
+
+function yAxisWidth(ticksCents: number[]): number {
+  const widest = Math.max(
+    0,
+    ...ticksCents.map((cents) => formatCents(cents).length),
+  );
+  return Math.max(
+    Y_AXIS_MIN_WIDTH,
+    Math.ceil(widest * MONO_12PX_ADVANCE + Y_AXIS_PADDING),
+  );
+}
 
 const FILL_GRADIENT_ID = "equity-curve-fill";
 const STROKE_GRADIENT_ID = "equity-curve-stroke";
 
-// The fill is strongest at the far edge and fades to nothing at the zero line,
-// so the distance from zero is what the eye reads. It stays well below the
+// The fill is strongest at the far edge and fades to nothing at the starting
+// line — zero without a balance — so the distance from the start is what the
+// eye reads. It stays well below the
 // calendar's 30%: this is a large surface, and a loud one would make the month
 // look like a mood rather than a record.
 const FILL_OPACITY_FAR = 0.3;
 const FILL_OPACITY_AT_ZERO = 0.02;
 
 /**
- * The two-tone split, green above zero and red below.
+ * The two-tone split, green above the starting line and red below it. The
+ * starting line is the account's starting balance, or zero without one
+ * (Design.md §4.15).
  *
  * Both gradients are anchored to the **plot area in pixels**
  * (`gradientUnits="userSpaceOnUse"`), not to the bounding box of the filled
  * shape. With the default object bounding box the split would drift with the
- * shape: the area is drawn from the curve to the zero baseline, so its box is
+ * shape: the area is drawn from the curve to the starting line, so its box is
  * not the axis and a ratio measured against the axis would land in the wrong
  * place.
  *
- * `zeroOffset` is the axis arithmetic from src/domain/equity.ts rather than a
+ * `baselineOffset` is the axis arithmetic from src/domain/equity.ts rather than a
  * measurement taken off the rendered chart — the y-domain is set by this
  * component and the scale over it is linear, so the ratio is exact and stays
  * testable without a DOM.
@@ -62,7 +80,7 @@ const FILL_OPACITY_AT_ZERO = 0.02;
  * for `.equity-chart` in globals.css). Opacity stays here, because it is a
  * number rather than a colour and the two ends of each gradient differ.
  */
-function SplitGradients({ zeroOffset }: { zeroOffset: number }) {
+function SplitGradients({ baselineOffset }: { baselineOffset: number }) {
   const plotArea = usePlotArea();
   if (!plotArea) return null;
 
@@ -85,12 +103,12 @@ function SplitGradients({ zeroOffset }: { zeroOffset: number }) {
           stopOpacity={FILL_OPACITY_FAR}
         />
         <stop
-          offset={zeroOffset}
+          offset={baselineOffset}
           className="equity-fill-win"
           stopOpacity={FILL_OPACITY_AT_ZERO}
         />
         <stop
-          offset={zeroOffset}
+          offset={baselineOffset}
           className="equity-fill-loss"
           stopOpacity={FILL_OPACITY_AT_ZERO}
         />
@@ -102,7 +120,7 @@ function SplitGradients({ zeroOffset }: { zeroOffset: number }) {
       </linearGradient>
 
       {/* Two stops on the same offset: everything above it takes the first
-          colour, everything below the second. A month that never crossed zero
+          colour, everything below the second. A curve that never crossed its start
           puts the offset on an edge and comes out in one colour. */}
       <linearGradient
         id={STROKE_GRADIENT_ID}
@@ -112,16 +130,17 @@ function SplitGradients({ zeroOffset }: { zeroOffset: number }) {
         y1={top}
         y2={bottom}
       >
-        <stop offset={zeroOffset} className="equity-line-win" />
-        <stop offset={zeroOffset} className="equity-line-loss" />
+        <stop offset={baselineOffset} className="equity-line-win" />
+        <stop offset={baselineOffset} className="equity-line-loss" />
       </linearGradient>
     </defs>
   );
 }
 
-function toneClass(cents: number): string {
-  if (cents > 0) return "text-success-fg";
-  if (cents < 0) return "text-danger-fg";
+/** Above the start is a gain, below it a loss — against the start, not zero. */
+function toneClass(cents: number, startCents: number): string {
+  if (cents > startCents) return "text-success-fg";
+  if (cents < startCents) return "text-danger-fg";
   return "text-fg-muted";
 }
 
@@ -129,7 +148,11 @@ function toneClass(cents: number): string {
 // already printed on the tile. Here nothing is printed, so a point is only
 // readable through one — kept to a small surface, not a modal, and showing
 // both the day's own result and where the month stood after it.
-function EquityTooltip({ active, payload }: TooltipContentProps) {
+function EquityTooltip({
+  active,
+  payload,
+  startCents,
+}: TooltipContentProps & { startCents: number }) {
   if (!active || !payload?.length) return null;
 
   const point = payload[0].payload as EquityPoint;
@@ -138,9 +161,12 @@ function EquityTooltip({ active, payload }: TooltipContentProps) {
     <div className="card-surface edge flex flex-col gap-1 px-3 py-2">
       <span className="cap">{formatDayLabel(point.date)}</span>
       <span
-        className={`font-mono text-[15px] font-semibold tabular-nums ${toneClass(point.equityCents)}`}
+        className={`font-mono text-[15px] font-semibold tabular-nums ${toneClass(point.equityCents, startCents)}`}
       >
-        {formatCents(point.equityCents, { signed: true })}
+        {/* With a starting balance the figure is where the account stood, not
+            a result, so it carries no plus sign; without one it is the
+            running result as before. */}
+        {formatCents(point.equityCents, { signed: startCents === 0 })}
       </span>
       <span className="text-fg-muted text-xs tabular-nums">
         {formatCents(point.amountCents, { signed: true })} that day
@@ -193,7 +219,7 @@ export function EquityCurve({ series }: EquityCurveProps) {
         <div className="equity-chart h-60">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={series.points} margin={CHART_MARGIN}>
-              <SplitGradients zeroOffset={series.zeroOffset} />
+              <SplitGradients baselineOffset={series.baselineOffset} />
 
               <CartesianGrid vertical={false} strokeDasharray="3 4" />
 
@@ -215,23 +241,25 @@ export function EquityCurve({ series }: EquityCurveProps) {
                 tickFormatter={(cents: number) => formatCents(cents)}
                 tickLine={false}
                 axisLine={false}
-                width={Y_AXIS_WIDTH}
+                width={yAxisWidth(series.ticksCents)}
               />
 
-              <ReferenceLine y={0} />
+              <ReferenceLine y={series.startCents} />
 
               <Tooltip
-                content={EquityTooltip}
+                content={(props) => (
+                  <EquityTooltip {...props} startCents={series.startCents} />
+                )}
                 isAnimationActive={!prefersReducedMotion}
               />
 
-              {/* baseValue={0} fills between the curve and the zero line
+              {/* baseValue fills between the curve and the starting line
                   rather than down to the bottom of the frame, which is what
                   makes a losing stretch read as a hole instead of a column. */}
               <Area
                 type="monotone"
                 dataKey="equityCents"
-                baseValue={0}
+                baseValue={series.startCents}
                 stroke={`url(#${STROKE_GRADIENT_ID})`}
                 strokeWidth={2}
                 fill={`url(#${FILL_GRADIENT_ID})`}

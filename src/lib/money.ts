@@ -9,6 +9,19 @@ export function dollarsToCents(amount: number): number {
   return Math.round(Number((amount * CENTS_PER_DOLLAR).toFixed(4)));
 }
 
+/**
+ * An amount a user typed, as whole cents — or null when it is not one: not
+ * finite, or with a third decimal that `numeric(14, 2)` would round away
+ * without anyone having seen it. Unlike `dollarsToCents`, nothing is rounded.
+ */
+export function exactCents(amount: number): number | null {
+  if (!Number.isFinite(amount)) return null;
+  const scaled = amount * CENTS_PER_DOLLAR;
+  const cents = Math.round(scaled);
+  // A float like 0.07 * 100 lands a hair off 7; a real third decimal does not.
+  return Math.abs(scaled - cents) < 1e-6 ? cents : null;
+}
+
 export function centsToDollars(cents: number): number {
   if (!Number.isInteger(cents)) {
     throw new RangeError(`cents must be an integer, got ${cents}`);

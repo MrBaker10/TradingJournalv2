@@ -8,12 +8,16 @@ import {
   renameAccount,
   setAccountCurrency,
   setDefaultAccount,
+  setStartingBalance,
   togglePractice,
 } from "@/actions/accounts";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { ACCOUNT_CURRENCIES, type AccountCurrency } from "@/domain/fx";
-import { renameAccountSchema } from "@/schemas/accounts";
+import {
+  renameAccountSchema,
+  setStartingBalanceSchema,
+} from "@/schemas/accounts";
 
 const CONFIRM_TIMEOUT_MS = 3000;
 
@@ -24,6 +28,14 @@ export interface AccountRowData {
   isDefaultForNewTrades: boolean;
   currency: AccountCurrency;
   hasTrades: boolean;
+  /** `accounts.starting_balance`, numeric(14, 2) as a string, in `currency`. */
+  startingBalance: string;
+}
+
+/** `50000.00` → `50000`, `1234.50` → `1234.5`: what the field shows. */
+function balanceFieldValue(stored: string): string {
+  const value = Number(stored);
+  return value === 0 ? "" : String(value);
 }
 
 interface AccountRowProps {
@@ -34,6 +46,9 @@ interface AccountRowProps {
 
 export function AccountRow({ account, isFirst, isLast }: AccountRowProps) {
   const [name, setName] = useState(account.name);
+  const [balance, setBalance] = useState(
+    balanceFieldValue(account.startingBalance),
+  );
   const [error, setError] = useState<string | null>(null);
   const [confirmingArchive, setConfirmingArchive] = useState(false);
   const [confirmingDefault, setConfirmingDefault] = useState(false);
@@ -48,6 +63,10 @@ export function AccountRow({ account, isFirst, isLast }: AccountRowProps) {
   useEffect(() => {
     setName(account.name);
   }, [account.name]);
+
+  useEffect(() => {
+    setBalance(balanceFieldValue(account.startingBalance));
+  }, [account.startingBalance]);
 
   useEffect(() => {
     return () => {
@@ -80,6 +99,32 @@ export function AccountRow({ account, isFirst, isLast }: AccountRowProps) {
       if (!result.success) {
         setError(result.error);
         setName(account.name);
+      } else {
+        setError(null);
+      }
+    });
+  }
+
+  // Saved on Enter or when the field loses focus, like the name.
+  function commitBalance() {
+    const current = balanceFieldValue(account.startingBalance);
+    if (balance.trim() === current) return;
+
+    const parsed = setStartingBalanceSchema.safeParse({
+      accountId: account.id,
+      startingBalance: balance.trim() === "" ? 0 : Number(balance),
+    });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0].message);
+      setBalance(current);
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await setStartingBalance(parsed.data);
+      if (!result.success) {
+        setError(result.error);
+        setBalance(current);
       } else {
         setError(null);
       }
@@ -241,6 +286,41 @@ export function AccountRow({ account, isFirst, isLast }: AccountRowProps) {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col">
+            <label
+              htmlFor={`account-balance-${account.id}`}
+              className="text-xs text-fg-muted"
+            >
+              Starting balance
+            </label>
+            <span className="text-xs text-fg-subtle">
+              Where the equity curve starts
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <input
+              id={`account-balance-${account.id}`}
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="0.01"
+              value={balance}
+              onChange={(event) => setBalance(event.target.value)}
+              onBlur={commitBalance}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.currentTarget.blur();
+              }}
+              placeholder="0"
+              disabled={isPending}
+              className="h-9 w-32 rounded-ctl border border-white/12 bg-well px-2 text-right font-mono text-sm text-fg tabular-nums transition-colors duration-200 placeholder:text-fg-placeholder hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60"
+            />
+            <span className="w-8 text-fg-subtle text-xs">
+              {account.currency}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center justify-between">

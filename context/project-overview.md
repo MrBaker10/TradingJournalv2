@@ -688,6 +688,18 @@ by picking a different answer while coding.
   Cron, 03:00 UTC) converts those trades again once their final rate exists. It fetches
   nothing when no trade is provisional. Reasoning: `context/decisions.md`, the
   ftmo-import entry.
+- **The equity curve starts at the starting balance** (2026-09-25, account-balance) —
+  replaces "the accumulator starts at 0". An account has an optional starting balance
+  in its own currency; a selected account starts at its own, "All accounts" at the sum
+  over the real accounts, archived ones included, practice ones never. The starting
+  line takes every role the zero line had: colour change, fill boundary, y-domain. A
+  foreign balance is converted once when set, at that day's ECB rate, and the rate
+  date is stored. Reasoning: `context/decisions.md`, the account-balance entry.
+- **Every conversion to USD goes through `convertToUsd`** (2026-09-25,
+  account-balance) — `src/lib/fx/convert.ts` fetches the missing ECB rates and
+  converts each amount with the rate of its own date; the import and the starting
+  balance use it, and a later caller does too instead of a third copy of the flow.
+
 
 ---
 
@@ -702,19 +714,6 @@ by picking a different answer while coding.
   as its own slice at the end, after the feature slices; the layout itself is still
   open.
 
-- **Starting balance / account size.** The equity curve should start at the account's
-  size, not at 0 — reported by Sascha on 2026-09-25 after the FTMO import. Decided the
-  same day: its own slice `account-balance`, right after `ftmo-import`. Today the start
-  at 0 is deliberate (`src/domain/equity.ts`, Design.md §4.15), and `accounts` has no
-  column for it. To settle at `load`:
-  - Combined view: the sum of the real accounts' starting balances?
-  - Which currency an EUR account's balance is entered in, and how it is converted
-    while `display-currency` does not exist yet.
-  - Does the zero line of §4.15 become a starting line, with the colour change at the
-    starting value?
-  - Required or optional when the account is created, and editable later?
-  - How it relates to the roadmap's "Account ↔ prop firm program link", which also
-    lists a starting balance.
 - **Display in the account currency — its own slice `display-currency`.** Carried over
   from the ftmo-import spec. Decided 2026-09-24:
   - Combined view ("All accounts"): if every real account has the same currency, show
@@ -726,8 +725,9 @@ by picking a different answer while coding.
   - To confirm at `load`: a single selected account shows its own currency, derived
     from the rule above; whether `users.currency_display` then goes away or gets
     another role is open.
-  - Order against `account-balance` is not decided; that slice's question about an EUR
-    account's starting balance depends on this one.
+  - `account-balance` came first (2026-09-25): an EUR account's starting balance is
+    stored in EUR with its converted USD value and rate date, so this slice can show it
+    in EUR without converting back.
 - **CFD or futures — on the account or on the instrument?** Asked on 2026-09-25, not
   decided. Recommendation: a kind on the instrument (`future` / `cfd`), which can drive
   the quantity label (contracts vs lots), decimals in the form and the tile. An account

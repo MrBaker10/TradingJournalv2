@@ -11,6 +11,7 @@ import {
   sql,
 } from "drizzle-orm";
 import type { AccountCurrency } from "../../domain/fx.ts";
+import { formatCentsPlain } from "../../lib/money.ts";
 import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
 import { tradeAccounts } from "../schema/trades.ts";
@@ -85,10 +86,17 @@ export async function updateAccountCurrency(
   accountId: number,
   currency: AccountCurrency,
   executor: AccountWriter = db,
+  balance?: StartingBalanceValues,
 ): Promise<boolean> {
+  // A starting balance keeps its amount and is read in the new currency, so
+  // its USD value is converted again — in the same statement, behind the same
+  // lock (decided 2026-09-25, account-balance).
   const updated = await executor
     .update(accounts)
-    .set({ currency })
+    .set({
+      currency,
+      ...(balance === undefined ? {} : balanceColumns(balance)),
+    })
     .where(
       and(
         eq(accounts.id, accountId),
@@ -96,6 +104,44 @@ export async function updateAccountCurrency(
         sql`not ${hasAssignedTrades()}`,
       ),
     )
+    .returning({ id: accounts.id });
+
+  return updated.length > 0;
+}
+
+/** A starting balance as the actions compute it, in integer cents. */
+export interface StartingBalanceValues {
+  /** In the account's currency. */
+  amountCents: number;
+  /** The same amount in USD, converted once. */
+  usdCents: number;
+  /** The ECB rate's date; null on a USD account. */
+  rateDate: string | null;
+}
+
+function balanceColumns(balance: StartingBalanceValues) {
+  return {
+    startingBalance: formatCentsPlain(balance.amountCents),
+    startingBalanceUsd: formatCentsPlain(balance.usdCents),
+    startingBalanceRateDate: balance.rateDate,
+  };
+}
+
+/**
+ * Sets an owned account's starting balance. Always allowed — it moves where
+ * the equity curve starts and touches no trade. Ownership sits in the
+ * statement. Returns false when nothing matched.
+ */
+export async function updateStartingBalance(
+  userId: number,
+  accountId: number,
+  balance: StartingBalanceValues,
+  executor: AccountWriter = db,
+): Promise<boolean> {
+  const updated = await executor
+    .update(accounts)
+    .set(balanceColumns(balance))
+    .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
     .returning({ id: accounts.id });
 
   return updated.length > 0;

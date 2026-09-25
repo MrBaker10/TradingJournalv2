@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   centsToDollars,
   dollarsToCents,
+  exactCents,
   formatCents,
   formatCentsPlain,
 } from "../money.ts";
@@ -104,5 +105,37 @@ describe("round trip", () => {
   it("recovers the original amount for values that already round to whole cents", () => {
     const amount = 1234.56;
     expect(centsToDollars(dollarsToCents(amount))).toBe(amount);
+  });
+});
+
+describe("exactCents", () => {
+  it("reads whole and two-decimal amounts exactly", () => {
+    expect(exactCents(50000)).toBe(5_000_000);
+    expect(exactCents(100000.5)).toBe(10_000_050);
+    expect(exactCents(0.07)).toBe(7);
+    expect(exactCents(1234.56)).toBe(123_456);
+    expect(exactCents(0)).toBe(0);
+  });
+
+  it("refuses a third decimal instead of rounding it away", () => {
+    expect(exactCents(10.005)).toBeNull();
+    expect(exactCents(0.001)).toBeNull();
+  });
+
+  it("is exact up to the largest starting balance the schema accepts", () => {
+    // MAX_STARTING_BALANCE in src/schemas/accounts.ts is 100,000,000.
+    expect(exactCents(100_000_000)).toBe(10_000_000_000);
+    expect(exactCents(99_999_999.99)).toBe(9_999_999_999);
+    expect(exactCents(12_345_678.91)).toBe(1_234_567_891);
+  });
+
+  it("stops being exact past a billion, which is why the bound sits lower", () => {
+    // A float cannot hold the second decimal here; this is the reason, pinned.
+    expect(exactCents(1_234_567_890.12)).toBeNull();
+  });
+
+  it("refuses what is not a number", () => {
+    expect(exactCents(Number.NaN)).toBeNull();
+    expect(exactCents(Number.POSITIVE_INFINITY)).toBeNull();
   });
 });

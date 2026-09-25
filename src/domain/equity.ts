@@ -13,10 +13,13 @@ import type { IsoDate } from "./streak.ts";
 //   which has already applied the account multiplier, the practice filter and
 //   any date range, so this module multiplies nothing, filters nothing and
 //   knows nothing about how long the stretch is.
-// - The accumulator starts at 0 on the first day it is given, never at a
-//   balance carried in. The dashboard passes the whole history, so the last
-//   point is the all-time result — deliberately **not** the Net P&L in the
-//   metric panel, which is the running month. Two questions, two numbers.
+// - The accumulator starts at the starting balance the caller hands over —
+//   the account's size, or the sum over the real accounts in the combined
+//   view — and at 0 when there is none (decided 2026-09-25, account-balance).
+//   The balance is a constant: it moves where the curve sits, never a day's
+//   own total. The dashboard passes the whole history, so the last point is
+//   the balance plus the all-time result — deliberately **not** the Net P&L in
+//   the metric panel, which is the running month. Two questions, two numbers.
 // - There is no gap filling. One point per day that was journaled, drawn
 //   evenly spaced: an equity curve counts trading days, and stretching
 //   weekends out as flat runs would add length without information.
@@ -34,15 +37,20 @@ export interface EquityPoint {
   date: IsoDate;
   /** That day's own total, in integer cents. */
   amountCents: number;
-  /** The running total from the start of the series, in integer cents. */
+  /** The running total, starting balance included, in integer cents. */
   equityCents: number;
 }
 
 export interface EquitySeries {
   points: EquityPoint[];
-  /** `[min, max]` in cents, rounded outward to whole ticks. Always spans 0. */
+  /** Where the curve starts: the starting balance, 0 without one. */
+  startCents: number;
+  /**
+   * `[min, max]` in cents, rounded outward to whole ticks. Always spans the
+   * starting balance.
+   */
   domainCents: [number, number];
-  /** The tick values, ascending, evenly spaced, always including 0. */
+  /** The tick values, ascending, evenly spaced round amounts. */
   ticksCents: number[];
   /**
    * Where a month mark belongs on the X axis: the first plotted date of each
@@ -54,12 +62,13 @@ export interface EquitySeries {
    */
   monthTicks: IsoDate[];
   /**
-   * Where the zero line sits between the top (0) and the bottom (1) of the
-   * plot area. The two-tone gradient splits exactly there, which is why it is
-   * computed from the domain rather than measured off the rendered chart: it
-   * is arithmetic, and arithmetic can be tested.
+   * Where the starting line sits between the top (0) and the bottom (1) of
+   * the plot area. The two-tone gradient splits exactly there — above the
+   * start is a gain, below it a loss — which is why it is computed from the
+   * domain rather than measured off the rendered chart: it is arithmetic, and
+   * arithmetic can be tested. Without a starting balance it is the zero line.
    */
-  zeroOffset: number;
+  baselineOffset: number;
 }
 
 /** Tick steps that read as round money: $1, $2, $2.50, $5 and their decades. */
@@ -74,7 +83,7 @@ const TARGET_STEPS = 4;
  */
 const MIN_STEP_CENTS = 100;
 
-/** The step a stretch that never left zero gets, so its axis reads $-50 / $0 / $50. */
+/** The step a stretch that never left its start gets: $-50 / $0 / $50 around a start of 0. */
 const FLAT_STEP_CENTS = 5000;
 
 /**
@@ -104,20 +113,26 @@ function niceStepCents(rangeCents: number): number {
  * over unordered rows is not a wrong curve, it is a meaningless one, and an
  * ISO date sorts correctly as a string.
  */
-export function buildEquitySeries(days: EquityDay[]): EquitySeries {
+export function buildEquitySeries(
+  days: EquityDay[],
+  startCents = 0,
+): EquitySeries {
+  if (!Number.isInteger(startCents)) {
+    throw new RangeError(`startCents must be an integer, got ${startCents}`);
+  }
   const ordered = [...days].sort((a, b) => a.date.localeCompare(b.date));
 
-  let equityCents = 0;
+  let equityCents = startCents;
   const points: EquityPoint[] = ordered.map((day) => {
     equityCents += day.amountCents;
     return { date: day.date, amountCents: day.amountCents, equityCents };
   });
 
-  // Zero is always in the domain. A stretch that only ever lost still has to
-  // show the line it fell away from, and the two-tone fill needs the split to
-  // exist even when the curve never reaches it.
-  let min = 0;
-  let max = 0;
+  // The start is always in the domain. A stretch that only ever lost still
+  // has to show the line it fell away from, and the two-tone fill needs the
+  // split to exist even when the curve never reaches it.
+  let min = startCents;
+  let max = startCents;
   for (const point of points) {
     if (point.equityCents < min) min = point.equityCents;
     if (point.equityCents > max) max = point.equityCents;
@@ -131,12 +146,13 @@ export function buildEquitySeries(days: EquityDay[]): EquitySeries {
   let domainMin = Math.floor(min / step) * step;
   let domainMax = Math.ceil(max / step) * step;
 
-  // A stretch whose curve never leaves zero — every day journaled, nothing taken
-  // — rounds to [0, 0]. That is not an axis, and every offset derived from it
-  // divides by zero. It gets one step of room on each side instead.
-  if (domainMin === 0 && domainMax === 0) {
-    domainMin = -step;
-    domainMax = step;
+  // A stretch whose curve never leaves the start — every day journaled,
+  // nothing taken — rounds to a single value. That is not an axis, and every
+  // offset derived from it divides by zero. It gets one step of room on each
+  // side instead.
+  if (domainMin === domainMax) {
+    domainMin -= step;
+    domainMax += step;
   }
 
   const ticksCents: number[] = [];
@@ -146,10 +162,11 @@ export function buildEquitySeries(days: EquityDay[]): EquitySeries {
 
   return {
     points,
+    startCents,
     domainCents: [domainMin, domainMax],
     ticksCents,
     monthTicks: firstDayOfEachMonth(points),
-    zeroOffset: domainMax / (domainMax - domainMin),
+    baselineOffset: (domainMax - startCents) / (domainMax - domainMin),
   };
 }
 

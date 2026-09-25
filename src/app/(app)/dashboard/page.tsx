@@ -14,6 +14,7 @@ import {
   getMonthCountMetrics,
   getMonthMoneyMetrics,
   getMonthScoreDays,
+  getStartingBalanceCents,
   getStreakEntryDays,
 } from "@/db/queries/dashboard";
 import { listRecentTrades } from "@/db/queries/trades";
@@ -97,6 +98,7 @@ export default async function DashboardPage({
     note,
     recentTrades,
     rewards,
+    startingBalanceCents,
   ] = await Promise.all([
     getMonthMoneyMetrics(scope, month),
     getMonthCountMetrics(scope, month),
@@ -108,6 +110,7 @@ export default async function DashboardPage({
     getDailyNote(user.id, today),
     listRecentTrades(user.id, user.selectedAccountId, RECENT_TRADES_LIMIT),
     getDashboardRewardState(user.id),
+    getStartingBalanceCents(scope),
   ]);
 
   const streak = calculateStreak(streakDays, today, user.timezone);
@@ -133,10 +136,11 @@ export default async function DashboardPage({
 
   const todayTotal = monthTotals.days.find((day) => day.date === today);
 
-  // The curve runs from the first trade to today, so its last point is the
+  // The curve runs from the first trade to today and starts at the starting
+  // balance of the scope's accounts, so its last point is the balance plus the
   // all-time result and **not** the Net P&L in the panel above it — that one
   // is the running month. Two different questions, deliberately two numbers.
-  const equity = buildEquitySeries(allTotals.days);
+  const equity = buildEquitySeries(allTotals.days, startingBalanceCents);
 
   // The calendar's month is a slice of the series the curve already has, not
   // a third query: picking the days of one month out of an ordered array is

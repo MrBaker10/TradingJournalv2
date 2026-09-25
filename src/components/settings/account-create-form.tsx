@@ -20,6 +20,7 @@ export function AccountCreateForm({ onCreated }: AccountCreateFormProps) {
   const [name, setName] = useState("");
   const [isPractice, setIsPractice] = useState(false);
   const [currency, setCurrency] = useState<AccountCurrency>("USD");
+  const [startingBalance, setStartingBalance] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<"idle" | "success">("idle");
   const [isPending, startTransition] = useTransition();
@@ -34,6 +35,8 @@ export function AccountCreateForm({ onCreated }: AccountCreateFormProps) {
       name,
       isPractice,
       currency,
+      startingBalance:
+        startingBalance.trim() === "" ? undefined : Number(startingBalance),
     });
     if (!parsed.success) {
       setError(parsed.error.issues[0].message);
@@ -52,6 +55,7 @@ export function AccountCreateForm({ onCreated }: AccountCreateFormProps) {
         setName("");
         setIsPractice(false);
         setCurrency("USD");
+        setStartingBalance("");
         setError(null);
         onCreated?.();
       }, SUCCESS_HOLD_MS);
@@ -171,6 +175,39 @@ export function AccountCreateForm({ onCreated }: AccountCreateFormProps) {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          <label
+            htmlFor="new-account-starting-balance"
+            className="text-sm text-fg"
+          >
+            Starting balance
+          </label>
+          <span className="text-xs text-fg-subtle">
+            The account size. Your equity curve starts here. Optional, and you
+            can change it later.
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <input
+            id="new-account-starting-balance"
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="0.01"
+            value={startingBalance}
+            onChange={(event) => {
+              setStartingBalance(event.target.value);
+              if (error) setError(null);
+            }}
+            placeholder="0"
+            disabled={loading || success}
+            className="h-9 w-32 rounded-ctl border border-white/12 bg-well px-2 text-right font-mono text-sm text-fg tabular-nums transition-colors duration-200 placeholder:text-fg-placeholder hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60"
+          />
+          <span className="w-8 text-fg-subtle text-xs">{currency}</span>
+        </div>
       </div>
     </form>
   );

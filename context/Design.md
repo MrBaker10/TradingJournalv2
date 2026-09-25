@@ -606,6 +606,14 @@ in einer `card-surface edge`-Karte über die volle Breite, zwischen Metrik-Tafel
 und Kalenderraster (4.8). Kopf wie beim Kalender: `cap cap-neon` links, rechts in
 `--color-fg-subtle` der Zeitraum statt eines Monatsnamens — „13 Aug 2026 — today".
 
+**Die Kurve beginnt beim Startguthaben** (entschieden 2026-09-25, account-balance): bei
+einem einzeln gewählten Konto bei dessen Guthaben, bei „All accounts" bei der Summe der
+echten Konten. Ohne Guthaben ist der Start 0 und alles unten Gesagte gilt wörtlich. Mit
+Guthaben übernimmt die **Startlinie** jede Rolle, die unten die Nulllinie hat: Farbwechsel,
+Grenze der Fläche, hellere Linie, fester Teil des Y-Bereichs. Über dem Start ist grün,
+darunter rot — gemessen am eigenen Startkapital, nicht an der absoluten Null, die bei
+einem Konto mit 50.000 $ nie auf der Achse liegt.
+
 **Der letzte Punkt ist bewusst nicht die Zahl der Tafel darüber.** Die Tafel zeigt den
 laufenden Monat, die Kurve alles. Das sind zwei Fragen, und zwei verschiedene Zahlen
 sind hier die richtige Antwort — nicht ein Widerspruch.
@@ -645,7 +653,8 @@ sitzt auf einer kleinen Kachel, hier wäre er eine Feier auf einer großen Fläc
   fehlt die Linie, von der sie sich entfernt hat.
 - **Hover**: senkrechte Cursorlinie in `--color-chart-zero`, ein Punkt auf der
   Kurve (Loch in `--color-bg`, Rand in derselben Farbe) und eine kleine
-  `card-surface edge`-Fläche mit Datum, Stand und Tagesergebnis. Kein Modal, kein
+  `card-surface edge`-Fläche mit Datum, Stand und Tagesergebnis. Mit Startguthaben
+  ist der Stand der Kontostand ohne Vorzeichen, gefärbt nach über oder unter dem Start. Kein Modal, kein
   Klickziel: der Weg zu den Trades eines Tages ist die Kalenderkachel.
 
 **Noch nichts eingetragen.** Kein leeres Achsenkreuz, sondern derselbe ruhige Satz wie

@@ -3,8 +3,10 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   boolean,
   check,
+  date,
   index,
   integer,
+  numeric,
   pgTable,
   text,
   timestamp,
@@ -38,6 +40,21 @@ export const accounts = pgTable(
     currency: text("currency", { enum: ACCOUNT_CURRENCIES })
       .notNull()
       .default("USD"),
+    // The account's size, where its equity curve starts (decided 2026-09-25,
+    // account-balance). Entered in the account's currency; `starting_balance_usd`
+    // is the same amount converted once, when it was set, with the ECB rate of
+    // that day — `starting_balance_rate_date`, null on a USD account. The rate
+    // stays fixed: display-currency can convert back exactly. 0 = none.
+    startingBalance: numeric("starting_balance", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+    startingBalanceUsd: numeric("starting_balance_usd", {
+      precision: 14,
+      scale: 2,
+    })
+      .notNull()
+      .default("0"),
+    startingBalanceRateDate: date("starting_balance_rate_date"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

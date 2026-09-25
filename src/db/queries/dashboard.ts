@@ -3,6 +3,7 @@ import type { ScoreDay, ScoreEntry } from "../../domain/consistency.ts";
 import type { IsoDate } from "../../domain/streak.ts";
 import { monthRangeOf } from "../../lib/time.ts";
 import { db } from "../index.ts";
+import { accounts } from "../schema/accounts.ts";
 import { dailyNotes } from "../schema/daily-notes.ts";
 import { instruments } from "../schema/instruments.ts";
 import {
@@ -483,4 +484,37 @@ export async function setStreakMilestoneSeen(
     .update(users)
     .set({ streakMilestoneSeen: milestone })
     .where(eq(users.id, userId));
+}
+
+/**
+ * Where the equity curve starts, in integer USD cents: the starting balance
+ * of the scope's accounts (decided 2026-09-25, account-balance).
+ *
+ * **Money aggregate over accounts, not trades.** A selected account — the
+ * only path allowed to read a practice account — gives its own balance.
+ * "All accounts" sums every real account, archived ones included: those are
+ * the accounts whose trades `getDayTotals` counts into the same curve, and a
+ * copy-traded trade counts once per real account for the same reason its
+ * account's balance does. Practice accounts never add to it.
+ *
+ * `starting_balance_usd` was converted when the balance was set, so the sum
+ * is plain `numeric` arithmetic in SQL, cast to whole cents at the end.
+ */
+export async function getStartingBalanceCents(
+  scope: DashboardScope,
+  executor: Pick<typeof db, "select"> = db,
+): Promise<number> {
+  const accountCondition =
+    scope.selectedAccountId === null
+      ? eq(accounts.isPractice, false)
+      : eq(accounts.id, scope.selectedAccountId);
+
+  const [row] = await executor
+    .select({
+      cents: sql<string>`coalesce(sum(${accounts.startingBalanceUsd}), 0) * 100`,
+    })
+    .from(accounts)
+    .where(and(eq(accounts.userId, scope.userId), accountCondition));
+
+  return Math.round(toNumber(row?.cents));
 }
