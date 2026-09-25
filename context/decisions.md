@@ -2491,3 +2491,114 @@ Neon steht aus.
   bevor die ECB den Tageskurs veröffentlicht hat — `rateFor` gibt dann den Vortageskurs.
 - Solange ein letzter angefragter Tag auf einem Wochenende nach dem letzten
   gespeicherten Kurs liegt, fragt jeder Aufruf erneut an; harmlos, eine Anfrage.
+
+## 2026-09-25 — FTMO-Import mit Bruchteil-Lots und vorläufigem FX-Kurs — feature/ftmo-import — b6f1183
+
+**Gebaut.** `/journal/import` erkennt neben dem Tradovate-Fill-Export die FTMO-Kontohistorie
+(MetaTrader-CSV) und legt deren CFD-Trades mit Bruchteil-Lots, ursprünglichem Stop und der
+P&L aus der Datei an — auf einem EUR-Konto mit dem ECB-Kurs des `trade_date` nach USD
+umgerechnet. Fehlt der Tageskurs noch (vor ca. 16 Uhr MEZ), wird mit dem letzten Kurs
+importiert, als vorläufig markiert und nachts von `job:fx` korrigiert. Vorschau zeigt
+Datei-P&L (Kontowährung), P&L aus den Preisen (USD) und den gespeicherten USD-Wert; die
+Detailseite zeigt einen neutralen Hinweis, solange der Kurs vorläufig ist. Das
+Instrument-Tile der Trade-Zeile kürzt CFD-Symbole.
+
+**Dateien.**
+- Domain: `src/domain/pnl.ts` (Menge skaliert in BigInt, `roundDiv`),
+  `src/domain/fx.ts` (`applicableRate`, `finalRateFor`, `isProvisional`,
+  `convertForTrade`, `correctionFor`), `src/domain/trades.ts`
+  (`importMarksAfterEdit`), `src/domain/import/detect.ts` (Formatliste `fills` + `ftmo`),
+  `src/domain/import/ftmo.ts` (neu, `readFtmoRows`), `src/domain/import/normalize.ts`
+  (`fromWallClock`, Stop auf den Tick), `src/domain/import/types.ts`
+  (`filePnlCents`, `stopPrice`, `stopNotice`, `ImportShape` + `"ftmo"`),
+  `src/domain/import/fills.ts` — jeweils mit Tests, neu `ftmo.test.ts`.
+- Schema/DB: `src/db/schema/trades.ts`, `src/db/seed-instruments.ts` (US100.cash,
+  US30.cash, XAUUSD), `src/db/queries/import.ts` (Insert mit Markern, `TOUCHED`),
+  `src/db/queries/fx.ts` (`listConvertedTrades`, `applyFxCorrections`,
+  `isTradeFxProvisional`), `src/db/queries/accounts.ts` (`findImportAccount`),
+  `src/db/queries/trades.ts` (`fxRateDate`, numerische Menge), `src/db/queries/export.ts`.
+- Job: `src/lib/fx/job.ts` (`runFxJob`), `src/db/job-fx.ts` (`pnpm job:fx`),
+  `src/app/api/cron/fx/route.ts`, `vercel.json` (Cron 03:00 UTC), `src/lib/env.ts`
+  (`CRON_SECRET`), `src/proxy.ts` (`/api/cron/` ohne Session).
+- Server/UI: `src/actions/import.ts` (`convertRows`, `computePnl`),
+  `src/actions/trades.ts`, `src/schemas/import.ts`, `src/schemas/trades.ts`
+  (`quantityField`), `src/components/import/file-step.tsx`, `preview-step.tsx`,
+  `src/components/journal/trade-detail.tsx`, `trade-row.tsx`,
+  `src/components/trades/trade-form.tsx`, `src/app/(app)/journal/[id]/page.tsx`.
+- Lib: `src/lib/csv/decode.ts` (neu, `decodeByHeader`), `src/lib/csv/trade-export.ts`
+  (Menge ohne Füllnullen), `src/lib/journal/tile-label.ts` (neu) — mit Tests.
+- Doku: `CLAUDE.md`, `context/coding-standards.md`, `context/Design.md` §4.9,
+  `context/project-overview.md` (Open Questions).
+
+**Migration.** `0015_amazing_grey_gargoyle.sql`: `trades.contracts` integer →
+`numeric(12,4)` (Werte bleiben), neu `pnl_source numeric(14,2)`, `fx_rate_date date`.
+`0016_careful_fixer.sql`: `stop_imported boolean not null default false`. Beide per
+`db:generate`/`db:migrate`, lokal angewendet, Neon steht aus.
+
+**Regeln.**
+- Menge mit Nachkommastellen geht wie ein Preis skaliert in die BigInt-Rechnung;
+  gerundet wird halb Richtung +∞ wie `Math.round` und wie `floor(x*100+0.5)` in SQL.
+  Tests: `pnl.test.ts` „fractional quantities", Gleichlauf gegen Postgres in
+  `db/queries/__tests__/trades.test.ts` („agrees on …" mit Bruchteil-Lots und halben Cents).
+- Vorläufig ist ein Kurs, solange `fx_rate_date` nicht der Kurs ist, den `finalRateFor`
+  für `trade_date` festlegt; endgültig ist er, sobald ein Kurs an oder nach dem
+  `trade_date` gespeichert ist. Samstag mit Freitagskurs ist nach Montag erledigt.
+  Tests: `fx.test.ts` „finalRateFor", „isProvisional", „correctionFor"; Job gegen
+  Postgres in `db/queries/__tests__/fx.test.ts` „job:fx".
+- Handedit gewinnt: nur ein tatsächlich geänderter Wert löscht seinen Marker
+  (`pnl_source`/`fx_rate_date` bzw. `stop_imported`). Test: `trades.test.ts`
+  „importMarksAfterEdit"; Undo-Verhalten gegen Postgres in `import.test.ts`
+  „FTMO rows".
+- FTMO-Zeit ist Berliner Wanduhr und wird genau einmal in `users.timezone` umgerechnet
+  (`fromWallClock`). Tests: `ftmo.test.ts`, `normalize.test.ts` „fromWallClock".
+- SL auf der Verlustseite wird Stop, auf/hinter dem Entry oder leer nicht; Tests in
+  `ftmo.test.ts`.
+
+**Entschieden unterwegs.**
+- **Vorläufiger Kurs:** importieren, markieren, nachts korrigieren; Markierung über das
+  Kursdatum; Handedit gewinnt; Hinweis in Vorschau und Detailseite (Sascha).
+- **Vorläufig gegen gespeicherte Kurse**, nicht `fx_rate_date < trade_date` — sonst
+  bliebe jeder Wochenend- und Feiertagstrade für immer markiert (Sascha).
+- **`pnl_source` speichert die Datei-P&L in Kontowährung**, damit der Job exakt neu
+  rechnet statt aus dem gerundeten USD-Wert zurück.
+- **Import-Marker für Batch-Undo:** `pnl_override` und `stop_price` zählten als
+  Handarbeit, Undo hätte keinen FTMO-Trade entfernt. Override zählt nur ohne
+  `pnl_source`, Stop nur ohne `stop_imported` (Sascha). `pnl_source` wird deshalb bei
+  jedem Import mit Datei-P&L gesetzt, auch auf einem USD-Konto.
+- **Acceptance in USD:** Das Journal zeigt die umgerechneten USD-Werte, die EUR-Beträge
+  stehen in Vorschau und `pnl_source`, bis `display-currency` kommt (Sascha).
+- **Menge ist `numeric(12,4)`** statt `integer`; `coding-standards.md` angepasst.
+- **`/api/cron/*` ohne Session**, geschützt über `CRON_SECRET` (konstante Zeit), liefert
+  nur Zähler; in `CLAUDE.md` als Ausnahme eingetragen (Sascha).
+- **Die Job-Währung kommt aus dem Konto des Import-Batches**, nicht aus späteren
+  Zuordnungen — es ist die Währung, in der die Datei war.
+- **Kein ECB-Kurs erreichbar:** Der Import bricht mit eigener Meldung ab und schreibt
+  nichts; gibt es für ein Datum gar keinen Kurs, nennt der Fehler Datum und Zeile.
+- **Schon die Vorschau holt fehlende Kurse**, damit sie den gespeicherten Wert und
+  „provisional" zeigen kann; der Commit rechnet trotzdem neu.
+- **Encoding nach Kopfzeile:** `ftmo.csv` ist Mac Roman, nicht Windows-1252 wie in der
+  Spec angenommen; UTF-8, Windows-1252 und Mac Roman werden probiert, gewinnt die erste
+  Variante mit bekannter Kopfzeile (Sascha).
+- **Beispieldatei hat 30 Trades**, nicht 29; Acceptance angepasst (Sascha).
+- **Leeres SL** meldet „no SL in the file — not imported" statt „SL at or past entry".
+- **Tile-Kürzel:** Teil vor dem ersten Punkt, ab fünf Zeichen 9px — unter der kleinsten
+  Stufe der Schrifttabelle (10.5px), in Design.md §4.9 als Ausnahme festgehalten (Sascha).
+- **Spalte „From prices"** erscheint auch bei Tradovate-Zeilen der Vorschau.
+- **Kontotyp CFD/Futures nicht gebaut.** Empfehlung: Art am Instrument; als offene
+  Frage in `project-overview.md`.
+- **Startguthaben** für die Equity-Kurve wird eigener Slice `account-balance` nach
+  diesem (Sascha); Fragen in `project-overview.md`.
+
+**Offen geblieben.**
+- Migration `0015` + `0016` auf Neon `preview` und Production; `CRON_SECRET` in Vercel
+  setzen — beides nur nach Rückfrage.
+- `listConvertedTrades` wächst ohne Grenze: Wochenend- und Feiertagstrades behalten
+  `fx_rate_date < trade_date` für immer und werden jede Nacht gelesen (ohne Abruf).
+  Bei einem Nutzer unkritisch.
+- Doppelte Rundung: `toMinorUnits` in `ftmo.ts` entspricht der Rundung in
+  `toUsdCents`; bei Gelegenheit zusammenlegen.
+- Die Vorschau ist mit „From prices" breiter geworden; gehört zum Mobile-Slice.
+- „provisional" im Browser nicht gesehen — mit der Beispieldatei nicht auslösbar, nur
+  durch Tests belegt.
+- Die Änderung an der Review-Checkliste (`.claude/skills/feature-review/SKILL.md`) liegt
+  in einem gitignorten Ordner und wird nicht mitcommittet.
