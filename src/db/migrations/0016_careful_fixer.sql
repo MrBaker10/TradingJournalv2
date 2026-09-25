@@ -1,0 +1,1 @@
+ALTER TABLE "trades" ADD COLUMN "stop_imported" boolean DEFAULT false NOT NULL;

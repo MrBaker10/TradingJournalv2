@@ -66,7 +66,9 @@ As of P0.4: `db:generate`, `db:migrate` and `db:seed` are real. `db:seed` create
 the one seeded user — no default account yet, since the `accounts` table doesn't exist
 until the Accounts slice. `test:e2e`, `db:seed:propfirms` and `job:*` still don't exist;
 they land with the slice that creates their target (Playwright, the prop-firm seeder,
-the cron handlers respectively).
+the cron handlers respectively). As of ftmo-import, `job:fx` is real: it converts
+provisionally imported FX amounts again once the ECB rate is published — the same
+handler `/api/cron/fx` runs nightly. `job:econ` and `job:month-close` still don't exist.
 
 **Neon (P2.2).** Production runs on Neon `tradingjournal` (aws-eu-central-1, PG 18),
 Vercel functions in `fra1`. Previews use the Neon branch `preview`. The Neon URLs live
@@ -103,13 +105,16 @@ These are the mistakes that are easy to make here and expensive to find later.
   `time without time zone` and carry the clock the trader sits in front of.
   `users.timezone` says which clock that is; it is never applied to the stored value.
   Only econ events and audit columns are `timestamptz`. An import converts a broker's
-  UTC timestamp exactly once, at the file boundary in `src/domain/import/normalize.ts`,
-  and the value is a chart-clock time from then on.
+  timestamp (UTC for Tradovate, `Europe/Berlin` server time for FTMO) exactly once, at
+  the file boundary in `src/domain/import/normalize.ts`, and the value is a chart-clock
+  time from then on.
 - **Nothing is shared, ever.** No public route, no share token, no read-only view, no
   leaderboard, no raffle. Every page and action sits behind a session and filters by
   the current user. An unauthenticated route is a bug.
   The exceptions are `/login`, `/register` and the front page `/`, which shows only
-  a sign-in and a create-account button and reads no session and no data.
+  a sign-in and a create-account button and reads no session and no data — and
+  `/api/cron/*`, which Vercel Cron calls without a session: it authenticates by
+  `CRON_SECRET` instead and returns no user data (decided 2026-09-25).
 - **Never fetch a user-supplied URL server-side.** Trade links are stored, validated as
   https and rendered as anchors. No server-side previews, no metadata scraping, no
   iframes. A preview image is allowed only when its address is *derived* from the link

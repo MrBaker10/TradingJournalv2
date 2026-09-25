@@ -1,13 +1,17 @@
 import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import {
+  type AccountCurrency,
   datesNeedingFetch,
   type ForeignCurrency,
   type FxRate,
+  isProvisional,
   MAX_RATE_LOOKBACK_DAYS,
   shiftDate,
 } from "../../domain/fx.ts";
+import { formatCentsPlain } from "../../lib/money.ts";
 import { db } from "../index.ts";
 import { fxRates } from "../schema/fx-rates.ts";
+import { toNumber } from "./scope.ts";
 
 /** Anything that can read and upsert: `db`, or a transaction in a test. */
 export type FxExecutor = Pick<typeof db, "select" | "insert">;
@@ -98,4 +102,140 @@ export async function ensureFxRates(
   }
 
   return listStoredRates(executor, currency, windowFrom, windowTo);
+}
+
+/** One imported trade whose P&L was converted with a rate from an earlier day. */
+export interface ConvertedTrade {
+  id: number;
+  tradeDate: string;
+  fxRateDate: string;
+  /** `pnl_source` as stored, e.g. `56.76`, in the account's currency. */
+  pnlSource: string;
+  currency: ForeignCurrency;
+}
+
+/**
+ * Every trade job:fx may have to convert again: an import's P&L on a foreign
+ * account, converted with a rate dated before the trade. Most of these are
+ * already final — a weekend trade keeps Friday's rate for good — and the job
+ * sorts that out against the stored rates (src/domain/fx.ts, correctionFor).
+ *
+ * The currency is the import target's, from the batch, not from whatever the
+ * trade has been assigned to since: it is the currency the file was in.
+ * A hand-edited P&L has no `pnl_source` left and never shows up here.
+ *
+ * Runs across users — it is the nightly job, not a request — and reads only
+ * what the conversion needs.
+ */
+export async function listConvertedTrades(
+  executor: Pick<typeof db, "execute"> = db,
+): Promise<ConvertedTrade[]> {
+  const rows = await executor.execute<{
+    id: number;
+    trade_date: string;
+    fx_rate_date: string;
+    pnl_source: string;
+    currency: Exclude<AccountCurrency, "USD">;
+  }>(sql`
+    select t.id, t.trade_date, t.fx_rate_date, t.pnl_source, a.currency
+    from trades t
+    join import_batches b on b.id = t.import_batch_id
+    join accounts a on a.id = b.account_id
+    where t.fx_rate_date is not null
+      and t.pnl_source is not null
+      and t.fx_rate_date < t.trade_date
+      and a.currency <> 'USD'
+    order by t.id
+  `);
+
+  return [...rows].map((row) => ({
+    id: toNumber(row.id),
+    tradeDate: row.trade_date,
+    fxRateDate: row.fx_rate_date,
+    pnlSource: row.pnl_source,
+    currency: row.currency,
+  }));
+}
+
+/** A provisional amount replaced by its final one. */
+export interface FxCorrection {
+  tradeId: number;
+  /** The rate date the trade had when it was read — the guard below. */
+  fromRateDate: string;
+  toRateDate: string;
+  usdCents: number;
+}
+
+/**
+ * Writes every correction in one statement.
+ *
+ * The guard is in the `where`: a trade whose rate date changed since it was
+ * read, or whose P&L was edited by hand in between (`pnl_source` cleared), is
+ * left alone. Returns how many trades were written.
+ */
+export async function applyFxCorrections(
+  corrections: FxCorrection[],
+  executor: Pick<typeof db, "execute"> = db,
+): Promise<number> {
+  if (corrections.length === 0) return 0;
+
+  // Casts on every tuple, as in updateImportedTrades: a list's types would
+  // otherwise be inferred from its first row alone.
+  const tuples = sql.join(
+    corrections.map(
+      (correction) =>
+        sql`(${correction.tradeId}::integer, ${correction.fromRateDate}::date, ${correction.toRateDate}::date, ${formatCentsPlain(correction.usdCents)}::numeric(14,2))`,
+    ),
+    sql`, `,
+  );
+
+  const rows = await executor.execute<{ id: number }>(sql`
+    update trades t
+    set pnl_override = v.pnl_override,
+        fx_rate_date = v.to_date,
+        updated_at = now()
+    from (values ${tuples}) as v(id, from_date, to_date, pnl_override)
+    where t.id = v.id
+      and t.fx_rate_date = v.from_date
+      and t.pnl_source is not null
+    returning t.id
+  `);
+
+  return [...rows].length;
+}
+
+/**
+ * Whether one trade's converted P&L is still on a provisional rate — the
+ * hint on the detail page. False for a trade that was never converted.
+ * Ownership is in the `where`, like every read behind a session.
+ */
+export async function isTradeFxProvisional(
+  userId: number,
+  tradeId: number,
+): Promise<boolean> {
+  const rows = await db.execute<{
+    trade_date: string;
+    fx_rate_date: string;
+    currency: Exclude<AccountCurrency, "USD">;
+  }>(sql`
+    select t.trade_date, t.fx_rate_date, a.currency
+    from trades t
+    join import_batches b on b.id = t.import_batch_id
+    join accounts a on a.id = b.account_id
+    where t.id = ${tradeId}
+      and t.user_id = ${userId}
+      and t.fx_rate_date is not null
+      and t.pnl_source is not null
+      and a.currency <> 'USD'
+  `);
+  const [row] = [...rows];
+  if (row === undefined) return false;
+
+  const rates = await listStoredRates(
+    db,
+    row.currency,
+    shiftDate(row.trade_date, -MAX_RATE_LOOKBACK_DAYS),
+    shiftDate(row.trade_date, MAX_RATE_LOOKBACK_DAYS),
+  );
+  return isProvisional(row.fx_rate_date, row.trade_date, rates);
 }

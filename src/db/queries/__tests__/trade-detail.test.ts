@@ -129,7 +129,7 @@ function takenTradeColumns(fixture: Fixture): TradeWriteColumns {
     tradeDate: "2026-03-02",
     instrumentId: fixture.instrumentId,
     taken: true,
-    contracts: 2,
+    contracts: "2",
     entryTime: "09:31:00",
     exitTime: "10:02:00",
     direction: "long",

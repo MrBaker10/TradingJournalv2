@@ -45,8 +45,30 @@ const FUTURES = [
   { symbol: "MGC", name: "Micro Gold", pointValue: "10", tickSize: "0.10" },
 ];
 
+// CFDs as FTMO's MetaTrader lists them, symbol spelled as the export writes
+// it. Point values are per lot and checked against the sample file: points ×
+// lots × point value is the USD amount before conversion (current-feature.md).
+// A CFD is its own instrument — `US100.cash` is not `NQ`.
+const CFDS = [
+  {
+    symbol: "US100.cash",
+    name: "Nasdaq 100 CFD",
+    pointValue: "1",
+    tickSize: "0.01",
+  },
+  {
+    symbol: "US30.cash",
+    name: "Dow Jones 30 CFD",
+    pointValue: "1",
+    tickSize: "0.01",
+  },
+  { symbol: "XAUUSD", name: "Gold CFD", pointValue: "100", tickSize: "0.01" },
+];
+
+const INSTRUMENTS = [...FUTURES, ...CFDS];
+
 async function seed() {
-  for (const instrument of FUTURES) {
+  for (const instrument of INSTRUMENTS) {
     await db
       .insert(instruments)
       .values(instrument)
@@ -60,7 +82,7 @@ async function seed() {
       });
   }
 
-  console.log(`Seeded ${FUTURES.length} instruments.`);
+  console.log(`Seeded ${INSTRUMENTS.length} instruments.`);
   process.exit(0);
 }
 

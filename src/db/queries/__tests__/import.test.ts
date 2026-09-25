@@ -123,6 +123,8 @@ function importedTrade(
     points: 50,
     result: "Win",
     session: "NY-AM",
+    stopPrice: null,
+    pnl: null,
     brokerTradeKey: null,
     importBatchId: batchId,
     ...overrides,
@@ -439,7 +441,7 @@ describe("updateImportedTrades", () => {
         .from(trades)
         .where(eq(trades.id, id));
 
-      expect(row.contracts).toBe(2);
+      expect(row.contracts).toBe("2.0000");
     });
   });
 
@@ -538,13 +540,16 @@ describe("updateImportedTrades", () => {
       // The closing row keeps its contracts, the resized one keeps its exit:
       // a field outside an update's own set is never touched by it.
       expect(rows[0]).toMatchObject({
-        contracts: 2,
+        contracts: "2.0000",
         exitPrice: "20050.0000",
         result: "Win",
       });
       // 20050 is the fixture's exit; the resize never named exitPrice, so it
       // still stands.
-      expect(rows[1]).toMatchObject({ contracts: 7, exitPrice: "20050.0000" });
+      expect(rows[1]).toMatchObject({
+        contracts: "7.0000",
+        exitPrice: "20050.0000",
+      });
     });
   });
 
@@ -774,7 +779,7 @@ describe("removeUntouchedTrades", () => {
           tradeDate: "2026-08-20",
           instrumentId: fixture.instrumentId,
           taken: true,
-          contracts: 1,
+          contracts: "1",
           entryTime: "10:00",
           direction: "long",
           entryPrice: "20000",
@@ -822,5 +827,132 @@ describe("removeUntouchedTrades", () => {
       expect(removed).toBe(0);
       expect(left).toHaveLength(1);
     });
+  });
+});
+
+describe("insertImportedTrades — FTMO rows", () => {
+  it("stores fractional lots, the file's P&L and its marks", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    let stored: Record<string, unknown> | undefined;
+    await withFixture(async (fixture) => {
+      const batchId = await createImportBatch(fixture.tx, {
+        userId: fixture.userId,
+        accountId: fixture.accountId,
+        filename: "ftmo.csv",
+        rowCount: 1,
+        detectedShape: "ftmo",
+      });
+      const [id] = await insertImportedTrades(
+        fixture.tx,
+        [
+          importedTrade(fixture, batchId, {
+            contracts: 1.88,
+            stopPrice: 19990,
+            pnl: {
+              sourceCents: 5676,
+              usdCents: 6505,
+              fxRateDate: "2026-08-19",
+            },
+          }),
+        ],
+        fixture.accountId,
+      );
+      [stored] = await fixture.tx
+        .select({
+          contracts: trades.contracts,
+          stopPrice: trades.stopPrice,
+          stopImported: trades.stopImported,
+          pnlOverride: trades.pnlOverride,
+          pnlSource: trades.pnlSource,
+          fxRateDate: trades.fxRateDate,
+        })
+        .from(trades)
+        .where(eq(trades.id, id));
+    });
+
+    expect(stored).toEqual({
+      contracts: "1.8800",
+      stopPrice: "19990.0000",
+      stopImported: true,
+      pnlOverride: "65.05",
+      pnlSource: "56.76",
+      fxRateDate: "2026-08-19",
+    });
+  });
+
+  it("lets an undo remove a trade whose stop and P&L came from the file", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    let removed = -1;
+    await withFixture(async (fixture) => {
+      const batchId = await createImportBatch(fixture.tx, {
+        userId: fixture.userId,
+        accountId: fixture.accountId,
+        filename: "ftmo.csv",
+        rowCount: 1,
+        detectedShape: "ftmo",
+      });
+      await insertImportedTrades(
+        fixture.tx,
+        [
+          importedTrade(fixture, batchId, {
+            stopPrice: 19990,
+            pnl: { sourceCents: 5676, usdCents: 5676, fxRateDate: null },
+          }),
+        ],
+        fixture.accountId,
+      );
+      removed = await removeUntouchedTrades(
+        fixture.tx,
+        fixture.userId,
+        batchId,
+      );
+    });
+
+    expect(removed).toBe(1);
+  });
+
+  it("keeps a trade whose stop or P&L the user set by hand", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    let removed = -1;
+    await withFixture(async (fixture) => {
+      const batchId = await createImportBatch(fixture.tx, {
+        userId: fixture.userId,
+        accountId: fixture.accountId,
+        filename: "ftmo.csv",
+        rowCount: 2,
+        detectedShape: "ftmo",
+      });
+      const [stopByHand, pnlByHand] = await insertImportedTrades(
+        fixture.tx,
+        [
+          importedTrade(fixture, batchId, { stopPrice: 19990 }),
+          importedTrade(fixture, batchId, {
+            entryTime: "10:30",
+            pnl: { sourceCents: 5676, usdCents: 5676, fxRateDate: null },
+          }),
+        ],
+        fixture.accountId,
+      );
+      // What the edit action writes after importMarksAfterEdit.
+      await fixture.tx
+        .update(trades)
+        .set({ stopImported: false })
+        .where(eq(trades.id, stopByHand));
+      await fixture.tx
+        .update(trades)
+        .set({ pnlOverride: "60.00", pnlSource: null, fxRateDate: null })
+        .where(eq(trades.id, pnlByHand));
+
+      removed = await removeUntouchedTrades(
+        fixture.tx,
+        fixture.userId,
+        batchId,
+      );
+    });
+
+    expect(removed).toBe(0);
   });
 });

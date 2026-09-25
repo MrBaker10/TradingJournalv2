@@ -2,6 +2,7 @@ import { ArrowLeft, Pencil } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TradeDetail } from "@/components/journal/trade-detail";
+import { isTradeFxProvisional } from "@/db/queries/fx";
 import { getJournalTradeById } from "@/db/queries/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 
@@ -23,6 +24,10 @@ export default async function TradeDetailPage({
   const trade = await getJournalTradeById(user.id, tradeId);
   if (!trade) notFound();
 
+  const fxProvisional =
+    trade.fxRateDate !== null &&
+    (await isTradeFxProvisional(user.id, trade.id));
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
@@ -42,7 +47,7 @@ export default async function TradeDetailPage({
         </Link>
       </div>
 
-      <TradeDetail trade={trade} />
+      <TradeDetail trade={trade} fxProvisional={fxProvisional} />
     </div>
   );
 }

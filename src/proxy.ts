@@ -11,9 +11,13 @@ import { auth } from "@/lib/auth/auth";
 // a path would otherwise leave it open (Next docs, proxy.md, "Server
 // Functions").
 
-/** The only paths reachable without a session. Everything else is behind one. */
+/**
+ * The only paths reachable without a session. Everything else is behind one.
+ * `/api/cron/` has no session either — Vercel Cron calls it — and checks
+ * `CRON_SECRET` itself; it returns no user data.
+ */
 const PUBLIC_PATHS = ["/", "/login", "/register"];
-const PUBLIC_PREFIXES = ["/api/auth/"];
+const PUBLIC_PREFIXES = ["/api/auth/", "/api/cron/"];
 
 function isPublic(pathname: string): boolean {
   return (

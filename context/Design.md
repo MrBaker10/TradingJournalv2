@@ -450,6 +450,10 @@ Monat verteilt ist. Er ist auf der Kachel, nicht auf der Zahl im Dashboard.
   gebaut**, die Farbe ist der einzige Unterschied — verpasste Setups werden
   nicht kleiner, blasser oder weiter unten dargestellt. Sie sind gleichwertige
   Einträge. Bis zur Designrunde 1 trugen beide den satten Verlauf.
+- Das Tile zeigt das Symbol bis zum ersten Punkt: aus einem CFD wie `US100.cash`
+  wird `US100`, Futures-Wurzeln bleiben unverändert. Ab fünf Zeichen steht das
+  Kürzel in 9px statt 11px, damit es im Tile bleibt; das volle Symbol steht
+  daneben in der Titelzeile (entschieden 2026-09-25, `src/lib/journal/tile-label.ts`).
 - Titelzeile: Instrument plus Tags (`short`, `loss`/`win`/`missed`, `Grade B`),
   darunter Metazeile in `--color-fg-subtle`.
 - Hat der Eintrag Confluences, steht dahinter ein weiterer `cap`-Tag mit ihrer

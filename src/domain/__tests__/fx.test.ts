@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  convertForTrade,
+  correctionFor,
   datesNeedingFetch,
   type FxRate,
+  finalRateFor,
+  isProvisional,
   rateFor,
   shiftDate,
   toUsdCents,
@@ -120,5 +124,117 @@ describe("datesNeedingFetch", () => {
     expect(
       datesNeedingFetch(["2026-09-24", "2026-09-10", "2026-09-24"], stored),
     ).toEqual(["2026-09-10", "2026-09-24"]);
+  });
+});
+
+// Wed 23, Thu 24, Fri 25 Sep 2026; Sat 26 and Sun 27 have no rate.
+const lateWeek: FxRate[] = [
+  { date: "2026-09-23", rateVsUsd: "1.15" },
+  { date: "2026-09-24", rateVsUsd: "1.16" },
+  { date: "2026-09-25", rateVsUsd: "1.17" },
+];
+const monday: FxRate = { date: "2026-09-28", rateVsUsd: "1.18" };
+
+describe("finalRateFor", () => {
+  it("is the day's own rate once it is stored", () => {
+    expect(finalRateFor("2026-09-24", lateWeek)).toEqual(lateWeek[1]);
+  });
+
+  it("is not known while the trade date has no rate on or after it", () => {
+    expect(finalRateFor("2026-09-24", lateWeek.slice(0, 1))).toBeNull();
+  });
+
+  it("settles a weekend day on Friday once Monday is stored", () => {
+    expect(finalRateFor("2026-09-26", lateWeek)).toBeNull();
+    expect(finalRateFor("2026-09-26", [...lateWeek, monday])).toEqual(
+      lateWeek[2],
+    );
+  });
+
+  it("is null when nothing lies within the lookback", () => {
+    expect(finalRateFor("2026-09-24", [monday])).toBeNull();
+  });
+});
+
+describe("isProvisional", () => {
+  it("is pending while the day's rate is not published yet", () => {
+    // Imported Thursday morning with Wednesday's rate.
+    expect(
+      isProvisional("2026-09-23", "2026-09-24", lateWeek.slice(0, 1)),
+    ).toBe(true);
+  });
+
+  it("stays pending after publication until the amount is converted again", () => {
+    expect(isProvisional("2026-09-23", "2026-09-24", lateWeek)).toBe(true);
+  });
+
+  it("is settled once converted with the day's own rate", () => {
+    expect(isProvisional("2026-09-24", "2026-09-24", lateWeek)).toBe(false);
+  });
+
+  it("settles a Saturday trade on Friday's rate once Monday is stored", () => {
+    expect(isProvisional("2026-09-25", "2026-09-26", lateWeek)).toBe(true);
+    expect(
+      isProvisional("2026-09-25", "2026-09-26", [...lateWeek, monday]),
+    ).toBe(false);
+  });
+
+  it("has nothing pending without a rate date", () => {
+    expect(isProvisional(null, "2026-09-24", [])).toBe(false);
+  });
+
+  it("rejects a malformed date", () => {
+    expect(() => isProvisional("24.09.2026", "2026-09-24", lateWeek)).toThrow(
+      RangeError,
+    );
+  });
+});
+
+describe("convertForTrade", () => {
+  it("converts with the day's own rate and is final", () => {
+    expect(convertForTrade(5676, "2026-09-24", lateWeek)).toEqual({
+      usdCents: 6584, // 56.76 * 1.16 = 65.8416
+      rateDate: "2026-09-24",
+      provisional: false,
+    });
+  });
+
+  it("borrows the latest rate before publication and says it is provisional", () => {
+    expect(convertForTrade(5676, "2026-09-24", lateWeek.slice(0, 1))).toEqual({
+      usdCents: 6527, // 56.76 * 1.15 = 65.274
+      rateDate: "2026-09-23",
+      provisional: true,
+    });
+  });
+
+  it("has nothing to convert with when no rate is close enough", () => {
+    expect(convertForTrade(5676, "2026-09-24", [])).toBeNull();
+  });
+});
+
+describe("correctionFor", () => {
+  it("re-converts once the day's rate is published", () => {
+    expect(correctionFor(5676, "2026-09-23", "2026-09-24", lateWeek)).toEqual({
+      usdCents: 6584,
+      rateDate: "2026-09-24",
+    });
+  });
+
+  it("waits while the final rate is not known", () => {
+    expect(
+      correctionFor(5676, "2026-09-23", "2026-09-24", lateWeek.slice(0, 1)),
+    ).toBeNull();
+  });
+
+  it("leaves a trade alone that already has its final rate", () => {
+    expect(
+      correctionFor(5676, "2026-09-25", "2026-09-26", [...lateWeek, monday]),
+    ).toBeNull();
+  });
+
+  it("keeps a loss a loss", () => {
+    expect(
+      correctionFor(-2827, "2026-09-23", "2026-09-24", lateWeek)?.usdCents,
+    ).toBe(-3279); // -28.27 * 1.16 = -32.7932
   });
 });

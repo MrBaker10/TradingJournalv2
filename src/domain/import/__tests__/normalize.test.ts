@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { FillColumns } from "../detect.ts";
 import {
+  fromWallClock,
   type InstrumentRef,
   normalizeFills,
   normalizeTrades,
@@ -49,7 +50,9 @@ function trade(overrides: Partial<RawTrade> = {}): RawTrade {
     exitTime: "18:25:20",
     exitPrice: 30176.75,
     brokerTradeKey: "621235570008",
-    filePnl: null,
+    filePnlCents: null,
+    stopPrice: null,
+    stopNotice: null,
     sourceRow: 2,
     ...overrides,
   };
@@ -240,10 +243,72 @@ describe("normalizeTrades", () => {
 
   it("carries the broker key and the file's P&L through untouched", () => {
     const { rows } = normalizeTrades(
-      [trade({ brokerTradeKey: "a|b", filePnl: 93 })],
+      [trade({ brokerTradeKey: "a|b", filePnlCents: 9300 })],
       INSTRUMENTS,
     );
 
-    expect(rows[0]).toMatchObject({ brokerTradeKey: "a|b", filePnl: 93 });
+    expect(rows[0]).toMatchObject({
+      brokerTradeKey: "a|b",
+      filePnlCents: 9300,
+    });
+  });
+});
+
+describe("fromWallClock", () => {
+  it("leaves a Berlin time alone for a trader in Berlin", () => {
+    expect(fromWallClock("2026-09-24 11:26:48", BERLIN, BERLIN)).toEqual({
+      tradeDate: "2026-09-24",
+      time: "11:26:48",
+    });
+  });
+
+  it("converts across a summer-time changeover by the instant", () => {
+    // Clocks go back at 03:00 CEST on 2026-10-25; 03:30 CET after that is 02:30 UTC.
+    expect(fromWallClock("2026-10-25 03:30:00", BERLIN, "UTC")).toEqual({
+      tradeDate: "2026-10-25",
+      time: "02:30:00",
+    });
+  });
+
+  it("rejects anything that is not a full wall-clock timestamp", () => {
+    expect(fromWallClock("2026-09-24", BERLIN, BERLIN)).toBeNull();
+    expect(fromWallClock("2026-13-01 10:00:00", BERLIN, BERLIN)).toBeNull();
+  });
+});
+
+describe("normalizeTrades — CFD symbols", () => {
+  const CFDS: InstrumentRef[] = [
+    { id: 20, symbol: "US100.cash", tickSize: 0.01 },
+    { id: 21, symbol: "XAUUSD", tickSize: 0.01 },
+  ];
+
+  it("resolves a CFD symbol directly, with no contract month to strip", () => {
+    const { rows, invalid } = normalizeTrades(
+      [
+        trade({ symbol: "US100.CASH", contracts: 1.88, entryPrice: 30191.72 }),
+        trade({ symbol: "XAUUSD", contracts: 0.05, entryPrice: 4334.78 }),
+      ],
+      CFDS,
+    );
+    expect(invalid).toEqual([]);
+    expect(rows.map((row) => [row.instrumentId, row.contracts])).toEqual([
+      [20, 1.88],
+      [21, 0.05],
+    ]);
+  });
+
+  it("snaps the stop to the tick and carries the notice", () => {
+    const { rows } = normalizeTrades(
+      [
+        trade({
+          symbol: "US100.CASH",
+          stopPrice: 30205.964,
+          stopNotice: null,
+          filePnlCents: 5676,
+        }),
+      ],
+      CFDS,
+    );
+    expect(rows[0]).toMatchObject({ stopPrice: 30205.96, filePnlCents: 5676 });
   });
 });

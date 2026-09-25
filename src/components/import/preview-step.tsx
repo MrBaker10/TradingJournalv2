@@ -4,6 +4,7 @@ import type { ImportPreview, RowVerdict } from "@/actions/import";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import type { InstrumentRef } from "@/domain/import/normalize";
+import { formatCentsPlain } from "@/lib/money";
 import type { ParsedFile } from "./import-wizard";
 
 interface PreviewStepProps {
@@ -25,6 +26,11 @@ const VERDICT_CLASS: Record<RowVerdict, string> = {
   update: "text-fg",
   skip: "text-fg-subtle",
 };
+
+/** An amount with its currency, plain: the preview compares, it does not rate. */
+function amount(cents: number | null, currency: string): string {
+  return cents === null ? "—" : `${formatCentsPlain(cents)} ${currency}`;
+}
 
 /**
  * Step three: what an import would do, before it does it.
@@ -87,7 +93,8 @@ export function PreviewStep({
           <span className="flex shrink-0 gap-3">
             <span className="cap w-20 text-right">Date</span>
             <span className="cap w-16 text-right">Entry</span>
-            <span className="cap w-20 text-right">File P&amp;L</span>
+            <span className="cap w-24 text-right">File P&amp;L</span>
+            <span className="cap w-24 text-right">From prices</span>
             <span className="cap w-16 text-right">Verdict</span>
           </span>
         </div>
@@ -111,11 +118,15 @@ export function PreviewStep({
                     <span className="w-16 text-right text-fg-muted">
                       {trade?.entryTime.slice(0, 5) ?? "—"}
                     </span>
-                    {/* Never coloured: the file's own P&L is shown for
-                        comparison and is never written. Design.md §4.17 does
-                        not let an unrealised number look like an earned one. */}
-                    <span className="w-20 text-right text-fg-subtle">
-                      {row.filePnl ?? "—"}
+                    {/* Never coloured: nothing here is written yet, and
+                        Design.md §4.17 does not let an unrealised number look
+                        like an earned one. The file's amount is in the
+                        account's currency, the price-derived one in USD. */}
+                    <span className="w-24 text-right text-fg-subtle">
+                      {amount(row.filePnlCents, preview.currency)}
+                    </span>
+                    <span className="w-24 text-right text-fg-subtle">
+                      {amount(row.computedPnlCents, "USD")}
                     </span>
                     <span
                       className={`w-16 text-right ${VERDICT_CLASS[row.verdict]}`}
@@ -126,6 +137,13 @@ export function PreviewStep({
                 </div>
                 <span className="text-[11.5px] text-fg-subtle">
                   line {row.sourceRow} — {row.reason}
+                  {row.pnlUsdCents !== null && row.fxRateDate !== null
+                    ? ` · stored as ${amount(row.pnlUsdCents, "USD")} at the ECB rate of ${row.fxRateDate}`
+                    : ""}
+                  {row.provisional
+                    ? " · provisional rate, corrected overnight"
+                    : ""}
+                  {trade?.stopNotice ? ` · ${trade.stopNotice}` : ""}
                 </span>
               </li>
             );

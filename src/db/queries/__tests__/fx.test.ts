@@ -1,14 +1,20 @@
 import { and, eq, sql, TransactionRollbackError } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { ForeignCurrency, FxRate } from "../../../domain/fx.ts";
+import { runFxJob } from "../../../lib/fx/job.ts";
 import { db } from "../../index.ts";
 import { accounts } from "../../schema/accounts.ts";
 import { fxRates } from "../../schema/fx-rates.ts";
+import { importBatches } from "../../schema/import-batches.ts";
 import { instruments } from "../../schema/instruments.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
 import { updateAccountCurrency } from "../accounts.ts";
-import { ensureFxRates } from "../fx.ts";
+import {
+  applyFxCorrections,
+  ensureFxRates,
+  listConvertedTrades,
+} from "../fx.ts";
 
 // Two rules that only hold if Postgres says so: the upsert behind
 // ensureFxRates, and the currency lock that lives inside an UPDATE's WHERE.
@@ -214,7 +220,7 @@ describe("updateAccountCurrency", () => {
           tradeDate: "2026-03-02",
           instrumentId: instrument.id,
           taken: true,
-          contracts: 1,
+          contracts: "1",
           entryTime: "09:31:00",
           direction: "long",
           entryPrice: "100.0000",
@@ -264,5 +270,195 @@ describe("updateAccountCurrency", () => {
         );
       }),
     ).rejects.toThrow();
+  });
+});
+
+describe("job:fx", () => {
+  // An EUR account with one import batch. Wednesday 2001-03-14 had a rate
+  // when the trades were imported; Thursday 2001-03-15, the trade date, did
+  // not yet.
+  const published: FxRate[] = [
+    { date: "2001-03-14", rateVsUsd: "0.9100" },
+    { date: "2001-03-15", rateVsUsd: "0.9200" },
+  ];
+
+  async function importFixture(tx: Tx) {
+    const [user] = await tx.select({ id: users.id }).from(users).limit(1);
+    if (!user) throw new Error("No seeded user — run `pnpm db:seed` first");
+    const [account] = await tx
+      .insert(accounts)
+      .values({
+        userId: user.id,
+        name: "FX job target",
+        sortOrder: 950,
+        currency: "EUR",
+      })
+      .returning({ id: accounts.id });
+    const [instrument] = await tx
+      .insert(instruments)
+      .values({
+        symbol: "TEST-FX-JOB",
+        name: "Throwaway test instrument",
+        pointValue: "1",
+        tickSize: "0.01",
+      })
+      .returning({ id: instruments.id });
+    const [batch] = await tx
+      .insert(importBatches)
+      .values({
+        userId: user.id,
+        accountId: account.id,
+        filename: "ftmo.csv",
+        rowCount: 2,
+        detectedShape: "ftmo",
+      })
+      .returning({ id: importBatches.id });
+    await tx
+      .insert(fxRates)
+      .values({ currency: "EUR", rateDate: "2001-03-14", rateVsUsd: "0.9100" });
+
+    const trade = (pnlSource: string | null, pnlOverride: string) => ({
+      userId: user.id,
+      tradeDate: "2001-03-15",
+      instrumentId: instrument.id,
+      taken: true,
+      contracts: "1.88",
+      entryTime: "11:20:09",
+      exitTime: "11:20:48",
+      direction: "long",
+      entryPrice: "100.0000",
+      exitPrice: "101.0000",
+      pnlOverride,
+      pnlSource,
+      fxRateDate: "2001-03-14",
+      importBatchId: batch.id,
+    });
+
+    const [provisional, handEdited] = await tx
+      .insert(trades)
+      .values([
+        // 56.76 EUR at Wednesday's 0.91 = 51.65 USD, provisional.
+        trade("56.76", "51.65"),
+        // The same, but the user has typed their own P&L since.
+        trade(null, "40.00"),
+      ])
+      .returning({ id: trades.id });
+    await tx.insert(tradeAccounts).values([
+      { tradeId: provisional.id, accountId: account.id },
+      { tradeId: handEdited.id, accountId: account.id },
+    ]);
+
+    return { provisional: provisional.id, handEdited: handEdited.id };
+  }
+
+  async function stored(tx: Tx, id: number) {
+    const [row] = await tx
+      .select({
+        pnlOverride: trades.pnlOverride,
+        fxRateDate: trades.fxRateDate,
+        pnlSource: trades.pnlSource,
+      })
+      .from(trades)
+      .where(eq(trades.id, id));
+    return row;
+  }
+
+  it("lists a provisional import, not one whose P&L was edited by hand", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const ids = await importFixture(tx);
+      const listed = await listConvertedTrades(tx);
+      return { ids, listedIds: listed.map((trade) => trade.id), listed };
+    });
+
+    expect(result.listedIds).toContain(result.ids.provisional);
+    expect(result.listedIds).not.toContain(result.ids.handEdited);
+    expect(
+      result.listed.find((trade) => trade.id === result.ids.provisional),
+    ).toMatchObject({
+      tradeDate: "2001-03-15",
+      fxRateDate: "2001-03-14",
+      pnlSource: "56.76",
+      currency: "EUR",
+    });
+  });
+
+  it("converts the provisional trade again once the day's rate exists", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const ids = await importFixture(tx);
+      const { fetcher } = recordingFetcher(published);
+      await runFxJob(fetcher, tx);
+      return {
+        provisional: await stored(tx, ids.provisional),
+        handEdited: await stored(tx, ids.handEdited),
+      };
+    });
+
+    // 56.76 EUR at Thursday's 0.92 = 52.2192 -> 52.22 USD.
+    expect(result.provisional).toEqual({
+      pnlOverride: "52.22",
+      fxRateDate: "2001-03-15",
+      pnlSource: "56.76",
+    });
+    // Hand edit wins: the job never touched it.
+    expect(result.handEdited).toEqual({
+      pnlOverride: "40.00",
+      fxRateDate: "2001-03-14",
+      pnlSource: null,
+    });
+  });
+
+  it("leaves the trade provisional while the day's rate is still missing", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const ids = await importFixture(tx);
+      const { fetcher } = recordingFetcher(published.slice(0, 1));
+      await runFxJob(fetcher, tx);
+      return stored(tx, ids.provisional);
+    });
+
+    expect(result).toEqual({
+      pnlOverride: "51.65",
+      fxRateDate: "2001-03-14",
+      pnlSource: "56.76",
+    });
+  });
+
+  it("skips a correction whose trade changed since it was read", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const ids = await importFixture(tx);
+      const written = await applyFxCorrections(
+        [
+          {
+            tradeId: ids.provisional,
+            fromRateDate: "2001-03-13",
+            toRateDate: "2001-03-15",
+            usdCents: 5222,
+          },
+          {
+            tradeId: ids.handEdited,
+            fromRateDate: "2001-03-14",
+            toRateDate: "2001-03-15",
+            usdCents: 5222,
+          },
+        ],
+        tx,
+      );
+      return {
+        written,
+        provisional: await stored(tx, ids.provisional),
+        handEdited: await stored(tx, ids.handEdited),
+      };
+    });
+
+    expect(result.written).toBe(0);
+    expect(result.provisional.pnlOverride).toBe("51.65");
+    expect(result.handEdited.pnlOverride).toBe("40.00");
   });
 });

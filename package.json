@@ -14,7 +14,8 @@
     "db:seed:instruments": "node --env-file=.env.local src/db/seed-instruments.ts",
     "db:seed:trade-tags": "node --env-file=.env.local src/db/seed-trade-tags.ts",
     "db:seed:badges": "node --env-file=.env.local src/db/seed-badges.ts",
-    "db:seed:propfirms": "node --env-file=.env.local src/db/seed-propfirms.ts"
+    "db:seed:propfirms": "node --env-file=.env.local src/db/seed-propfirms.ts",
+    "job:fx": "node --env-file=.env.local src/db/job-fx.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1132.0",

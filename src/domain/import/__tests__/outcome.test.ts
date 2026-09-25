@@ -19,7 +19,9 @@ function row(overrides: Partial<NormalizedTrade> = {}): NormalizedTrade {
     exitTime: "09:45",
     exitPrice: 20050,
     brokerTradeKey: null,
-    filePnl: null,
+    filePnlCents: null,
+    stopPrice: null,
+    stopNotice: null,
     sourceRow: 2,
     ...overrides,
   };

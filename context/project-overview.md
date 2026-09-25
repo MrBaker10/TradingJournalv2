@@ -670,6 +670,24 @@ by picking a different answer while coding.
   the v2 API blends 98 sources and returns weekend values unless scoped to the ECB, and
   the project specifies ECB reference rates. Reasoning: `context/decisions.md`, the
   account-currency entry.
+- **Trade quantity is `numeric(12,4)`** (2026-09-25, ftmo-import) — contracts for a
+  future, lots like 1.88 for a CFD. It enters `pnl.ts` scaled like a price, never as a
+  float factor; `coding-standards.md` § Money says the same.
+- **Cron routes authenticate by secret, not by session** (2026-09-25, ftmo-import) —
+  `/api/cron/*` is the fourth exception to "Nothing is shared" in `CLAUDE.md`: Vercel
+  Cron calls it without a session, it checks `CRON_SECRET` in constant time and returns
+  counts, never user data.
+- **An imported value is the user's only once edited by hand** (2026-09-25,
+  ftmo-import) — an import that writes its own stop or P&L marks them
+  (`stop_imported`, `pnl_source`), and a batch undo may still remove such a trade. A
+  hand edit that actually changes the value clears the mark; from then on the trade is
+  protected, and the nightly FX correction leaves its P&L alone.
+- **Nightly FX correction job** (2026-09-25, ftmo-import) — narrows "FX rates on
+  demand" above: rates are still fetched when an import needs them, but an import made
+  before the ECB publishes the day's rate converts provisionally, and `job:fx` (Vercel
+  Cron, 03:00 UTC) converts those trades again once their final rate exists. It fetches
+  nothing when no trade is provisional. Reasoning: `context/decisions.md`, the
+  ftmo-import entry.
 
 ---
 
@@ -680,7 +698,28 @@ by picking a different answer while coding.
   at all (collapsed sidebar, drawer or bottom nav: not decided). Found on the trade
   detail page on 2026-09-24; it affects every page behind the session, so it is a
   slice of its own, not a fix inside a page. "Responsive web only" in
-  `project-structure.md` makes it a gap, not a scope question.
+  `project-structure.md` makes it a gap, not a scope question. Scheduled 2026-09-25
+  as its own slice at the end, after the feature slices; the layout itself is still
+  open.
+
+- **Starting balance / account size.** The equity curve should start at the account's
+  size, not at 0 — reported by Sascha on 2026-09-25 after the FTMO import. Decided the
+  same day: its own slice `account-balance`, right after `ftmo-import`. Today the start
+  at 0 is deliberate (`src/domain/equity.ts`, Design.md §4.15), and `accounts` has no
+  column for it. To settle at `load`:
+  - Combined view: the sum of the real accounts' starting balances?
+  - Which currency an EUR account's balance is entered in, and how it is converted
+    while `display-currency` does not exist yet.
+  - Does the zero line of §4.15 become a starting line, with the colour change at the
+    starting value?
+  - Required or optional when the account is created, and editable later?
+  - How it relates to the roadmap's "Account ↔ prop firm program link", which also
+    lists a starting balance.
+- **CFD or futures — on the account or on the instrument?** Asked on 2026-09-25, not
+  decided. Recommendation: a kind on the instrument (`future` / `cfd`), which can drive
+  the quantity label (contracts vs lots), decimals in the form and the tile. An account
+  type would be a second source of truth next to it; a per-account restriction only
+  pays off once accounts link to a prop firm program, which then implies the kind.
 
 New questions belong in the Open questions block of `context/current-feature.md` while
 a feature is in progress, and move up here once they affect the project as a whole.

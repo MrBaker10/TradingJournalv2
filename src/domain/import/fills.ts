@@ -88,8 +88,10 @@ function closeTrip(trip: OpenTrip): RawTrade {
     exitTime: trip.exit.quantity === 0 ? null : trip.exit.lastTime,
     exitPrice: averagePrice(trip.exit),
     brokerTradeKey: brokerKeyOf([...trip.entry.fillIds, ...trip.exit.fillIds]),
-    // A fill-level file reports prices, not a per-trade P&L.
-    filePnl: null,
+    // A fill-level file reports prices, not a per-trade P&L, and no stop.
+    filePnlCents: null,
+    stopPrice: null,
+    stopNotice: null,
     sourceRow: trip.sourceRow,
   };
 }

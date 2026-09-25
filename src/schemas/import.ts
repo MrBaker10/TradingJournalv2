@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { directionEnum } from "./trades.ts";
+import { directionEnum, quantityField } from "./trades.ts";
 
 // What the import actions accept.
 //
@@ -19,7 +19,12 @@ export const MAX_IMPORT_ROWS = 2000;
 /** Max file size in bytes. Enforced in the browser, before anything is read. */
 export const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
 
-export const importShapeEnum = z.enum(["round-trip", "fills", "tradingview"]);
+export const importShapeEnum = z.enum([
+  "round-trip",
+  "fills",
+  "tradingview",
+  "ftmo",
+]);
 
 const dateField = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date");
 const timeField = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time");
@@ -32,14 +37,16 @@ const priceField = z.number().positive();
 export const normalizedTradeSchema = z.object({
   instrumentId: z.number().int().positive(),
   direction: directionEnum,
-  contracts: z.number().int().positive(),
+  contracts: quantityField,
   tradeDate: dateField,
   entryTime: timeField,
   entryPrice: priceField,
   exitTime: timeField.nullable(),
   exitPrice: priceField.nullable(),
   brokerTradeKey: z.string().min(1).max(500).nullable(),
-  filePnl: z.number().nullable(),
+  filePnlCents: z.number().int().nullable(),
+  stopPrice: priceField.nullable(),
+  stopNotice: z.string().max(200).nullable(),
   sourceRow: z.number().int().nonnegative(),
 });
 

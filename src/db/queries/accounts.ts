@@ -126,6 +126,30 @@ export async function listOwnedAccountIds(
   return rows.map((row) => row.id);
 }
 
+/**
+ * The one account an import writes into, with the currency its file reports
+ * in — or null when it is not this user's, or archived. Like
+ * `listOwnedAccountIds`, the id from the client is checked, not trusted.
+ */
+export async function findImportAccount(
+  userId: number,
+  accountId: number,
+): Promise<{ id: number; currency: AccountCurrency } | null> {
+  const [row] = await db
+    .select({ id: accounts.id, currency: accounts.currency })
+    .from(accounts)
+    .where(
+      and(
+        eq(accounts.userId, userId),
+        isNull(accounts.archivedAt),
+        eq(accounts.id, accountId),
+      ),
+    )
+    .limit(1);
+
+  return row ?? null;
+}
+
 export interface AssignableAccount {
   id: number;
   name: string;

@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/index";
-import { listOwnedAccountIds } from "@/db/queries/accounts";
+import { findImportAccount } from "@/db/queries/accounts";
+import { ensureFxRates } from "@/db/queries/fx";
 import {
   createImportBatch,
   type ImportedTrade,
@@ -12,6 +13,8 @@ import {
   type TradeUpdate,
   updateImportedTrades,
 } from "@/db/queries/import";
+import { listInstruments } from "@/db/queries/instruments";
+import { type AccountCurrency, convertForTrade } from "@/domain/fx";
 import { matchRows } from "@/domain/import/match";
 import {
   decideOutcome,
@@ -20,8 +23,10 @@ import {
 } from "@/domain/import/outcome";
 import { sessionFromEntryTime } from "@/domain/import/session";
 import type { NormalizedTrade } from "@/domain/import/types";
+import { calculatePnl } from "@/domain/pnl";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { awardBadgesQuietly } from "@/lib/badges/sync";
+import { fetchEcbRates } from "@/lib/fx/frankfurter";
 import {
   commitImportSchema,
   previewImportSchema,
@@ -39,8 +44,16 @@ export interface PreviewRow {
   verdict: RowVerdict;
   /** Plain English, shown next to the row in the preview table. */
   reason: string;
-  /** The file's own P&L, for comparison only — it is never written. */
-  filePnl: number | null;
+  /** The file's own P&L in the account's currency, as the file reports it. */
+  filePnlCents: number | null;
+  /** What the journal will store for it, in USD; null without a file P&L. */
+  pnlUsdCents: number | null;
+  /** The P&L the prices give, in USD, next to the file's for comparison. */
+  computedPnlCents: number | null;
+  /** The date of the ECB rate used, when the amount was converted. */
+  fxRateDate: string | null;
+  /** Converted before the day's rate was published; corrected overnight. */
+  provisional: boolean;
 }
 
 export interface ImportCounters {
@@ -52,6 +65,113 @@ export interface ImportCounters {
 export interface ImportPreview {
   rows: PreviewRow[];
   counters: ImportCounters;
+  /** The currency the target account's file amounts are in. */
+  currency: AccountCurrency;
+}
+
+/**
+ * What an import writes for a row's own P&L (project-overview.md, Currency):
+ * the file amount in the account's currency as `pnl_source`, and that amount
+ * in USD as `pnl_override`, converted once with the ECB rate of the trade date.
+ */
+interface RowPnl {
+  sourceCents: number;
+  usdCents: number;
+  /** Null on a USD account: nothing was converted. */
+  fxRateDate: string | null;
+  provisional: boolean;
+}
+
+type ConvertedRows =
+  | { ok: true; pnl: (RowPnl | null)[] }
+  | { ok: false; error: string };
+
+/**
+ * Converts every file P&L of a batch. Missing rates are fetched first
+ * (`ensureFxRates`); before the ECB publishes, a day borrows the latest rate
+ * and the row is provisional until job:fx converts it again.
+ */
+async function convertRows(
+  rows: NormalizedTrade[],
+  currency: AccountCurrency,
+): Promise<ConvertedRows> {
+  if (currency === "USD") {
+    return {
+      ok: true,
+      pnl: rows.map((row) =>
+        row.filePnlCents === null
+          ? null
+          : {
+              sourceCents: row.filePnlCents,
+              usdCents: row.filePnlCents,
+              fxRateDate: null,
+              provisional: false,
+            },
+      ),
+    };
+  }
+
+  const dates = [
+    ...new Set(
+      rows
+        .filter((row) => row.filePnlCents !== null)
+        .map((row) => row.tradeDate),
+    ),
+  ];
+  let rates: Awaited<ReturnType<typeof ensureFxRates>>;
+  try {
+    rates = await ensureFxRates(currency, dates, fetchEcbRates);
+  } catch {
+    // The rate source or its store failed, not the journal: said as such, so
+    // the user retries later instead of suspecting their data.
+    return {
+      ok: false,
+      error: `Couldn't fetch the ECB rates to convert ${currency} to USD. Nothing was imported — try again in a moment.`,
+    };
+  }
+
+  const pnl: (RowPnl | null)[] = [];
+  for (const row of rows) {
+    if (row.filePnlCents === null) {
+      pnl.push(null);
+      continue;
+    }
+    const converted = convertForTrade(row.filePnlCents, row.tradeDate, rates);
+    if (converted === null) {
+      return {
+        ok: false,
+        error: `There is no ECB rate for ${currency} on ${row.tradeDate}, so line ${row.sourceRow} cannot be converted to USD.`,
+      };
+    }
+    pnl.push({
+      sourceCents: row.filePnlCents,
+      usdCents: converted.usdCents,
+      fxRateDate: converted.rateDate,
+      provisional: converted.provisional,
+    });
+  }
+  return { ok: true, pnl };
+}
+
+/** The P&L the prices give, per row, for the preview's comparison column. */
+async function computePnl(rows: NormalizedTrade[]): Promise<(number | null)[]> {
+  const pointValues = new Map(
+    (await listInstruments()).map((instrument) => [
+      instrument.id,
+      Number(instrument.pointValue),
+    ]),
+  );
+  return rows.map((row) => {
+    const pointValue = pointValues.get(row.instrumentId);
+    if (row.exitPrice === null || pointValue === undefined) return null;
+    return calculatePnl({
+      direction: row.direction,
+      entryPrice: row.entryPrice,
+      exitPrice: row.exitPrice,
+      contracts: row.contracts,
+      pointValue,
+    }).pnlCents;
+  });
 }
 
 /**
@@ -62,13 +182,23 @@ export interface ImportPreview {
 function buildPreview(
   rows: NormalizedTrade[],
   candidates: Awaited<ReturnType<typeof listMatchCandidates>>,
+  currency: AccountCurrency,
+  pnl: (RowPnl | null)[],
+  computed: (number | null)[],
 ): { preview: ImportPreview; outcomes: ReturnType<typeof decideOutcome>[] } {
   const matched = matchRows(rows, candidates);
   const outcomes = rows.map((row, index) => decideOutcome(row, matched[index]));
 
   const counters: ImportCounters = { new: 0, update: 0, skip: 0 };
-  const previewRows = rows.map((row, index) => {
+  const previewRows = rows.map((row, index): PreviewRow => {
     const outcome = outcomes[index];
+    const money = {
+      filePnlCents: row.filePnlCents,
+      pnlUsdCents: pnl[index]?.usdCents ?? null,
+      computedPnlCents: computed[index] ?? null,
+      fxRateDate: pnl[index]?.fxRateDate ?? null,
+      provisional: pnl[index]?.provisional ?? false,
+    };
 
     if (outcome.kind === "skip") {
       counters.skip += 1;
@@ -76,7 +206,7 @@ function buildPreview(
         sourceRow: row.sourceRow,
         verdict: "skip" as const,
         reason: "already in your journal",
-        filePnl: row.filePnl,
+        ...money,
       };
     }
 
@@ -89,7 +219,7 @@ function buildPreview(
         reason: closesOpen
           ? "closes an open trade"
           : `updates ${outcome.changed.join(", ")}`,
-        filePnl: row.filePnl,
+        ...money,
       };
     }
 
@@ -98,11 +228,11 @@ function buildPreview(
       sourceRow: row.sourceRow,
       verdict: "new" as const,
       reason: row.exitPrice === null ? "new, still open" : "new",
-      filePnl: row.filePnl,
+      ...money,
     };
   });
 
-  return { preview: { rows: previewRows, counters }, outcomes };
+  return { preview: { rows: previewRows, counters, currency }, outcomes };
 }
 
 /** Dates the file mentions, deduplicated — the read is bounded by these. */
@@ -126,20 +256,29 @@ export async function previewImport(
     const user = await getCurrentUser();
 
     // An account id from the client is a permission boundary, not a label
-    // (coding-standards.md, Database). listOwnedAccountIds also drops an
+    // (coding-standards.md, Database). findImportAccount also drops an
     // archived account, which is not a valid import target.
-    const owned = await listOwnedAccountIds(user.id, [parsed.data.accountId]);
-    if (owned.length === 0) {
+    const account = await findImportAccount(user.id, parsed.data.accountId);
+    if (account === null) {
       return { success: false, error: "That account isn't yours" };
     }
 
+    const converted = await convertRows(parsed.data.rows, account.currency);
+    if (!converted.ok) return { success: false, error: converted.error };
+
     const candidates = await listMatchCandidates(
       user.id,
-      parsed.data.accountId,
+      account.id,
       datesOf(parsed.data.rows),
     );
 
-    const { preview } = buildPreview(parsed.data.rows, candidates);
+    const { preview } = buildPreview(
+      parsed.data.rows,
+      candidates,
+      account.currency,
+      converted.pnl,
+      await computePnl(parsed.data.rows),
+    );
     return { success: true, data: preview };
   } catch {
     return {
@@ -175,17 +314,28 @@ export async function commitImport(
   try {
     const user = await getCurrentUser();
 
-    const owned = await listOwnedAccountIds(user.id, [accountId]);
-    if (owned.length === 0) {
+    const account = await findImportAccount(user.id, accountId);
+    if (account === null) {
       return { success: false, error: "That account isn't yours" };
     }
+
+    // Converted again rather than taken from the preview: the client is not
+    // the authority on amounts, and a rate may have been published since.
+    const converted = await convertRows(rows, account.currency);
+    if (!converted.ok) return { success: false, error: converted.error };
 
     const candidates = await listMatchCandidates(
       user.id,
       accountId,
       datesOf(rows),
     );
-    const { preview, outcomes } = buildPreview(rows, candidates);
+    const { preview, outcomes } = buildPreview(
+      rows,
+      candidates,
+      account.currency,
+      converted.pnl,
+      [],
+    );
 
     const written = preview.counters.new + preview.counters.update;
     if (written === 0) {
@@ -248,6 +398,8 @@ export async function commitImport(
             user.timezone,
           ),
           brokerTradeKey: row.brokerTradeKey,
+          stopPrice: row.stopPrice,
+          pnl: converted.pnl[index],
           importBatchId: batchId,
         });
       }

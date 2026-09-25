@@ -8,6 +8,9 @@
 //    chart clock, and this is the one place in the project that converts
 //    between them. Afterwards the value is a chart-clock time like any other
 //    and is never converted again (coding-standards.md, Time).
+//    An FTMO row is read by `ftmo.ts`, which takes its clock from
+//    `fromWallClock` below — the same single conversion, from the broker's
+//    server zone instead of UTC.
 // 2. `normalizeTrades` runs on the round trips `fills.ts` has paired. It owns
 //    the **instrument**: the symbol is resolved against the journal's own
 //    table and the prices are snapped to that instrument's tick.
@@ -116,6 +119,51 @@ function onChartClock(
   };
 }
 
+const WALL_CLOCK = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/;
+
+/**
+ * The trader's chart-clock date and time for a wall-clock timestamp that a
+ * file writes in some other zone — an FTMO export writes the broker's server
+ * time, `Europe/Berlin` (current-feature.md, Zeit).
+ *
+ * The same rule as `onChartClock`: this is the one conversion the value ever
+ * sees, and date and time come out of the same converted instant. With the
+ * trader sitting in the file's own zone nothing changes.
+ */
+export function fromWallClock(
+  raw: string,
+  fileZone: string,
+  timeZone: string,
+): { tradeDate: string; time: string } | null {
+  const match = WALL_CLOCK.exec(raw.trim());
+  if (match === null) return null;
+  const [year, month, day, hour, minute, second] = match.slice(1).map(Number);
+
+  const inFileZone = new TZDate(
+    year,
+    month - 1,
+    day,
+    hour,
+    minute,
+    second,
+    fileZone,
+  );
+  // A date like 2026-02-31 rolls over instead of failing; reject it.
+  if (
+    Number.isNaN(inFileZone.getTime()) ||
+    inFileZone.getDate() !== day ||
+    inFileZone.getMonth() !== month - 1
+  ) {
+    return null;
+  }
+
+  const local = new TZDate(inFileZone.getTime(), timeZone);
+  return {
+    tradeDate: format(local, "yyyy-MM-dd"),
+    time: format(local, "HH:mm:ss"),
+  };
+}
+
 /**
  * One row as a fill, or the reason it could not be read. Every check names
  * the value it choked on, because "invalid row" alone gives the user nothing
@@ -206,7 +254,8 @@ export function normalizeFills(
  * The journal instrument a contract symbol belongs to, or null.
  *
  * The full symbol is tried first, so a file that already writes `MNQ` needs
- * no stripping at all; only then is the contract month removed. An unknown
+ * no stripping at all — nor does a CFD like `US100.cash`, which has no
+ * contract month; only then is the contract month removed. An unknown
  * symbol is never invented as a new instrument — an instrument without a real
  * point value would falsify every P&L figure computed from it
  * (current-feature.md, §Regeln).
@@ -282,7 +331,12 @@ export function normalizeTrades(
           ? null
           : snapToTick(trade.exitPrice, instrument.tickSize),
       brokerTradeKey: trade.brokerTradeKey,
-      filePnl: trade.filePnl,
+      filePnlCents: trade.filePnlCents,
+      stopPrice:
+        trade.stopPrice === null
+          ? null
+          : snapToTick(trade.stopPrice, instrument.tickSize),
+      stopNotice: trade.stopNotice,
       sourceRow: trade.sourceRow,
     });
   }

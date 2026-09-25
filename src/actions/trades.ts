@@ -18,7 +18,10 @@ import {
 } from "@/db/queries/trades";
 import { tradeLinks, tradeScreenshots, trades } from "@/db/schema/trades";
 import { calculatePnl } from "@/domain/pnl";
-import { validateTradeAccountAssignment } from "@/domain/trades";
+import {
+  importMarksAfterEdit,
+  validateTradeAccountAssignment,
+} from "@/domain/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { awardBadgesQuietly } from "@/lib/badges/sync";
 import { dollarsToCents } from "@/lib/money";
@@ -88,7 +91,7 @@ function buildTradeColumns(data: CreateTradeInput, pointValue: number) {
       tradeDate: data.tradeDate,
       instrumentId: data.instrumentId,
       taken: data.taken,
-      contracts: data.taken ? data.contracts : null,
+      contracts: data.taken ? String(data.contracts) : null,
       entryTime: data.entryTime,
       exitTime: data.taken ? data.exitTime : null,
       session: data.session ?? null,
@@ -269,11 +272,16 @@ export async function updateTrade(
   );
 
   await db.transaction((tx) =>
-    replaceTradeWithRelations(tx, existing.id, columns, {
-      accountIds,
-      confluenceTagIds: data.confluenceTagIds,
-      mistakeTagIds: data.mistakeTagIds,
-    }),
+    replaceTradeWithRelations(
+      tx,
+      existing.id,
+      { ...columns, ...importMarksAfterEdit(existing, columns) },
+      {
+        accountIds,
+        confluenceTagIds: data.confluenceTagIds,
+        mistakeTagIds: data.mistakeTagIds,
+      },
+    ),
   );
 
   await awardBadgesQuietly(user.id, user.timezone);

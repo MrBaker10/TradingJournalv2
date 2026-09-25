@@ -30,7 +30,8 @@ export interface ExportTradeRow {
   instrumentSymbol: string;
   pointValue: string;
   direction: string;
-  contracts: number | null;
+  /** numeric(12, 4) as a string, e.g. `1.8800`. */
+  contracts: string | null;
   entryTime: string;
   exitTime: string | null;
   entryPrice: string;

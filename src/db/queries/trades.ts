@@ -111,6 +111,12 @@ export interface JournalTradeRow {
    * can put back exactly what was typed.
    */
   pnlOverride: number | null;
+  /**
+   * The date of the ECB rate an import converted this trade's P&L with, or
+   * null. Whether that rate is still provisional needs the stored rates —
+   * `getProvisionalFxRate` in fx.ts answers it for the detail page.
+   */
+  fxRateDate: string | null;
   pnlCents: number | null;
   rMultiple: number | null;
   accounts: JournalTradeAccount[];
@@ -441,6 +447,7 @@ async function queryTradeRows(
       postExitMfeR: trades.postExitMfeR,
       holdMinutes,
       pnlOverride: trades.pnlOverride,
+      fxRateDate: trades.fxRateDate,
       accounts: accountsJson,
       confluences: confluencesJson,
       mistakes: mistakesJson,
@@ -477,7 +484,7 @@ async function queryTradeRows(
     const entryPrice = Number(row.entryPrice);
     const exitPrice = row.exitPrice !== null ? Number(row.exitPrice) : null;
     const stopPrice = row.stopPrice !== null ? Number(row.stopPrice) : null;
-    const contracts = row.contracts;
+    const contracts = row.contracts !== null ? Number(row.contracts) : null;
 
     let pnlCents: number | null = null;
     let rMultiple: number | null = null;
@@ -527,6 +534,7 @@ async function queryTradeRows(
       postExitMfeR: row.postExitMfeR !== null ? Number(row.postExitMfeR) : null,
       holdMinutes: row.holdMinutes !== null ? Number(row.holdMinutes) : null,
       pnlOverride: row.pnlOverride !== null ? Number(row.pnlOverride) : null,
+      fxRateDate: row.fxRateDate,
       pnlCents,
       rMultiple: row.taken
         ? rMultiple

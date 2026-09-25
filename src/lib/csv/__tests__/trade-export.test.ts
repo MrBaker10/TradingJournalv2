@@ -19,7 +19,7 @@ const takenTrade: ExportTradeRow = {
   instrumentSymbol: "ES",
   pointValue: "50.0000",
   direction: "long",
-  contracts: 1,
+  contracts: "1.0000",
   entryTime: "09:45:00",
   exitTime: "10:20:00",
   entryPrice: "5000.0000",
@@ -113,6 +113,20 @@ describe("tradeToCsvRow", () => {
     const row = tradeToCsvRow({ ...takenTrade, stopPrice: null });
     expect(column(row, "r_multiple")).toBe("");
     expect(column(row, "pnl")).toBe("500.00");
+  });
+
+  it("writes a quantity without padding zeros", () => {
+    expect(column(tradeToCsvRow(takenTrade), "contracts")).toBe("1");
+    const lots = tradeToCsvRow({ ...takenTrade, contracts: "1.8800" });
+    expect(column(lots, "contracts")).toBe("1.88");
+    const tens = tradeToCsvRow({ ...takenTrade, contracts: "10.0000" });
+    expect(column(tens, "contracts")).toBe("10");
+  });
+
+  it("prices a fractional quantity", () => {
+    // 10 points * $50 * 0.5 = $250
+    const row = tradeToCsvRow({ ...takenTrade, contracts: "0.5000" });
+    expect(column(row, "pnl")).toBe("250.00");
   });
 
   it("writes an empty field for every null, never the word null", () => {

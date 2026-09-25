@@ -11,6 +11,11 @@ import { formatCents } from "@/lib/money";
 
 interface TradeDetailProps {
   trade: JournalTradeRow;
+  /**
+   * The P&L was converted with the latest rate before the day's own was
+   * published; job:fx converts it again overnight.
+   */
+  fxProvisional: boolean;
 }
 
 type ExecutionValue = { label: string; value: string | null; mono?: boolean };
@@ -112,7 +117,7 @@ function formatR(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}R`;
 }
 
-export function TradeDetail({ trade }: TradeDetailProps) {
+export function TradeDetail({ trade, fxProvisional }: TradeDetailProps) {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const confluenceGroups = [
@@ -194,6 +199,13 @@ export function TradeDetail({ trade }: TradeDetailProps) {
                 {formatR(trade.rMultiple)} would-be
               </span>
             ))}
+          {/* Neutral on purpose: a note about the rate, not about the money
+              (Design.md §1 — money gets its colour and nothing else). */}
+          {fxProvisional && trade.fxRateDate !== null && (
+            <span className="text-[11.5px] text-fg-subtle">
+              Provisional rate ({trade.fxRateDate}), corrected overnight
+            </span>
+          )}
         </div>
       </div>
 

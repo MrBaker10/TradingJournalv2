@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { JournalTradeRow as JournalTradeRowData } from "@/db/queries/trades";
+import { tileLabel } from "@/lib/journal/tile-label";
 import { formatCents } from "@/lib/money";
 
 interface TradeRowProps {
@@ -28,6 +29,9 @@ export function TradeRow({ trade }: TradeRowProps) {
   const amountPositive = trade.pnlCents !== null && trade.pnlCents >= 0;
   const showWouldBeR = !trade.taken && trade.rMultiple !== null;
   const showR = trade.taken && trade.rMultiple !== null;
+  // A CFD symbol like `US100.cash` is cut to fit the tile; the full symbol
+  // stays next to it (Design.md §4.9).
+  const tile = tileLabel(trade.instrumentSymbol);
 
   return (
     <Link
@@ -39,13 +43,15 @@ export function TradeRow({ trade }: TradeRowProps) {
           setup is not rendered smaller, paler or lower down; it is a
           differently labelled entry, not a lesser one. */}
       <div
-        className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xs font-mono text-[11px] font-semibold ${
+        className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xs font-mono font-semibold ${
+          tile.compact ? "text-[9px]" : "text-[11px]"
+        } ${
           trade.taken
             ? "bg-[image:var(--gradient-info-soft)] text-cyan shadow-[var(--shadow-info-soft)]"
             : "bg-[image:var(--gradient-dark-soft)] text-fg-muted shadow-[var(--shadow-dark-soft)]"
         }`}
       >
-        {trade.instrumentSymbol}
+        {tile.text}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">

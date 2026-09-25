@@ -6,6 +6,7 @@ import {
   type BrokerValues,
 } from "../../domain/import/outcome.ts";
 import type { TradeDirection } from "../../domain/pnl.ts";
+import { formatCentsPlain } from "../../lib/money.ts";
 import { db } from "../index.ts";
 import { importBatches } from "../schema/import-batches.ts";
 import { tradeAccounts, trades } from "../schema/trades.ts";
@@ -87,7 +88,7 @@ export async function listMatchCandidates(
     id: row.id,
     instrumentId: row.instrumentId,
     direction: row.direction as TradeDirection,
-    contracts: row.contracts,
+    contracts: row.contracts === null ? null : Number(row.contracts),
     tradeDate: row.tradeDate,
     entryTime: row.entryTime,
     exitTime: row.exitTime,
@@ -132,6 +133,14 @@ export interface ImportedTrade {
   result: string | null;
   session: string | null;
   brokerTradeKey: string | null;
+  /** From the file; written with `stop_imported` so an undo may still remove it. */
+  stopPrice: number | null;
+  /** The file's own P&L and its conversion, when the file reports one. */
+  pnl: {
+    sourceCents: number;
+    usdCents: number;
+    fxRateDate: string | null;
+  } | null;
   importBatchId: number;
 }
 
@@ -162,7 +171,7 @@ export async function insertImportedTrades(
         tradeDate: row.tradeDate,
         instrumentId: row.instrumentId,
         taken: true,
-        contracts: row.contracts,
+        contracts: String(row.contracts),
         entryTime: row.entryTime,
         exitTime: row.exitTime,
         direction: row.direction,
@@ -172,6 +181,13 @@ export async function insertImportedTrades(
         result: row.result,
         session: row.session,
         brokerTradeKey: row.brokerTradeKey,
+        stopPrice: row.stopPrice === null ? null : String(row.stopPrice),
+        stopImported: row.stopPrice !== null,
+        pnlOverride:
+          row.pnl === null ? null : formatCentsPlain(row.pnl.usdCents),
+        pnlSource:
+          row.pnl === null ? null : formatCentsPlain(row.pnl.sourceCents),
+        fxRateDate: row.pnl?.fxRateDate ?? null,
         importBatchId: row.importBatchId,
       })),
     )
@@ -206,7 +222,7 @@ const UPDATABLE_COLUMN: Record<
   tradeDate: { column: "trade_date", type: "date" },
   instrumentId: { column: "instrument_id", type: "integer" },
   direction: { column: "direction", type: "text" },
-  contracts: { column: "contracts", type: "integer" },
+  contracts: { column: "contracts", type: "numeric(12,4)" },
   entryTime: { column: "entry_time", type: "time" },
   exitTime: { column: "exit_time", type: "time" },
   entryPrice: { column: "entry_price", type: "numeric(12,4)" },
@@ -325,6 +341,10 @@ export async function updateImportedTrades(
 /**
  * Whether a trade has been worked on since it was imported.
  *
+ * A stop and a P&L override count only when the user set them. An import that
+ * writes its own — an FTMO row carries both — marks them (`stop_imported`,
+ * `pnl_source`), and a hand edit clears the mark (decided 2026-09-25).
+ *
  * `session` is deliberately absent: the import writes it itself, so it is not
  * evidence of handiwork. Were it in this list, every imported trade with an
  * entry time inside a session window would be protected and an undo could
@@ -339,14 +359,14 @@ const TOUCHED = sql`(
   t.notes is not null
   or t.setup_type is not null
   or t.entry_model is not null
-  or t.stop_price is not null
+  or (t.stop_price is not null and not t.stop_imported)
   or t.mfe_r is not null
   or t.mae_r is not null
   or t.post_exit_mfe_r is not null
   or t.grade is not null
   or t.felt is not null
   or t.by_the_book is not null
-  or t.pnl_override is not null
+  or (t.pnl_override is not null and t.pnl_source is null)
   or exists (select 1 from trade_screenshots s where s.trade_id = t.id)
   or exists (select 1 from trade_links l where l.trade_id = t.id)
   or exists (select 1 from trade_confluences c where c.trade_id = t.id)

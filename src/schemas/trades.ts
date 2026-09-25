@@ -1,5 +1,18 @@
 import * as z from "zod";
 
+/**
+ * Contracts for a future, lots for a CFD. At most four decimals, the scale of
+ * `trades.contracts` — the check runs on the value times 10^4, since a float
+ * like 1.88 has no exact decimal form to count digits on.
+ */
+export const quantityField = z
+  .number()
+  .positive()
+  .refine(
+    (value) => Math.abs(value * 10_000 - Math.round(value * 10_000)) < 1e-6,
+    "At most four decimals",
+  );
+
 export const sessionEnum = z.enum(["Asia", "London", "NY-AM", "NY-PM"]);
 export const setupTypeEnum = z.enum([
   "Break & Retest",
@@ -90,7 +103,7 @@ export const takenTradeSchema = z
     ...sharedFields,
     exitTime: timeField,
     exitPrice: priceField,
-    contracts: z.number().int().positive(),
+    contracts: quantityField,
     pnlOverride: z.number().optional(),
     result: resultEnum.optional(),
     byTheBook: z.boolean().optional(),

@@ -5,7 +5,7 @@
 import type { TradeDirection } from "../pnl.ts";
 
 /** What `detect.ts` recognised a file as. Stored on the batch. */
-export type ImportShape = "round-trip" | "fills" | "tradingview";
+export type ImportShape = "round-trip" | "fills" | "tradingview" | "ftmo";
 
 /**
  * One fill straight out of a fill-level file, after the columns have been
@@ -48,8 +48,16 @@ export interface RawTrade {
   exitPrice: number | null;
   /** Tier 1 key when the file carries one, else null. */
   brokerTradeKey: string | null;
-  /** The file's own P&L, shown in the preview for comparison, never written. */
-  filePnl: number | null;
+  /**
+   * The file's own P&L in integer minor units of the account currency, or
+   * null when the file reports none. A fill-level file never does; an FTMO
+   * row does, and that amount becomes the trade's P&L.
+   */
+  filePnlCents: number | null;
+  /** The initial stop, when the file carries one that can be a stop. */
+  stopPrice: number | null;
+  /** Why a stop in the file was not taken, shown next to the row. */
+  stopNotice: string | null;
   /** 1-based line in the source file, so the preview can point at a row. */
   sourceRow: number;
 }
@@ -69,7 +77,9 @@ export interface NormalizedTrade {
   exitTime: string | null;
   exitPrice: number | null;
   brokerTradeKey: string | null;
-  filePnl: number | null;
+  filePnlCents: number | null;
+  stopPrice: number | null;
+  stopNotice: string | null;
   sourceRow: number;
 }
 

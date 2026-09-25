@@ -81,7 +81,8 @@ async function evaluateSql(fixture: TradeFixture): Promise<SqlEvaluation> {
           tradeDate: "2026-01-01",
           instrumentId: instrument.id,
           taken: fixture.taken,
-          contracts: fixture.contracts,
+          contracts:
+            fixture.contracts === null ? null : String(fixture.contracts),
           entryTime: "09:00",
           exitTime: fixture.exitPrice !== null ? "09:30" : null,
           direction: fixture.direction,
@@ -368,6 +369,42 @@ describe("tradePnlCents (SQL, run against real Postgres) vs calculatePnl (pnl.ts
     };
     expect(await evaluateSqlPnlCents(fixture)).toBeNull();
   });
+
+  // A CFD trades in lots: the quantity is numeric(12, 4) now, and the SQL
+  // multiplies by it in NUMERIC while pnl.ts scales it into BigInt. Both have
+  // to land on the same cent, including a half cent on either side of zero.
+  it.for([
+    ["the FTMO sample's 15-lot sell", "short", 30191.72, 30187.38, 15, 1],
+    ["fractional lots", "long", 30203.38, 30204.03, 7.56, 1],
+    ["gold at 0.05 lots", "short", 4334.78, 4328.21, 0.05, 100],
+    ["a gain that ends on half a cent", "long", 100, 100.01, 0.5, 1],
+    ["a loss that ends on half a cent", "long", 100.01, 100, 0.5, 1],
+    ["four decimals on the quantity", "long", 1.2345, 1.2378, 1.3333, 12.5],
+  ] as const)(
+    "agrees on %s",
+    async ([
+      ,
+      direction,
+      entryPrice,
+      exitPrice,
+      contracts,
+      pointValue,
+    ], ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const fixture: TradeFixture = {
+        taken: true,
+        direction,
+        entryPrice,
+        exitPrice,
+        stopPrice: null,
+        contracts,
+        pointValue,
+      };
+      const domain = calculatePnl(toPnlInput(fixture));
+      expect(await evaluateSqlPnlCents(fixture)).toBe(domain.pnlCents);
+    },
+  );
 });
 
 // Design.md §4.9 and project-structure.md: a missed setup carries no account
@@ -419,7 +456,7 @@ describe("isVisibleForAccount", () => {
 
         const [taken] = await tx
           .insert(trades)
-          .values({ ...base, taken: true, contracts: 1, notes: "taken" })
+          .values({ ...base, taken: true, contracts: "1", notes: "taken" })
           .returning({ id: trades.id });
         await tx
           .insert(trades)

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { canAddScreenshot, validateTradeAccountAssignment } from "../trades.ts";
+import {
+  canAddScreenshot,
+  importMarksAfterEdit,
+  validateTradeAccountAssignment,
+} from "../trades.ts";
 
 describe("validateTradeAccountAssignment", () => {
   it("fails a taken trade with no accounts", () => {
@@ -60,5 +64,73 @@ describe("canAddScreenshot", () => {
       success: false,
       error: "A trade can have at most 3 screenshots.",
     });
+  });
+});
+
+describe("importMarksAfterEdit", () => {
+  const imported = {
+    stopPrice: "30205.9600",
+    stopImported: true,
+    pnlOverride: "65.04",
+    pnlSource: "56.76",
+    fxRateDate: "2026-09-23",
+  };
+
+  it("keeps every mark when the form is saved unchanged", () => {
+    // The form sends numbers back as it parsed them, without the padding.
+    expect(
+      importMarksAfterEdit(imported, {
+        stopPrice: "30205.96",
+        pnlOverride: "65.04",
+      }),
+    ).toEqual({
+      stopImported: true,
+      pnlSource: "56.76",
+      fxRateDate: "2026-09-23",
+    });
+  });
+
+  it("clears the stop mark when the stop is moved", () => {
+    expect(
+      importMarksAfterEdit(imported, {
+        stopPrice: "30210",
+        pnlOverride: "65.04",
+      }).stopImported,
+    ).toBe(false);
+  });
+
+  it("clears the stop mark when the stop is removed", () => {
+    expect(
+      importMarksAfterEdit(imported, { stopPrice: null, pnlOverride: "65.04" })
+        .stopImported,
+    ).toBe(false);
+  });
+
+  it("ends the FX correction when the P&L is edited by hand", () => {
+    expect(
+      importMarksAfterEdit(imported, {
+        stopPrice: "30205.96",
+        pnlOverride: "60",
+      }),
+    ).toEqual({ stopImported: true, pnlSource: null, fxRateDate: null });
+  });
+
+  it("ends it too when the override is cleared", () => {
+    expect(
+      importMarksAfterEdit(imported, {
+        stopPrice: "30205.96",
+        pnlOverride: null,
+      }).pnlSource,
+    ).toBeNull();
+  });
+
+  it("never marks a stop the user typed as imported", () => {
+    const manual = { ...imported, stopImported: false };
+    expect(
+      importMarksAfterEdit(manual, {
+        stopPrice: "30205.96",
+        pnlOverride: "65.04",
+      }).stopImported,
+    ).toBe(false);
   });
 });

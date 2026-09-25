@@ -1,5 +1,3 @@
-import { dollarsToCents } from "../lib/money.ts";
-
 export type TradeDirection = "long" | "short";
 
 export interface PnlInput {
@@ -41,12 +39,30 @@ export function fromScaledPrice(scaled: bigint): number {
   return Number(scaled) / Number(PRICE_SCALE);
 }
 
-// scaledDollars is priceScale^2 * dollars; the float division back to a plain
-// dollar amount happens exactly once, after the multiplication itself ran
-// entirely in BigInt.
+// Cents per dollar, as a BigInt for the rounding below.
+const CENTS = BigInt(100);
+const TWO = BigInt(2);
+
+/**
+ * An exact quotient rounded to the nearest integer, halves towards +infinity —
+ * the same rule as `Math.round`, so a whole-contract trade lands on exactly the
+ * cents the float path produced before quantities could be fractional.
+ */
+function roundDiv(numerator: bigint, denominator: bigint): bigint {
+  const doubled = numerator * TWO + denominator;
+  const divisor = denominator * TWO;
+  const quotient = doubled / divisor;
+  // BigInt division truncates towards zero; step down once for a negative
+  // remainder so the result is a floor, not a truncation.
+  return doubled % divisor < ZERO ? quotient - BigInt(1) : quotient;
+}
+
+// The product of points, point value and quantity, each at PRICE_SCALE, is
+// dollars at PRICE_SCALE^3. It is rounded to cents in BigInt: with a fractional
+// quantity the product no longer fits a float without losing digits.
 function scaledToCents(scaledDollars: bigint): number {
-  return dollarsToCents(
-    Number(scaledDollars) / Number(PRICE_SCALE * PRICE_SCALE),
+  return Number(
+    roundDiv(scaledDollars * CENTS, PRICE_SCALE * PRICE_SCALE * PRICE_SCALE),
   );
 }
 
@@ -61,7 +77,9 @@ export function calculatePnl(
   overridePnlCents?: number,
 ): PnlResult {
   const pointValueScaled = toScaledPrice(input.pointValue);
-  const contracts = BigInt(input.contracts);
+  // A quantity may be fractional — a CFD trades in lots like 1.88 — so it
+  // is scaled like a price rather than taken as a whole number.
+  const contracts = toScaledPrice(input.contracts);
 
   const derivedPnlCents = scaledToCents(
     pointsCapturedScaled(input) * pointValueScaled * contracts,

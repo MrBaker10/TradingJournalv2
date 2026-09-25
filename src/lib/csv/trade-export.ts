@@ -56,8 +56,14 @@ function bool(value: boolean | null): string {
   return value === null ? "" : String(value);
 }
 
-function number(value: number | null): string {
-  return value === null ? "" : String(value);
+/**
+ * A quantity as `numeric(12, 4)` delivers it, without the padding zeros:
+ * `2.0000` is written `2`, `1.8800` is `1.88`. Trimmed on the string, never
+ * through a float, so what the column holds is what the file says.
+ */
+function quantity(value: string | null): string {
+  if (value === null) return "";
+  return value.includes(".") ? value.replace(/\.?0+$/, "") : value;
 }
 
 /**
@@ -85,7 +91,7 @@ function derivePnl(row: ExportTradeRow): { pnl: string; rMultiple: string } {
       direction: row.direction as TradeDirection,
       entryPrice: Number(row.entryPrice),
       exitPrice: Number(row.exitPrice),
-      contracts: row.contracts,
+      contracts: Number(row.contracts),
       pointValue: Number(row.pointValue),
       stopPrice: row.stopPrice !== null ? Number(row.stopPrice) : undefined,
     },
@@ -109,7 +115,7 @@ export function tradeToCsvRow(row: ExportTradeRow): string[] {
     String(row.taken),
     row.instrumentSymbol,
     row.direction,
-    number(row.contracts),
+    quantity(row.contracts),
     row.entryTime,
     text(row.exitTime),
     row.entryPrice,

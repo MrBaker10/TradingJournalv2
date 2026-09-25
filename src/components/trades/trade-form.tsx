@@ -783,8 +783,10 @@ export function TradeForm(props: TradeFormProps) {
                   id="contracts"
                   required
                   type="number"
-                  min={1}
-                  step={1}
+                  // Lots for a CFD come in fractions like 1.88; the schema
+                  // allows up to four decimals (schemas/trades.ts).
+                  min={0.0001}
+                  step="any"
                   value={state.contracts}
                   onChange={(event) => set("contracts", event.target.value)}
                   disabled={loading || success}

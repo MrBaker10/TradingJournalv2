@@ -28,7 +28,9 @@ export const trades = pgTable(
       .references(() => instruments.id),
     // false = missed setup. Not a second table (decisions.md).
     taken: boolean("taken").notNull(),
-    contracts: integer("contracts"),
+    // Contracts for a future, lots for a CFD — a CFD trades in fractions
+    // like 1.88, so this is numeric at the precision of a price.
+    contracts: numeric("contracts", { precision: 12, scale: 4 }),
     // Chart-clock times, never converted (coding-standards.md, Time).
     entryTime: time("entry_time").notNull(),
     exitTime: time("exit_time"),
@@ -39,6 +41,9 @@ export const trades = pgTable(
     entryPrice: numeric("entry_price", { precision: 12, scale: 4 }).notNull(),
     exitPrice: numeric("exit_price", { precision: 12, scale: 4 }),
     stopPrice: numeric("stop_price", { precision: 12, scale: 4 }),
+    // The stop came from the import file, not from the user, so an undo may
+    // still remove the trade. A hand edit of the stop sets it back to false.
+    stopImported: boolean("stop_imported").notNull().default(false),
     mfeR: numeric("mfe_r", { precision: 8, scale: 2 }),
     maeR: numeric("mae_r", { precision: 8, scale: 2 }),
     // Manual field, shown only when a stop price is set — cannot be derived,
@@ -46,6 +51,15 @@ export const trades = pgTable(
     postExitMfeR: numeric("post_exit_mfe_r", { precision: 8, scale: 2 }),
     points: numeric("points", { precision: 12, scale: 4 }),
     pnlOverride: numeric("pnl_override", { precision: 14, scale: 2 }),
+    // Set by an import whose file reports a P&L: that amount in the account's
+    // currency. While it is set, `pnl_override` is the import's, not the
+    // user's — an undo may remove the trade. A hand edit of the P&L clears it.
+    pnlSource: numeric("pnl_source", { precision: 14, scale: 2 }),
+    // Only on an account kept in another currency: the date of the ECB rate
+    // `pnl_source` was converted into `pnl_override` with. The nightly job:fx
+    // converts again while that rate is provisional (src/domain/fx.ts,
+    // isProvisional). A hand edit of the P&L clears it with `pnl_source`.
+    fxRateDate: date("fx_rate_date"),
     result: text("result"),
     grade: text("grade"),
     felt: text("felt"),

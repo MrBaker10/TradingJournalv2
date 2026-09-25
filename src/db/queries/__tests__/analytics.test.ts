@@ -115,7 +115,7 @@ async function run(fixture: Fixture): Promise<Result> {
             tradeDate: fixtureTrade.tradeDate ?? "2026-03-04",
             instrumentId: instrument.id,
             taken,
-            contracts: taken ? 1 : null,
+            contracts: taken ? "1" : null,
             entryTime: fixtureTrade.entryTime ?? "09:00",
             exitTime: taken ? (fixtureTrade.exitTime ?? "09:30") : null,
             direction: "long",

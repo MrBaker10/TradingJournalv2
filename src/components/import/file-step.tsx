@@ -5,11 +5,13 @@ import { useRef, useState } from "react";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { detectShape } from "@/domain/import/detect";
 import { pairFills } from "@/domain/import/fills";
+import { readFtmoRows } from "@/domain/import/ftmo";
 import {
   type InstrumentRef,
   normalizeFills,
   normalizeTrades,
 } from "@/domain/import/normalize";
+import { decodeByHeader } from "@/lib/csv/decode";
 import { parseDelimited } from "@/lib/csv/parse";
 import { MAX_IMPORT_BYTES, MAX_IMPORT_ROWS } from "@/schemas/import";
 import type { ParsedFile } from "./import-wizard";
@@ -21,6 +23,20 @@ interface FileStepProps {
 }
 
 const MAX_MB = Math.round(MAX_IMPORT_BYTES / (1024 * 1024));
+
+/**
+ * Whether a header belongs to a known export. Used to pick the encoding: an
+ * FTMO file comes as UTF-8, Windows-1252 or Mac Roman, and only its header
+ * tells which (src/lib/csv/decode.ts).
+ */
+function isKnownHeader(header: string[]): boolean {
+  try {
+    detectShape(header);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Step one: get the rows out of a file, in the browser.
@@ -68,13 +84,17 @@ export function FileStep({ instruments, timeZone, onParsed }: FileStepProps) {
       return;
     }
 
-    const { fills, invalid: unreadable } = normalizeFills(
-      data,
-      detected.columns,
-      timeZone,
-    );
+    // A fill-level file is paired into round trips first; an FTMO row
+    // already is one. Both then meet the same instrument resolution.
+    const { trades, invalid: unreadable } =
+      detected.shape === "fills"
+        ? (() => {
+            const read = normalizeFills(data, detected.columns, timeZone);
+            return { trades: pairFills(read.fills), invalid: read.invalid };
+          })()
+        : readFtmoRows(data, detected.columns, timeZone);
     const { rows: normalized, invalid: unknown } = normalizeTrades(
-      pairFills(fills),
+      trades,
       instruments,
     );
 
@@ -108,8 +128,8 @@ export function FileStep({ instruments, timeZone, onParsed }: FileStepProps) {
       return;
     }
 
-    file.text().then(
-      (text) => read(text, file.name),
+    file.arrayBuffer().then(
+      (bytes) => read(decodeByHeader(bytes, isKnownHeader), file.name),
       () => setError("That file could not be opened."),
     );
   }
@@ -124,8 +144,9 @@ export function FileStep({ instruments, timeZone, onParsed }: FileStepProps) {
       <div className="flex flex-col gap-1">
         <h2 className="cap cap-neon">Choose a file</h2>
         <p className="text-[11.5px] text-fg-subtle">
-          A CSV or TSV export of your fills, up to {MAX_IMPORT_ROWS} rows and{" "}
-          {MAX_MB} MB. It is read in your browser and never uploaded.
+          A CSV or TSV export of your Tradovate fills or your FTMO account
+          history, up to {MAX_IMPORT_ROWS} rows and {MAX_MB} MB. It is read in
+          your browser and never uploaded.
         </p>
       </div>
 

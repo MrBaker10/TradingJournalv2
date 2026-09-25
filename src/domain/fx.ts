@@ -92,11 +92,10 @@ export function shiftDate(date: IsoDate, days: number): IsoDate {
 }
 
 /**
- * The rate that applies on `date`: that day's, or the last one published
- * before it within `MAX_RATE_LOOKBACK_DAYS`. A Saturday takes Friday's rate.
- * Null when nothing is close enough — the caller has to fetch, not guess.
+ * The stored rate that applies on `date`: that day's, or the last one
+ * published before it within `MAX_RATE_LOOKBACK_DAYS`, with its own date.
  */
-export function rateFor(date: string, rates: FxRate[]): string | null {
+export function applicableRate(date: string, rates: FxRate[]): FxRate | null {
   assertIsoDate(date);
   const earliest = shiftDate(date, -MAX_RATE_LOOKBACK_DAYS);
   let best: FxRate | null = null;
@@ -104,7 +103,16 @@ export function rateFor(date: string, rates: FxRate[]): string | null {
     if (rate.date > date || rate.date < earliest) continue;
     if (best === null || rate.date > best.date) best = rate;
   }
-  return best?.rateVsUsd ?? null;
+  return best;
+}
+
+/**
+ * The rate that applies on `date`: that day's, or the last one published
+ * before it within `MAX_RATE_LOOKBACK_DAYS`. A Saturday takes Friday's rate.
+ * Null when nothing is close enough — the caller has to fetch, not guess.
+ */
+export function rateFor(date: string, rates: FxRate[]): string | null {
+  return applicableRate(date, rates)?.rateVsUsd ?? null;
 }
 
 /**
@@ -133,4 +141,83 @@ export function datesNeedingFetch(
     if (!covered) needed.add(date);
   }
   return [...needed].sort();
+}
+
+/**
+ * The rate `date` will keep for good, or null while that is not known yet.
+ *
+ * Final means the same as settled in `datesNeedingFetch`: a rate is stored on
+ * or after the date, so any gap before it is a day the ECB did not publish.
+ * Until then the applicable rate is only the latest one there happens to be.
+ */
+export function finalRateFor(date: string, rates: FxRate[]): FxRate | null {
+  assertIsoDate(date);
+  if (!rates.some((rate) => rate.date >= date)) return null;
+  return applicableRate(date, rates);
+}
+
+/**
+ * Whether a converted amount still waits for its final rate.
+ *
+ * An import before the ECB publishes (around 16:00 CET) converts with the
+ * last rate there is and records that rate's date. The amount is provisional
+ * until `finalRateFor` settles on that same date: a Saturday trade on Friday's
+ * rate is final once Monday's rate is stored, a Thursday trade on Wednesday's
+ * rate waits for Thursday's. The nightly `job:fx` converts the rest again.
+ * A trade with no rate date was never converted, or its P&L was edited by
+ * hand — either way nothing is pending.
+ */
+export function isProvisional(
+  fxRateDate: string | null,
+  tradeDate: string,
+  rates: FxRate[],
+): boolean {
+  if (fxRateDate === null) return false;
+  assertIsoDate(fxRateDate);
+  return finalRateFor(tradeDate, rates)?.date !== fxRateDate;
+}
+
+/** An amount converted for a trade: the USD cents and the rate it took. */
+export interface UsdConversion {
+  usdCents: number;
+  /** The date of the rate used — `trades.fx_rate_date`. */
+  rateDate: string;
+  provisional: boolean;
+}
+
+/**
+ * An import's conversion: the rate that applies on the trade date now, even
+ * if it is only provisional. Null when no rate is close enough — the caller
+ * reports that instead of writing an unconverted amount.
+ */
+export function convertForTrade(
+  cents: number,
+  tradeDate: string,
+  rates: FxRate[],
+): UsdConversion | null {
+  const rate = applicableRate(tradeDate, rates);
+  if (rate === null) return null;
+  return {
+    usdCents: toUsdCents(cents, rate.rateVsUsd),
+    rateDate: rate.date,
+    provisional: isProvisional(rate.date, tradeDate, rates),
+  };
+}
+
+/**
+ * The nightly correction for one provisional trade: its amount on the final
+ * rate, or null while there is none yet or the trade already has it.
+ */
+export function correctionFor(
+  cents: number,
+  fxRateDate: string,
+  tradeDate: string,
+  rates: FxRate[],
+): Omit<UsdConversion, "provisional"> | null {
+  const final = finalRateFor(tradeDate, rates);
+  if (final === null || final.date === fxRateDate) return null;
+  return {
+    usdCents: toUsdCents(cents, final.rateVsUsd),
+    rateDate: final.date,
+  };
 }

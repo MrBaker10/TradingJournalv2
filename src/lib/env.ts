@@ -26,6 +26,10 @@ const envSchema = z.object({
   // Feed Better Auth's trustedOrigins (src/lib/auth/trusted-origins.ts).
   VERCEL_URL: z.string().optional(),
   VERCEL_BRANCH_URL: z.string().optional(),
+  // Vercel Cron sends it as `Authorization: Bearer <CRON_SECRET>`; the cron
+  // routes (/api/cron/*) accept nothing else. Unset locally, where the jobs
+  // run as `pnpm job:*` and the routes answer 401.
+  CRON_SECRET: z.string().min(32).optional(),
   // Which storage adapter serves screenshots (src/lib/storage/index.ts).
   // Explicit rather than inferred from the R2 variables, so that a deployment
   // missing them fails at startup instead of silently writing to a read-only
