@@ -715,6 +715,19 @@ by picking a different answer while coding.
   - Required or optional when the account is created, and editable later?
   - How it relates to the roadmap's "Account ↔ prop firm program link", which also
     lists a starting balance.
+- **Display in the account currency — its own slice `display-currency`.** Carried over
+  from the ftmo-import spec. Decided 2026-09-24:
+  - Combined view ("All accounts"): if every real account has the same currency, show
+    that one (EUR only → EUR, USD only → USD); a mix of EUR and USD shows USD.
+  - Rate: convert back with the rate the import converted with (the trade date's ECB
+    rate, now stored per trade as `fx_rate_date`), so the figure matches the broker.
+    This replaces "One daily ECB rate … applied to every figure … including historical
+    ones" in this file — adjust it at `load`.
+  - To confirm at `load`: a single selected account shows its own currency, derived
+    from the rule above; whether `users.currency_display` then goes away or gets
+    another role is open.
+  - Order against `account-balance` is not decided; that slice's question about an EUR
+    account's starting balance depends on this one.
 - **CFD or futures — on the account or on the instrument?** Asked on 2026-09-25, not
   decided. Recommendation: a kind on the instrument (`future` / `cfd`), which can drive
   the quantity label (contracts vs lots), decimals in the form and the tile. An account
