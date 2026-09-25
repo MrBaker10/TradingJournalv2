@@ -2681,3 +2681,80 @@ steht aus.
 - Bei einem krummen Startwert steht der Start nicht als Beschriftung auf der Y-Achse, nur
   als Linie.
 - Ob der Import-Umbau ein eigener `refactor:`-Commit wird, entscheidet `complete`.
+
+## 2026-09-25 — Anzeige in der Kontowährung — feature/display-currency — b72ddfb
+
+**Gebaut.** Geldbeträge erscheinen in der Währung der Konten, die eine Ansicht zeigt: Ein
+gewähltes EUR-Konto zeigt Metrik-Tafel, Kalender, Equity-Kurve, Journal, Detailseite und
+Analytics in EUR, „All accounts" die gemeinsame Währung der echten Konten, sonst USD.
+Ein Trade mit Datei-P&L aus einem EUR-Konto zeigt genau den Broker-Betrag, jeder andere
+seinen USD-Betrag geteilt durch den ECB-Kurs des Handelstags. Gespeichert wird weiter in
+USD. `users.currency_display` ist entfernt.
+
+**Dateien.**
+- Domain: `src/domain/fx.ts` (`displayCurrencyFor`, `toAccountCents`) mit Tests.
+- Schema/DB: `src/db/schema/users.ts`, `src/db/seed.ts`, Migration `0018`;
+  `src/db/queries/trades.ts` (`tradeDisplayCents`, `displayRateOn`, `displayPnlCents`
+  an jeder Trade-Zeile, `getJournalTradeById` mit Options-Objekt),
+  `src/db/queries/scope.ts` (`QueryScope.currency`, `moneyContribution` in
+  Anzeigewährung, `listScopeCurrencies`, `withDisplayCurrency`),
+  `src/db/queries/analytics.ts` („By account"), `src/db/queries/dashboard.ts`
+  (Startguthaben in EUR), `src/db/queries/fx.ts` (`listTradeDatesOnCurrency`,
+  `listForeignCurrencies`); Tests `display-currency.test.ts` (neu), `fx.test.ts`,
+  `trade-detail.test.ts` (Aufruf-Signatur).
+- Job/Actions: `src/lib/fx/job.ts` (Kurse für Handelstage auf EUR-Konten),
+  `src/actions/trades.ts` (`ensureDisplayRates` nach dem Speichern).
+- Lib/UI: `src/lib/money.ts` (`formatCents(..., { currency })`, `DisplayCurrency`) mit
+  Test; Seiten `dashboard`, `journal`, `journal/[id]`, `analytics`; Komponenten
+  `metric-panel`, `pnl-calendar`, `equity-curve`, `trade-row`, `trade-detail`,
+  `dimension-table`, `trade-form` (Beschriftung).
+- Doku: `project-overview.md` (Currency, Settings-Liste, Datenmodell, Decision, offene
+  Frage geschlossen), `project-structure.md` (Currency), `Design.md` (Anzeigewährung).
+
+**Migration.** `0018_red_lionheart.sql`: `alter table users drop column
+currency_display`. Lokal angewendet, Neon steht aus — **erst nach dem Deployment des
+neuen Codes**: der alte Code liest die Spalte in `getCurrentUser` (`select()` über
+`users`), würde also zwischen Migration und Deployment auf jeder Seite scheitern.
+
+**Regeln.**
+- Anzeigewährung: gemeinsame Währung, sonst USD; ohne Konten USD. Test: `fx.test.ts`
+  „displayCurrencyFor"; Postgres: `display-currency.test.ts` „the display currency of a
+  scope" (Einzelkonto, gemischt, nur EUR mit USD-Practice).
+- Rückrechnung: `pnl_source` exakt, wenn das Konto des Import-Batches in der
+  Anzeigewährung ist; sonst `round(tradePnlCents / Kurs)`, halb vom Nullpunkt weg, pro
+  Trade, dann summiert. Gleichlauf SQL ↔ `toAccountCents`: `display-currency.test.ts`.
+- Kurs: letzter gespeicherter an oder vor `trade_date`, ohne 7-Tage-Grenze; der früheste
+  für ältere Trades. Tests: Wochenende, Trade vor jedem Kurs.
+- Startguthaben in EUR = `starting_balance` direkt. Test: „sums a day per trade in EUR".
+- R bleibt in USD (`pnlCents`), die Anzeige nutzt `displayPnlCents`.
+
+**Entschieden unterwegs.**
+- **Manuelle Trades auf EUR-Konten mit dem ECB-Kurs ihres Handelstags** (Sascha).
+- **Alle Geldanzeigen in einem Slice**, CSV-Export und Prop-Firm-Limits bleiben USD
+  (Sascha).
+- **Override-Feld bleibt USD** und ist als „P&L override (USD)" beschriftet (Sascha).
+- **`users.currency_display` entfällt** — die Anzeigewährung ergibt sich immer aus den
+  Konten (Sascha).
+- **Fehlender Kurs:** letzter an oder vor dem Handelstag ohne Grenze, sonst frühester
+  (Sascha).
+- **Detailseite in der Anzeigewährung des gewählten Scopes**, wie das Journal (Sascha).
+- **Speichern scheitert nie an der ECB** — `ensureDisplayRates` ist best effort, die
+  Anzeige nimmt den nächstgelegenen Kurs, `job:fx` holt nach (im Plan freigegeben).
+- **`moneyContribution` als einziger Hebel:** alle Summen folgen der Anzeigewährung über
+  diesen einen Ausdruck; Vorzeichen-Filter bleiben auf `tradePnlCents`, weil die
+  Umrechnung das Vorzeichen nicht ändert.
+- **`displayPnlCents` kommt aus SQL**, nicht aus TypeScript, damit eine Zeile genau zu
+  ihrer Summe passt.
+- **Aus dem Review:** `getJournalTradeById` nimmt ein Options-Objekt statt eines
+  vierten Positionsparameters; `listForeignCurrencies` nutzt `inArray` der Core API.
+
+**Offen geblieben.**
+- Migration `0018` auf Neon `preview` und Production — nach dem Deployment.
+- Klickpfad von Sascha: vor allem Analytics und Detailseite in EUR.
+- **Grenze von `datesNeedingFetch`** (aus `account-currency`, beim Testen gefunden,
+  nicht behoben): Ein Tag gilt als abgedeckt, sobald ein späterer Kurs gespeichert ist
+  und innerhalb von 7 Tagen ein früherer existiert — auch wenn die Tage dazwischen nie
+  abgerufen wurden. Er bekommt dann einen bis zu 7 Tage alten Kurs.
+- `tradeDisplayCents` wertet für EUR pro Zeile Unterabfragen aus, in
+  `getMonthMoneyMetrics` mehrfach; bei einem Nutzer unkritisch, bei großen Historien
+  wäre ein vorberechneter Wert pro Trade die Alternative.
