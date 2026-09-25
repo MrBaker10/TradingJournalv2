@@ -2602,3 +2602,82 @@ Instrument-Tile der Trade-Zeile kürzt CFD-Symbole.
   durch Tests belegt.
 - Die Änderung an der Review-Checkliste (`.claude/skills/feature-review/SKILL.md`) liegt
   in einem gitignorten Ordner und wird nicht mitcommittet.
+
+## 2026-09-25 — Startguthaben für die Equity-Kurve — feature/account-balance — f0e13ec (refactor 2e5dddc)
+
+**Gebaut.** Ein Konto hat ein optionales Startguthaben in seiner Währung, gesetzt beim
+Anlegen oder später in der Kontozeile unter `/settings`. Die Equity-Kurve im Dashboard
+beginnt bei diesem Guthaben — bei einem Einzelkonto bei dessen eigenem, bei „All
+accounts" bei der Summe der echten Konten — und färbt und füllt an dieser Startlinie
+statt an der Null. Ein EUR-Guthaben wird beim Speichern einmal mit dem ECB-Kurs des Tages
+nach USD umgerechnet. Nebenbei teilen sich Import und Guthaben jetzt einen FX-Helfer.
+
+**Dateien.**
+- Domain: `src/domain/equity.ts` (`buildEquitySeries(days, startCents)`, `startCents`,
+  `baselineOffset` statt `zeroOffset`) mit `__tests__/equity.test.ts`.
+- Schema/DB: `src/db/schema/accounts.ts`, Migration `0017`; `src/db/queries/dashboard.ts`
+  (`getStartingBalanceCents`), `src/db/queries/accounts.ts` (`updateStartingBalance`,
+  `StartingBalanceValues`, `updateAccountCurrency` mit Guthaben); neuer Query-Test
+  `src/db/queries/__tests__/starting-balance.test.ts`.
+- Lib: `src/lib/money.ts` (`exactCents`) mit Test; `src/lib/fx/convert.ts` (neu,
+  `convertToUsd`) mit Postgres-Test `src/lib/fx/__tests__/convert.test.ts`.
+- Server: `src/schemas/accounts.ts` (`startingBalanceField`, `MAX_STARTING_BALANCE`,
+  `setStartingBalanceSchema`, `renameAccountSchema` entkoppelt),
+  `src/actions/accounts.ts` (`startingBalanceValues`, `setStartingBalance`,
+  `createAccount`, `setAccountCurrency`), `src/actions/import.ts` (`convertRows` über
+  `convertToUsd`).
+- UI: `src/app/(app)/dashboard/page.tsx`, `src/components/dashboard/equity-curve.tsx`,
+  `src/components/settings/account-create-form.tsx`, `account-row.tsx`.
+- Doku: `context/Design.md` §4.15.
+
+**Migration.** `0017_yielding_romulus.sql`: `accounts.starting_balance numeric(14,2) not
+null default 0`, `starting_balance_usd numeric(14,2) not null default 0`,
+`starting_balance_rate_date date`. Bestehende Konten bekommen 0. Lokal angewendet, Neon
+steht aus.
+
+**Regeln.**
+- Die Kurve beginnt bei `startCents`, der Y-Bereich enthält den Start statt der Null, die
+  Farbe wechselt an der Startlinie; mit Start 0 ist die Reihe identisch zu vorher.
+  Tests: `equity.test.ts` „starting balance", „is exactly today's series without a
+  balance".
+- Startwert: Einzelkonto sein eigenes Guthaben (auch Practice), kombiniert die Summe
+  über `is_practice = false`, archivierte eingeschlossen; immer auf den Nutzer
+  gefiltert. Test gegen Postgres: `starting-balance.test.ts`.
+- Eingabe: ≥ 0, ≤ 100.000.000, höchstens zwei Nachkommastellen, exakt über
+  `exactCents`. Test: `money.test.ts` „exactCents".
+- Währungswechsel mit Guthaben: Betrag bleibt, wird mit dem Tageskurs neu umgerechnet,
+  im selben `UPDATE` hinter derselben Sperre. Test: `starting-balance.test.ts`.
+
+**Entschieden unterwegs.**
+- **Kombiniert = Summe der echten Konten, archivierte eingeschlossen** — dieselbe
+  Kontomenge, deren Trades in der kombinierten Kurve zählen (Sascha).
+- **EUR-Guthaben in EUR eingeben, fester Kurs beim Setzen**, Kursdatum gespeichert, damit
+  `display-currency` exakt zurückrechnen kann; keine nächtliche Korrektur (Sascha).
+- **Startlinie ersetzt die Nulllinie** in Farbe, Fläche, Referenzlinie und Y-Bereich;
+  Tooltip zeigt mit Guthaben den Kontostand ohne Vorzeichen, gefärbt gegen den Start
+  (Sascha, Design.md §4.15).
+- **Optional und jederzeit änderbar**, leer = 0 (Sascha).
+- **Beim Währungswechsel wird das Guthaben neu umgerechnet**, nicht gelöscht (Sascha).
+- **`starting_balance_usd` wird beim Setzen gespeichert**, damit die Summe reine
+  SQL-Arithmetik bleibt statt einer Umrechnung pro Konto beim Lesen.
+- **Obergrenze 100.000.000** statt der Spaltenbreite: `exactCents` ist nur bis etwa
+  einer Milliarde exakt (aus dem Review).
+- **Die Sperre wird vor dem Kursabruf geprüft**, damit ein Konto mit Trades nie eine
+  Kurs-Fehlermeldung statt der Sperrmeldung zeigt (aus dem Review).
+- **Schema ohne Transform:** das Feld bleibt eine Zahl, die Action rechnet in Cents; so
+  schicken alle Formulare wieder `parsed.data` (aus dem Review).
+- **Schema-Test nur über `exactCents`:** Vitest löst den `@/`-Alias der Schemas nicht auf.
+- **`convertToUsd` als gemeinsamer Helfer** für Import und Guthaben; der Import-Pfad wurde
+  dafür umgebaut, Verhalten unverändert (in der Vorschau nachgesehen).
+- **`renameAccountSchema` hängt nicht mehr an `createAccountSchema`**, damit ein
+  Umbenennen nie ein Guthaben tragen oder zurücksetzen kann.
+- **Die Y-Achse wird breiter** mit dem breitesten Tick, damit Beträge wie „$150,000.00"
+  nicht abgeschnitten werden.
+
+**Offen geblieben.**
+- Migration `0017` auf Neon `preview` und Production.
+- Klickpfad von Sascha abzunehmen (Guthaben setzen, EUR-Konto, kombiniert, Practice,
+  Tooltip).
+- Bei einem krummen Startwert steht der Start nicht als Beschriftung auf der Y-Achse, nur
+  als Linie.
+- Ob der Import-Umbau ein eigener `refactor:`-Commit wird, entscheidet `complete`.
