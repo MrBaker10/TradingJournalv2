@@ -193,7 +193,7 @@ describe("getJournalTradeById", () => {
         })),
       );
 
-      return getJournalTradeById(fixture.userId, row.id, tx);
+      return getJournalTradeById(fixture.userId, row.id, { executor: tx });
     });
 
     expect(trade).not.toBeNull();
@@ -219,7 +219,7 @@ describe("getJournalTradeById", () => {
         .insert(tradeAccounts)
         .values({ tradeId: row.id, accountId: fixture.realAccountId });
 
-      return getJournalTradeById(fixture.userId, row.id, tx);
+      return getJournalTradeById(fixture.userId, row.id, { executor: tx });
     });
 
     expect((trade as JournalTradeRow).confluences).toEqual([]);
@@ -250,7 +250,9 @@ describe("getJournalTradeById", () => {
         ids.push(row.id);
       }
       return Promise.all(
-        ids.map((id) => getJournalTradeById(fixture.userId, id, tx)),
+        ids.map((id) =>
+          getJournalTradeById(fixture.userId, id, { executor: tx }),
+        ),
       );
     });
 
@@ -275,7 +277,7 @@ describe("getJournalTradeById", () => {
         .insert(tradeAccounts)
         .values({ tradeId: row.id, accountId: fixture.realAccountId });
 
-      return getJournalTradeById(fixture.userId, row.id, tx);
+      return getJournalTradeById(fixture.userId, row.id, { executor: tx });
     });
 
     expect((trade as JournalTradeRow).instrumentId).toBeGreaterThan(0);
@@ -311,7 +313,9 @@ describe("getJournalTradeById", () => {
       );
 
       return {
-        detail: await getJournalTradeById(fixture.userId, row.id, tx),
+        detail: await getJournalTradeById(fixture.userId, row.id, {
+          executor: tx,
+        }),
         listed: result.rows.some((listedRow) => listedRow.id === row.id),
       };
     });
@@ -329,7 +333,7 @@ describe("getJournalTradeById", () => {
         .values({ userId: fixture.userId, ...takenTradeColumns(fixture) })
         .returning({ id: trades.id });
 
-      return getJournalTradeById(fixture.otherUserId, row.id, tx);
+      return getJournalTradeById(fixture.otherUserId, row.id, { executor: tx });
     });
 
     expect(trade).toBeNull();
@@ -339,7 +343,7 @@ describe("getJournalTradeById", () => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 
     const trade = await withFixture((tx, fixture) =>
-      getJournalTradeById(fixture.userId, 2_147_483_600, tx),
+      getJournalTradeById(fixture.userId, 2_147_483_600, { executor: tx }),
     );
 
     expect(trade).toBeNull();
@@ -376,7 +380,7 @@ describe("replaceTradeWithRelations", () => {
         mistakeTagIds: [],
       });
 
-      return getJournalTradeById(fixture.userId, row.id, tx);
+      return getJournalTradeById(fixture.userId, row.id, { executor: tx });
     });
 
     const row = trade as JournalTradeRow;
@@ -426,7 +430,7 @@ describe("replaceTradeWithRelations", () => {
         { accountIds: [], confluenceTagIds: [], mistakeTagIds: [] },
       );
 
-      return getJournalTradeById(fixture.userId, row.id, tx);
+      return getJournalTradeById(fixture.userId, row.id, { executor: tx });
     });
 
     const row = trade as JournalTradeRow;

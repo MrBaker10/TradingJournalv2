@@ -428,6 +428,55 @@ describe("job:fx", () => {
     });
   });
 
+  it("fetches the rate of a hand-logged trade on the EUR account", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const ids = await importFixture(tx);
+      // A second trade on the same account, eleven days later, logged by hand: no
+      // pnl_source, so only display-currency needs its rate. More than seven
+      // days after the last stored rate: within seven, datesNeedingFetch
+      // counts a day as settled once any later rate is stored — here the
+      // developer's own 2026 rates would be — which is a known limit of that
+      // rule (decisions.md, display-currency), not what this case is about.
+      const [{ id: _id, createdAt: _c, updatedAt: _u, ...base }] = await tx
+        .select()
+        .from(trades)
+        .where(eq(trades.id, ids.handEdited));
+      const [late] = await tx
+        .insert(trades)
+        .values({
+          ...base,
+          tradeDate: "2001-03-26",
+          importBatchId: null,
+          fxRateDate: null,
+        })
+        .returning({ id: trades.id });
+      const [assignment] = await tx
+        .select({ accountId: tradeAccounts.accountId })
+        .from(tradeAccounts)
+        .where(eq(tradeAccounts.tradeId, ids.handEdited));
+      await tx
+        .insert(tradeAccounts)
+        .values({ tradeId: late.id, accountId: assignment.accountId });
+
+      const { fetcher } = recordingFetcher([
+        ...published,
+        { date: "2001-03-26", rateVsUsd: "0.9050" },
+      ]);
+      await runFxJob(fetcher, tx);
+      const [stored] = await tx
+        .select({ rate: fxRates.rateVsUsd })
+        .from(fxRates)
+        .where(
+          and(eq(fxRates.currency, "EUR"), eq(fxRates.rateDate, "2001-03-26")),
+        );
+      return stored?.rate ?? null;
+    });
+
+    expect(result).toBe("0.905000");
+  });
+
   it("skips a correction whose trade changed since it was read", async (ctx) => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 

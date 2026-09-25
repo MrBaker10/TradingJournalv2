@@ -29,23 +29,32 @@ export function centsToDollars(cents: number): number {
   return cents / CENTS_PER_DOLLAR;
 }
 
-const USD = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
+// One formatter per currency, built once. en-US for both: the currency sign
+// changes, the digit grouping and the decimal point do not — `€1,234.56`
+// beside `$1,234.56`, not a second number format on the same page.
+const FORMATTERS = {
+  USD: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }),
+  EUR: new Intl.NumberFormat("en-US", { style: "currency", currency: "EUR" }),
+} as const;
+
+/** The currencies an amount can be shown in (src/domain/fx.ts, ACCOUNT_CURRENCIES). */
+export type DisplayCurrency = keyof typeof FORMATTERS;
 
 /**
- * Display only. Trades are stored in USD and the display-currency conversion
- * is a later slice, so this formats USD and nothing else.
+ * Display only. Trades are stored in USD; a page shows them in the display
+ * currency of its accounts (display-currency) and passes it here. Left out,
+ * the amount is USD.
  *
  * `signed` puts an explicit + on a gain, which is what a P&L column wants;
  * a loss carries its own minus either way.
  */
 export function formatCents(
   cents: number,
-  options?: { signed?: boolean },
+  options?: { signed?: boolean; currency?: DisplayCurrency },
 ): string {
-  const formatted = USD.format(centsToDollars(cents));
+  const formatted = FORMATTERS[options?.currency ?? "USD"].format(
+    centsToDollars(cents),
+  );
   return options?.signed && cents > 0 ? `+${formatted}` : formatted;
 }
 

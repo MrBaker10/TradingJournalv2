@@ -4,6 +4,7 @@ import { JournalFilters } from "@/components/journal/journal-filters";
 import { PaginationControls } from "@/components/journal/pagination-controls";
 import { TradeRow } from "@/components/journal/trade-row";
 import { listInstruments } from "@/db/queries/instruments";
+import { withDisplayCurrency } from "@/db/queries/scope";
 import {
   JOURNAL_PAGE_SIZE,
   type JournalSortBy,
@@ -44,12 +45,19 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
     : undefined;
 
   const user = await getCurrentUser();
+  // The rows' P&L in the accounts' own currency if they share one, else USD
+  // (display-currency).
+  const { currency } = await withDisplayCurrency({
+    userId: user.id,
+    selectedAccountId: user.selectedAccountId,
+  });
 
   const [{ rows, totalCount, hiddenPracticeCounts }, instruments] =
     await Promise.all([
       listJournalTrades({
         userId: user.id,
         selectedAccountId: user.selectedAccountId,
+        currency,
         dateFrom,
         dateTo,
         instrumentId,
@@ -98,7 +106,7 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
       ) : (
         <div className="flex flex-col gap-[10px]">
           {rows.map((trade) => (
-            <TradeRow key={trade.id} trade={trade} />
+            <TradeRow key={trade.id} trade={trade} currency={currency} />
           ))}
         </div>
       )}

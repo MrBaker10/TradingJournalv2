@@ -127,6 +127,13 @@
       "when": 1790370726257,
       "tag": "0017_yielding_romulus",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790372057612,
+      "tag": "0018_red_lionheart",
+      "breakpoints": true
     }
   ]
 }

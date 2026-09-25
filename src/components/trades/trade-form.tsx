@@ -921,7 +921,7 @@ export function TradeForm(props: TradeFormProps) {
           </div>
           {state.taken && (
             <FormField
-              label="P&amp;L override"
+              label="P&amp;L override (USD)"
               htmlFor="pnlOverride"
               error={errors.pnlOverride}
             >

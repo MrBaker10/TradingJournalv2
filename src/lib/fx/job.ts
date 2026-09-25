@@ -17,11 +17,21 @@ import {
   type FxCorrection,
   type FxExecutor,
   listConvertedTrades,
+  listTradeDatesOnCurrency,
   type RateFetcher,
 } from "../../db/queries/fx.ts";
-import { correctionFor, type ForeignCurrency } from "../../domain/fx.ts";
+import {
+  ACCOUNT_CURRENCIES,
+  correctionFor,
+  type ForeignCurrency,
+} from "../../domain/fx.ts";
 import { dollarsToCents } from "../money.ts";
 import { fetchEcbRates } from "./frankfurter.ts";
+
+/** Every currency that is not USD — the ones that have a rate. */
+const FOREIGN_CURRENCIES = ACCOUNT_CURRENCIES.filter(
+  (currency): currency is ForeignCurrency => currency !== "USD",
+);
 
 export interface FxJobResult {
   /** Trades converted with a rate from before their own date. */
@@ -70,5 +80,17 @@ export async function runFxJob(
   }
 
   const corrected = await applyFxCorrections(corrections, executor);
+
+  // Display in an account currency needs the rate of every trade date on such
+  // an account (display-currency). Saving a trade already asks for its own;
+  // this fills what that missed — the ECB was down, or the trade predates the
+  // slice. `ensureFxRates` fetches only what the table cannot settle.
+  for (const currency of FOREIGN_CURRENCIES) {
+    const dates = await listTradeDatesOnCurrency(currency, executor);
+    if (dates.length > 0) {
+      await ensureFxRates(currency, dates, fetcher, executor);
+    }
+  }
+
   return { checked: converted.length, corrected };
 }

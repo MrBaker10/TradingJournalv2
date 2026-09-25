@@ -17,6 +17,7 @@ import {
   getStartingBalanceCents,
   getStreakEntryDays,
 } from "@/db/queries/dashboard";
+import { withDisplayCurrency } from "@/db/queries/scope";
 import { listRecentTrades } from "@/db/queries/trades";
 import { BADGE_DEFINITIONS } from "@/domain/badges";
 import {
@@ -82,10 +83,12 @@ export default async function DashboardPage({
       ? requestedMonth
       : month;
 
-  const scope = {
+  // One display currency for every money figure on the page: the accounts'
+  // own if they share one, else USD (display-currency).
+  const scope = await withDisplayCurrency({
     userId: user.id,
     selectedAccountId: user.selectedAccountId,
-  };
+  });
 
   const [
     money,
@@ -108,7 +111,12 @@ export default async function DashboardPage({
     getMonthScoreDays(user.id, month),
     listUserBadges(user.id),
     getDailyNote(user.id, today),
-    listRecentTrades(user.id, user.selectedAccountId, RECENT_TRADES_LIMIT),
+    listRecentTrades(
+      user.id,
+      user.selectedAccountId,
+      RECENT_TRADES_LIMIT,
+      scope.currency,
+    ),
     getDashboardRewardState(user.id),
     getStartingBalanceCents(scope),
   ]);
@@ -187,9 +195,10 @@ export default async function DashboardPage({
         currentStreak={streak.current}
         longestStreak={streak.longest}
         today={today}
+        currency={scope.currency}
       />
 
-      <EquityCurve series={equity} />
+      <EquityCurve series={equity} currency={scope.currency} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <PnlCalendar
@@ -198,6 +207,7 @@ export default async function DashboardPage({
           days={calendarDays}
           currentMonth={month}
           firstTradeMonth={firstTradeMonth}
+          currency={scope.currency}
         />
         <PlanCard
           premarketPlan={note?.premarketPlan ?? null}
@@ -214,7 +224,11 @@ export default async function DashboardPage({
         ) : (
           <div className="flex flex-col gap-[10px]">
             {recentTrades.map((trade) => (
-              <TradeRow key={trade.id} trade={trade} />
+              <TradeRow
+                key={trade.id}
+                trade={trade}
+                currency={scope.currency}
+              />
             ))}
           </div>
         )}

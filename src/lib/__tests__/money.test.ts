@@ -139,3 +139,17 @@ describe("exactCents", () => {
     expect(exactCents(Number.POSITIVE_INFINITY)).toBeNull();
   });
 });
+
+describe("formatCents — currency", () => {
+  it("formats USD by default", () => {
+    expect(formatCents(123456)).toBe("$1,234.56");
+  });
+
+  it("formats EUR with the euro sign and the same grouping", () => {
+    expect(formatCents(123456, { currency: "EUR" })).toBe("€1,234.56");
+    expect(formatCents(-5676, { currency: "EUR" })).toBe("-€56.76");
+    expect(formatCents(5676, { currency: "EUR", signed: true })).toBe(
+      "+€56.76",
+    );
+  });
+});

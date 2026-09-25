@@ -31,14 +31,12 @@ async function seed() {
       email: placeholderEmail(DEMO_USERNAME),
       displayName: "Local User",
       timezone: "Europe/Berlin",
-      currencyDisplay: "USD",
     })
     .onConflictDoUpdate({
       target: users.username,
       set: {
         displayName: "Local User",
         timezone: "Europe/Berlin",
-        currencyDisplay: "USD",
       },
     })
     .returning({ id: users.id });

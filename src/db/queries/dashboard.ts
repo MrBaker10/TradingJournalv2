@@ -498,7 +498,8 @@ export async function setStreakMilestoneSeen(
  * account's balance does. Practice accounts never add to it.
  *
  * `starting_balance_usd` was converted when the balance was set, so the sum
- * is plain `numeric` arithmetic in SQL, cast to whole cents at the end.
+ * is plain `numeric` arithmetic in SQL, cast to whole cents at the end. In
+ * the scope's display currency when that is not USD.
  */
 export async function getStartingBalanceCents(
   scope: DashboardScope,
@@ -509,9 +510,17 @@ export async function getStartingBalanceCents(
       ? eq(accounts.isPractice, false)
       : eq(accounts.id, scope.selectedAccountId);
 
+  // In a foreign display currency every account in scope is kept in it
+  // (displayCurrencyFor), so the balance as entered is the figure — no
+  // conversion back (decided 2026-09-25, display-currency).
+  const column =
+    scope.currency !== undefined && scope.currency !== "USD"
+      ? accounts.startingBalance
+      : accounts.startingBalanceUsd;
+
   const [row] = await executor
     .select({
-      cents: sql<string>`coalesce(sum(${accounts.startingBalanceUsd}), 0) * 100`,
+      cents: sql<string>`coalesce(sum(${column}), 0) * 100`,
     })
     .from(accounts)
     .where(and(eq(accounts.userId, scope.userId), accountCondition));

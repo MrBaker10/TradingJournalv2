@@ -3,11 +3,13 @@ import {
   convertForTrade,
   correctionFor,
   datesNeedingFetch,
+  displayCurrencyFor,
   type FxRate,
   finalRateFor,
   isProvisional,
   rateFor,
   shiftDate,
+  toAccountCents,
   toUsdCents,
 } from "../fx.ts";
 
@@ -236,5 +238,45 @@ describe("correctionFor", () => {
     expect(
       correctionFor(-2827, "2026-09-23", "2026-09-24", lateWeek)?.usdCents,
     ).toBe(-3279); // -28.27 * 1.16 = -32.7932
+  });
+});
+
+describe("displayCurrencyFor", () => {
+  it("shows the one currency every account shares", () => {
+    expect(displayCurrencyFor(["EUR"])).toBe("EUR");
+    expect(displayCurrencyFor(["EUR", "EUR"])).toBe("EUR");
+    expect(displayCurrencyFor(["USD", "USD"])).toBe("USD");
+  });
+
+  it("falls back to USD for a mix", () => {
+    expect(displayCurrencyFor(["EUR", "USD"])).toBe("USD");
+    expect(displayCurrencyFor(["USD", "EUR", "EUR"])).toBe("USD");
+  });
+
+  it("is USD without any account", () => {
+    expect(displayCurrencyFor([])).toBe("USD");
+  });
+});
+
+describe("toAccountCents", () => {
+  it("converts USD cents back with the rate", () => {
+    // 65.05 USD at 1.146 USD per EUR = 56.7626... EUR
+    expect(toAccountCents(6505, "1.146")).toBe(5676);
+  });
+
+  it("round-trips an import's own conversion", () => {
+    const usd = toUsdCents(5676, "1.146");
+    expect(toAccountCents(usd, "1.146")).toBe(5676);
+  });
+
+  it("rounds half away from zero, symmetric for gains and losses", () => {
+    // 3 cents at 2.0 = 1.5 cents
+    expect(toAccountCents(3, "2")).toBe(2);
+    expect(toAccountCents(-3, "2")).toBe(-2);
+    expect(toAccountCents(1, "4")).toBe(0);
+  });
+
+  it("rejects fractional cents", () => {
+    expect(() => toAccountCents(1.5, "1.1")).toThrow(RangeError);
   });
 });

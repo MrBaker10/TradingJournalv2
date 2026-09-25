@@ -533,6 +533,12 @@ Feldoptik aus 4.22, beim Anlegen und in der Kachel. Hat das Konto Trades, ist da
 Select deaktiviert, und darunter steht „Locked — this account has trades" in
 `--color-fg-subtle`; ausgegraut ohne Begründung reicht nicht.
 
+**Anzeigewährung (display-currency, 2026-09-25).** Geldbeträge stehen in der Währung der
+Konten, die eine Ansicht zeigt — `€1,234.56` neben `$1,234.56`, beide in derselben
+en-US-Schreibweise mit Tausenderkomma und Dezimalpunkt; nur das Zeichen wechselt. Es
+gibt keinen Schalter und keinen Kurs im UI. Das Override-Feld im Trade-Formular ist als
+„P&L override (USD)" beschriftet, weil dort in der gespeicherten Währung eingegeben wird.
+
 ### 4.13 Screenshots und Links am Trade
 
 Beide liegen auf der Detailseite (4.20), je in einem eigenen Abschnitt. Seit S14

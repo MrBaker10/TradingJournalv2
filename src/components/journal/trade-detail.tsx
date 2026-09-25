@@ -7,7 +7,7 @@ import { ScreenshotLightbox } from "@/components/journal/screenshot-lightbox";
 import type { JournalTradeRow } from "@/db/queries/trades";
 import { formatHoldTime } from "@/domain/execution";
 import { buildPriceBand } from "@/domain/price-band";
-import { formatCents } from "@/lib/money";
+import { type DisplayCurrency, formatCents } from "@/lib/money";
 
 interface TradeDetailProps {
   trade: JournalTradeRow;
@@ -16,6 +16,8 @@ interface TradeDetailProps {
    * published; job:fx converts it again overnight.
    */
   fxProvisional: boolean;
+  /** The display currency of `displayPnlCents` (display-currency). */
+  currency: DisplayCurrency;
 }
 
 type ExecutionValue = { label: string; value: string | null; mono?: boolean };
@@ -117,7 +119,11 @@ function formatR(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}R`;
 }
 
-export function TradeDetail({ trade, fxProvisional }: TradeDetailProps) {
+export function TradeDetail({
+  trade,
+  fxProvisional,
+  currency,
+}: TradeDetailProps) {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const confluenceGroups = [
@@ -176,13 +182,15 @@ export function TradeDetail({ trade, fxProvisional }: TradeDetailProps) {
               else — bigger here, but still no glow. §4.17: anything never
               realised stays out of green, so a missed setup's would-be R is
               subtle even when it is positive. */}
-          {trade.pnlCents !== null ? (
+          {trade.displayPnlCents !== null ? (
             <span
               className={`font-bold font-mono text-[26px] tabular-nums leading-none ${
-                trade.pnlCents >= 0 ? "text-success-fg" : "text-danger-fg"
+                trade.displayPnlCents >= 0
+                  ? "text-success-fg"
+                  : "text-danger-fg"
               }`}
             >
-              {formatCents(trade.pnlCents, { signed: true })}
+              {formatCents(trade.displayPnlCents, { signed: true, currency })}
             </span>
           ) : (
             <span className="font-bold font-mono text-[26px] text-fg-subtle leading-none">

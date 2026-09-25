@@ -132,8 +132,14 @@ time, MFE/MAE) count it once. Streak, consistency score and badges see real acco
 only. A practice-only trade stays in the journal and is hidden from the
 combined list behind a visible count, never dropped without a trace.
 
-**Currency.** Trades are stored in USD. One daily ECB rate per currency is applied to
-every figure for display only, including historical ones. Prop firm limits stay in USD.
+**Currency.** Trades are stored in USD. Figures are shown in the currency of the
+accounts they cover (decided 2026-09-24/25, display-currency): a selected account in its
+own, "All accounts" in the one currency every real account shares — archived ones
+included — else USD. A trade whose file reported its P&L in that currency shows exactly
+that amount (`pnl_source`); any other trade is its USD P&L divided by the ECB rate of its
+trade date — the last stored rate on or before it, without a seven-day limit, the
+earliest stored one for a trade older than all of them. Rounded per trade, then summed.
+The CSV export and prop firm limits stay in USD.
 
 ## Phases
 

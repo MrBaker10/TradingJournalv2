@@ -4,13 +4,15 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { ValueBar } from "@/components/ui/value-bar";
 import { DIMENSION_ROW_LIMIT, type DimensionRow } from "@/domain/analytics";
-import { formatCents } from "@/lib/money";
+import { type DisplayCurrency, formatCents } from "@/lib/money";
 
 interface DimensionTableProps {
   title: string;
   rows: DimensionRow[];
   /** The line under the heading when a trade can land in several rows. */
   note?: string;
+  /** The display currency of the money column (display-currency). */
+  currency: DisplayCurrency;
 }
 
 const EMPTY = "—";
@@ -26,7 +28,13 @@ function moneyClass(cents: number): string {
   return cents > 0 ? "text-success-fg" : "text-danger-fg";
 }
 
-function Row({ row }: { row: DimensionRow }) {
+function Row({
+  row,
+  currency,
+}: {
+  row: DimensionRow;
+  currency: DisplayCurrency;
+}) {
   return (
     <li className="flex flex-col gap-1.5 py-2">
       <div className="flex items-baseline justify-between gap-3">
@@ -43,7 +51,7 @@ function Row({ row }: { row: DimensionRow }) {
             {row.winRate === null ? EMPTY : `${Math.round(row.winRate * 100)}%`}
           </span>
           <span className={`w-24 text-right ${moneyClass(row.netPnlCents)}`}>
-            {formatCents(row.netPnlCents, { signed: true })}
+            {formatCents(row.netPnlCents, { signed: true, currency })}
           </span>
           <span className="w-12 text-right text-fg-muted">
             {row.avgR === null ? EMPTY : `${row.avgR.toFixed(2)}R`}
@@ -67,7 +75,12 @@ function Row({ row }: { row: DimensionRow }) {
 // Eight rows are shown; the rest sit behind a disclosure rather than being
 // cut off, because "nothing disappears silently" applies to a long dimension
 // as much as it does to a practice-only trade in the journal.
-export function DimensionTable({ title, rows, note }: DimensionTableProps) {
+export function DimensionTable({
+  title,
+  rows,
+  note,
+  currency,
+}: DimensionTableProps) {
   const [expanded, setExpanded] = useState(false);
   const visible = rows.slice(0, DIMENSION_ROW_LIMIT);
   const overflow = rows.slice(DIMENSION_ROW_LIMIT);
@@ -97,7 +110,7 @@ export function DimensionTable({ title, rows, note }: DimensionTableProps) {
 
           <ul className="flex flex-col divide-y divide-white/6">
             {visible.map((row) => (
-              <Row key={rowKey(row)} row={row} />
+              <Row key={rowKey(row)} row={row} currency={currency} />
             ))}
           </ul>
 
@@ -116,7 +129,7 @@ export function DimensionTable({ title, rows, note }: DimensionTableProps) {
               >
                 <ul className="flex flex-col divide-y divide-white/6 border-white/6 border-t">
                   {overflow.map((row) => (
-                    <Row key={rowKey(row)} row={row} />
+                    <Row key={rowKey(row)} row={row} currency={currency} />
                   ))}
                 </ul>
               </motion.div>

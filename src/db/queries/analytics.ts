@@ -29,7 +29,12 @@ import {
   scopeWhere,
   toNumber,
 } from "./scope.ts";
-import { holdMinutes, rMultipleSortKey, tradePnlCents } from "./trades.ts";
+import {
+  holdMinutes,
+  rMultipleSortKey,
+  tradeDisplayCents,
+  tradePnlCents,
+} from "./trades.ts";
 
 // The eleven analytics dimensions of project-overview.md §F, each as one
 // GROUP BY, all eleven in a single UNION ALL statement. One round trip, no
@@ -164,7 +169,9 @@ export async function getDimensionBreakdowns(
   // it yields exactly one row.
   const accountKey = DIMENSION_KEYS.account;
   const accountBranch = executor
-    .select(dimensionFields("account", accountKey, tradePnlCents))
+    .select(
+      dimensionFields("account", accountKey, tradeDisplayCents(scope.currency)),
+    )
     .from(trades)
     .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
     .innerJoin(tradeAccounts, eq(tradeAccounts.tradeId, trades.id))

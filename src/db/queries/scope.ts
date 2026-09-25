@@ -1,8 +1,10 @@
 import { and, eq, gte, lte, type SQL, sql } from "drizzle-orm";
+import { type AccountCurrency, displayCurrencyFor } from "../../domain/fx.ts";
 import type { IsoDate } from "../../domain/streak.ts";
+import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
 import { tradeAccounts, trades } from "../schema/trades.ts";
-import { hasRealAccount, tradePnlCents } from "./trades.ts";
+import { hasRealAccount, tradeDisplayCents } from "./trades.ts";
 
 // The account scope every figure in this app is computed inside, in one place
 // so no query invents its own. It came out of src/db/queries/dashboard.ts when
@@ -27,6 +29,12 @@ export interface QueryScope {
   userId: number;
   /** `users.selected_account_id`. null = "All accounts" = all real accounts. */
   selectedAccountId: number | null;
+  /**
+   * The currency money figures are shown in (display-currency). A page works
+   * it out once with `listScopeCurrencies` and `displayCurrencyFor`; left out
+   * it is USD, the currency trades are stored in.
+   */
+  currency?: AccountCurrency;
 }
 
 /**
@@ -85,11 +93,16 @@ export function scopeWhere(scope: QueryScope, range?: DateRange) {
   return and(...scopeConditions(scope, range));
 }
 
-/** One trade's contribution to a money figure, in integer cents. */
+/**
+ * One trade's contribution to a money figure, in integer cents of the scope's
+ * display currency: rounded to cents per trade first, then multiplied, so the
+ * rows of a view add up to its total.
+ */
 export function moneyContribution(scope: QueryScope): SQL<number> {
+  const perTrade = tradeDisplayCents(scope.currency);
   return scope.selectedAccountId === null
-    ? sql<number>`(${tradePnlCents} * ${realAccountCount})`
-    : sql<number>`${tradePnlCents}`;
+    ? sql<number>`(${perTrade} * ${realAccountCount})`
+    : sql<number>`${perTrade}`;
 }
 
 /**
@@ -111,4 +124,42 @@ export function toNumber(value: unknown): number {
 /** Integer cents in, integer cents out — never a fraction of a cent. */
 export function ratioCents(totalCents: number, weight: number): number | null {
   return weight > 0 ? Math.round(totalCents / weight) : null;
+}
+
+/**
+ * The currencies of the accounts a view covers, for `displayCurrencyFor`: the
+ * selected account's own — a practice account included, it is the one path
+ * allowed to read one — or, for "All accounts", every real account's,
+ * archived ones included, the same accounts whose trades and starting
+ * balances the combined figures count. Filtered by the user either way.
+ */
+export async function listScopeCurrencies(
+  scope: QueryScope,
+  executor: Pick<typeof db, "selectDistinct"> = db,
+): Promise<AccountCurrency[]> {
+  const rows = await executor
+    .selectDistinct({ currency: accounts.currency })
+    .from(accounts)
+    .where(
+      and(
+        eq(accounts.userId, scope.userId),
+        scope.selectedAccountId === null
+          ? eq(accounts.isPractice, false)
+          : eq(accounts.id, scope.selectedAccountId),
+      ),
+    );
+  return rows.map((row) => row.currency);
+}
+
+/**
+ * The scope with its display currency filled in — what a page does once
+ * before it reads any money figure, so every figure on it shares one currency.
+ */
+export async function withDisplayCurrency(
+  scope: QueryScope,
+): Promise<QueryScope & { currency: AccountCurrency }> {
+  return {
+    ...scope,
+    currency: displayCurrencyFor(await listScopeCurrencies(scope)),
+  };
 }

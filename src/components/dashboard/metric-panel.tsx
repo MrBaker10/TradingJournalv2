@@ -5,7 +5,7 @@ import type {
   MonthMoneyMetrics,
 } from "@/db/queries/dashboard";
 import type { IsoDate } from "@/domain/streak";
-import { formatCents } from "@/lib/money";
+import { type DisplayCurrency, formatCents } from "@/lib/money";
 import { formatDayLabel } from "@/lib/time";
 
 interface MetricPanelProps {
@@ -18,12 +18,16 @@ interface MetricPanelProps {
   currentStreak: number;
   longestStreak: number;
   today: IsoDate;
+  /** The display currency of the figures (display-currency). */
+  currency: DisplayCurrency;
 }
 
 const EMPTY = "—";
 
-function money(cents: number | null): string {
-  return cents === null ? EMPTY : formatCents(cents, { signed: true });
+function money(cents: number | null, currency: DisplayCurrency): string {
+  return cents === null
+    ? EMPTY
+    : formatCents(cents, { signed: true, currency });
 }
 
 function ratio(value: number | null, digits: number): string {
@@ -47,13 +51,14 @@ export function MetricPanel({
   currentStreak,
   longestStreak,
   today,
+  currency,
 }: MetricPanelProps) {
   return (
     <section className="card-surface edge overflow-hidden">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
         <MetricCell
           label="Net P&L"
-          value={money(moneyMetrics.netPnlCents)}
+          value={money(moneyMetrics.netPnlCents, currency)}
           context="This month"
           tone="money"
           sign={moneyMetrics.netPnlCents}
@@ -90,21 +95,25 @@ export function MetricPanel({
         />
         <MetricCell
           label="Expectancy"
-          value={money(moneyMetrics.expectancyCents)}
+          value={money(moneyMetrics.expectancyCents, currency)}
           context="Per trade"
           tone="money"
           sign={moneyMetrics.expectancyCents ?? 0}
         />
         <MetricCell
           label="Max drawdown"
-          value={maxDrawdownCents > 0 ? formatCents(-maxDrawdownCents) : EMPTY}
+          value={
+            maxDrawdownCents > 0
+              ? formatCents(-maxDrawdownCents, { currency })
+              : EMPTY
+          }
           context="From equity peak"
           tone="money"
           sign={-maxDrawdownCents}
         />
         <MetricCell
           label="Avg winner"
-          value={money(moneyMetrics.avgWinnerCents)}
+          value={money(moneyMetrics.avgWinnerCents, currency)}
           context={
             moneyMetrics.avgWinnerCents === null
               ? "No winning trades yet"
@@ -115,7 +124,7 @@ export function MetricPanel({
         />
         <MetricCell
           label="Avg loser"
-          value={money(moneyMetrics.avgLoserCents)}
+          value={money(moneyMetrics.avgLoserCents, currency)}
           context={
             moneyMetrics.avgLoserCents === null
               ? "No losing trades yet"
@@ -138,14 +147,18 @@ export function MetricPanel({
         />
         <MetricCell
           label="Best day"
-          value={bestDay === null ? EMPTY : money(bestDay.amountCents)}
+          value={
+            bestDay === null ? EMPTY : money(bestDay.amountCents, currency)
+          }
           context={bestDay === null ? undefined : formatDayLabel(bestDay.date)}
           tone="money"
           sign={bestDay?.amountCents ?? 0}
         />
         <MetricCell
           label="Worst day"
-          value={worstDay === null ? EMPTY : money(worstDay.amountCents)}
+          value={
+            worstDay === null ? EMPTY : money(worstDay.amountCents, currency)
+          }
           context={
             worstDay === null ? undefined : formatDayLabel(worstDay.date)
           }
@@ -154,7 +167,7 @@ export function MetricPanel({
         />
         <MetricCell
           label="Today"
-          value={money(todayAmountCents)}
+          value={money(todayAmountCents, currency)}
           context={formatDayLabel(today)}
           tone="money"
           sign={todayAmountCents}

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import type { JournalTradeRow as JournalTradeRowData } from "@/db/queries/trades";
 import { tileLabel } from "@/lib/journal/tile-label";
-import { formatCents } from "@/lib/money";
+import { type DisplayCurrency, formatCents } from "@/lib/money";
 
 interface TradeRowProps {
   trade: JournalTradeRowData;
+  /** The display currency of `displayPnlCents` (display-currency). */
+  currency: DisplayCurrency;
 }
 
 function resultLabel(trade: JournalTradeRowData): string {
@@ -21,12 +23,13 @@ function resultLabel(trade: JournalTradeRowData): string {
 // the detail page carries things the row never could: confluences, mistakes,
 // notes at full length, chart previews, and the way into editing. §4.9 was
 // rewritten with this slice; the hover treatment is the part that stayed.
-export function TradeRow({ trade }: TradeRowProps) {
+export function TradeRow({ trade, currency }: TradeRowProps) {
   const amount =
-    trade.pnlCents !== null
-      ? formatCents(trade.pnlCents, { signed: true })
+    trade.displayPnlCents !== null
+      ? formatCents(trade.displayPnlCents, { signed: true, currency })
       : null;
-  const amountPositive = trade.pnlCents !== null && trade.pnlCents >= 0;
+  const amountPositive =
+    trade.displayPnlCents !== null && trade.displayPnlCents >= 0;
   const showWouldBeR = !trade.taken && trade.rMultiple !== null;
   const showR = trade.taken && trade.rMultiple !== null;
   // A CFD symbol like `US100.cash` is cut to fit the tile; the full symbol

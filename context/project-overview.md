@@ -182,7 +182,7 @@ design, not caveats:
 
 Profile, immutable username, Discord handle, account management (create, rename,
 reorder, archive, practice toggle, set default for new trades), password change,
-TOTP two-factor, timezone, display currency, CSV export, account deletion. No theme
+TOTP two-factor, timezone, CSV export, account deletion. No theme
 toggle — the app is dark only.
 
 ---
@@ -226,8 +226,14 @@ account.
   combined journal view it is hidden with a visible count and a one-click way to show
   it, so a saved entry is never simply absent.
 
-**Currency.** Trades are stored in USD. One daily ECB rate per currency is applied to
-every figure for display only, including historical ones. Prop firm limits stay in USD.
+**Currency.** Trades are stored in USD. Figures are shown in the currency of the
+accounts they cover (decided 2026-09-24/25, display-currency): a selected account in its
+own, "All accounts" in the one currency every real account shares — archived ones
+included — else USD. A trade whose file reported its P&L in that currency shows exactly
+that amount (`pnl_source`); any other trade is its USD P&L divided by the ECB rate of its
+trade date — the last stored rate on or before it, without a seven-day limit, the
+earliest stored one for a trade older than all of them. Rounded per trade, then summed.
+The CSV export and prop firm limits stay in USD.
 
 ---
 
@@ -237,7 +243,7 @@ every figure for display only, including historical ones. Prop firm limits stay 
 
 ```sql
 users                (id, username UNIQUE, display_name, discord_username,
-                      timezone, currency_display,
+                      timezone,
                       selected_account_id NULL,   -- remembered account selector,
                                                    -- NULL = "All accounts"
                       email UNIQUE,   -- placeholder <username>@users.invalid,
@@ -700,6 +706,12 @@ by picking a different answer while coding.
   converts each amount with the rate of its own date; the import and the starting
   balance use it, and a later caller does too instead of a third copy of the flow.
 
+- **Figures in the accounts' own currency** (2026-09-25, display-currency) — replaces
+  "one daily ECB rate applied to every figure, including historical ones". The rules
+  are under Currency above; `users.currency_display` is gone, the display currency is
+  always derived from the accounts, never set by hand. Reasoning: `context/decisions.md`,
+  the display-currency entry.
+
 
 ---
 
@@ -714,20 +726,13 @@ by picking a different answer while coding.
   as its own slice at the end, after the feature slices; the layout itself is still
   open.
 
-- **Display in the account currency — its own slice `display-currency`.** Carried over
-  from the ftmo-import spec. Decided 2026-09-24:
-  - Combined view ("All accounts"): if every real account has the same currency, show
-    that one (EUR only → EUR, USD only → USD); a mix of EUR and USD shows USD.
-  - Rate: convert back with the rate the import converted with (the trade date's ECB
-    rate, now stored per trade as `fx_rate_date`), so the figure matches the broker.
-    This replaces "One daily ECB rate … applied to every figure … including historical
-    ones" in this file — adjust it at `load`.
-  - To confirm at `load`: a single selected account shows its own currency, derived
-    from the rule above; whether `users.currency_display` then goes away or gets
-    another role is open.
-  - `account-balance` came first (2026-09-25): an EUR account's starting balance is
-    stored in EUR with its converted USD value and rate date, so this slice can show it
-    in EUR without converting back.
+- **`datesNeedingFetch` can settle a day that was never fetched.** Found on 2026-09-25
+  while testing display-currency; the rule comes from account-currency. A date counts as
+  settled once any later rate is stored and `rateFor` finds an earlier one within seven
+  days — even when the days in between were never fetched (an old file imported after
+  newer rates were stored). Such a day then gets a rate up to seven days old, for an
+  import's conversion as much as for display. Not fixed; needs its own small slice that
+  records which date ranges were actually fetched, or re-checks the gap.
 - **CFD or futures — on the account or on the instrument?** Asked on 2026-09-25, not
   decided. Recommendation: a kind on the instrument (`future` / `cfd`), which can drive
   the quantity label (contracts vs lots), decimals in the form and the tile. An account

@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import {
   type AccountCurrency,
   datesNeedingFetch,
@@ -10,6 +10,7 @@ import {
 } from "../../domain/fx.ts";
 import { formatCentsPlain } from "../../lib/money.ts";
 import { db } from "../index.ts";
+import { accounts } from "../schema/accounts.ts";
 import { fxRates } from "../schema/fx-rates.ts";
 import { toNumber } from "./scope.ts";
 
@@ -238,4 +239,49 @@ export async function isTradeFxProvisional(
     shiftDate(row.trade_date, MAX_RATE_LOOKBACK_DAYS),
   );
   return isProvisional(row.fx_rate_date, row.trade_date, rates);
+}
+
+/**
+ * The trade dates on accounts kept in `currency`, for which a display
+ * conversion needs a rate (display-currency). `ensureFxRates` decides which of
+ * them are missing; this only lists them. Runs across users — it is job:fx.
+ */
+export async function listTradeDatesOnCurrency(
+  currency: ForeignCurrency,
+  executor: Pick<typeof db, "execute"> = db,
+): Promise<string[]> {
+  const rows = await executor.execute<{ trade_date: string }>(sql`
+    select distinct t.trade_date
+    from trades t
+    join trade_accounts ta on ta.trade_id = t.id
+    join accounts a on a.id = ta.account_id
+    where a.currency = ${currency}
+    order by t.trade_date
+  `);
+  return [...rows].map((row) => row.trade_date);
+}
+
+/**
+ * The foreign currencies among some of the user's accounts — the ones a trade
+ * assigned to them needs rates for. Filtered by the user.
+ */
+export async function listForeignCurrencies(
+  userId: number,
+  accountIds: number[],
+  executor: Pick<typeof db, "selectDistinct"> = db,
+): Promise<ForeignCurrency[]> {
+  if (accountIds.length === 0) return [];
+  const rows = await executor
+    .selectDistinct({ currency: accounts.currency })
+    .from(accounts)
+    .where(
+      and(
+        eq(accounts.userId, userId),
+        inArray(accounts.id, accountIds),
+        ne(accounts.currency, "USD"),
+      ),
+    );
+  return rows
+    .map((row) => row.currency)
+    .filter((currency): currency is ForeignCurrency => currency !== "USD");
 }

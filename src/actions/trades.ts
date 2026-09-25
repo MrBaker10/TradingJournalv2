@@ -7,6 +7,7 @@ import {
   listAssignableAccounts,
   listOwnedAccountIds,
 } from "@/db/queries/accounts";
+import { ensureFxRates, listForeignCurrencies } from "@/db/queries/fx";
 import { getInstrumentById } from "@/db/queries/instruments";
 import {
   countExistingConfluenceTags,
@@ -24,6 +25,7 @@ import {
 } from "@/domain/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { awardBadgesQuietly } from "@/lib/badges/sync";
+import { fetchEcbRates } from "@/lib/fx/frankfurter";
 import { dollarsToCents } from "@/lib/money";
 import { storage } from "@/lib/storage";
 import {
@@ -121,6 +123,28 @@ function buildTradeColumns(data: CreateTradeInput, pointValue: number) {
   };
 }
 
+/**
+ * Makes sure the rate of this trade's date is stored when it sits on an
+ * account kept in another currency, so the account's figures can be shown in
+ * that currency (display-currency). Best effort, on purpose: a trade is saved
+ * whatever the ECB says, the display falls back to the nearest stored rate,
+ * and job:fx fetches what is still missing overnight.
+ */
+async function ensureDisplayRates(
+  userId: number,
+  accountIds: number[],
+  tradeDate: string,
+): Promise<void> {
+  try {
+    const currencies = await listForeignCurrencies(userId, accountIds);
+    for (const currency of currencies) {
+      await ensureFxRates(currency, [tradeDate], fetchEcbRates);
+    }
+  } catch (error) {
+    console.error("ensureDisplayRates: rate not stored", error);
+  }
+}
+
 // Same "an id from the client is untrusted until checked" treatment the
 // account ids get, applied to the two tag join tables. Returns the message to
 // hand back, or null when everything exists.
@@ -199,6 +223,7 @@ export async function createTrade(input: unknown): Promise<
     ),
   );
 
+  await ensureDisplayRates(user.id, ownedAccountIds, data.tradeDate);
   await awardBadgesQuietly(user.id, user.timezone);
 
   revalidatePath("/journal");
@@ -284,6 +309,7 @@ export async function updateTrade(
     ),
   );
 
+  await ensureDisplayRates(user.id, accountIds, data.tradeDate);
   await awardBadgesQuietly(user.id, user.timezone);
 
   revalidatePath("/journal");

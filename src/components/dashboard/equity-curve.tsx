@@ -14,7 +14,7 @@ import {
   YAxis,
 } from "recharts";
 import type { EquityPoint, EquitySeries } from "@/domain/equity";
-import { formatCents } from "@/lib/money";
+import { type DisplayCurrency, formatCents } from "@/lib/money";
 import {
   formatDateWithYear,
   formatDayLabel,
@@ -23,6 +23,8 @@ import {
 
 interface EquityCurveProps {
   series: EquitySeries;
+  /** The display currency of the series (display-currency). */
+  currency: DisplayCurrency;
 }
 
 // A little air at the top so the curve's peak does not touch the card edge.
@@ -35,10 +37,10 @@ const Y_AXIS_MIN_WIDTH = 84;
 const MONO_12PX_ADVANCE = 7.3;
 const Y_AXIS_PADDING = 12;
 
-function yAxisWidth(ticksCents: number[]): number {
+function yAxisWidth(ticksCents: number[], currency: DisplayCurrency): number {
   const widest = Math.max(
     0,
-    ...ticksCents.map((cents) => formatCents(cents).length),
+    ...ticksCents.map((cents) => formatCents(cents, { currency }).length),
   );
   return Math.max(
     Y_AXIS_MIN_WIDTH,
@@ -152,7 +154,8 @@ function EquityTooltip({
   active,
   payload,
   startCents,
-}: TooltipContentProps & { startCents: number }) {
+  currency,
+}: TooltipContentProps & { startCents: number; currency: DisplayCurrency }) {
   if (!active || !payload?.length) return null;
 
   const point = payload[0].payload as EquityPoint;
@@ -166,10 +169,13 @@ function EquityTooltip({
         {/* With a starting balance the figure is where the account stood, not
             a result, so it carries no plus sign; without one it is the
             running result as before. */}
-        {formatCents(point.equityCents, { signed: startCents === 0 })}
+        {formatCents(point.equityCents, {
+          signed: startCents === 0,
+          currency,
+        })}
       </span>
       <span className="text-fg-muted text-xs tabular-nums">
-        {formatCents(point.amountCents, { signed: true })} that day
+        {formatCents(point.amountCents, { signed: true, currency })} that day
       </span>
     </div>
   );
@@ -183,7 +189,7 @@ function EquityTooltip({
  * equity line. The whole series arrives finished from the page; nothing here
  * adds, multiplies or divides money.
  */
-export function EquityCurve({ series }: EquityCurveProps) {
+export function EquityCurve({ series, currency }: EquityCurveProps) {
   // Recharts animates in JavaScript, so neither MotionConfig nor the
   // prefers-reduced-motion block in globals.css reaches it. The build-in has
   // to be switched off by hand.
@@ -238,17 +244,23 @@ export function EquityCurve({ series }: EquityCurveProps) {
                 type="number"
                 domain={series.domainCents}
                 ticks={series.ticksCents}
-                tickFormatter={(cents: number) => formatCents(cents)}
+                tickFormatter={(cents: number) =>
+                  formatCents(cents, { currency })
+                }
                 tickLine={false}
                 axisLine={false}
-                width={yAxisWidth(series.ticksCents)}
+                width={yAxisWidth(series.ticksCents, currency)}
               />
 
               <ReferenceLine y={series.startCents} />
 
               <Tooltip
                 content={(props) => (
-                  <EquityTooltip {...props} startCents={series.startCents} />
+                  <EquityTooltip
+                    {...props}
+                    startCents={series.startCents}
+                    currency={currency}
+                  />
                 )}
                 isAnimationActive={!prefersReducedMotion}
               />

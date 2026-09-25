@@ -13,7 +13,7 @@ import {
   type DashboardSearchParams,
 } from "@/lib/dashboard/href";
 import { buildJournalHref } from "@/lib/journal/href";
-import { formatCents } from "@/lib/money";
+import { type DisplayCurrency, formatCents } from "@/lib/money";
 import { monthRangeOf, shiftMonth } from "@/lib/time";
 
 interface PnlCalendarProps {
@@ -25,6 +25,8 @@ interface PnlCalendarProps {
   month: string;
   today: IsoDate;
   days: DayTotal[];
+  /** The display currency of the day totals (display-currency). */
+  currency: DisplayCurrency;
 }
 
 // Sunday first, because Design.md §4.8 writes the header as S M T W T F S.
@@ -74,11 +76,15 @@ function amountClass(amountCents: number): string {
 // Design.md §8: the colour coding does not reach a screen reader, so the
 // label carries date, amount and entry count in words. A day with nothing
 // logged is not a link and reads as its plain day number.
-function ariaLabel(date: IsoDate, total: DayTotal): string {
+function ariaLabel(
+  date: IsoDate,
+  total: DayTotal,
+  currency: DisplayCurrency,
+): string {
   const day = format(dayOf(date), "MMMM d, yyyy");
   const entries =
     total.entryCount === 1 ? "1 entry" : `${total.entryCount} entries`;
-  return `${day}, ${formatCents(total.amountCents, { signed: true })}, ${entries}`;
+  return `${day}, ${formatCents(total.amountCents, { signed: true, currency })}, ${entries}`;
 }
 
 // Design.md §4.8. The coloured glow on a money day is deliberate and is the
@@ -91,6 +97,7 @@ export function PnlCalendar({
   days,
   currentMonth,
   firstTradeMonth,
+  currency,
 }: PnlCalendarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -192,7 +199,10 @@ export function PnlCalendar({
                       total.amountCents,
                     )}`}
                   >
-                    {formatCents(total.amountCents, { signed: true })}
+                    {formatCents(total.amountCents, {
+                      signed: true,
+                      currency,
+                    })}
                   </span>
                   <span className="font-mono text-[10px] text-fg-subtle tabular-nums">
                     {total.entryCount}
@@ -222,7 +232,7 @@ export function PnlCalendar({
               {total ? (
                 <Link
                   href={buildJournalHref({}, { from: date, to: date })}
-                  aria-label={ariaLabel(date, total)}
+                  aria-label={ariaLabel(date, total, currency)}
                   className={className}
                 >
                   {content}

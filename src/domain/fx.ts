@@ -221,3 +221,34 @@ export function correctionFor(
     rateDate: final.date,
   };
 }
+
+/**
+ * The currency figures are shown in (decided 2026-09-24, display-currency):
+ * the one currency every account in scope shares, else USD. A selected
+ * account passes just its own. No account at all is USD — the currency
+ * trades are stored in.
+ */
+export function displayCurrencyFor(
+  currencies: AccountCurrency[],
+): AccountCurrency {
+  const [first] = currencies;
+  if (first === undefined) return "USD";
+  return currencies.every((currency) => currency === first) ? first : "USD";
+}
+
+/**
+ * USD cents back into the account currency, in integer minor units: the
+ * inverse of `toUsdCents`, for display only. Rounds half away from zero like
+ * `toUsdCents` and like `round()` on `numeric` in SQL, which is what the
+ * display query does (`tradeDisplayCents`, src/db/queries/trades.ts).
+ */
+export function toAccountCents(usdCents: number, rateVsUsd: string): number {
+  if (!Number.isInteger(usdCents)) {
+    throw new RangeError(`usdCents must be an integer, got ${usdCents}`);
+  }
+  const rate = toScaledRate(rateVsUsd);
+  const numerator = BigInt(usdCents) * RATE_SCALE;
+  const magnitude = numerator < ZERO ? -numerator : numerator;
+  const rounded = (magnitude * TWO + rate) / (rate * TWO);
+  return Number(numerator < ZERO ? -rounded : rounded);
+}

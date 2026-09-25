@@ -10,6 +10,7 @@ import {
   getExecutionSummary,
   getMissedSetupBreakdowns,
 } from "@/db/queries/analytics";
+import { withDisplayCurrency } from "@/db/queries/scope";
 import {
   DIMENSION_IDS,
   DIMENSION_NOTES,
@@ -49,10 +50,11 @@ export default async function AnalyticsPage({
       ? { from, to }
       : (rangeForPreset(firstValue(rawParams.range), today) ?? undefined);
 
-  const scope = {
+  // One display currency for every money figure on the page (display-currency).
+  const scope = await withDisplayCurrency({
     userId: user.id,
     selectedAccountId: user.selectedAccountId,
-  };
+  });
 
   const [dimensionRows, missedRows, execution, excursions] = await Promise.all([
     getDimensionBreakdowns(scope, range),
@@ -79,6 +81,7 @@ export default async function AnalyticsPage({
             title={DIMENSION_TITLES[dimension]}
             rows={byDimension[dimension]}
             note={DIMENSION_NOTES[dimension]}
+            currency={scope.currency}
           />
         ))}
       </div>

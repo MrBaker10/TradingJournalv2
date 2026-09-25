@@ -11,6 +11,7 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
+import type { AccountCurrency, ForeignCurrency } from "../../domain/fx.ts";
 import { calculatePnl } from "../../domain/pnl.ts";
 import { dollarsToCents } from "../../lib/money.ts";
 import { createSignedUploadUrl } from "../../lib/uploads/signed-url.ts";
@@ -39,6 +40,8 @@ export type JournalSortDir = "asc" | "desc";
 export interface JournalFilters {
   userId: number;
   selectedAccountId: number | null;
+  /** Display currency of the rows' P&L; USD when left out. */
+  currency?: AccountCurrency;
   dateFrom?: string;
   dateTo?: string;
   instrumentId?: number;
@@ -117,7 +120,14 @@ export interface JournalTradeRow {
    * `getProvisionalFxRate` in fx.ts answers it for the detail page.
    */
   fxRateDate: string | null;
+  /** The realised P&L in USD cents — the stored currency, which R is read from. */
   pnlCents: number | null;
+  /**
+   * The same P&L in the view's display currency, from the same SQL expression
+   * the money figures sum (`tradeDisplayCents`), so a row matches its total.
+   * Equal to `pnlCents` in USD.
+   */
+  displayPnlCents: number | null;
   rMultiple: number | null;
   accounts: JournalTradeAccount[];
   confluences: JournalTradeConfluence[];
@@ -350,6 +360,60 @@ export const tradePnlCents = sql<number | null>`(
   end
 )::bigint`;
 
+/**
+ * The ECB rate a display conversion uses for this trade (decided 2026-09-25,
+ * display-currency): the last one stored on or before `trade_date` — no
+ * seven-day limit, so a gap never breaks a figure — and for a trade older than
+ * every stored rate, the earliest one. NULL only while no rate is stored at
+ * all. `job:fx` and saving a trade keep the table filled.
+ */
+function displayRateOn(currency: ForeignCurrency): SQL {
+  return sql`coalesce(
+    (select r.rate_vs_usd from fx_rates r
+     where r.currency = ${currency} and r.rate_date <= ${trades.tradeDate}
+     order by r.rate_date desc limit 1),
+    (select r.rate_vs_usd from fx_rates r
+     where r.currency = ${currency}
+     order by r.rate_date asc limit 1)
+  )`;
+}
+
+/**
+ * One trade's realised P&L in the display currency, in integer cents — what
+ * every money figure sums once a view is shown in an account currency
+ * (decided 2026-09-24/25, display-currency). In USD it **is** `tradePnlCents`.
+ *
+ * In a foreign currency:
+ * - a trade whose file reported its P&L in that currency — `pnl_source` set,
+ *   and the account of its import batch kept in it — shows exactly that
+ *   amount, the broker's own figure;
+ * - anything else (logged by hand, P&L edited by hand, copy-traded from a USD
+ *   account) is its USD P&L divided by the rate of its trade date.
+ *
+ * `round()` on `numeric` rounds half away from zero, the same rule as
+ * `toAccountCents` in src/domain/fx.ts, which the parity test in
+ * __tests__/display-currency.test.ts pins against real NUMERIC arithmetic.
+ * The sign follows `tradePnlCents`, so a winner/loser filter on that stays
+ * right in every currency.
+ */
+export function tradeDisplayCents(
+  currency: AccountCurrency = "USD",
+): SQL<number | null> {
+  if (currency === "USD") return tradePnlCents;
+  return sql<number | null>`(
+    case
+      when ${tradePnlCents} is null then null
+      when ${trades.pnlSource} is not null and (
+        select a.currency from import_batches b
+        join accounts a on a.id = b.account_id
+        where b.id = ${trades.importBatchId}
+      ) = ${currency}
+        then round(${trades.pnlSource} * 100)
+      else round(${tradePnlCents} / ${displayRateOn(currency)})
+    end
+  )::bigint`;
+}
+
 // Ownership is not in here: queryTradeRows applies it to every caller, so it
 // can't be forgotten by a new one.
 function buildFilterConditions(filters: JournalFilters): SQL[] {
@@ -400,6 +464,8 @@ interface TradeRowsQuery {
    */
   executor?: ReadExecutor;
   selectedAccountId: number | null;
+  /** The display currency `displayPnlCents` is in; USD when left out. */
+  currency?: AccountCurrency;
   visibility: TradeVisibility;
   /** Extra filters on top of the ownership and visibility conditions. */
   conditions: SQL[];
@@ -448,6 +514,7 @@ async function queryTradeRows(
       holdMinutes,
       pnlOverride: trades.pnlOverride,
       fxRateDate: trades.fxRateDate,
+      displayPnlCents: tradeDisplayCents(input.currency),
       accounts: accountsJson,
       confluences: confluencesJson,
       mistakes: mistakesJson,
@@ -536,6 +603,8 @@ async function queryTradeRows(
       pnlOverride: row.pnlOverride !== null ? Number(row.pnlOverride) : null,
       fxRateDate: row.fxRateDate,
       pnlCents,
+      displayPnlCents:
+        row.displayPnlCents === null ? null : Number(row.displayPnlCents),
       rMultiple: row.taken
         ? rMultiple
         : row.mfeR !== null
@@ -563,6 +632,7 @@ export async function listJournalTrades(
   const { rows, totalCount } = await queryTradeRows({
     userId: filters.userId,
     selectedAccountId: filters.selectedAccountId,
+    currency: filters.currency,
     visibility: "scoped",
     executor,
     conditions: buildFilterConditions(filters),
@@ -586,10 +656,12 @@ export async function listRecentTrades(
   userId: number,
   selectedAccountId: number | null,
   limit: number,
+  currency?: AccountCurrency,
 ): Promise<JournalTradeRow[]> {
   const { rows } = await queryTradeRows({
     userId,
     selectedAccountId,
+    currency,
     visibility: "scoped",
     conditions: [],
     orderBy: [desc(trades.tradeDate), desc(trades.id)],
@@ -614,11 +686,18 @@ export async function listRecentTrades(
 export async function getJournalTradeById(
   userId: number,
   tradeId: number,
-  executor: ReadExecutor = db,
+  options: {
+    /** A test's transaction; the shared client otherwise. */
+    executor?: ReadExecutor;
+    /** The display currency of `displayPnlCents`; USD when left out. */
+    currency?: AccountCurrency;
+  } = {},
 ): Promise<JournalTradeRow | null> {
+  const { executor = db, currency } = options;
   const { rows } = await queryTradeRows({
     userId,
     selectedAccountId: null,
+    currency,
     visibility: "owner",
     executor,
     conditions: [eq(trades.id, tradeId)],

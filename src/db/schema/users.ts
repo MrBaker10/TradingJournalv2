@@ -33,7 +33,6 @@ export const users = pgTable("users", {
   twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   discordUsername: text("discord_username"),
   timezone: text("timezone").notNull(),
-  currencyDisplay: text("currency_display").notNull().default("USD"),
   selectedAccountId: integer("selected_account_id").references(
     (): AnyPgColumn => accounts.id,
     { onDelete: "set null" },
