@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/index";
 import { findImportAccount } from "@/db/queries/accounts";
-import { ensureFxRates } from "@/db/queries/fx";
 import {
   createImportBatch,
   type ImportedTrade,
@@ -14,7 +13,7 @@ import {
   updateImportedTrades,
 } from "@/db/queries/import";
 import { listInstruments } from "@/db/queries/instruments";
-import { type AccountCurrency, convertForTrade } from "@/domain/fx";
+import type { AccountCurrency } from "@/domain/fx";
 import { matchRows } from "@/domain/import/match";
 import {
   decideOutcome,
@@ -26,7 +25,7 @@ import type { NormalizedTrade } from "@/domain/import/types";
 import { calculatePnl } from "@/domain/pnl";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { awardBadgesQuietly } from "@/lib/badges/sync";
-import { fetchEcbRates } from "@/lib/fx/frankfurter";
+import { convertToUsd } from "@/lib/fx/convert";
 import {
   commitImportSchema,
   previewImportSchema,
@@ -111,44 +110,34 @@ async function convertRows(
     };
   }
 
-  const dates = [
-    ...new Set(
-      rows
-        .filter((row) => row.filePnlCents !== null)
-        .map((row) => row.tradeDate),
-    ),
-  ];
-  let rates: Awaited<ReturnType<typeof ensureFxRates>>;
-  try {
-    rates = await ensureFxRates(currency, dates, fetchEcbRates);
-  } catch {
+  // Only rows the file gives a P&L for are converted; the rest stay null.
+  const withPnl = rows.flatMap((row, index) =>
+    row.filePnlCents === null
+      ? []
+      : [{ index, cents: row.filePnlCents, date: row.tradeDate }],
+  );
+  const result = await convertToUsd(currency, withPnl);
+  if (!result.ok) {
     // The rate source or its store failed, not the journal: said as such, so
     // the user retries later instead of suspecting their data.
     return {
       ok: false,
-      error: `Couldn't fetch the ECB rates to convert ${currency} to USD. Nothing was imported — try again in a moment.`,
+      error:
+        result.reason === "unavailable"
+          ? `Couldn't fetch the ECB rates to convert ${currency} to USD. Nothing was imported — try again in a moment.`
+          : `There is no ECB rate for ${currency} on ${result.date}, so line ${rows[withPnl[result.index].index].sourceRow} cannot be converted to USD.`,
     };
   }
 
-  const pnl: (RowPnl | null)[] = [];
-  for (const row of rows) {
-    if (row.filePnlCents === null) {
-      pnl.push(null);
-      continue;
-    }
-    const converted = convertForTrade(row.filePnlCents, row.tradeDate, rates);
-    if (converted === null) {
-      return {
-        ok: false,
-        error: `There is no ECB rate for ${currency} on ${row.tradeDate}, so line ${row.sourceRow} cannot be converted to USD.`,
-      };
-    }
-    pnl.push({
-      sourceCents: row.filePnlCents,
+  const pnl: (RowPnl | null)[] = rows.map(() => null);
+  for (const [position, item] of withPnl.entries()) {
+    const converted = result.conversions[position];
+    pnl[item.index] = {
+      sourceCents: item.cents,
       usdCents: converted.usdCents,
       fxRateDate: converted.rateDate,
       provisional: converted.provisional,
-    });
+    };
   }
   return { ok: true, pnl };
 }
