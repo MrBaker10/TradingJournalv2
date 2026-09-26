@@ -2940,3 +2940,71 @@ by-the-book); Doku `Design.md` §4.7, `project-overview.md`.
   nichts.
 
 **Offen geblieben.** Nichts.
+
+## 2026-09-26 — Tradovate-Stop aus dem Orders-Export — feature/tradovate-orders-stop — bd6d7bd
+
+**Gebaut.** Der Tradovate-Import nimmt den Orders-Export als optionale zweite Datei in
+derselben Auswahl. Er liefert nur den initialen Stop: übernommen, wenn die letzte
+Änderung der Stop-Order in der Sekunde des Entry-Fills liegt und der Stop auf der
+Verlustseite steht; sonst ein Hinweis in der Vorschau. Ein Re-Import trägt den Stop in
+bestehende Trades ohne Stop nach. In der Beispielwoche (14.–18.09) 3 von 6 Stops.
+
+**Dateien.** Neu `src/domain/import/tradovate-orders.ts` (`readOrders`,
+`applyOrderStops`, vier Hinweistexte) mit `__tests__/tradovate-orders.test.ts` (echte
+Woche anonymisiert plus Randfälle). `detect.ts` (`detectOrders`, optionales
+`_orderId` in `FillColumns`), `normalize.ts`/`fills.ts`/`types.ts` (Order IDs bis
+`RawTrade`: `entryOrderId`, `exitOrderIds`; `NormalizedTrade` unverändert), `ftmo.ts`
+(leere Order IDs), `outcome.ts` (`ExistingTrade.stopPrice`, `fillStop`),
+`src/db/queries/import.ts` (`stopPrice` in `listMatchCandidates`, `fillImportedStops`),
+`src/actions/import.ts` („adds the stop"), `file-step.tsx` (Mehrfachauswahl,
+Einordnung per Kopfzeile), `preview-step.tsx` (Stop in der Hinweiszeile),
+`src/lib/csv/decode.ts` (`headerOf` exportiert).
+
+**Migration.** Keine.
+
+**Regeln.**
+- Stop nur bei letzter Änderung in exakt der Entry-Sekunde; eine Sekunde später ist
+  „moved", davor „placed before entry", auf/hinter dem Entry „at or past entry", zwei
+  verschiedene Stops in der Entry-Sekunde „several stops". Tests:
+  `tradovate-orders.test.ts` „rules" und „the real week".
+- Zuordnung Stop → Trip: gleicher Kontrakt, Gegenseite, Order ID nach der Entry-Order
+  und vor der nächsten Entry-Order desselben Kontrakts, letzte Änderung nicht nach dem
+  Exit (oder selbst Exit-Order). Hält die Klammer einer gecancelten Limit-Order zwischen
+  zwei Trades fern. Tests: „leaves the stop orders of the next trade…", echte Woche
+  18.09.
+- Zeiten der Orders-Datei werden nie umgerechnet, nur untereinander verglichen
+  (`Fill Time` der Entry-Order gegen `Timestamp` des Stops). Test: „reads the display
+  times as sortable strings, unconverted".
+- Der Stop ist kein Broker-Feld: `decideOutcome` füllt ihn nur, wo er leer ist
+  (`fillStop`), `fillImportedStops` prüft `stop_price is null` im Statement selbst und
+  setzt `stop_imported`. Tests: `outcome.test.ts` „decideOutcome — stop",
+  `db/queries/__tests__/import.test.ts` „fillImportedStops" gegen Postgres.
+- Orders-Export ist nie eine eigene Import-Form (`detectShape` lehnt ihn ab). Test:
+  `detect.test.ts` „is not a shape an import can be on its own".
+
+**Entschieden unterwegs.**
+- **Fills bleiben Quelle der Trades, Orders nur für den Stop** (Sascha): UTC-Spalte,
+  Fill-IDs und Dubletten-Erkennung bleiben; die Orders-Datei hat keine UTC-Spalte.
+- **Exakt gleiche Sekunde, kein Fenster** (Sascha).
+- **Nachtragen in bestehende Trades ja, nie überschreiben** (Sascha).
+- **Mehrfachauswahl statt zweitem Dateifeld** (Sascha): der Ablauf bleibt, die
+  Kopfzeile entscheidet, welche Datei was ist.
+- **Stop vor dem Entry platziert** (Limit-Entry mit Klammer) wird nicht übernommen,
+  Hinweis „stop placed before entry" (Sascha, strenge Regel).
+- **Zeitvergleich innerhalb der Orders-Datei** statt gegen den `Timestamp` der
+  Fills-Datei: gleiche Zone, keine zusätzliche Spalte aus den Fills nötig.
+- **Undo:** ein in einen Trade eines früheren Batches nachgetragener Stop bleibt beim
+  Undo des späteren Batches stehen — Undo entfernt nur Trades, die der Batch angelegt
+  hat.
+- Die Vorschau zeigt den Stop jetzt für jede Importform, also auch FTMO.
+- Aus dem Review: Meldung nennt eine nicht erkannte zweite Datei beim Namen; Einordnung
+  liest nur die Kopfzeile.
+
+**Offen geblieben.**
+- Ein Re-Import, der nur Stops nachträgt, legt einen Batch ohne eigene Trades an
+  („Remove 0 of 0"). Bestehendes Verhalten wie bei reinen Close-Updates, hier aber
+  häufiger.
+- Order-Typ, Exit-Grund, Target, Slippage und Kommission stehen in den Dateien, sind
+  aber nicht im Datenmodell — Entscheidung über neue Spalten steht aus.
+- Die echten Lucid-Trades (14.–18.09) haben noch keinen Stop; das Nachtragen macht
+  Sascha per Import von `Tradovate.csv` plus `Orders_Tradovate.csv`.

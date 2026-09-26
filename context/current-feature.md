@@ -51,6 +51,7 @@ One line per merged feature. Newest at the top.
 
 | Date | Feature | Notes |
 | --- | --- | --- |
+| 2026-09-26 | Tradovate-Stop aus dem Orders-Export | Orders-Export als optionale zweite Datei in derselben Auswahl liefert nur den Stop: übernommen bei letzter Änderung in der Entry-Sekunde auf der Verlustseite, sonst Hinweis in der Vorschau. Re-Import füllt fehlende Stops nach, überschreibt nie (`fillImportedStops`, `stop_price is null` im Statement). In der Beispielwoche 3 von 6. Keine Migration. Details in `decisions.md`. |
 | 2026-09-26 | Metriktafel all time außer Today | Alle Kacheln der Dashboard-Metriktafel rechnen seit dem ersten Trade im Scope (`getMoneyMetrics`, `getCountMetrics` ohne Zeitraum); Best/Worst day, Max drawdown und Today kommen aus der Tagesreihe der Kurve. Consistency Score, Streak und Kalender bleiben beim Monat. Keine Migration. |
 | 2026-09-26 | Net P&L all time und Startpunkt der Kurve | Net P&L im Dashboard ist die Summe seit dem ersten Trade im Scope (`getMoneyMetrics` ohne Zeitraum) und damit letzter Kurvenpunkt minus Startguthaben; alle anderen Kacheln bleiben beim Monat. Die Kurve zeichnet das Startguthaben als eigenen ersten Punkt „Start" (`plotted` in `equity.ts`). Keine Migration. |
 | 2026-09-26 | Luft für 7-Zeichen-Kürzel im Tile | Ab sieben Zeichen (`DOGEUSD`, `SOYBEAN`, `HEATOIL`) läuft das Tile-Kürzel mit `-0.06em` Tracking: 34px statt 37,8px im 38px-Tile, Schrift bleibt 9px. `tight` in `tile-label.ts`, Design.md §4.9 ergänzt. |
