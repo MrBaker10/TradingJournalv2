@@ -48,7 +48,7 @@ export function TradeRow({ trade, currency }: TradeRowProps) {
       <div
         className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xs font-mono font-semibold ${
           tile.compact ? "text-[9px]" : "text-[11px]"
-        } ${
+        } ${tile.tight ? "tracking-[-0.06em]" : ""} ${
           trade.taken
             ? "bg-[image:var(--gradient-info-soft)] text-cyan shadow-[var(--shadow-info-soft)]"
             : "bg-[image:var(--gradient-dark-soft)] text-fg-muted shadow-[var(--shadow-dark-soft)]"

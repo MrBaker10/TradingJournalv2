@@ -454,6 +454,8 @@ Monat verteilt ist. Er ist auf der Kachel, nicht auf der Zahl im Dashboard.
   wird `US100`, Futures-Wurzeln bleiben unverändert. Ab fünf Zeichen steht das
   Kürzel in 9px statt 11px, damit es im Tile bleibt; das volle Symbol steht
   daneben in der Titelzeile (entschieden 2026-09-25, `src/lib/journal/tile-label.ts`).
+  Ab sieben Zeichen rückt das Kürzel mit `-0.06em` Tracking zusammen, damit es nicht
+  am Rand des Tiles anliegt (entschieden 2026-09-26).
 - Titelzeile: Instrument plus Tags (`short`, `loss`/`win`/`missed`, `Grade B`),
   darunter Metazeile in `--color-fg-subtle`.
 - Hat der Eintrag Confluences, steht dahinter ein weiterer `cap`-Tag mit ihrer
