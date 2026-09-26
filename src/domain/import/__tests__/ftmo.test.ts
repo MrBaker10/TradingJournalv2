@@ -57,6 +57,8 @@ describe("readFtmoRows", () => {
       filePnlCents: 5676,
       stopPrice: 30205.96,
       stopNotice: null,
+      entryOrderId: null,
+      exitOrderIds: [],
       sourceRow: 2,
     });
   });

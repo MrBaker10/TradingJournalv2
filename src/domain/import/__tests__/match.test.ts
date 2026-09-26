@@ -34,6 +34,7 @@ function candidate(overrides: Partial<MatchableTrade> = {}): MatchableTrade {
     exitPrice: 20050,
     points: 50,
     result: "Win",
+    stopPrice: null,
     brokerTradeKey: null,
     ...overrides,
   };

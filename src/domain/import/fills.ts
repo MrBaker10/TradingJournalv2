@@ -32,6 +32,8 @@ interface OpenTrip {
   exit: Leg;
   tradeDate: string;
   entryTime: string;
+  entryOrderId: string | null;
+  exitOrderIds: string[];
   sourceRow: number;
 }
 
@@ -92,6 +94,8 @@ function closeTrip(trip: OpenTrip): RawTrade {
     filePnlCents: null,
     stopPrice: null,
     stopNotice: null,
+    entryOrderId: trip.entryOrderId,
+    exitOrderIds: trip.exitOrderIds,
     sourceRow: trip.sourceRow,
   };
 }
@@ -107,6 +111,10 @@ function openTrip(fill: ImportFill, quantity: number): OpenTrip {
     // way the New Trade form treats one.
     tradeDate: fill.tradeDate,
     entryTime: fill.entryTime,
+    // The order that opened the position, for joining an Orders export.
+    // A position scaled into over several orders keeps the first.
+    entryOrderId: fill.orderId,
+    exitOrderIds: [],
     // The line the position was opened on. A round trip spans several lines;
     // the entry is the one the preview points at.
     sourceRow: fill.sourceRow,
@@ -159,6 +167,12 @@ export function pairFills(fills: ImportFill[]): RawTrade[] {
         const closing = Math.min(remaining, openQuantity);
 
         addToLeg(open.exit, fill.price, closing, fill);
+        if (
+          fill.orderId !== null &&
+          !open.exitOrderIds.includes(fill.orderId)
+        ) {
+          open.exitOrderIds.push(fill.orderId);
+        }
         remaining -= closing;
 
         if (open.exit.quantity === open.entry.quantity) {

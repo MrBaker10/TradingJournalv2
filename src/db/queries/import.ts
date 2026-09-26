@@ -59,6 +59,7 @@ export async function listMatchCandidates(
       exitPrice: trades.exitPrice,
       points: trades.points,
       result: trades.result,
+      stopPrice: trades.stopPrice,
       brokerTradeKey: trades.brokerTradeKey,
       occurrence: sql<number>`row_number() over (
         partition by ${trades.tradeDate}, ${trades.instrumentId},
@@ -96,6 +97,7 @@ export async function listMatchCandidates(
     exitPrice: row.exitPrice === null ? null : Number(row.exitPrice),
     points: row.points === null ? null : Number(row.points),
     result: row.result,
+    stopPrice: row.stopPrice === null ? null : Number(row.stopPrice),
     brokerTradeKey: row.brokerTradeKey,
   }));
 }
@@ -336,6 +338,48 @@ export async function updateImportedTrades(
   }
 
   return written;
+}
+
+/** A stop the import fills into a matched trade that has none. */
+export interface StopFill {
+  tradeId: number;
+  stopPrice: number;
+}
+
+/**
+ * Writes imported stops into matched trades, in one statement.
+ *
+ * The stop is not a broker-owned field, so it does not go through
+ * `updateImportedTrades`. It is only ever filled where it is empty — and that
+ * is checked by the statement that writes (`stop_price is null`), not only by
+ * `decideOutcome` beforehand: a stop typed between preview and commit stays.
+ * `stop_imported` marks it like a stop written on insert, so the trade still
+ * counts as untouched for a batch undo.
+ */
+export async function fillImportedStops(
+  tx: Tx,
+  userId: number,
+  fills: StopFill[],
+): Promise<number> {
+  if (fills.length === 0) return 0;
+
+  const tuples = sql.join(
+    fills.map(
+      (fill) =>
+        sql`(${fill.tradeId}::integer, ${String(fill.stopPrice)}::numeric(13,5))`,
+    ),
+    sql`, `,
+  );
+
+  const rows = await tx.execute<{ id: number }>(sql`
+    update trades t
+    set updated_at = now(), stop_price = v.stop_price, stop_imported = true
+    from (values ${tuples}) as v(id, stop_price)
+    where t.id = v.id and t.user_id = ${userId} and t.stop_price is null
+    returning t.id
+  `);
+
+  return [...rows].length;
 }
 
 /**

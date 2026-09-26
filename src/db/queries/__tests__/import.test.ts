@@ -20,6 +20,7 @@ import {
 import { users } from "../../schema/users.ts";
 import {
   createImportBatch,
+  fillImportedStops,
   type ImportedTrade,
   insertImportedTrades,
   listImportBatches,
@@ -566,6 +567,103 @@ describe("updateImportedTrades", () => {
           { tradeId: 1, values: {} },
         ]),
       ).toBe(0);
+    });
+  });
+});
+
+describe("fillImportedStops", () => {
+  it("fills an empty stop and marks it as imported", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      const batchId = await newBatch(fixture);
+      const [id] = await insertImportedTrades(
+        fixture.tx,
+        [importedTrade(fixture, batchId)],
+        fixture.accountId,
+      );
+
+      const written = await fillImportedStops(fixture.tx, fixture.userId, [
+        { tradeId: id, stopPrice: 19990.25 },
+      ]);
+      expect(written).toBe(1);
+
+      const [row] = await fixture.tx
+        .select({
+          stopPrice: trades.stopPrice,
+          stopImported: trades.stopImported,
+        })
+        .from(trades)
+        .where(eq(trades.id, id));
+      expect(row).toEqual({ stopPrice: "19990.25000", stopImported: true });
+
+      const [candidate] = await listMatchCandidates(
+        fixture.userId,
+        fixture.accountId,
+        ["2026-08-20"],
+        fixture.tx,
+      );
+      expect(candidate.stopPrice).toBe(19990.25);
+    });
+  });
+
+  it("never overwrites a stop the trade already has", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      const batchId = await newBatch(fixture);
+      const [id] = await insertImportedTrades(
+        fixture.tx,
+        [importedTrade(fixture, batchId)],
+        fixture.accountId,
+      );
+      // Typed between preview and commit: the statement itself must hold.
+      await fixture.tx
+        .update(trades)
+        .set({ stopPrice: "19980" })
+        .where(eq(trades.id, id));
+
+      const written = await fillImportedStops(fixture.tx, fixture.userId, [
+        { tradeId: id, stopPrice: 19990 },
+      ]);
+      expect(written).toBe(0);
+
+      const [row] = await fixture.tx
+        .select({
+          stopPrice: trades.stopPrice,
+          stopImported: trades.stopImported,
+        })
+        .from(trades)
+        .where(eq(trades.id, id));
+      expect(row).toEqual({ stopPrice: "19980.00000", stopImported: false });
+    });
+  });
+
+  it("writes nothing for a trade that belongs to somebody else", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      const batchId = await newBatch(fixture);
+      const [id] = await insertImportedTrades(
+        fixture.tx,
+        [importedTrade(fixture, batchId)],
+        fixture.accountId,
+      );
+
+      const written = await fillImportedStops(
+        fixture.tx,
+        fixture.userId + 9999,
+        [{ tradeId: id, stopPrice: 19990 }],
+      );
+      expect(written).toBe(0);
+    });
+  });
+
+  it("does nothing when there is nothing to write", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      expect(await fillImportedStops(fixture.tx, fixture.userId, [])).toBe(0);
     });
   });
 });

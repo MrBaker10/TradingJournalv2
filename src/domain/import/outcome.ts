@@ -54,6 +54,8 @@ export interface ExistingTrade {
   exitPrice: number | null;
   points: number | null;
   result: string | null;
+  /** Typed by the user or written by an earlier import; either way it stays. */
+  stopPrice: number | null;
 }
 
 export interface BrokerValues {
@@ -77,6 +79,12 @@ export type RowOutcome =
       tradeId: number;
       changed: BrokerOwnedField[];
       values: BrokerValues;
+      /**
+       * A stop the file carries for a trade that has none yet, else null.
+       * Not a broker-owned field: the stop is the user's, and an import may
+       * only ever fill it where it is empty — never change it.
+       */
+      fillStop: number | null;
     };
 
 function atStoredPrecision(price: number): bigint {
@@ -205,7 +213,11 @@ export function decideOutcome(
   ];
 
   const changed = comparisons.filter((comparison) => comparison.changed);
-  if (changed.length === 0) {
+  const fillStop =
+    incoming.stopPrice !== null && existing.stopPrice === null
+      ? incoming.stopPrice
+      : null;
+  if (changed.length === 0 && fillStop === null) {
     return { kind: "skip", tradeId: existing.id };
   }
 
@@ -219,5 +231,6 @@ export function decideOutcome(
     tradeId: existing.id,
     changed: changed.map((comparison) => comparison.field),
     values,
+    fillStop,
   };
 }

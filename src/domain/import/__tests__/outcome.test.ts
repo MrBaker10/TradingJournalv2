@@ -40,6 +40,7 @@ function existing(overrides: Partial<ExistingTrade> = {}): ExistingTrade {
     exitPrice: 20050,
     points: 50,
     result: "Win",
+    stopPrice: null,
     ...overrides,
   };
 }
@@ -175,5 +176,43 @@ describe("decideOutcome", () => {
       existing(),
     );
     expect(result.kind).toBe("skip");
+  });
+});
+
+describe("decideOutcome — stop", () => {
+  it("fills a stop into a matched trade that has none", () => {
+    expect(decideOutcome(row({ stopPrice: 19990 }), existing())).toEqual({
+      kind: "update",
+      tradeId: 7,
+      changed: [],
+      values: {},
+      fillStop: 19990,
+    });
+  });
+
+  it("never changes a stop the trade already has", () => {
+    expect(
+      decideOutcome(row({ stopPrice: 19990 }), existing({ stopPrice: 19980 })),
+    ).toEqual({ kind: "skip", tradeId: 7 });
+  });
+
+  it("does not clear a stop when the file carries none", () => {
+    expect(decideOutcome(row(), existing({ stopPrice: 19980 }))).toEqual({
+      kind: "skip",
+      tradeId: 7,
+    });
+  });
+
+  it("fills the stop alongside a broker-owned change", () => {
+    const outcome = decideOutcome(
+      row({ stopPrice: 19990 }),
+      existing({ exitTime: null, exitPrice: null, points: null, result: null }),
+    );
+    expect(outcome).toMatchObject({ kind: "update", fillStop: 19990 });
+    expect(outcome.kind === "update" && outcome.changed).toContain("exitPrice");
+  });
+
+  it("keeps the stop out of the broker-owned fields", () => {
+    expect(BROKER_OWNED_FIELDS).not.toContain("stopPrice");
   });
 });

@@ -13,6 +13,7 @@ function fill(overrides: Partial<ImportFill> = {}): ImportFill {
   const hour = String(9 + Math.floor(nextId / 60)).padStart(2, "0");
   return {
     fillId: `f${nextId}`,
+    orderId: null,
     symbol: "MNQ",
     direction: "long",
     contracts: 1,
@@ -26,6 +27,19 @@ function fill(overrides: Partial<ImportFill> = {}): ImportFill {
 }
 
 describe("pairFills", () => {
+  it("carries the entry order and every closing order onto the trip", () => {
+    const [trade] = pairFills([
+      fill({ orderId: "10", direction: "long", contracts: 2 }),
+      fill({ orderId: "11", direction: "long", contracts: 1 }),
+      fill({ orderId: "12", direction: "short", contracts: 1 }),
+      fill({ orderId: "12", direction: "short", contracts: 1 }),
+      fill({ orderId: "13", direction: "short", contracts: 1 }),
+    ]);
+
+    expect(trade.entryOrderId).toBe("10");
+    expect(trade.exitOrderIds).toEqual(["12", "13"]);
+  });
+
   it("pairs one buy with one sell into a long round trip", () => {
     const trades = pairFills([
       fill({

@@ -691,6 +691,11 @@ by picking a different answer while coding.
   (`stop_imported`, `pnl_source`), and a batch undo may still remove such a trade. A
   hand edit that actually changes the value clears the mark; from then on the trade is
   protected, and the nightly FX correction leaves its P&L alone.
+- **An import fills an empty stop, it never changes one** (2026-09-26,
+  tradovate-orders-stop) — a re-import that matches an existing trade without a stop
+  sets the file's stop (marked `stop_imported`); a stop already on the trade, typed or
+  imported, stays. The stop is not a broker-owned field; the guard sits in
+  `decideOutcome` and in the writing statement (`stop_price is null`).
 - **Nightly FX correction job** (2026-09-25, ftmo-import) — narrows "FX rates on
   demand" above: rates are still fetched when an import needs them, but an import made
   before the ECB publishes the day's rate converts provisionally, and `job:fx` (Vercel

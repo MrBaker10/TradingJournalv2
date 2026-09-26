@@ -213,6 +213,9 @@ function readRow(
     filePnlCents: exitPrice === null ? null : toMinorUnits(total),
     stopPrice: stop.stopPrice,
     stopNotice: stop.stopNotice,
+    // One row is a whole trade; there is no Orders export to join.
+    entryOrderId: null,
+    exitOrderIds: [],
     sourceRow,
   };
 }

@@ -17,6 +17,11 @@ export type ImportShape = "round-trip" | "fills" | "tradingview" | "ftmo";
  */
 export interface ImportFill {
   fillId: string;
+  /**
+   * The order the fill executed, when the file names it. Only used to join a
+   * Tradovate Orders export onto the round trip (tradovate-orders.ts).
+   */
+  orderId: string | null;
   symbol: string;
   direction: TradeDirection;
   contracts: number;
@@ -58,6 +63,13 @@ export interface RawTrade {
   stopPrice: number | null;
   /** Why a stop in the file was not taken, shown next to the row. */
   stopNotice: string | null;
+  /**
+   * The order that opened the position and the orders that closed it, when a
+   * fill-level file names them. They join an Orders export onto the trip and
+   * go no further: `normalizeTrades` drops them.
+   */
+  entryOrderId: string | null;
+  exitOrderIds: string[];
   /** 1-based line in the source file, so the preview can point at a row. */
   sourceRow: number;
 }

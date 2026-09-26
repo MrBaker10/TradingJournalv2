@@ -143,6 +143,7 @@ export function PreviewStep({
                   {row.provisional
                     ? " · provisional rate, corrected overnight"
                     : ""}
+                  {trade?.stopPrice != null ? ` · stop ${trade.stopPrice}` : ""}
                   {trade?.stopNotice ? ` · ${trade.stopNotice}` : ""}
                 </span>
               </li>

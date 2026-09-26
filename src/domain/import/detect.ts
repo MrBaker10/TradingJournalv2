@@ -20,6 +20,11 @@ export interface FillColumns {
   quantity: number;
   price: number;
   contract: number;
+  /**
+   * `_orderId`, when the export has it. Optional, so a file without it still
+   * imports; it is only needed to join a Tradovate Orders export.
+   */
+  orderId: number | null;
 }
 
 export interface DetectedFills {
@@ -59,7 +64,7 @@ export type DetectedShape = DetectedFills | DetectedFtmo;
  * whatever zone the platform is set to, which is exactly what the import must
  * not depend on. `_timestamp` is unambiguous UTC.
  */
-const FILL_COLUMNS: Record<keyof FillColumns, string> = {
+const FILL_COLUMNS: Record<Exclude<keyof FillColumns, "orderId">, string> = {
   fillId: "_id",
   timestamp: "_timestamp",
   action: "_action",
@@ -67,6 +72,8 @@ const FILL_COLUMNS: Record<keyof FillColumns, string> = {
   price: "_price",
   contract: "contract",
 };
+
+const FILL_ORDER_ID = "_orderid";
 
 /**
  * The columns an FTMO export is recognised by, lowercased, as the German
@@ -137,8 +144,9 @@ function detectFills(byName: Map<string, number>): DetectedFills | null {
   for (const [field, name] of Object.entries(FILL_COLUMNS)) {
     const index = byName.get(name);
     if (index === undefined) return null;
-    columns[field as keyof FillColumns] = index;
+    columns[field as keyof typeof FILL_COLUMNS] = index;
   }
+  columns.orderId = byName.get(FILL_ORDER_ID) ?? null;
   return { shape: "fills", columns };
 }
 
@@ -207,4 +215,50 @@ export function detectShape(header: string[]): DetectedShape {
       `The file has: ${describe(header)}. ` +
       `Round-trip and TradingView exports are not supported yet.`,
   );
+}
+
+/** Where each field of a Tradovate Orders export sits. One row is one order. */
+export interface OrderColumns {
+  orderId: number;
+  side: number;
+  contract: number;
+  type: number;
+  stopPrice: number;
+  fillTime: number;
+  lastChange: number;
+}
+
+/**
+ * The columns a Tradovate Orders export is recognised by, lowercased.
+ *
+ * It has no UTC column: `Fill Time` and `Timestamp` are in the platform's
+ * display zone. That is why the file never supplies a trade, only a stop —
+ * and why its two times are only ever compared with each other
+ * (tradovate-orders.ts). `Timestamp` is the time of the order's last change,
+ * not of its creation.
+ */
+const ORDER_COLUMNS: Record<keyof OrderColumns, string> = {
+  orderId: "orderid",
+  side: "b/s",
+  contract: "contract",
+  type: "type",
+  stopPrice: "stop price",
+  fillTime: "fill time",
+  lastChange: "timestamp",
+};
+
+/**
+ * The columns of a Tradovate Orders export, or null when the header is not
+ * one. Kept apart from `detectShape` on purpose: an Orders export is never a
+ * file of trades on its own, so it must not become a shape the import can be.
+ */
+export function detectOrders(header: string[]): OrderColumns | null {
+  const byName = indexHeader(header);
+  const columns = {} as OrderColumns;
+  for (const [field, name] of Object.entries(ORDER_COLUMNS)) {
+    const index = byName.get(name);
+    if (index === undefined) return null;
+    columns[field as keyof OrderColumns] = index;
+  }
+  return columns;
 }

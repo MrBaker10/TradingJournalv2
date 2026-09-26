@@ -31,7 +31,8 @@ function candidates(bytes: ArrayBuffer): string[] {
   return texts;
 }
 
-function headerOf(text: string): string[] {
+/** The header row of a text, parsed on its own. Throws like `parseDelimited`. */
+export function headerOf(text: string): string[] {
   const end = text.search(/[\r\n]/);
   const firstLine = end === -1 ? text : text.slice(0, end);
   return parseDelimited(firstLine)[0] ?? [];

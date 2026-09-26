@@ -205,8 +205,11 @@ function readFill(
     return { sourceRow, reason: `cannot read time: "${rawTime}"` };
   }
 
+  const orderId = columns.orderId === null ? "" : fieldAt(row, columns.orderId);
+
   return {
     fillId,
+    orderId: orderId === "" ? null : orderId,
     symbol,
     direction,
     contracts,

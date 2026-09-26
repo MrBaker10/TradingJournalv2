@@ -6,10 +6,12 @@ import { findImportAccount } from "@/db/queries/accounts";
 import { ensureFxRates, storedRatesOn } from "@/db/queries/fx";
 import {
   createImportBatch,
+  fillImportedStops,
   type ImportedTrade,
   insertImportedTrades,
   listMatchCandidates,
   removeUntouchedTrades,
+  type StopFill,
   type TradeUpdate,
   updateImportedTrades,
 } from "@/db/queries/import";
@@ -237,12 +239,16 @@ function buildPreview(
     if (outcome.kind === "update") {
       counters.update += 1;
       const closesOpen = outcome.changed.includes("exitPrice");
+      const changes = closesOpen
+        ? "closes an open trade"
+        : outcome.changed.length > 0
+          ? `updates ${outcome.changed.join(", ")}`
+          : null;
+      const stop = outcome.fillStop === null ? null : "adds the stop";
       return {
         sourceRow: row.sourceRow,
         verdict: "update" as const,
-        reason: closesOpen
-          ? "closes an open trade"
-          : `updates ${outcome.changed.join(", ")}`,
+        reason: [changes, stop].filter((part) => part !== null).join(", "),
         ...money,
       };
     }
@@ -380,6 +386,7 @@ export async function commitImport(
 
       const toInsert: ImportedTrade[] = [];
       const toUpdate: TradeUpdate[] = [];
+      const toFillStop: StopFill[] = [];
 
       for (const [index, outcome] of outcomes.entries()) {
         const row = rows[index];
@@ -391,6 +398,12 @@ export async function commitImport(
           // fields they touch, so a file of 500 closed positions costs one
           // statement rather than 500.
           toUpdate.push({ tradeId: outcome.tradeId, values: outcome.values });
+          if (outcome.fillStop !== null) {
+            toFillStop.push({
+              tradeId: outcome.tradeId,
+              stopPrice: outcome.fillStop,
+            });
+          }
           continue;
         }
 
@@ -429,6 +442,7 @@ export async function commitImport(
       }
 
       await updateImportedTrades(tx, user.id, toUpdate);
+      await fillImportedStops(tx, user.id, toFillStop);
       await insertImportedTrades(tx, toInsert, accountId);
 
       return { ...preview.counters, batchId };

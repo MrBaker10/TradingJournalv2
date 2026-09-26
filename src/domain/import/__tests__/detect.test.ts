@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectShape, type FillColumns } from "../detect.ts";
+import { detectOrders, detectShape, type FillColumns } from "../detect.ts";
 
 function fillColumns(header: string[]): FillColumns {
   const detected = detectShape(header);
@@ -47,8 +47,16 @@ describe("detectShape", () => {
         quantity: 6,
         price: 7,
         contract: 21,
+        orderId: 1,
       },
     });
+  });
+
+  it("still recognises a fills export without _orderId", () => {
+    const columns = fillColumns(
+      TRADOVATE_HEADER.filter((name) => name !== "_orderId"),
+    );
+    expect(columns.orderId).toBeNull();
   });
 
   it("points at the machine columns, not the display ones", () => {
@@ -177,5 +185,41 @@ describe("detectShape — FTMO", () => {
 
   it("keeps the Tradovate export on the fills shape", () => {
     expect(detectShape(TRADOVATE_HEADER).shape).toBe("fills");
+  });
+});
+
+// The header row of a real Tradovate Orders export, verbatim.
+const ORDERS_HEADER =
+  "orderId,Account,Order ID,B/S,Contract,Product,Product Description,avgPrice,filledQty,Fill Time,lastCommandId,Status,_priceFormat,_priceFormatType,_tickSize,spreadDefinitionId,Version ID,Timestamp,Date,Quantity,Text,Type,Limit Price,Stop Price,decimalLimit,decimalStop,Filled Qty,Avg Fill Price,decimalFillAvg,Venue,Notional Value,Currency".split(
+    ",",
+  );
+
+describe("detectOrders", () => {
+  it("recognises a Tradovate Orders export", () => {
+    expect(detectOrders(ORDERS_HEADER)).toEqual({
+      orderId: 0,
+      side: 3,
+      contract: 4,
+      type: 21,
+      stopPrice: 23,
+      fillTime: 9,
+      lastChange: 17,
+    });
+  });
+
+  it("is not a shape an import can be on its own", () => {
+    // An Orders export has no UTC column and no fill ids; it only ever adds
+    // stops to a fills export.
+    expect(() => detectShape(ORDERS_HEADER)).toThrow(/not recognised/);
+  });
+
+  it("does not take a fills export for one", () => {
+    expect(detectOrders(TRADOVATE_HEADER)).toBeNull();
+  });
+
+  it("rejects an Orders export without its stop column", () => {
+    expect(
+      detectOrders(ORDERS_HEADER.filter((name) => name !== "Stop Price")),
+    ).toBeNull();
   });
 });

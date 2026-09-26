@@ -18,6 +18,7 @@ const COLUMNS: FillColumns = {
   quantity: 6,
   price: 7,
   contract: 21,
+  orderId: 1,
 };
 
 // A real row from the sample export, verbatim.
@@ -53,18 +54,30 @@ function trade(overrides: Partial<RawTrade> = {}): RawTrade {
     filePnlCents: null,
     stopPrice: null,
     stopNotice: null,
+    entryOrderId: null,
+    exitOrderIds: [],
     sourceRow: 2,
     ...overrides,
   };
 }
 
 describe("normalizeFills", () => {
+  it("leaves the order id empty when the export has no _orderId column", () => {
+    const { fills } = normalizeFills(
+      [row()],
+      { ...COLUMNS, orderId: null },
+      BERLIN,
+    );
+    expect(fills[0].orderId).toBeNull();
+  });
+
   it("reads a real row into a fill", () => {
     const { fills, invalid } = normalizeFills([row()], COLUMNS, BERLIN);
 
     expect(invalid).toEqual([]);
     expect(fills[0]).toEqual({
       fillId: "621235570008",
+      orderId: "621235570005",
       symbol: "MNQU6",
       direction: "long",
       contracts: 2,
