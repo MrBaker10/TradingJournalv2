@@ -704,6 +704,11 @@ by picking a different answer while coding.
   line takes every role the zero line had: colour change, fill boundary, y-domain. A
   foreign balance is converted once when set, at that day's ECB rate, and the rate
   date is stored. Reasoning: `context/decisions.md`, the account-balance entry.
+  Since 2026-09-26 (net-pnl-all-time) the curve also plots that balance as its own
+  first point, "Start", before the first day moves it.
+- **Dashboard Net P&L is all time** (2026-09-26, net-pnl-all-time) — the sum since the
+  first trade in the scope, so it equals the curve's last point minus the starting
+  balance. Every other dashboard metric stays the running month.
 - **Every conversion to USD goes through `convertToUsd`** (2026-09-25,
   account-balance) — `src/lib/fx/convert.ts` fetches the missing ECB rates and
   converts each amount with the rate of its own date; the import and the starting

@@ -10,6 +10,7 @@ import {
   type DayTotals,
   getDashboardRewardState,
   getDayTotals,
+  getMoneyMetrics,
   setStreakMilestoneSeen,
 } from "../dashboard.ts";
 import type { QueryScope } from "../scope.ts";
@@ -233,8 +234,21 @@ interface TotalsFixture {
   range?: { from: string; to: string };
 }
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 async function totalsFor(fixture: TotalsFixture): Promise<DayTotals> {
-  let result: DayTotals | null = null;
+  return readFixture(fixture, (scope, tx) =>
+    getDayTotals(scope, fixture.range, tx),
+  );
+}
+
+// Builds the fixture inside a transaction, runs one read against it and
+// rolls everything back — the same fixture for every dashboard aggregate.
+async function readFixture<T>(
+  fixture: TotalsFixture,
+  read: (scope: QueryScope, tx: Tx) => Promise<T>,
+): Promise<T> {
+  let result: T | null = null;
 
   try {
     await db.transaction(async (tx) => {
@@ -305,7 +319,7 @@ async function totalsFor(fixture: TotalsFixture): Promise<DayTotals> {
             : (accountIds.get(fixture.selected) ?? null),
       };
 
-      result = await getDayTotals(scope, fixture.range, tx);
+      result = await read(scope, tx);
       tx.rollback();
     });
   } catch (error) {
@@ -444,5 +458,62 @@ describe("getDayTotals", () => {
 
     expect(totals.days).toEqual([]);
     expect(totals.maxDrawdownCents).toBe(0);
+  });
+});
+
+// --- getMoneyMetrics --------------------------------------------------------
+//
+// The dashboard's Net P&L reads all time since 2026-09-26 (net-pnl-all-time):
+// without a range it sums everything since the first trade, with the same
+// money rules as the month it replaces.
+
+describe("getMoneyMetrics", () => {
+  const acrossTwoMonths: TotalsTrade[] = [
+    { on: ["Live"], tradeDate: "2026-08-20" },
+    { on: ["Live"], tradeDate: "2026-09-03" },
+    { on: ["Live", "Copy"], tradeDate: "2026-09-04", exitPrice: "90" },
+    { on: ["Live", "Sim"], tradeDate: "2026-09-05" },
+  ];
+  const accountsWithPractice = { Live: false, Copy: false, Sim: true };
+
+  it("sums every month without a range", async () => {
+    // +500 + 500 − 500 × 2 real accounts + 500 × 1 (practice left out)
+    const all = await readFixture(
+      { accounts: accountsWithPractice, trades: acrossTwoMonths },
+      (scope, tx) => getMoneyMetrics(scope, undefined, tx),
+    );
+    expect(all.netPnlCents).toBe(50_000);
+  });
+
+  it("keeps a month to that month", async () => {
+    const september = await readFixture(
+      { accounts: accountsWithPractice, trades: acrossTwoMonths },
+      (scope, tx) =>
+        getMoneyMetrics(scope, { from: "2026-09-01", to: "2026-09-30" }, tx),
+    );
+    expect(september.netPnlCents).toBe(0);
+  });
+
+  it("equals the sum of the day totals the curve is built from", async () => {
+    const [metrics, totals] = await Promise.all([
+      readFixture(
+        { accounts: accountsWithPractice, trades: acrossTwoMonths },
+        (scope, tx) => getMoneyMetrics(scope, undefined, tx),
+      ),
+      totalsFor({ accounts: accountsWithPractice, trades: acrossTwoMonths }),
+    ]);
+    const curveResult = totals.days.reduce(
+      (sum, day) => sum + day.amountCents,
+      0,
+    );
+    expect(metrics.netPnlCents).toBe(curveResult);
+  });
+
+  it("is zero for a user with no entries", async () => {
+    const empty = await readFixture(
+      { accounts: { Live: false }, trades: [] },
+      (scope, tx) => getMoneyMetrics(scope, undefined, tx),
+    );
+    expect(empty.netPnlCents).toBe(0);
   });
 });

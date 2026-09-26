@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { EquityPoint, EquitySeries } from "@/domain/equity";
+import type { EquitySeries, PlottedPoint } from "@/domain/equity";
 import { type DisplayCurrency, formatCents } from "@/lib/money";
 import {
   formatDateWithYear,
@@ -47,6 +47,9 @@ function yAxisWidth(ticksCents: number[], currency: DisplayCurrency): number {
     Math.ceil(widest * MONO_12PX_ADVANCE + Y_AXIS_PADDING),
   );
 }
+
+// The X key of the start point (src/domain/equity.ts, `plotted`).
+const START_KEY = "start";
 
 const FILL_GRADIENT_ID = "equity-curve-fill";
 const STROKE_GRADIENT_ID = "equity-curve-stroke";
@@ -158,7 +161,22 @@ function EquityTooltip({
 }: TooltipContentProps & { startCents: number; currency: DisplayCurrency }) {
   if (!active || !payload?.length) return null;
 
-  const point = payload[0].payload as EquityPoint;
+  const point = payload[0].payload as PlottedPoint;
+
+  // The start is where the curve leaves from, not a day: it has a balance
+  // and no result of its own (decided 2026-09-26).
+  if (point.kind === "start") {
+    return (
+      <div className="card-surface edge flex flex-col gap-1 px-3 py-2">
+        <span className="cap">Starting balance</span>
+        <span
+          className={`font-mono text-[15px] font-semibold tabular-nums ${toneClass(point.equityCents, startCents)}`}
+        >
+          {formatCents(point.equityCents, { currency })}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="card-surface edge flex flex-col gap-1 px-3 py-2">
@@ -224,16 +242,22 @@ export function EquityCurve({ series, currency }: EquityCurveProps) {
       ) : (
         <div className="equity-chart h-60">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={series.points} margin={CHART_MARGIN}>
+            <AreaChart data={series.plotted} margin={CHART_MARGIN}>
               <SplitGradients baselineOffset={series.baselineOffset} />
 
               <CartesianGrid vertical={false} strokeDasharray="3 4" />
 
               <XAxis
-                dataKey="date"
-                ticks={spansMonths ? series.monthTicks : undefined}
-                tickFormatter={
-                  spansMonths ? formatMonthTickLabel : formatDayLabel
+                dataKey="key"
+                ticks={
+                  spansMonths ? [START_KEY, ...series.monthTicks] : undefined
+                }
+                tickFormatter={(key: string) =>
+                  key === START_KEY
+                    ? "Start"
+                    : spansMonths
+                      ? formatMonthTickLabel(key)
+                      : formatDayLabel(key)
                 }
                 tickLine={false}
                 axisLine={false}

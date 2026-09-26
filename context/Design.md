@@ -382,6 +382,11 @@ Hierarchie, man sucht dann jede Zahl einzeln.
 Pro Zelle: `cap`-Label, Wert 21px mono, optionale Kontextzeile
 („Per trade", „From equity peak", „Sep 3").
 
+**Net P&L ist die eine Ausnahme vom Monat** (entschieden 2026-09-26): die Summe seit dem
+ersten Trade im gewählten Scope, Kontextzeile „All time". Sie ist damit genau der
+letzte Punkt der Equity-Kurve (4.15) minus Startguthaben. Alle anderen Zellen bleiben
+beim laufenden Monat.
+
 - Geldwerte: `--color-success-fg` / `--color-danger-fg`, kein Glow.
 - Regelwerte: `--color-warning`.
 - Prozesswerte: `text-glow`.
@@ -622,9 +627,14 @@ Grenze der Fläche, hellere Linie, fester Teil des Y-Bereichs. Über dem Start i
 darunter rot — gemessen am eigenen Startkapital, nicht an der absoluten Null, die bei
 einem Konto mit 50.000 $ nie auf der Achse liegt.
 
-**Der letzte Punkt ist bewusst nicht die Zahl der Tafel darüber.** Die Tafel zeigt den
-laufenden Monat, die Kurve alles. Das sind zwei Fragen, und zwei verschiedene Zahlen
-sind hier die richtige Antwort — nicht ein Widerspruch.
+**Der letzte Punkt minus Startguthaben ist die Net-P&L-Zahl der Tafel darüber**
+(entschieden 2026-09-26, ersetzt „bewusst nicht die Zahl der Tafel"): Net P&L zeigt
+seit diesem Tag All Time, nicht mehr den laufenden Monat.
+
+**Die Kurve beginnt mit einem Startpunkt** (entschieden 2026-09-26): vor dem ersten Tag
+steht ein eigener Punkt beim Startguthaben — ohne Guthaben bei 0 —, auf der X-Achse
+„Start", im Tooltip „Starting balance" mit dem Betrag. Die Kurve verlässt ihn mit dem
+ersten Tag sichtbar nach oben oder unten: 25.000 $, dann 25.400 $.
 
 **Die Kurve ist ein Geldwert.** Sie bekommt deshalb semantische Farbe und keinen
 Schein — kein Cyan, kein `text-glow`, kein Halo (1, 9). Die Ausnahme von 4.8 gilt
@@ -654,7 +664,7 @@ sitzt auf einer kleinen Kachel, hier wäre er eine Feier auf einer großen Fläc
   geht, Monatslabels „Sep 2026". Ein Tageslabel ohne Jahr ist über mehrere Jahre
   mehrdeutig, und bei zweihundert Punkten ohnehin nicht lesbar.
 - **Keine Lückenfüllung.** Ein Punkt je Tag, an dem etwas eingetragen wurde, gleich
-  weit auseinander. Eine Equity-Kurve zählt Handelstage; Wochenenden und Feiertage als
+  weit auseinander — plus der Startpunkt davor, die einzige Ausnahme. Eine Equity-Kurve zählt Handelstage; Wochenenden und Feiertage als
   flache Strecken auszurollen gäbe der Kurve Länge ohne Information.
 - **Y-Bereich** immer inklusive Null, nach außen auf runde Beträge gerundet, vier
   Schritte. Eine Kurve, die nur gestiegen ist, zeigt die Null trotzdem — sonst

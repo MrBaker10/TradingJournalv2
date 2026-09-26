@@ -401,3 +401,49 @@ describe("buildEquitySeries — starting balance", () => {
     expect(() => buildEquitySeries([], 100.5)).toThrow(RangeError);
   });
 });
+
+describe("the start point", () => {
+  it("opens the plotted curve at the starting balance, then moves with the first day", () => {
+    const series = buildEquitySeries(
+      days(["2026-09-03", 40_000], ["2026-09-04", -15_000]),
+      2_500_000,
+    );
+    expect(
+      series.plotted.map((point) => [point.key, point.equityCents]),
+    ).toEqual([
+      ["start", 2_500_000],
+      ["2026-09-03", 2_540_000],
+      ["2026-09-04", 2_525_000],
+    ]);
+    expect(series.plotted[0]).toMatchObject({
+      kind: "start",
+      date: null,
+      amountCents: 0,
+    });
+  });
+
+  it("starts at zero without a starting balance", () => {
+    const series = buildEquitySeries(days(["2026-09-03", -12_345]));
+    expect(series.plotted[0].equityCents).toBe(0);
+    expect(series.plotted[1].equityCents).toBe(-12_345);
+  });
+
+  it("plots nothing without days — a start alone is not a curve", () => {
+    expect(buildEquitySeries([], 2_500_000).plotted).toEqual([]);
+  });
+
+  it("keeps points to one per day, so month marks never see the start", () => {
+    const series = buildEquitySeries(days(["2026-09-03", 100]), 2_500_000);
+    expect(series.points).toHaveLength(1);
+    expect(series.monthTicks).toEqual(["2026-09-03"]);
+  });
+
+  it("ends where the net result of the whole stretch says", () => {
+    const series = buildEquitySeries(
+      days(["2026-08-28", 10_000], ["2026-09-03", -2_500]),
+      2_500_000,
+    );
+    const last = series.plotted[series.plotted.length - 1];
+    expect(last.equityCents - series.startCents).toBe(7_500);
+  });
+});

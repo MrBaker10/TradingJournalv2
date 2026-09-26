@@ -63,10 +63,25 @@ export async function getMonthMoneyMetrics(
   scope: DashboardScope,
   month: string,
 ): Promise<MonthMoneyMetrics> {
+  return getMoneyMetrics(scope, monthRangeOf(month));
+}
+
+/**
+ * **Money aggregate.** The same figures as `getMonthMoneyMetrics` over any
+ * stretch — without a range, over everything since the first trade in the
+ * scope. The dashboard's Net P&L reads it that way (decided 2026-09-26,
+ * net-pnl-all-time), so the cell equals the curve's last point minus the
+ * starting balance.
+ */
+export async function getMoneyMetrics(
+  scope: DashboardScope,
+  range?: DateRange,
+  executor: ReadExecutor = db,
+): Promise<MonthMoneyMetrics> {
   const contribution = moneyContribution(scope);
   const weight = moneyWeight(scope);
 
-  const [row] = await db
+  const [row] = await executor
     .select({
       netPnlCents: sql<string>`coalesce(sum(${contribution}), 0)::bigint`,
       grossWinCents: sql<string>`coalesce(sum(${contribution}) filter (where ${tradePnlCents} > 0), 0)::bigint`,
@@ -77,7 +92,7 @@ export async function getMonthMoneyMetrics(
     })
     .from(trades)
     .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
-    .where(and(...scopeConditions(scope, monthRangeOf(month))));
+    .where(and(...scopeConditions(scope, range)));
 
   const netPnlCents = toNumber(row.netPnlCents);
   const grossWinCents = toNumber(row.grossWinCents);

@@ -18,11 +18,15 @@ import type { IsoDate } from "./streak.ts";
 //   view — and at 0 when there is none (decided 2026-09-25, account-balance).
 //   The balance is a constant: it moves where the curve sits, never a day's
 //   own total. The dashboard passes the whole history, so the last point is
-//   the balance plus the all-time result — deliberately **not** the Net P&L in
-//   the metric panel, which is the running month. Two questions, two numbers.
+//   the balance plus the all-time result — the Net P&L in the metric panel,
+//   which reads all time since 2026-09-26 (net-pnl-all-time).
 // - There is no gap filling. One point per day that was journaled, drawn
 //   evenly spaced: an equity curve counts trading days, and stretching
 //   weekends out as flat runs would add length without information.
+// - The one point that is not a day is the start (decided 2026-09-26): what
+//   the chart plots (`plotted`) opens with the starting balance, so the curve
+//   visibly leaves it with the first day — $25,000, then $25,400. `points`
+//   stays one per day, which the month marks and the calendar rely on.
 // - A day with nothing but missed setups arrives with `amountCents: 0`. It is
 //   a real point on the curve — that day was journaled — and it simply does
 //   not move the line.
@@ -41,8 +45,26 @@ export interface EquityPoint {
   equityCents: number;
 }
 
+/** What the chart draws: the start, then one point per day. */
+export type PlottedPoint =
+  | {
+      /** The X key; "start" never collides with an ISO date. */
+      key: "start";
+      kind: "start";
+      date: null;
+      amountCents: 0;
+      /** The starting balance. */
+      equityCents: number;
+    }
+  | (EquityPoint & { key: IsoDate; kind: "day" });
+
 export interface EquitySeries {
   points: EquityPoint[];
+  /**
+   * `points` with the start in front, at the starting balance (0 without
+   * one). Empty when there are no points: a start alone is not a curve.
+   */
+  plotted: PlottedPoint[];
   /** Where the curve starts: the starting balance, 0 without one. */
   startCents: number;
   /**
@@ -160,8 +182,27 @@ export function buildEquitySeries(
     ticksCents.push(tick);
   }
 
+  const plotted: PlottedPoint[] =
+    points.length === 0
+      ? []
+      : [
+          {
+            key: "start",
+            kind: "start",
+            date: null,
+            amountCents: 0,
+            equityCents: startCents,
+          },
+          ...points.map((point) => ({
+            ...point,
+            key: point.date,
+            kind: "day" as const,
+          })),
+        ];
+
   return {
     points,
+    plotted,
     startCents,
     domainCents: [domainMin, domainMax],
     ticksCents,

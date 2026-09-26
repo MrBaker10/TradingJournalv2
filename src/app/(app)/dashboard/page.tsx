@@ -11,6 +11,7 @@ import {
   type DayTotal,
   getDashboardRewardState,
   getDayTotals,
+  getMoneyMetrics,
   getMonthCountMetrics,
   getMonthMoneyMetrics,
   getMonthScoreDays,
@@ -102,6 +103,7 @@ export default async function DashboardPage({
     recentTrades,
     rewards,
     startingBalanceCents,
+    allTimeMoney,
   ] = await Promise.all([
     getMonthMoneyMetrics(scope, month),
     getMonthCountMetrics(scope, month),
@@ -119,6 +121,7 @@ export default async function DashboardPage({
     ),
     getDashboardRewardState(user.id),
     getStartingBalanceCents(scope),
+    getMoneyMetrics(scope),
   ]);
 
   const streak = calculateStreak(streakDays, today, user.timezone);
@@ -146,8 +149,8 @@ export default async function DashboardPage({
 
   // The curve runs from the first trade to today and starts at the starting
   // balance of the scope's accounts, so its last point is the balance plus the
-  // all-time result and **not** the Net P&L in the panel above it — that one
-  // is the running month. Two different questions, deliberately two numbers.
+  // all-time result — the Net P&L in the panel above it (decided 2026-09-26,
+  // net-pnl-all-time). Every other panel figure stays the running month.
   const equity = buildEquitySeries(allTotals.days, startingBalanceCents);
 
   // The calendar's month is a slice of the series the curve already has, not
@@ -187,6 +190,7 @@ export default async function DashboardPage({
 
       <MetricPanel
         money={money}
+        allTimeNetPnlCents={allTimeMoney.netPnlCents}
         counts={counts}
         bestDay={extremeDay(monthTotals.days, (a, b) => a > b)}
         worstDay={extremeDay(monthTotals.days, (a, b) => a < b)}

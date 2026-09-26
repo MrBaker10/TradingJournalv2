@@ -10,6 +10,8 @@ import { formatDayLabel } from "@/lib/time";
 
 interface MetricPanelProps {
   money: MonthMoneyMetrics;
+  /** Net P&L since the first trade in the scope — the one all-time cell. */
+  allTimeNetPnlCents: number;
   counts: MonthCountMetrics;
   bestDay: DayTotal | null;
   worstDay: DayTotal | null;
@@ -43,6 +45,7 @@ function ratio(value: number | null, digits: number): string {
 // written and which of the three treatments it gets.
 export function MetricPanel({
   money: moneyMetrics,
+  allTimeNetPnlCents,
   counts,
   bestDay,
   worstDay,
@@ -58,10 +61,10 @@ export function MetricPanel({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
         <MetricCell
           label="Net P&L"
-          value={money(moneyMetrics.netPnlCents, currency)}
-          context="This month"
+          value={money(allTimeNetPnlCents, currency)}
+          context="All time"
           tone="money"
-          sign={moneyMetrics.netPnlCents}
+          sign={allTimeNetPnlCents}
         />
         <MetricCell
           label="Win rate"
