@@ -2853,3 +2853,24 @@ Assetklasse, wie die Auswahl im Trade-Formular seit ftmo-cfd-instruments.
 
 **Offen geblieben.**
 - Andere Auswahllisten (Import-Wizard) sind nicht gruppiert.
+
+## 2026-09-26 — Luft für 7-Zeichen-Kürzel im Tile — feature/tile-tracking — 49972b2
+
+**Gebaut.** Tile-Kürzel ab sieben Zeichen laufen mit `-0.06em` Tracking. Bei 9px Mono
+füllte `DOGEUSD` mit 37,8px das 38px-Tile ohne Luft; jetzt sind es 34px.
+
+**Dateien.** `src/lib/journal/tile-label.ts` (`tight`, `TIGHT_FROM = 7`) mit Tests,
+`src/components/journal/trade-row.tsx` (`tracking-[-0.06em]`), `context/Design.md` §4.9.
+
+**Migration.** Keine.
+
+**Regeln.** `compact` ab fünf Zeichen (9px), `tight` ab sieben (zusätzlich Tracking).
+Test: `tile-label.test.ts` „tightens the tracking … only from seven characters".
+
+**Entschieden unterwegs.**
+- **Tracking statt 8px oder Kürzen** — die Schrift bleibt bei 9px, das volle Kürzel
+  bleibt stehen (Sascha).
+- Testtrade per SQL angelegt statt über das Formular, damit kein Badge entsteht; danach
+  gelöscht.
+
+**Offen geblieben.** Nichts.
