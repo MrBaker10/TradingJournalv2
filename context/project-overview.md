@@ -708,7 +708,12 @@ by picking a different answer while coding.
   first point, "Start", before the first day moves it.
 - **Dashboard Net P&L is all time** (2026-09-26, net-pnl-all-time) — the sum since the
   first trade in the scope, so it equals the curve's last point minus the starting
-  balance. Every other dashboard metric stays the running month.
+  balance.
+- **The whole dashboard metric panel is all time, except Today** (2026-09-26,
+  dashboard-all-time; replaces "every other dashboard metric stays the running
+  month"). Win rate, trades logged, profit factor, expectancy, max drawdown, averages,
+  avg R, best and worst day, missed setups and by the book run since the first trade in
+  the scope. The consistency score, the streak and the P&L calendar are unchanged.
 - **Every conversion to USD goes through `convertToUsd`** (2026-09-25,
   account-balance) — `src/lib/fx/convert.ts` fetches the missing ECB rates and
   converts each amount with the rate of its own date; the import and the starting

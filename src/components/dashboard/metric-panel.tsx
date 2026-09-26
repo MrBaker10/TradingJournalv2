@@ -1,18 +1,17 @@
 import { MetricCell } from "@/components/dashboard/metric-cell";
 import type {
+  CountMetrics,
   DayTotal,
-  MonthCountMetrics,
-  MonthMoneyMetrics,
+  MoneyMetrics,
 } from "@/db/queries/dashboard";
 import type { IsoDate } from "@/domain/streak";
 import { type DisplayCurrency, formatCents } from "@/lib/money";
 import { formatDayLabel } from "@/lib/time";
 
 interface MetricPanelProps {
-  money: MonthMoneyMetrics;
-  /** Net P&L since the first trade in the scope — the one all-time cell. */
-  allTimeNetPnlCents: number;
-  counts: MonthCountMetrics;
+  /** Since the first trade in the scope, like every cell but Today. */
+  money: MoneyMetrics;
+  counts: CountMetrics;
   bestDay: DayTotal | null;
   worstDay: DayTotal | null;
   todayAmountCents: number;
@@ -45,7 +44,6 @@ function ratio(value: number | null, digits: number): string {
 // written and which of the three treatments it gets.
 export function MetricPanel({
   money: moneyMetrics,
-  allTimeNetPnlCents,
   counts,
   bestDay,
   worstDay,
@@ -61,10 +59,10 @@ export function MetricPanel({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
         <MetricCell
           label="Net P&L"
-          value={money(allTimeNetPnlCents, currency)}
+          value={money(moneyMetrics.netPnlCents, currency)}
           context="All time"
           tone="money"
-          sign={allTimeNetPnlCents}
+          sign={moneyMetrics.netPnlCents}
         />
         <MetricCell
           label="Win rate"
@@ -76,14 +74,14 @@ export function MetricPanel({
           context={
             counts.tradesLogged > 0
               ? `Of ${counts.tradesLogged} taken`
-              : "Nothing logged this month yet"
+              : "Nothing logged yet"
           }
           tone="neutral"
         />
         <MetricCell
           label="Trades logged"
           value={String(counts.tradesLogged)}
-          context="This month"
+          context="All time"
           tone="neutral"
         />
         <MetricCell
@@ -179,7 +177,7 @@ export function MetricPanel({
         <MetricCell
           label="Missed setups"
           value={String(counts.missedSetups)}
-          context="This month"
+          context="All time"
           tone="process"
         />
         <MetricCell

@@ -382,10 +382,12 @@ Hierarchie, man sucht dann jede Zahl einzeln.
 Pro Zelle: `cap`-Label, Wert 21px mono, optionale Kontextzeile
 („Per trade", „From equity peak", „Sep 3").
 
-**Net P&L ist die eine Ausnahme vom Monat** (entschieden 2026-09-26): die Summe seit dem
-ersten Trade im gewählten Scope, Kontextzeile „All time". Sie ist damit genau der
-letzte Punkt der Equity-Kurve (4.15) minus Startguthaben. Alle anderen Zellen bleiben
-beim laufenden Monat.
+**Alle Zellen zeigen All Time, außer Today** (entschieden 2026-09-26,
+dashboard-all-time; ersetzt „Net P&L ist die eine Ausnahme vom Monat"): jede Zahl der
+Tafel läuft seit dem ersten Trade im gewählten Scope, Kontextzeile „All time" wo sie
+keinen eigenen Kontext hat. Net P&L ist damit genau der letzte Punkt der Equity-Kurve
+(4.15) minus Startguthaben; Best und Worst day können in jedem Monat liegen. Today ist
+der heutige Tag. Der Consistency Score (4.3) bleibt ein Monatswert.
 
 - Geldwerte: `--color-success-fg` / `--color-danger-fg`, kein Glow.
 - Regelwerte: `--color-warning`.

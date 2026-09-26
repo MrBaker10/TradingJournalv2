@@ -36,7 +36,7 @@ import { hasRealAccount, rMultipleSortKey, tradePnlCents } from "./trades.ts";
 /** The dashboard's name for the shared scope. Same shape, same rules. */
 export type DashboardScope = QueryScope;
 
-export interface MonthMoneyMetrics {
+export interface MoneyMetrics {
   netPnlCents: number;
   grossWinCents: number;
   /** Magnitude, always >= 0. */
@@ -44,12 +44,16 @@ export interface MonthMoneyMetrics {
   avgWinnerCents: number | null;
   avgLoserCents: number | null;
   expectancyCents: number | null;
-  /** Gross win over gross loss. null when the month has no loss to divide by. */
+  /** Gross win over gross loss. null when the stretch has no loss to divide by. */
   profitFactor: number | null;
 }
 
 /**
- * **Money aggregate.** Net P&L and everything derived from it for one month.
+ * **Money aggregate.** Net P&L and everything derived from it over `range` —
+ * without a range, over everything since the first trade in the scope. The
+ * dashboard's metric panel reads it that way (decided 2026-09-26,
+ * dashboard-all-time), so its Net P&L equals the curve's last point minus the
+ * starting balance.
  *
  * Winner and loser are decided by the derived P&L sign, not by the optional
  * `trades.result` field: `result` is user-set and may be empty, and a win
@@ -59,25 +63,11 @@ export interface MonthMoneyMetrics {
  * aggregates themselves — the sums are computed in SQL, the single division
  * happens here so the rounding back to whole cents stays visible.
  */
-export async function getMonthMoneyMetrics(
-  scope: DashboardScope,
-  month: string,
-): Promise<MonthMoneyMetrics> {
-  return getMoneyMetrics(scope, monthRangeOf(month));
-}
-
-/**
- * **Money aggregate.** The same figures as `getMonthMoneyMetrics` over any
- * stretch — without a range, over everything since the first trade in the
- * scope. The dashboard's Net P&L reads it that way (decided 2026-09-26,
- * net-pnl-all-time), so the cell equals the curve's last point minus the
- * starting balance.
- */
 export async function getMoneyMetrics(
   scope: DashboardScope,
   range?: DateRange,
   executor: ReadExecutor = db,
-): Promise<MonthMoneyMetrics> {
+): Promise<MoneyMetrics> {
   const contribution = moneyContribution(scope);
   const weight = moneyWeight(scope);
 
@@ -109,7 +99,7 @@ export async function getMoneyMetrics(
   };
 }
 
-export interface MonthCountMetrics {
+export interface CountMetrics {
   tradesLogged: number;
   missedSetups: number;
   byTheBook: number;
@@ -120,17 +110,19 @@ export interface MonthCountMetrics {
 
 /**
  * **Count aggregate.** A trade counts once, however many accounts it was
- * copy-traded onto — it was one decision.
+ * copy-traded onto — it was one decision. Without a range it reads the whole
+ * history, like `getMoneyMetrics`.
  *
  * Missed setups are counted over the whole user, not the selected account:
  * they carry no account assignment at all, so there is nothing to filter them
  * by. They stay out of win rate and avg R, which are P&L figures.
  */
-export async function getMonthCountMetrics(
+export async function getCountMetrics(
   scope: DashboardScope,
-  month: string,
-): Promise<MonthCountMetrics> {
-  const [row] = await db
+  range?: DateRange,
+  executor: ReadExecutor = db,
+): Promise<CountMetrics> {
+  const [row] = await executor
     .select({
       tradesLogged: sql<number>`count(*) filter (where ${trades.taken})::int`,
       wins: sql<number>`count(*) filter (where ${tradePnlCents} > 0)::int`,
@@ -142,7 +134,7 @@ export async function getMonthCountMetrics(
     })
     .from(trades)
     .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
-    .where(and(...scopeConditions(scope, monthRangeOf(month))));
+    .where(and(...scopeConditions(scope, range)));
 
   return {
     tradesLogged: row.tradesLogged,

@@ -9,11 +9,10 @@ import { listUserBadges } from "@/db/queries/badges";
 import { getDailyNote } from "@/db/queries/daily-notes";
 import {
   type DayTotal,
+  getCountMetrics,
   getDashboardRewardState,
   getDayTotals,
   getMoneyMetrics,
-  getMonthCountMetrics,
-  getMonthMoneyMetrics,
   getMonthScoreDays,
   getStartingBalanceCents,
   getStreakEntryDays,
@@ -30,7 +29,7 @@ import { buildEquitySeries } from "@/domain/equity";
 import { calculateStreak, pendingStreakMilestone } from "@/domain/streak";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { firstValue } from "@/lib/search-params";
-import { monthKeyOf, monthRangeOf, todayInTimeZone } from "@/lib/time";
+import { monthKeyOf, todayInTimeZone } from "@/lib/time";
 
 const RECENT_TRADES_LIMIT = 5;
 
@@ -72,10 +71,11 @@ export default async function DashboardPage({
   const today = todayInTimeZone(user.timezone);
   const month = monthKeyOf(today);
 
-  // The calendar pages on its own. Everything else on this page — the metric
-  // panel, the consistency score, the streak — stays on the running month,
-  // because the top of the dashboard answers "how is it going right now" and
-  // a panel that silently followed the calendar would stop answering it.
+  // The calendar pages on its own. The metric panel reads the whole history
+  // except its Today cell (decided 2026-09-26, dashboard-all-time); the
+  // consistency score stays on the running month, which is what it measures.
+  // Neither follows the calendar — a panel that silently changed with the
+  // month on screen would stop saying what it says.
   // The client only ever writes the YYYY-MM token; it is resolved and
   // validated here, against the user's own clock.
   const requestedMonth = firstValue((await searchParams).month);
@@ -94,7 +94,6 @@ export default async function DashboardPage({
   const [
     money,
     counts,
-    monthTotals,
     allTotals,
     streakDays,
     scoreDays,
@@ -103,11 +102,9 @@ export default async function DashboardPage({
     recentTrades,
     rewards,
     startingBalanceCents,
-    allTimeMoney,
   ] = await Promise.all([
-    getMonthMoneyMetrics(scope, month),
-    getMonthCountMetrics(scope, month),
-    getDayTotals(scope, monthRangeOf(month)),
+    getMoneyMetrics(scope),
+    getCountMetrics(scope),
     getDayTotals(scope),
     getStreakEntryDays(user.id),
     getMonthScoreDays(user.id, month),
@@ -121,7 +118,6 @@ export default async function DashboardPage({
     ),
     getDashboardRewardState(user.id),
     getStartingBalanceCents(scope),
-    getMoneyMetrics(scope),
   ]);
 
   const streak = calculateStreak(streakDays, today, user.timezone);
@@ -145,12 +141,14 @@ export default async function DashboardPage({
     rewards.milestoneSeen,
   );
 
-  const todayTotal = monthTotals.days.find((day) => day.date === today);
+  // Today is the one panel cell that is not all time, and a pick from the
+  // day series like best and worst day — not a query of its own.
+  const todayTotal = allTotals.days.find((day) => day.date === today);
 
   // The curve runs from the first trade to today and starts at the starting
   // balance of the scope's accounts, so its last point is the balance plus the
   // all-time result — the Net P&L in the panel above it (decided 2026-09-26,
-  // net-pnl-all-time). Every other panel figure stays the running month.
+  // net-pnl-all-time).
   const equity = buildEquitySeries(allTotals.days, startingBalanceCents);
 
   // The calendar's month is a slice of the series the curve already has, not
@@ -190,12 +188,11 @@ export default async function DashboardPage({
 
       <MetricPanel
         money={money}
-        allTimeNetPnlCents={allTimeMoney.netPnlCents}
         counts={counts}
-        bestDay={extremeDay(monthTotals.days, (a, b) => a > b)}
-        worstDay={extremeDay(monthTotals.days, (a, b) => a < b)}
+        bestDay={extremeDay(allTotals.days, (a, b) => a > b)}
+        worstDay={extremeDay(allTotals.days, (a, b) => a < b)}
         todayAmountCents={todayTotal?.amountCents ?? 0}
-        maxDrawdownCents={monthTotals.maxDrawdownCents}
+        maxDrawdownCents={allTotals.maxDrawdownCents}
         currentStreak={streak.current}
         longestStreak={streak.longest}
         today={today}

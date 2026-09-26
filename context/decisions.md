@@ -2908,3 +2908,35 @@ Doku `Design.md` §4.7/§4.15, `project-overview.md`.
   sichtbar war noch der alte Stand in Production.
 
 **Offen geblieben.** Nichts.
+
+## 2026-09-26 — Metric Panel all time außer Today — feature/dashboard-all-time
+
+**Gebaut.** Alle Kacheln der Metriktafel im Dashboard rechnen seit dem ersten Trade im
+gewählten Scope, nur Today bleibt der heutige Tag. Kontextzeilen „This month" werden zu
+„All time", die Leerzeile der Win rate zu „Nothing logged yet".
+
+**Dateien.** `src/db/queries/dashboard.ts` (`getCountMetrics(scope, range?, executor)`
+statt `getMonthCountMetrics`; `getMonthMoneyMetrics` entfernt; Typen `MoneyMetrics`,
+`CountMetrics`), `src/app/(app)/dashboard/page.tsx` (eine `getDayTotals`-Abfrage weniger:
+Best/Worst day, Max drawdown und Today kommen aus der Gesamtreihe der Kurve),
+`src/components/dashboard/metric-panel.tsx` (`allTimeNetPnlCents` entfällt); Tests
+`db/queries/__tests__/dashboard.test.ts` („getCountMetrics", Fixture kann Stop und
+by-the-book); Doku `Design.md` §4.7, `project-overview.md`.
+
+**Migration.** Keine.
+
+**Regeln.**
+- Zählaggregate bleiben Zählaggregate: ein Trade einmal, egal auf wie vielen Konten.
+  Tests: „getCountMetrics" (zwei Monate, ein Monat, leer).
+- Max drawdown misst über die gesamte kumulierte Reihe, dieselbe Regel wie vorher über
+  den Monat.
+
+**Entschieden unterwegs.**
+- **Alles außer Today auf All Time** (Sascha); ersetzt „Nur Net P&L auf All Time".
+- **Nur die Metriktafel** (Sascha): Consistency Score, Streak, Badges und Kalender
+  bleiben wie sie sind.
+- Anlass war die Frage, warum Lucid 25k Eval kein Avg R zeigt: alle 50 importierten
+  Trades haben keinen Stop, R ist ohne Stop nicht definiert. Daran ändert dieser Slice
+  nichts.
+
+**Offen geblieben.** Nichts.

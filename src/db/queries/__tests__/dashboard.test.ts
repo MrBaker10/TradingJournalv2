@@ -8,6 +8,7 @@ import { users } from "../../schema/users.ts";
 import {
   bumpStreakExpression,
   type DayTotals,
+  getCountMetrics,
   getDashboardRewardState,
   getDayTotals,
   getMoneyMetrics,
@@ -222,7 +223,10 @@ interface TotalsTrade {
   tradeDate: string;
   /** Long, entry 100. An exit of 110 with point value 50 nets $500. */
   exitPrice?: string;
+  /** Without one the trade has no R, the form's default. */
+  stopPrice?: string;
   taken?: boolean;
+  byTheBook?: boolean;
 }
 
 interface TotalsFixture {
@@ -297,6 +301,8 @@ async function readFixture<T>(
             direction: "long",
             entryPrice: "100",
             exitPrice: taken ? (fixtureTrade.exitPrice ?? "110") : null,
+            stopPrice: fixtureTrade.stopPrice ?? null,
+            byTheBook: fixtureTrade.byTheBook ?? false,
           })
           .returning({ id: trades.id });
 
@@ -515,5 +521,71 @@ describe("getMoneyMetrics", () => {
       (scope, tx) => getMoneyMetrics(scope, undefined, tx),
     );
     expect(empty.netPnlCents).toBe(0);
+  });
+});
+
+// --- getCountMetrics --------------------------------------------------------
+//
+// The panel's count cells read all time since 2026-09-26 (dashboard-all-time):
+// without a range the whole history, a trade once however many accounts it
+// ran on, missed setups out of win rate and avg R.
+
+describe("getCountMetrics", () => {
+  // Entry 100, stop 95: an exit of 110 is +2R, an exit of 90 is −2R.
+  const acrossTwoMonths: TotalsTrade[] = [
+    { on: ["Live"], tradeDate: "2026-08-20", stopPrice: "95", byTheBook: true },
+    { on: ["Live"], tradeDate: "2026-08-21", taken: false },
+    { on: ["Live", "Copy"], tradeDate: "2026-09-03" },
+    {
+      on: ["Live"],
+      tradeDate: "2026-09-04",
+      exitPrice: "90",
+      stopPrice: "95",
+    },
+  ];
+  const twoRealAccounts = { Live: false, Copy: false };
+
+  it("counts every month without a range", async () => {
+    const all = await readFixture(
+      { accounts: twoRealAccounts, trades: acrossTwoMonths },
+      (scope, tx) => getCountMetrics(scope, undefined, tx),
+    );
+    expect(all).toEqual({
+      tradesLogged: 3,
+      missedSetups: 1,
+      byTheBook: 1,
+      winRate: 2 / 3,
+      // +2R and −2R; the trade without a stop has no R to average.
+      avgR: 0,
+    });
+  });
+
+  it("keeps a month to that month", async () => {
+    const september = await readFixture(
+      { accounts: twoRealAccounts, trades: acrossTwoMonths },
+      (scope, tx) =>
+        getCountMetrics(scope, { from: "2026-09-01", to: "2026-09-30" }, tx),
+    );
+    expect(september).toEqual({
+      tradesLogged: 2,
+      missedSetups: 0,
+      byTheBook: 0,
+      winRate: 0.5,
+      avgR: -2,
+    });
+  });
+
+  it("has no ratios for a user with no entries", async () => {
+    const empty = await readFixture(
+      { accounts: { Live: false }, trades: [] },
+      (scope, tx) => getCountMetrics(scope, undefined, tx),
+    );
+    expect(empty).toEqual({
+      tradesLogged: 0,
+      missedSetups: 0,
+      byTheBook: 0,
+      winRate: null,
+      avgR: null,
+    });
   });
 });
