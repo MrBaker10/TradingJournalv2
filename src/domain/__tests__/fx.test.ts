@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   convertForTrade,
   correctionFor,
+  crossRateVsUsd,
   datesNeedingFetch,
   displayCurrencyFor,
   type FxRate,
   finalRateFor,
   isProvisional,
+  isRateCurrency,
   rateFor,
   shiftDate,
   toAccountCents,
@@ -36,9 +38,10 @@ describe("toUsdCents", () => {
     expect(toUsdCents(0, "1.146")).toBe(0);
   });
 
-  it("accepts six decimals and rejects a seventh", () => {
+  it("accepts ten decimals and rejects an eleventh", () => {
     expect(toUsdCents(1_000_000, "1.123456")).toBe(1_123_456);
-    expect(() => toUsdCents(100, "1.1234567")).toThrow(RangeError);
+    expect(toUsdCents(100_000_000, "0.0062950656")).toBe(629_507);
+    expect(() => toUsdCents(100, "0.00629506561")).toThrow(RangeError);
   });
 
   it("rejects a rate that is not a positive decimal", () => {
@@ -278,5 +281,49 @@ describe("toAccountCents", () => {
 
   it("rejects fractional cents", () => {
     expect(() => toAccountCents(1.5, "1.1")).toThrow(RangeError);
+  });
+});
+
+describe("crossRateVsUsd", () => {
+  it("crosses two ECB euro quotes into USD per unit", () => {
+    // 2026-09-24: 1 EUR = 1.1367 USD = 180.57 JPY
+    expect(crossRateVsUsd("1.1367", "180.57")).toBe("0.0062950656");
+    expect(crossRateVsUsd("1.1367", "366.15")).toBe("0.0031044654");
+  });
+
+  it("keeps more than the three figures a rounded cross rate has", () => {
+    // frankfurter's own JPY->USD for the day is 0.0063
+    expect(crossRateVsUsd("1.1367", "180.57")).not.toBe("0.0063");
+  });
+
+  it("rounds the tenth decimal half up", () => {
+    // 1 / 3 = 0.33333333333..., 2 / 3 = 0.66666666666...
+    expect(crossRateVsUsd("1", "3")).toBe("0.3333333333");
+    expect(crossRateVsUsd("2", "3")).toBe("0.6666666667");
+  });
+
+  it("writes a whole rate without trailing zeros", () => {
+    expect(crossRateVsUsd("1.5", "0.75")).toBe("2");
+    expect(crossRateVsUsd("1.1", "1")).toBe("1.1");
+  });
+
+  it("produces a rate toUsdCents accepts", () => {
+    expect(() =>
+      toUsdCents(100, crossRateVsUsd("1.1367", "180.57")),
+    ).not.toThrow();
+  });
+});
+
+describe("isRateCurrency", () => {
+  it("knows every profit currency and EUR", () => {
+    for (const currency of ["EUR", "JPY", "GBP", "CHF", "HUF", "ZAR"]) {
+      expect(isRateCurrency(currency)).toBe(true);
+    }
+  });
+
+  it("has no rate for USD, CNH or anything unknown", () => {
+    for (const currency of ["USD", "CNH", "XYZ", ""]) {
+      expect(isRateCurrency(currency)).toBe(false);
+    }
   });
 });

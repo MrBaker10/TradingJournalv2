@@ -93,6 +93,9 @@ These are the mistakes that are easy to make here and expensive to find later.
 
 - **Money is never a float.** `numeric` in Postgres, integer minor units in the domain.
   No `number` arithmetic on prices, points, P&L or R.
+- **P&L from prices is not always USD.** An instrument settles in its
+  `profit_currency` (USDJPY in yen, GER40.cash in euro); `pnl.ts` and `tradePnlCents`
+  convert with the ECB rate of the trade date. The override is USD already.
 - **Accounts multiply money, not counts.** A trade assigned to three accounts
   contributes three times to Net P&L and once to trades logged. `src/domain/accounts.ts`
   owns the multiplier.

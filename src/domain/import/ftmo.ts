@@ -24,7 +24,7 @@ export const FTMO_SERVER_ZONE = "Europe/Berlin";
 /** A decimal with a comma, as the file writes it: `-0,26000000`. */
 const DECIMAL_COMMA = /^(-)?(\d+)(?:,(\d+))?$/;
 
-/** Matches `trades.contracts` and every price column, numeric(12, 4). */
+/** Matches `trades.contracts`, numeric(12, 4). Prices are numeric(13, 5). */
 const MAX_QUANTITY_DECIMALS = 4;
 
 /** The file writes eight decimals; money is kept at that scale until summed. */

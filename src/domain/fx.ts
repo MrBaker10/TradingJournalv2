@@ -11,6 +11,7 @@
 
 import { TZDate } from "@date-fns/tz";
 import { addDays, format } from "date-fns";
+import { RATE_DECIMALS, RATE_SCALE, toScaledRate } from "./rate.ts";
 import type { IsoDate } from "./streak.ts";
 
 export const ACCOUNT_CURRENCIES = ["USD", "EUR"] as const;
@@ -18,6 +19,39 @@ export type AccountCurrency = (typeof ACCOUNT_CURRENCIES)[number];
 
 /** A currency other than USD — the only kind that has a rate. */
 export type ForeignCurrency = Exclude<AccountCurrency, "USD">;
+
+/**
+ * Every currency an instrument can settle its P&L in besides USD — the quote
+ * currencies of the FTMO CFDs (src/db/seed-instruments.ts). Each is on the
+ * ECB's reference list; CNH is not, which is why USD/CNH is not an instrument.
+ */
+export const PROFIT_CURRENCIES = [
+  "EUR",
+  "GBP",
+  "JPY",
+  "CHF",
+  "CAD",
+  "AUD",
+  "NZD",
+  "HKD",
+  "SGD",
+  "SEK",
+  "NOK",
+  "PLN",
+  "CZK",
+  "HUF",
+  "ILS",
+  "MXN",
+  "ZAR",
+] as const;
+export type ProfitCurrency = (typeof PROFIT_CURRENCIES)[number];
+
+/** Anything `fx_rates` holds a rate for: an account or a profit currency. */
+export type RateCurrency = ForeignCurrency | ProfitCurrency;
+
+export function isRateCurrency(value: string): value is RateCurrency {
+  return (PROFIT_CURRENCIES as readonly string[]).includes(value);
+}
 
 /** One stored rate: how many USD one unit of the currency buys on that date. */
 export interface FxRate {
@@ -33,32 +67,34 @@ export interface FxRate {
  */
 export const MAX_RATE_LOOKBACK_DAYS = 7;
 
-/** Matches `fx_rates.rate_vs_usd`, numeric(12, 6). */
-const RATE_DECIMALS = 6;
-const RATE_SCALE = BigInt(10) ** BigInt(RATE_DECIMALS);
 const ZERO = BigInt(0);
 const TWO = BigInt(2);
 
-const DECIMAL = /^(\d+)(?:\.(\d+))?$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** A positive decimal string as an integer at `RATE_SCALE`, parsed exactly. */
-function toScaledRate(rate: string): bigint {
-  const match = DECIMAL.exec(rate.trim());
-  if (!match) {
-    throw new RangeError(`rate must be a positive decimal, got "${rate}"`);
-  }
-  const [, whole, fraction = ""] = match;
-  if (fraction.length > RATE_DECIMALS) {
+/**
+ * USD per one unit of `currency` from two ECB reference rates, both quoted
+ * per euro the way the ECB publishes them: USD per EUR ÷ currency per EUR,
+ * rounded half up to `RATE_DECIMALS`. Used for every currency but EUR, whose
+ * rate is the USD quote itself. A rate source's own cross rate is not good
+ * enough: frankfurter rounds JPY→USD to 0.00636, three significant figures.
+ */
+export function crossRateVsUsd(
+  usdPerEur: string,
+  currencyPerEur: string,
+): string {
+  const usd = toScaledRate(usdPerEur);
+  const other = toScaledRate(currencyPerEur);
+  const scaled = (usd * RATE_SCALE * TWO + other) / (other * TWO);
+  if (scaled === ZERO) {
     throw new RangeError(
-      `rate has more than ${RATE_DECIMALS} decimals: "${rate}"`,
+      `cross rate below ${RATE_DECIMALS} decimals: ${usdPerEur} / ${currencyPerEur}`,
     );
   }
-  const scaled = BigInt(whole + fraction.padEnd(RATE_DECIMALS, "0"));
-  if (scaled === ZERO) {
-    throw new RangeError(`rate must be greater than zero, got "${rate}"`);
-  }
-  return scaled;
+  const digits = scaled.toString().padStart(RATE_DECIMALS + 1, "0");
+  const whole = digits.slice(0, -RATE_DECIMALS);
+  const fraction = digits.slice(-RATE_DECIMALS).replace(/0+$/, "");
+  return fraction === "" ? whole : `${whole}.${fraction}`;
 }
 
 /**

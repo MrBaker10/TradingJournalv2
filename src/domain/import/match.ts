@@ -30,7 +30,7 @@ export interface MatchableTrade extends ExistingTrade {
   brokerTradeKey: string | null;
 }
 
-// numeric(12,4): two prices that store identically must key identically.
+// numeric(13,5): two prices that store identically must key identically.
 function scaled(price: number): bigint {
   return toScaledPrice(price);
 }

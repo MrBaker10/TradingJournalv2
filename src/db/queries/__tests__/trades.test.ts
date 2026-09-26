@@ -4,11 +4,13 @@ import { calculatePnl, type PnlInput } from "../../../domain/pnl.ts";
 import { dollarsToCents } from "../../../lib/money.ts";
 import { db } from "../../index.ts";
 import { accounts } from "../../schema/accounts.ts";
+import { fxRates } from "../../schema/fx-rates.ts";
 import { instruments } from "../../schema/instruments.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
 import {
   isVisibleForAccount,
+  profitRateText,
   rMultipleSortKey,
   tradePnlCents,
 } from "../trades.ts";
@@ -28,6 +30,8 @@ interface TradeFixture {
   pointValue: number;
   pnlOverride?: number;
   mfeR?: number;
+  /** The instrument's profit currency with the rate stored for the trade date. */
+  profit?: { currency: string; rateVsUsd: string };
 }
 
 let dbReachable = false;
@@ -44,6 +48,7 @@ beforeAll(async () => {
 interface SqlEvaluation {
   r: number | null;
   pnlCents: number | null;
+  profitRate: string | null;
 }
 
 // Inserts a throwaway instrument + trade for the fixture, reads the exact
@@ -53,7 +58,7 @@ interface SqlEvaluation {
 // NUMERIC arithmetic, not a JS stand-in for it: the whole point is that no
 // second copy of the formula exists anywhere, in SQL or in JS.
 async function evaluateSql(fixture: TradeFixture): Promise<SqlEvaluation> {
-  let result: SqlEvaluation = { r: null, pnlCents: null };
+  let result: SqlEvaluation = { r: null, pnlCents: null, profitRate: null };
 
   try {
     await db.transaction(async (tx) => {
@@ -71,8 +76,25 @@ async function evaluateSql(fixture: TradeFixture): Promise<SqlEvaluation> {
           name: "Throwaway test instrument",
           pointValue: String(fixture.pointValue),
           tickSize: "0.25",
+          profitCurrency: fixture.profit?.currency ?? "USD",
         })
         .returning({ id: instruments.id });
+
+      if (fixture.profit !== undefined) {
+        // On the trade date itself, so it is the latest one on or before it
+        // whatever else the local table holds; rolled back with the rest.
+        await tx
+          .insert(fxRates)
+          .values({
+            currency: fixture.profit.currency,
+            rateDate: "2026-01-01",
+            rateVsUsd: fixture.profit.rateVsUsd,
+          })
+          .onConflictDoUpdate({
+            target: [fxRates.currency, fxRates.rateDate],
+            set: { rateVsUsd: fixture.profit.rateVsUsd },
+          });
+      }
 
       const [trade] = await tx
         .insert(trades)
@@ -100,7 +122,11 @@ async function evaluateSql(fixture: TradeFixture): Promise<SqlEvaluation> {
         .returning({ id: trades.id });
 
       const [row] = await tx
-        .select({ r: rMultipleSortKey, pnlCents: tradePnlCents })
+        .select({
+          r: rMultipleSortKey,
+          pnlCents: tradePnlCents,
+          profitRate: profitRateText,
+        })
         .from(trades)
         .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
         .where(eq(trades.id, trade.id));
@@ -108,6 +134,7 @@ async function evaluateSql(fixture: TradeFixture): Promise<SqlEvaluation> {
       result = {
         r: row.r === null ? null : Number(row.r),
         pnlCents: row.pnlCents === null ? null : Number(row.pnlCents),
+        profitRate: row.profitRate,
       };
 
       tx.rollback();
@@ -141,6 +168,7 @@ function toPnlInput(fixture: TradeFixture): PnlInput {
     contracts: fixture.contracts as number,
     pointValue: fixture.pointValue,
     stopPrice: fixture.stopPrice ?? undefined,
+    profitRateVsUsd: fixture.profit?.rateVsUsd,
   };
 }
 
@@ -405,6 +433,186 @@ describe("tradePnlCents (SQL, run against real Postgres) vs calculatePnl (pnl.ts
       expect(await evaluateSqlPnlCents(fixture)).toBe(domain.pnlCents);
     },
   );
+});
+
+// Five decimals on the price and a P&L in the instrument's profit currency
+// (ftmo-cfd-instruments): SQL multiplies by the stored rate in NUMERIC,
+// pnl.ts in BigInt, and both round once afterwards.
+describe("tradePnlCents vs calculatePnl — five decimals and profit currency", () => {
+  it.for([
+    ["EURUSD at five decimals", "long", 1.08453, 1.08553, 1, 100_000, null],
+    [
+      "a pipette on a micro lot",
+      "short",
+      1.23457,
+      1.23456,
+      0.01,
+      100_000,
+      null,
+    ],
+    [
+      "USDJPY in yen",
+      "long",
+      157.1,
+      157.6,
+      1,
+      100_000,
+      ["JPY", "0.0062950656"],
+    ],
+    [
+      "a yen loss",
+      "short",
+      157.1,
+      157.6,
+      0.37,
+      100_000,
+      ["JPY", "0.0062950656"],
+    ],
+    ["GER40.cash in euro", "short", 24000.5, 23990.25, 1, 1, ["EUR", "1.1403"]],
+    [
+      "half a cent after converting",
+      "long",
+      100,
+      100.001,
+      1,
+      1000,
+      ["JPY", "0.005"],
+    ],
+    [
+      "minus half a cent after converting",
+      "short",
+      100,
+      100.001,
+      1,
+      1000,
+      ["JPY", "0.005"],
+    ],
+  ] as const)(
+    "agrees on %s",
+    async ([
+      ,
+      direction,
+      entryPrice,
+      exitPrice,
+      contracts,
+      pointValue,
+      profit,
+    ], ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const fixture: TradeFixture = {
+        taken: true,
+        direction,
+        entryPrice,
+        exitPrice,
+        stopPrice: null,
+        contracts,
+        pointValue,
+        profit:
+          profit === null
+            ? undefined
+            : { currency: profit[0], rateVsUsd: profit[1] },
+      };
+      const domain = calculatePnl(toPnlInput(fixture));
+      expect(await evaluateSqlPnlCents(fixture)).toBe(domain.pnlCents);
+    },
+  );
+
+  it("converts the derived value but never the USD override", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const fixture: TradeFixture = {
+      taken: true,
+      direction: "long",
+      entryPrice: 157.1,
+      exitPrice: 157.6,
+      stopPrice: 156.85,
+      contracts: 1,
+      pointValue: 100_000,
+      pnlOverride: 123.45,
+      profit: { currency: "JPY", rateVsUsd: "0.0062950656" },
+    };
+    expect(await evaluateSqlPnlCents(fixture)).toBe(12345);
+  });
+
+  it("keeps R the same in the profit currency", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const fixture: TradeFixture = {
+      taken: true,
+      direction: "long",
+      entryPrice: 157.1,
+      exitPrice: 157.6,
+      stopPrice: 156.85,
+      contracts: 1,
+      pointValue: 100_000,
+      profit: { currency: "JPY", rateVsUsd: "0.0062950656" },
+    };
+    expect(await evaluateSqlRMultiple(fixture)).toBeCloseTo(2, 10);
+  });
+
+  // Every FTMO import writes a USD override. The risk from the prices is in
+  // the profit currency, so it has to be converted too, or R comes out as
+  // USD over yen (review 2026-09-26).
+  it.for([
+    ["USDJPY", 157.1, 157.6, 156.85, 100_000, "JPY", "0.0062950656", 314.75],
+    ["GER40.cash", 24000.5, 24010.5, 23995.5, 1, "EUR", "1.1403", 11.4],
+  ] as const)(
+    "agrees on R for %s with a USD override",
+    async ([
+      ,
+      entryPrice,
+      exitPrice,
+      stopPrice,
+      pointValue,
+      currency,
+      rate,
+      override,
+    ], ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const fixture: TradeFixture = {
+        taken: true,
+        direction: "long",
+        entryPrice,
+        exitPrice,
+        stopPrice,
+        contracts: 1,
+        pointValue,
+        pnlOverride: override,
+        profit: { currency, rateVsUsd: rate },
+      };
+      const domain = calculatePnl(
+        toPnlInput(fixture),
+        dollarsToCents(override),
+      );
+      expect(domain.rMultiple).toBeCloseTo(2, 1);
+      expect(await evaluateSqlRMultiple(fixture)).toBeCloseTo(
+        domain.rMultiple as number,
+        2,
+      );
+    },
+  );
+
+  it("hands calculatePnl the rate SQL used, and none for USD", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const base: TradeFixture = {
+      taken: true,
+      direction: "long",
+      entryPrice: 157.1,
+      exitPrice: 157.6,
+      stopPrice: null,
+      contracts: 1,
+      pointValue: 100_000,
+    };
+    const yen = await evaluateSql({
+      ...base,
+      profit: { currency: "JPY", rateVsUsd: "0.0062950656" },
+    });
+    expect(Number(yen.profitRate)).toBe(0.0062950656);
+    expect((await evaluateSql(base)).profitRate).toBeNull();
+  });
 });
 
 // Design.md §4.9 and project-structure.md: a missed setup carries no account

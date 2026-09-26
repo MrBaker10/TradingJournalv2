@@ -38,9 +38,9 @@ export const trades = pgTable(
     direction: text("direction").notNull(),
     setupType: text("setup_type"),
     entryModel: text("entry_model"),
-    entryPrice: numeric("entry_price", { precision: 12, scale: 4 }).notNull(),
-    exitPrice: numeric("exit_price", { precision: 12, scale: 4 }),
-    stopPrice: numeric("stop_price", { precision: 12, scale: 4 }),
+    entryPrice: numeric("entry_price", { precision: 13, scale: 5 }).notNull(),
+    exitPrice: numeric("exit_price", { precision: 13, scale: 5 }),
+    stopPrice: numeric("stop_price", { precision: 13, scale: 5 }),
     // The stop came from the import file, not from the user, so an undo may
     // still remove the trade. A hand edit of the stop sets it back to false.
     stopImported: boolean("stop_imported").notNull().default(false),
@@ -49,7 +49,7 @@ export const trades = pgTable(
     // Manual field, shown only when a stop price is set — cannot be derived,
     // deriving it would need price data after the exit (project-overview.md).
     postExitMfeR: numeric("post_exit_mfe_r", { precision: 8, scale: 2 }),
-    points: numeric("points", { precision: 12, scale: 4 }),
+    points: numeric("points", { precision: 13, scale: 5 }),
     pnlOverride: numeric("pnl_override", { precision: 14, scale: 2 }),
     // Set by an import whose file reports a P&L: that amount in the account's
     // currency. While it is set, `pnl_override` is the import's, not the

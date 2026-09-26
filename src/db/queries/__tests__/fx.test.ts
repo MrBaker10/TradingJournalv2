@@ -1,6 +1,6 @@
 import { and, eq, sql, TransactionRollbackError } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
-import type { ForeignCurrency, FxRate } from "../../../domain/fx.ts";
+import type { FxRate, RateCurrency } from "../../../domain/fx.ts";
 import { runFxJob } from "../../../lib/fx/job.ts";
 import { db } from "../../index.ts";
 import { accounts } from "../../schema/accounts.ts";
@@ -14,6 +14,8 @@ import {
   applyFxCorrections,
   ensureFxRates,
   listConvertedTrades,
+  listProfitCurrencyTradeDates,
+  storedRateOn,
 } from "../fx.ts";
 
 // Two rules that only hold if Postgres says so: the upsert behind
@@ -57,12 +59,8 @@ const source: FxRate[] = [
 ];
 
 function recordingFetcher(rates: FxRate[]) {
-  const calls: { currency: ForeignCurrency; from: string; to: string }[] = [];
-  const fetcher = async (
-    currency: ForeignCurrency,
-    from: string,
-    to: string,
-  ) => {
+  const calls: { currency: RateCurrency; from: string; to: string }[] = [];
+  const fetcher = async (currency: RateCurrency, from: string, to: string) => {
     calls.push({ currency, from, to });
     return rates.filter((rate) => rate.date >= from && rate.date <= to);
   };
@@ -85,11 +83,11 @@ describe("ensureFxRates", () => {
     expect(result.calls).toEqual([
       { currency: "EUR", from: "2001-03-02", to: "2001-03-12" },
     ]);
-    // numeric(12, 6) hands the rate back padded to its scale. The fetch ends
+    // numeric(18, 10) hands the rate back padded to its scale. The fetch ends
     // at the last date asked for, so Tuesday is not stored.
     expect(result.first).toEqual([
-      { date: "2001-03-09", rateVsUsd: "0.931200" },
-      { date: "2001-03-12", rateVsUsd: "0.926500" },
+      { date: "2001-03-09", rateVsUsd: "0.9312000000" },
+      { date: "2001-03-12", rateVsUsd: "0.9265000000" },
     ]);
     expect(result.second).toEqual(result.first);
   });
@@ -133,7 +131,10 @@ describe("ensureFxRates", () => {
       return ensureFxRates("EUR", ["2001-03-12"], fetcher, tx);
     });
 
-    expect(stored[0]).toEqual({ date: "2001-03-09", rateVsUsd: "0.931200" });
+    expect(stored[0]).toEqual({
+      date: "2001-03-09",
+      rateVsUsd: "0.9312000000",
+    });
   });
 
   it("does not call the source for no dates", async () => {
@@ -474,7 +475,7 @@ describe("job:fx", () => {
       return stored?.rate ?? null;
     });
 
-    expect(result).toBe("0.905000");
+    expect(result).toBe("0.9050000000");
   });
 
   it("skips a correction whose trade changed since it was read", async (ctx) => {
@@ -509,5 +510,100 @@ describe("job:fx", () => {
     expect(result.written).toBe(0);
     expect(result.provisional.pnlOverride).toBe("51.65");
     expect(result.handEdited.pnlOverride).toBe("40.00");
+  });
+});
+
+// ftmo-cfd-instruments: a trade on an instrument that settles in another
+// currency needs that currency's rate, whatever account it sits on.
+describe("profit-currency rates", () => {
+  async function yenTrade(tx: Tx, tradeDate: string): Promise<void> {
+    const [user] = await tx.select({ id: users.id }).from(users).limit(1);
+    if (!user) throw new Error("No seeded user — run `pnpm db:seed` first");
+    const [instrument] = await tx
+      .insert(instruments)
+      .values({
+        symbol: "TEST-PROFIT-JPY",
+        name: "Throwaway yen instrument",
+        assetClass: "forex",
+        profitCurrency: "JPY",
+        pointValue: "100000",
+        tickSize: "0.001",
+      })
+      .returning({ id: instruments.id });
+    await tx.insert(trades).values({
+      userId: user.id,
+      tradeDate,
+      instrumentId: instrument.id,
+      taken: true,
+      contracts: "1",
+      entryTime: "09:00",
+      exitTime: "09:30",
+      direction: "long",
+      entryPrice: "157.10000",
+      exitPrice: "157.60000",
+    });
+  }
+
+  it("lists the trade dates per profit currency, none for USD", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const listed = await inRollback(async (tx) => {
+      await yenTrade(tx, "2001-03-12");
+      return listProfitCurrencyTradeDates(tx);
+    });
+
+    expect(listed.get("JPY")).toContain("2001-03-12");
+    expect([...listed.keys()]).not.toContain("USD");
+  });
+
+  it("job:fx fetches the rate of the trade date", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      await yenTrade(tx, "2001-03-12");
+      const { calls, fetcher } = recordingFetcher([
+        { date: "2001-03-12", rateVsUsd: "0.0082750656" },
+      ]);
+      await runFxJob(fetcher, tx);
+      return {
+        currencies: calls.map((call) => call.currency),
+        rate: await storedRateOn("JPY", "2001-03-12", tx),
+      };
+    });
+
+    expect(result.currencies).toContain("JPY");
+    expect(result.rate).toBe("0.0082750656");
+  });
+
+  it("is null for a currency without any stored rate", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const rate = await inRollback((tx) =>
+      storedRateOn("NOPE" as RateCurrency, "2001-03-12", tx),
+    );
+    expect(rate).toBeNull();
+  });
+
+  it("reads the last rate on or before the date, else the earliest", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      // A currency nothing real stores, so only these two rows exist.
+      await tx.insert(fxRates).values([
+        { currency: "TST", rateDate: "2001-03-09", rateVsUsd: "0.5" },
+        { currency: "TST", rateDate: "2001-03-12", rateVsUsd: "0.6" },
+      ]);
+      const on = (date: string) =>
+        storedRateOn("TST" as RateCurrency, date, tx);
+      return {
+        weekend: await on("2001-03-10"),
+        monday: await on("2001-03-12"),
+        before: await on("2001-01-01"),
+      };
+    });
+
+    expect(result.weekend).toBe("0.5000000000");
+    expect(result.monday).toBe("0.6000000000");
+    expect(result.before).toBe("0.5000000000");
   });
 });

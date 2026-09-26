@@ -47,8 +47,8 @@ function addToLeg(leg: Leg, price: number, quantity: number, fill: ImportFill) {
 }
 
 /**
- * The size-weighted average price of a leg, rounded half-up to the four
- * decimals `numeric(12,4)` stores. Null for an empty leg, which is how an
+ * The size-weighted average price of a leg, rounded half-up to the five
+ * decimals `numeric(13,5)` stores. Null for an empty leg, which is how an
  * unclosed position reports its exit.
  */
 function averagePrice(leg: Leg): number | null {

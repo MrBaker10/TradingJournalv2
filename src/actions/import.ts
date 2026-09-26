@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/index";
 import { findImportAccount } from "@/db/queries/accounts";
+import { ensureFxRates, storedRatesOn } from "@/db/queries/fx";
 import {
   createImportBatch,
   type ImportedTrade,
@@ -13,7 +14,11 @@ import {
   updateImportedTrades,
 } from "@/db/queries/import";
 import { listInstruments } from "@/db/queries/instruments";
-import type { AccountCurrency } from "@/domain/fx";
+import {
+  type AccountCurrency,
+  isRateCurrency,
+  type RateCurrency,
+} from "@/domain/fx";
 import { matchRows } from "@/domain/import/match";
 import {
   decideOutcome,
@@ -22,10 +27,11 @@ import {
 } from "@/domain/import/outcome";
 import { sessionFromEntryTime } from "@/domain/import/session";
 import type { NormalizedTrade } from "@/domain/import/types";
-import { calculatePnl } from "@/domain/pnl";
+import { calculateUsdPnl } from "@/domain/pnl";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { awardBadgesQuietly } from "@/lib/badges/sync";
 import { convertToUsd } from "@/lib/fx/convert";
+import { fetchEcbRates } from "@/lib/fx/frankfurter";
 import {
   commitImportSchema,
   previewImportSchema,
@@ -142,23 +148,52 @@ async function convertRows(
   return { ok: true, pnl };
 }
 
-/** The P&L the prices give, per row, for the preview's comparison column. */
+/**
+ * The P&L the prices give, per row, for the preview's comparison column —
+ * converted from the instrument's profit currency with the trade date's rate
+ * like every other P&L from prices (ftmo-cfd-instruments). Null where there
+ * is no exit, or no rate for a foreign profit currency.
+ */
 async function computePnl(rows: NormalizedTrade[]): Promise<(number | null)[]> {
-  const pointValues = new Map(
-    (await listInstruments()).map((instrument) => [
-      instrument.id,
-      Number(instrument.pointValue),
-    ]),
+  const instrumentsById = new Map(
+    (await listInstruments()).map((instrument) => [instrument.id, instrument]),
   );
+
+  // The trade dates per foreign profit currency, so each currency costs one
+  // fetch at most and one query — not one of each per row.
+  const datesByCurrency = new Map<RateCurrency, string[]>();
+  for (const row of rows) {
+    const currency = instrumentsById.get(row.instrumentId)?.profitCurrency;
+    if (currency === undefined || !isRateCurrency(currency)) continue;
+    const dates = datesByCurrency.get(currency) ?? [];
+    dates.push(row.tradeDate);
+    datesByCurrency.set(currency, dates);
+  }
+  const ratesByCurrency = new Map<RateCurrency, Map<string, string | null>>();
+  for (const [currency, dates] of datesByCurrency) {
+    try {
+      await ensureFxRates(currency, dates, fetchEcbRates);
+    } catch (error) {
+      console.error("computePnl: rates not stored", error);
+    }
+    ratesByCurrency.set(currency, await storedRatesOn(currency, dates));
+  }
+
   return rows.map((row) => {
-    const pointValue = pointValues.get(row.instrumentId);
-    if (row.exitPrice === null || pointValue === undefined) return null;
-    return calculatePnl({
+    const instrument = instrumentsById.get(row.instrumentId);
+    if (row.exitPrice === null || instrument === undefined) return null;
+    const currency = instrument.profitCurrency;
+    const rate = isRateCurrency(currency)
+      ? (ratesByCurrency.get(currency)?.get(row.tradeDate) ?? null)
+      : null;
+    return calculateUsdPnl({
       direction: row.direction,
       entryPrice: row.entryPrice,
       exitPrice: row.exitPrice,
       contracts: row.contracts,
-      pointValue,
+      pointValue: Number(instrument.pointValue),
+      profitCurrency: currency,
+      profitRateVsUsd: rate,
     }).pnlCents;
   });
 }

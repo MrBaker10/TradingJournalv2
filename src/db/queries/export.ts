@@ -12,6 +12,7 @@ import {
   tradeScreenshots,
   trades,
 } from "../schema/trades.ts";
+import { profitRateText } from "./trades.ts";
 
 export interface ExportAccount {
   name: string;
@@ -29,6 +30,10 @@ export interface ExportTradeRow {
   taken: boolean;
   instrumentSymbol: string;
   pointValue: string;
+  /** USD per unit of the profit currency; null for a USD instrument. */
+  profitRateVsUsd: string | null;
+  /** `USD`, or the currency points × quantity × point value is in. */
+  profitCurrency: string;
   direction: string;
   /** numeric(12, 4) as a string, e.g. `1.8800`. */
   contracts: string | null;
@@ -131,6 +136,8 @@ export async function listTradesForExport(
       taken: trades.taken,
       instrumentSymbol: instruments.symbol,
       pointValue: instruments.pointValue,
+      profitRateVsUsd: profitRateText,
+      profitCurrency: instruments.profitCurrency,
       direction: trades.direction,
       contracts: trades.contracts,
       entryTime: trades.entryTime,

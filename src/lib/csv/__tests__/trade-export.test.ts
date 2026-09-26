@@ -18,6 +18,8 @@ const takenTrade: ExportTradeRow = {
   taken: true,
   instrumentSymbol: "ES",
   pointValue: "50.0000",
+  profitRateVsUsd: null,
+  profitCurrency: "USD",
   direction: "long",
   contracts: "1.0000",
   entryTime: "09:45:00",
@@ -127,6 +129,31 @@ describe("tradeToCsvRow", () => {
     // 10 points * $50 * 0.5 = $250
     const row = tradeToCsvRow({ ...takenTrade, contracts: "0.5000" });
     expect(column(row, "pnl")).toBe("250.00");
+  });
+
+  it("converts P&L from an instrument's profit currency", () => {
+    // USDJPY 0.5 * 100,000 = ¥50,000 at 0.0062950656 = $314.75
+    const row = tradeToCsvRow({
+      ...takenTrade,
+      pointValue: "100000.0000",
+      entryPrice: "157.10000",
+      exitPrice: "157.60000",
+      stopPrice: "156.85000",
+      profitCurrency: "JPY",
+      profitRateVsUsd: "0.0062950656",
+    });
+    expect(column(row, "pnl")).toBe("314.75");
+    expect(column(row, "r_multiple")).toBe("2.00");
+  });
+
+  it("leaves P&L empty while no rate for the profit currency exists", () => {
+    const row = tradeToCsvRow({
+      ...takenTrade,
+      profitCurrency: "JPY",
+      profitRateVsUsd: null,
+    });
+    expect(column(row, "pnl")).toBe("");
+    expect(column(row, "r_multiple")).toBe("2.00");
   });
 
   it("writes an empty field for every null, never the word null", () => {

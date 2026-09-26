@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculatePnl, type PnlInput } from "../pnl.ts";
+import { calculatePnl, calculateUsdPnl, type PnlInput } from "../pnl.ts";
 
 const esLong: PnlInput = {
   direction: "long",
@@ -204,5 +204,154 @@ describe("calculatePnl — fractional quantities", () => {
       pointValue: 50,
     });
     expect(result.pnlCents + 0).toBe(0);
+  });
+});
+
+describe("calculatePnl — five decimals and profit currency", () => {
+  it("prices EURUSD at five decimals", () => {
+    // 0.00100 * 100,000 per lot * 1 lot = $100.00
+    const result = calculatePnl({
+      direction: "long",
+      entryPrice: 1.08453,
+      exitPrice: 1.08553,
+      contracts: 1,
+      pointValue: 100_000,
+    });
+    expect(result.pnlCents).toBe(10000);
+  });
+
+  it("keeps the fifth decimal a float would blur", () => {
+    // 0.00001 * 100,000 * 0.01 lots = $0.01 — one pipette on a micro lot
+    const result = calculatePnl({
+      direction: "short",
+      entryPrice: 1.23457,
+      exitPrice: 1.23456,
+      contracts: 0.01,
+      pointValue: 100_000,
+    });
+    expect(result.pnlCents).toBe(1);
+  });
+
+  it("converts a yen P&L with the rate of the trade date", () => {
+    // 0.5 * 100,000 = ¥50,000 at 0.0062950656 USD per JPY = $314.75328
+    const result = calculatePnl({
+      direction: "long",
+      entryPrice: 157.1,
+      exitPrice: 157.6,
+      contracts: 1,
+      pointValue: 100_000,
+      profitRateVsUsd: "0.0062950656",
+    });
+    expect(result.pnlCents).toBe(31475);
+  });
+
+  it("converts a euro index CFD", () => {
+    // GER40.cash short 10.25 points * €1 = €10.25 at 1.1403 = $11.688075
+    const result = calculatePnl({
+      direction: "short",
+      entryPrice: 24000.5,
+      exitPrice: 23990.25,
+      contracts: 1,
+      pointValue: 1,
+      profitRateVsUsd: "1.1403",
+    });
+    expect(result.pnlCents).toBe(1169);
+  });
+
+  it("rounds once, after converting, halves towards +infinity", () => {
+    // ¥1 at 0.005 = half a cent
+    const base: PnlInput = {
+      direction: "long",
+      entryPrice: 100,
+      exitPrice: 100.001,
+      contracts: 1,
+      pointValue: 1000,
+      profitRateVsUsd: "0.005",
+    };
+    expect(calculatePnl(base).pnlCents).toBe(1);
+    expect(calculatePnl({ ...base, direction: "short" }).pnlCents).toBe(0);
+  });
+
+  it("never converts the override, which is USD already", () => {
+    const result = calculatePnl(
+      {
+        direction: "long",
+        entryPrice: 157.1,
+        exitPrice: 157.6,
+        contracts: 1,
+        pointValue: 100_000,
+        profitRateVsUsd: "0.0062950656",
+      },
+      12345,
+    );
+    expect(result.pnlCents).toBe(12345);
+  });
+
+  it("keeps R the same in any currency", () => {
+    const base: PnlInput = {
+      direction: "long",
+      entryPrice: 157.1,
+      exitPrice: 157.6,
+      stopPrice: 156.85,
+      contracts: 1,
+      pointValue: 100_000,
+    };
+    const converted = calculatePnl({ ...base, profitRateVsUsd: "0.0063" });
+    expect(calculatePnl(base).rMultiple).toBe(2);
+    expect(converted.rMultiple).toBe(2);
+  });
+
+  it("rejects a rate with more than ten decimals", () => {
+    expect(() =>
+      calculatePnl({ ...esLong, profitRateVsUsd: "0.00629506561" }),
+    ).toThrow(RangeError);
+  });
+});
+
+describe("calculateUsdPnl", () => {
+  const yen = {
+    direction: "long" as const,
+    entryPrice: 157.1,
+    exitPrice: 157.6,
+    stopPrice: 156.85,
+    contracts: 1,
+    pointValue: 100_000,
+  };
+
+  it("converts with the stored rate", () => {
+    const result = calculateUsdPnl({
+      ...yen,
+      profitCurrency: "JPY",
+      profitRateVsUsd: "0.0062950656",
+    });
+    // P&L and risk are each rounded to the cent after converting.
+    expect(result.pnlCents).toBe(31475);
+    expect(result.rMultiple).toBeCloseTo(2, 3);
+  });
+
+  it("has no USD amount without a rate, but keeps R", () => {
+    const result = calculateUsdPnl({
+      ...yen,
+      profitCurrency: "JPY",
+      profitRateVsUsd: null,
+    });
+    expect(result).toEqual({ pnlCents: null, rMultiple: 2 });
+  });
+
+  it("still takes a USD override without a rate", () => {
+    const result = calculateUsdPnl(
+      { ...yen, profitCurrency: "JPY", profitRateVsUsd: null },
+      12345,
+    );
+    expect(result.pnlCents).toBe(12345);
+  });
+
+  it("ignores any rate for a USD instrument", () => {
+    const result = calculateUsdPnl({
+      ...esLong,
+      profitCurrency: "USD",
+      profitRateVsUsd: null,
+    });
+    expect(result.pnlCents).toBe(50000);
   });
 });

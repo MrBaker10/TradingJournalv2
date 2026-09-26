@@ -23,10 +23,12 @@ import { InlineMessage } from "@/components/ui/inline-message";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import type { JournalTradeRow } from "@/db/queries/trades";
+import { isRateCurrency } from "@/domain/fx";
+import { groupByAssetClass } from "@/domain/instruments";
 import { calculatePnl, type TradeDirection } from "@/domain/pnl";
 import type { PriceBandInput } from "@/domain/price-band";
 import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
-import { centsToDollars } from "@/lib/money";
+import { formatCents, type MoneyCurrency } from "@/lib/money";
 import { resizeAndCompressImage } from "@/lib/uploads/resize-image";
 import {
   createTradeSchema,
@@ -118,13 +120,15 @@ function FormField({
 }
 
 // What the button says while it holds its success state (Design.md §4.2).
-// A missed setup has no realised figure, so it says what happened instead.
-function summaryOf(result: {
-  pnlCents: number | null;
-  rMultiple: number | null;
-}): string {
-  if (result.pnlCents === null) return "Missed setup saved";
-  const amount = `${result.pnlCents >= 0 ? "+" : ""}$${centsToDollars(result.pnlCents).toFixed(2)}`;
+// A missed setup has no realised figure, so it says what happened instead;
+// neither has a taken trade whose profit currency has no rate stored yet.
+function summaryOf(
+  taken: boolean,
+  result: { pnlCents: number | null; rMultiple: number | null },
+): string {
+  if (!taken) return "Missed setup saved";
+  if (result.pnlCents === null) return "Trade saved";
+  const amount = formatCents(result.pnlCents, { signed: true });
   if (result.rMultiple === null) return amount;
   return `${amount}, ${result.rMultiple >= 0 ? "+" : ""}${result.rMultiple.toFixed(2)}R`;
 }
@@ -140,6 +144,8 @@ interface InstrumentOption {
   symbol: string;
   name: string;
   pointValue: string;
+  assetClass: string;
+  profitCurrency: string;
 }
 
 interface AccountOption {
@@ -296,6 +302,17 @@ export function TradeForm(props: TradeFormProps) {
   const instrument = instruments.find(
     (candidate) => candidate.id === Number(state.instrumentId),
   );
+  const instrumentGroups = useMemo(
+    () => groupByAssetClass(instruments),
+    [instruments],
+  );
+  // Before saving, the rate of the trade date is not known in the browser:
+  // the live P&L of an instrument that settles in another currency is shown
+  // in that currency, and the saved trade in USD (ftmo-cfd-instruments).
+  const liveCurrency: MoneyCurrency =
+    instrument !== undefined && isRateCurrency(instrument.profitCurrency)
+      ? instrument.profitCurrency
+      : "USD";
 
   const livePreview = useMemo(() => {
     if (!state.taken || !instrument) return null;
@@ -571,7 +588,7 @@ export function TradeForm(props: TradeFormProps) {
           return;
         }
 
-        setSuccessSummary(summaryOf(result.data));
+        setSuccessSummary(summaryOf(state.taken, result.data));
         setErrors({});
         setTimeout(() => {
           router.push(`/journal/${edit.trade.id}`);
@@ -601,7 +618,7 @@ export function TradeForm(props: TradeFormProps) {
         }
       }
 
-      setSuccessSummary(summaryOf(result.data));
+      setSuccessSummary(summaryOf(state.taken, result.data));
       setErrors(screenshotUploadError ? { form: screenshotUploadError } : {});
       setTimeout(() => {
         setState(emptyState);
@@ -675,10 +692,14 @@ export function TradeForm(props: TradeFormProps) {
                 )}
               >
                 <option value="">Select…</option>
-                {instruments.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.symbol} — {option.name}
-                  </option>
+                {instrumentGroups.map((group) => (
+                  <optgroup key={group.assetClass} label={group.label}>
+                    {group.instruments.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.symbol} — {option.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </FormField>
@@ -808,7 +829,7 @@ export function TradeForm(props: TradeFormProps) {
                 id="entryPrice"
                 required
                 type="number"
-                step="0.0001"
+                step="0.00001"
                 value={state.entryPrice}
                 onChange={(event) => set("entryPrice", event.target.value)}
                 disabled={loading || success}
@@ -829,7 +850,7 @@ export function TradeForm(props: TradeFormProps) {
                   id="exitPrice"
                   required
                   type="number"
-                  step="0.0001"
+                  step="0.00001"
                   value={state.exitPrice}
                   onChange={(event) => set("exitPrice", event.target.value)}
                   disabled={loading || success}
@@ -848,7 +869,7 @@ export function TradeForm(props: TradeFormProps) {
               <input
                 id="stopPrice"
                 type="number"
-                step="0.0001"
+                step="0.00001"
                 value={state.stopPrice}
                 onChange={(event) => set("stopPrice", event.target.value)}
                 disabled={loading || success}
@@ -1162,8 +1183,10 @@ export function TradeForm(props: TradeFormProps) {
                         : "text-danger-fg"
                     }`}
                   >
-                    {livePreview.pnlCents >= 0 ? "+" : ""}$
-                    {centsToDollars(livePreview.pnlCents).toFixed(2)}
+                    {formatCents(livePreview.pnlCents, {
+                      signed: true,
+                      currency: liveCurrency,
+                    })}
                   </span>
                   {livePreview.rMultiple !== null && (
                     <span className="text-fg-muted text-sm">

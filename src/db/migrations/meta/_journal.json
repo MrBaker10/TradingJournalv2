@@ -134,6 +134,13 @@
       "when": 1790372057612,
       "tag": "0018_red_lionheart",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790406186703,
+      "tag": "0019_keen_sleeper",
+      "breakpoints": true
     }
   ]
 }

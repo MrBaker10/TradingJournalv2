@@ -17,6 +17,7 @@ import {
   type FxCorrection,
   type FxExecutor,
   listConvertedTrades,
+  listProfitCurrencyTradeDates,
   listTradeDatesOnCurrency,
   type RateFetcher,
 } from "../../db/queries/fx.ts";
@@ -90,6 +91,14 @@ export async function runFxJob(
     if (dates.length > 0) {
       await ensureFxRates(currency, dates, fetcher, executor);
     }
+  }
+
+  // P&L from prices on an instrument that settles in another currency needs
+  // that currency's rate on the trade date (ftmo-cfd-instruments). Same
+  // best-effort fill as above for what saving a trade missed.
+  const profitDates = await listProfitCurrencyTradeDates(executor);
+  for (const [currency, dates] of profitDates) {
+    await ensureFxRates(currency, dates, fetcher, executor);
   }
 
   return { checked: converted.length, corrected };

@@ -225,9 +225,9 @@ const UPDATABLE_COLUMN: Record<
   contracts: { column: "contracts", type: "numeric(12,4)" },
   entryTime: { column: "entry_time", type: "time" },
   exitTime: { column: "exit_time", type: "time" },
-  entryPrice: { column: "entry_price", type: "numeric(12,4)" },
-  exitPrice: { column: "exit_price", type: "numeric(12,4)" },
-  points: { column: "points", type: "numeric(12,4)" },
+  entryPrice: { column: "entry_price", type: "numeric(13,5)" },
+  exitPrice: { column: "exit_price", type: "numeric(13,5)" },
+  points: { column: "points", type: "numeric(13,5)" },
   result: { column: "result", type: "text" },
 };
 

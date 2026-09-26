@@ -186,10 +186,15 @@ commit that changes nothing else.
 
 Non-negotiable, because this is a P&L tool:
 
-- Storage: `numeric(14,2)` for currency, `numeric(12,4)` for prices, points and the
-  trade quantity (contracts for a future, lots like 1.88 for a CFD — decided
-  2026-09-25), `integer` for account counts. A quantity enters `pnl.ts` scaled like
-  a price, never as a float factor.
+- Storage: `numeric(14,2)` for currency, `numeric(13,5)` for prices and points
+  (five decimals for forex — decided 2026-09-26), `numeric(12,4)` for the trade
+  quantity (contracts for a future, lots like 1.88 for a CFD — decided 2026-09-25),
+  `numeric(18,10)` for FX rates, `integer` for account counts. A quantity enters
+  `pnl.ts` scaled like a price, never as a float factor.
+- P&L from prices is in the instrument's `profit_currency` and converted to USD with
+  the rate of the trade date before the one rounding — `profitRateVsUsd` in
+  `pnl.ts`, `tradePnlCents` in SQL. Never treat points × quantity × point value as
+  USD without checking the currency.
 - Domain math: integer minor units (cents). Never `number` arithmetic on money.
 - Point value comes from the `instruments` table, never a literal in a component.
 - Derived P&L and R are computed in `src/domain/pnl.ts` and stay overridable by the

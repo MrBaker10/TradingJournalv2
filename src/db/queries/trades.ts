@@ -11,8 +11,8 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
-import type { AccountCurrency, ForeignCurrency } from "../../domain/fx.ts";
-import { calculatePnl } from "../../domain/pnl.ts";
+import type { AccountCurrency, RateCurrency } from "../../domain/fx.ts";
+import { calculateUsdPnl } from "../../domain/pnl.ts";
 import { dollarsToCents } from "../../lib/money.ts";
 import { createSignedUploadUrl } from "../../lib/uploads/signed-url.ts";
 import { db } from "../index.ts";
@@ -28,6 +28,7 @@ import {
   tradeScreenshots,
   trades,
 } from "../schema/trades.ts";
+import { rateOnSql } from "./fx.ts";
 
 export const JOURNAL_PAGE_SIZE = 25;
 
@@ -301,12 +302,23 @@ export const holdMinutes = sql<string | null>`(
   end
 )`;
 
+// 1 for an instrument that settles in USD, else the rate of its profit
+// currency on the trade date. Needs the instruments join in scope.
+const profitRate = sql`(
+  case when ${instruments.profitCurrency} = 'USD' then 1
+    else ${rateOn(sql`${instruments.profitCurrency}`)}
+  end
+)`;
+
 // Sort key for "R-Multiple": for a taken trade this mirrors calculatePnl in
 // src/domain/pnl.ts exactly (COALESCE the override, else derive from prices),
 // simplified to a plain dollar ratio since dividing by cents or by dollars
 // gives the same R — no cents scaling needed for a sort key. For a missed
 // setup there is no exit, so it sorts by the same "would-be" mfe_r value the
-// row displays (Design.md §4.9). Rendering itself never uses this expression;
+// row displays (Design.md §4.9). Both sides are in USD: the override is, and
+// the prices and the risk are converted from the profit currency — an FTMO
+// import always carries a USD override, so a yen risk would make R a ratio of
+// two currencies. Rendering itself never uses this expression;
 // it stays SQL-only for ORDER BY, tested against pnl.ts in
 // __tests__/trades.test.ts.
 export const rMultipleSortKey = sql<number | null>`(
@@ -320,13 +332,26 @@ export const rMultipleSortKey = sql<number | null>`(
           then (${trades.exitPrice} - ${trades.entryPrice})
           else (${trades.entryPrice} - ${trades.exitPrice})
         end * ${instruments.pointValue} * ${trades.contracts}
+          * ${profitRate}
       )
       / nullif(
           abs(${trades.entryPrice} - ${trades.stopPrice}) *
-            ${instruments.pointValue} * ${trades.contracts},
+            ${instruments.pointValue} * ${trades.contracts}
+            * ${profitRate},
           0
         )
     )
+  end
+)`;
+
+/**
+ * The same rate as text for calculatePnl's `profitRateVsUsd`, NULL for an
+ * instrument that settles in USD — so a row computed in TypeScript converts
+ * with exactly the rate `tradePnlCents` used. Needs the instruments join.
+ */
+export const profitRateText = sql<string | null>`(
+  case when ${instruments.profitCurrency} = 'USD' then null
+    else ${rateOn(sql`${instruments.profitCurrency}`)}::text
   end
 )`;
 
@@ -340,6 +365,13 @@ export const rMultipleSortKey = sql<number | null>`(
 // NULL wherever there is no realised P&L (a missed setup, a trade without an
 // exit): it then drops out of a SUM and out of the winner/loser split instead
 // of reading as a flat zero. Needs the instruments join in scope.
+//
+// Points × point value × quantity is in the instrument's profit currency
+// (ftmo-cfd-instruments): USDJPY settles in yen, GER40.cash in euro. It is
+// multiplied by that currency's rate on the trade date before the one
+// rounding, like `profitRateVsUsd` in calculatePnl. The override is USD and is
+// never converted. With no rate stored at all the derived value is NULL and
+// drops out rather than counting yen as dollars.
 //
 // This is the per-trade value, not a figure. Whether it multiplies by the
 // assigned real accounts is the caller's decision — see
@@ -355,27 +387,18 @@ export const tradePnlCents = sql<number | null>`(
           then (${trades.exitPrice} - ${trades.entryPrice})
           else (${trades.entryPrice} - ${trades.exitPrice})
         end * ${instruments.pointValue} * ${trades.contracts}
+          * ${profitRate}
       ) * 100 + 0.5
     )
   end
 )::bigint`;
 
 /**
- * The ECB rate a display conversion uses for this trade (decided 2026-09-25,
- * display-currency): the last one stored on or before `trade_date` — no
- * seven-day limit, so a gap never breaks a figure — and for a trade older than
- * every stored rate, the earliest one. NULL only while no rate is stored at
- * all. `job:fx` and saving a trade keep the table filled.
+ * The rate a conversion uses for this trade: `rateOnSql` on its trade date.
+ * `job:fx` and saving a trade keep the table filled.
  */
-function displayRateOn(currency: ForeignCurrency): SQL {
-  return sql`coalesce(
-    (select r.rate_vs_usd from fx_rates r
-     where r.currency = ${currency} and r.rate_date <= ${trades.tradeDate}
-     order by r.rate_date desc limit 1),
-    (select r.rate_vs_usd from fx_rates r
-     where r.currency = ${currency}
-     order by r.rate_date asc limit 1)
-  )`;
+function rateOn(currency: RateCurrency | SQL): SQL {
+  return rateOnSql(currency, sql`${trades.tradeDate}`);
 }
 
 /**
@@ -409,7 +432,7 @@ export function tradeDisplayCents(
         where b.id = ${trades.importBatchId}
       ) = ${currency}
         then round(${trades.pnlSource} * 100)
-      else round(${tradePnlCents} / ${displayRateOn(currency)})
+      else round(${tradePnlCents} / ${rateOn(currency)})
     end
   )::bigint`;
 }
@@ -494,6 +517,8 @@ async function queryTradeRows(
       instrumentSymbol: instruments.symbol,
       instrumentName: instruments.name,
       pointValue: instruments.pointValue,
+      profitCurrency: instruments.profitCurrency,
+      profitRateVsUsd: profitRateText,
       session: trades.session,
       setupType: trades.setupType,
       entryModel: trades.entryModel,
@@ -556,7 +581,7 @@ async function queryTradeRows(
     let pnlCents: number | null = null;
     let rMultiple: number | null = null;
     if (row.taken && exitPrice !== null && contracts !== null) {
-      const result = calculatePnl(
+      const result = calculateUsdPnl(
         {
           direction: row.direction as "long" | "short",
           entryPrice,
@@ -564,6 +589,8 @@ async function queryTradeRows(
           contracts,
           pointValue,
           stopPrice: stopPrice ?? undefined,
+          profitCurrency: row.profitCurrency,
+          profitRateVsUsd: row.profitRateVsUsd,
         },
         row.pnlOverride !== null
           ? dollarsToCents(Number(row.pnlOverride))

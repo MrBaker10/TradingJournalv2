@@ -1,5 +1,5 @@
 import type { ExportTradeRow } from "../../db/queries/export.ts";
-import { calculatePnl, type TradeDirection } from "../../domain/pnl.ts";
+import { calculateUsdPnl, type TradeDirection } from "../../domain/pnl.ts";
 import { dollarsToCents, formatCentsPlain } from "../money.ts";
 
 /**
@@ -68,7 +68,7 @@ function quantity(value: string | null): string {
 
 /**
  * Realised P&L and R, derived the same way the journal row derives them:
- * through `calculatePnl`, never through a second formula written for the
+ * through `calculateUsdPnl`, never through a second formula written for the
  * export. Cents in, `formatCentsPlain` out — no float ever touches the money.
  *
  * Both stay empty where there is nothing realised: a missed setup, or a trade
@@ -86,7 +86,7 @@ function derivePnl(row: ExportTradeRow): { pnl: string; rMultiple: string } {
     return { pnl: "", rMultiple: "" };
   }
 
-  const result = calculatePnl(
+  const result = calculateUsdPnl(
     {
       direction: row.direction as TradeDirection,
       entryPrice: Number(row.entryPrice),
@@ -94,6 +94,8 @@ function derivePnl(row: ExportTradeRow): { pnl: string; rMultiple: string } {
       contracts: Number(row.contracts),
       pointValue: Number(row.pointValue),
       stopPrice: row.stopPrice !== null ? Number(row.stopPrice) : undefined,
+      profitCurrency: row.profitCurrency,
+      profitRateVsUsd: row.profitRateVsUsd,
     },
     row.pnlOverride !== null
       ? dollarsToCents(Number(row.pnlOverride))
@@ -101,7 +103,7 @@ function derivePnl(row: ExportTradeRow): { pnl: string; rMultiple: string } {
   );
 
   return {
-    pnl: formatCentsPlain(result.pnlCents),
+    pnl: result.pnlCents === null ? "" : formatCentsPlain(result.pnlCents),
     rMultiple: result.rMultiple === null ? "" : result.rMultiple.toFixed(2),
   };
 }

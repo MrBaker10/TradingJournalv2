@@ -7,7 +7,11 @@ import {
   listAssignableAccounts,
   listOwnedAccountIds,
 } from "@/db/queries/accounts";
-import { ensureFxRates, listForeignCurrencies } from "@/db/queries/fx";
+import {
+  ensureFxRates,
+  listForeignCurrencies,
+  storedRateOn,
+} from "@/db/queries/fx";
 import { getInstrumentById } from "@/db/queries/instruments";
 import {
   countExistingConfluenceTags,
@@ -18,7 +22,8 @@ import {
   replaceTradeWithRelations,
 } from "@/db/queries/trades";
 import { tradeLinks, tradeScreenshots, trades } from "@/db/schema/trades";
-import { calculatePnl } from "@/domain/pnl";
+import { isRateCurrency } from "@/domain/fx";
+import { calculateUsdPnl } from "@/domain/pnl";
 import {
   importMarksAfterEdit,
   validateTradeAccountAssignment,
@@ -57,20 +62,22 @@ type ActionResult<T> =
  * imported trade keeps its provenance. Hand-editing it is what protects it
  * from an undo anyway (src/db/queries/import.ts, TOUCHED).
  */
-function buildTradeColumns(data: CreateTradeInput, pointValue: number) {
+function buildTradeColumns(data: CreateTradeInput, profit: ProfitRate) {
   let pnlCents: number | null = null;
   let rMultiple: number | null = null;
   let points: string | null = null;
 
   if (data.taken) {
-    const result = calculatePnl(
+    const result = calculateUsdPnl(
       {
         direction: data.direction,
         entryPrice: data.entryPrice,
         exitPrice: data.exitPrice,
         contracts: data.contracts,
-        pointValue,
+        pointValue: profit.pointValue,
         stopPrice: data.stopPrice,
+        profitCurrency: profit.currency,
+        profitRateVsUsd: profit.rateVsUsd,
       },
       data.pnlOverride !== undefined
         ? dollarsToCents(data.pnlOverride)
@@ -83,7 +90,7 @@ function buildTradeColumns(data: CreateTradeInput, pointValue: number) {
       data.direction === "long"
         ? data.exitPrice - data.entryPrice
         : data.entryPrice - data.exitPrice;
-    points = rawPoints.toFixed(4);
+    points = rawPoints.toFixed(5);
   }
 
   return {
@@ -120,6 +127,41 @@ function buildTradeColumns(data: CreateTradeInput, pointValue: number) {
       byTheBook: data.taken ? (data.byTheBook ?? null) : null,
       notes: data.notes ?? null,
     },
+  };
+}
+
+interface ProfitRate {
+  pointValue: number;
+  currency: string;
+  /** Null for USD, or while no rate for the currency is stored. */
+  rateVsUsd: string | null;
+}
+
+/**
+ * The point value and the rate a trade's P&L from prices is converted with
+ * (ftmo-cfd-instruments). For an instrument that settles in another currency
+ * the trade date's rate is fetched first — best effort like
+ * `ensureDisplayRates`: the figures read the rate in SQL and fall back to the
+ * nearest stored one, and job:fx fetches what is still missing.
+ */
+async function profitRateFor(
+  instrument: { pointValue: string; profitCurrency: string },
+  tradeDate: string,
+): Promise<ProfitRate> {
+  const pointValue = Number(instrument.pointValue);
+  const currency = instrument.profitCurrency;
+  if (!isRateCurrency(currency)) {
+    return { pointValue, currency, rateVsUsd: null };
+  }
+  try {
+    await ensureFxRates(currency, [tradeDate], fetchEcbRates);
+  } catch (error) {
+    console.error("profitRateFor: rate not stored", error);
+  }
+  return {
+    pointValue,
+    currency,
+    rateVsUsd: await storedRateOn(currency, tradeDate),
   };
 }
 
@@ -206,7 +248,7 @@ export async function createTrade(input: unknown): Promise<
 
   const { columns, pnlCents, rMultiple } = buildTradeColumns(
     data,
-    Number(instrument.pointValue),
+    await profitRateFor(instrument, data.tradeDate),
   );
 
   const createdId = await db.transaction((tx) =>
@@ -293,7 +335,7 @@ export async function updateTrade(
 
   const { columns, pnlCents, rMultiple } = buildTradeColumns(
     data,
-    Number(instrument.pointValue),
+    await profitRateFor(instrument, data.tradeDate),
   );
 
   await db.transaction((tx) =>

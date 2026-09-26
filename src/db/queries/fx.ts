@@ -1,11 +1,23 @@
-import { and, asc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  gte,
+  inArray,
+  lte,
+  ne,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import {
   type AccountCurrency,
   datesNeedingFetch,
   type ForeignCurrency,
   type FxRate,
   isProvisional,
+  isRateCurrency,
   MAX_RATE_LOOKBACK_DAYS,
+  type RateCurrency,
   shiftDate,
 } from "../../domain/fx.ts";
 import { formatCentsPlain } from "../../lib/money.ts";
@@ -19,14 +31,14 @@ export type FxExecutor = Pick<typeof db, "select" | "insert">;
 
 /** Where missing rates come from. The import passes `fetchEcbRates`. */
 export type RateFetcher = (
-  currency: ForeignCurrency,
+  currency: RateCurrency,
   from: string,
   to: string,
 ) => Promise<FxRate[]>;
 
 async function listStoredRates(
   executor: FxExecutor,
-  currency: ForeignCurrency,
+  currency: RateCurrency,
   from: string,
   to: string,
 ): Promise<FxRate[]> {
@@ -56,7 +68,7 @@ async function listStoredRates(
  * after the fetch has no ECB rate, and the caller says so.
  */
 export async function ensureFxRates(
-  currency: ForeignCurrency,
+  currency: RateCurrency,
   dates: string[],
   fetcher: RateFetcher,
   executor: FxExecutor = db,
@@ -284,4 +296,87 @@ export async function listForeignCurrencies(
   return rows
     .map((row) => row.currency)
     .filter((currency): currency is ForeignCurrency => currency !== "USD");
+}
+
+/**
+ * The trade dates, per profit currency, of trades on an instrument that does
+ * not settle in USD — each needs that currency's rate for its P&L from prices
+ * (ftmo-cfd-instruments). Runs across users — it is job:fx.
+ */
+export async function listProfitCurrencyTradeDates(
+  executor: Pick<typeof db, "execute"> = db,
+): Promise<Map<RateCurrency, string[]>> {
+  const rows = await executor.execute<{
+    currency: string;
+    trade_date: string;
+  }>(sql`
+    select distinct i.profit_currency as currency, t.trade_date
+    from trades t
+    join instruments i on i.id = t.instrument_id
+    where i.profit_currency <> 'USD'
+    order by i.profit_currency, t.trade_date
+  `);
+  const byCurrency = new Map<RateCurrency, string[]>();
+  for (const row of rows) {
+    if (!isRateCurrency(row.currency)) continue;
+    const dates = byCurrency.get(row.currency) ?? [];
+    dates.push(row.trade_date);
+    byCurrency.set(row.currency, dates);
+  }
+  return byCurrency;
+}
+
+/**
+ * The stored rate that applies on `date`: the last one on or before it — no
+ * seven-day limit, so a gap never breaks a figure — else, for a date older
+ * than every stored rate, the earliest one. NULL only while nothing is stored
+ * for the currency. The one definition of that rule (display-currency,
+ * ftmo-cfd-instruments): the figures embed it per trade with the trade date
+ * and the instrument's column, `storedRatesOn` with plain dates.
+ */
+export function rateOnSql(
+  currency: RateCurrency | SQL,
+  date: string | SQL,
+): SQL {
+  return sql`coalesce(
+    (select r.rate_vs_usd from fx_rates r
+     where r.currency = ${currency} and r.rate_date <= ${date}
+     order by r.rate_date desc limit 1),
+    (select r.rate_vs_usd from fx_rates r
+     where r.currency = ${currency}
+     order by r.rate_date asc limit 1)
+  )`;
+}
+
+/**
+ * `rateOnSql` for several dates of one currency in one query, keyed by date.
+ * A date maps to null while nothing is stored for the currency.
+ */
+export async function storedRatesOn(
+  currency: RateCurrency,
+  dates: string[],
+  executor: Pick<typeof db, "execute"> = db,
+): Promise<Map<string, string | null>> {
+  if (dates.length === 0) return new Map();
+  const unique = [...new Set(dates)];
+  // A VALUES list with a cast on every tuple, as in applyFxCorrections.
+  const days = sql.join(
+    unique.map((date) => sql`(${date}::date)`),
+    sql`, `,
+  );
+  const rows = await executor.execute<{ day: string; rate: string | null }>(sql`
+    select d.day::text as day,
+      ${rateOnSql(currency, sql`d.day`)}::text as rate
+    from (values ${days}) as d(day)
+  `);
+  return new Map([...rows].map((row) => [row.day, row.rate]));
+}
+
+/** `storedRatesOn` for one date. */
+export async function storedRateOn(
+  currency: RateCurrency,
+  date: string,
+  executor: Pick<typeof db, "execute"> = db,
+): Promise<string | null> {
+  return (await storedRatesOn(currency, [date], executor)).get(date) ?? null;
 }

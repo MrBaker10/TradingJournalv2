@@ -266,7 +266,10 @@ trade_accounts       (trade_id, account_id)
                       -- one trade can belong to several accounts (copy trading)
                       -- at least one row per trade, enforced in the domain layer
 
-instruments          (id, symbol, name, point_value NUMERIC(12,4), tick_size)
+instruments          (id, symbol, name, asset_class, profit_currency,
+                      point_value NUMERIC(12,4), tick_size NUMERIC(12,5))
+                      -- asset_class: future · index · forex · metal · commodity · crypto
+                      -- profit_currency: what points × quantity × point value is in
 
 trades               (id, user_id, trade_date DATE, instrument_id,
                       taken BOOLEAN,                 -- false = missed setup
@@ -712,6 +715,26 @@ by picking a different answer while coding.
   always derived from the accounts, never set by hand. Reasoning: `context/decisions.md`,
   the display-currency entry.
 
+- **Asset class on the instrument** (2026-09-26, ftmo-cfd-instruments) — answers
+  "CFD or futures — on the account or on the instrument?": the instrument carries
+  `asset_class` (`future · index · forex · metal · commodity · crypto`); there is no
+  account type. The trade form groups the instrument select by it.
+- **Instruments settle in a profit currency** (2026-09-26, ftmo-cfd-instruments) — P&L
+  from prices is in the instrument's `profit_currency` (USDJPY in yen, GER40.cash in
+  euro) and is converted to USD at request time with the ECB rate of the trade date,
+  the same "last rate on or before" rule the display conversion uses. The override is
+  USD and never converted. This narrows "every conversion to USD goes through
+  `convertToUsd`": that stays the path for stored conversions; a profit-currency
+  conversion is not stored, it is read with the rate like the display currency.
+- **Prices have five decimals** (2026-09-26, ftmo-cfd-instruments) — `numeric(13,5)`
+  for prices and points, `numeric(12,5)` for tick size, `PRICE_SCALE` 100,000 in
+  `pnl.ts`; forex majors quote five. `fx_rates.rate_vs_usd` is `numeric(18,10)`, and
+  every rate but EUR is crossed through the ECB's euro table, because frankfurter
+  rounds its own cross rates to five significant figures.
+- **FTMO CFDs except equities are instruments** (2026-09-26, ftmo-cfd-instruments) —
+  106 symbols from FTMO's symbol list, snapshot in `src/db/seed-instruments.ts`;
+  USD/CNH is left out because the ECB publishes no CNH rate.
+
 
 ---
 
@@ -733,11 +756,6 @@ by picking a different answer while coding.
   newer rates were stored). Such a day then gets a rate up to seven days old, for an
   import's conversion as much as for display. Not fixed; needs its own small slice that
   records which date ranges were actually fetched, or re-checks the gap.
-- **CFD or futures — on the account or on the instrument?** Asked on 2026-09-25, not
-  decided. Recommendation: a kind on the instrument (`future` / `cfd`), which can drive
-  the quantity label (contracts vs lots), decimals in the form and the tile. An account
-  type would be a second source of truth next to it; a per-account restriction only
-  pays off once accounts link to a prop firm program, which then implies the kind.
 
 New questions belong in the Open questions block of `context/current-feature.md` while
 a feature is in progress, and move up here once they affect the project as a whole.

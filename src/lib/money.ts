@@ -1,3 +1,5 @@
+import type { AccountCurrency, ProfitCurrency } from "../domain/fx.ts";
+
 const CENTS_PER_DOLLAR = 100;
 
 export function dollarsToCents(amount: number): number {
@@ -29,16 +31,30 @@ export function centsToDollars(cents: number): number {
   return cents / CENTS_PER_DOLLAR;
 }
 
-// One formatter per currency, built once. en-US for both: the currency sign
-// changes, the digit grouping and the decimal point do not — `€1,234.56`
-// beside `$1,234.56`, not a second number format on the same page.
-const FORMATTERS = {
-  USD: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }),
-  EUR: new Intl.NumberFormat("en-US", { style: "currency", currency: "EUR" }),
-} as const;
+// One formatter per currency, built on first use and kept. en-US for all: the
+// currency sign changes, the digit grouping and the decimal point do not —
+// `€1,234.56` beside `$1,234.56`, not a second number format on the same page.
+// Each currency keeps its own minor units: yen shows no decimals.
+const FORMATTERS = new Map<MoneyCurrency, Intl.NumberFormat>();
+
+function formatterFor(currency: MoneyCurrency): Intl.NumberFormat {
+  let formatter = FORMATTERS.get(currency);
+  if (formatter === undefined) {
+    formatter = new Intl.NumberFormat("en-US", { style: "currency", currency });
+    FORMATTERS.set(currency, formatter);
+  }
+  return formatter;
+}
 
 /** The currencies an amount can be shown in (src/domain/fx.ts, ACCOUNT_CURRENCIES). */
-export type DisplayCurrency = keyof typeof FORMATTERS;
+export type DisplayCurrency = AccountCurrency;
+
+/**
+ * Any currency an amount can be in: an account currency, or the profit
+ * currency of an instrument — the trade form shows a live P&L in it before a
+ * rate is known (ftmo-cfd-instruments).
+ */
+export type MoneyCurrency = AccountCurrency | ProfitCurrency;
 
 /**
  * Display only. Trades are stored in USD; a page shows them in the display
@@ -50,9 +66,9 @@ export type DisplayCurrency = keyof typeof FORMATTERS;
  */
 export function formatCents(
   cents: number,
-  options?: { signed?: boolean; currency?: DisplayCurrency },
+  options?: { signed?: boolean; currency?: MoneyCurrency },
 ): string {
-  const formatted = FORMATTERS[options?.currency ?? "USD"].format(
+  const formatted = formatterFor(options?.currency ?? "USD").format(
     centsToDollars(cents),
   );
   return options?.signed && cents > 0 ? `+${formatted}` : formatted;

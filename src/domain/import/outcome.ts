@@ -12,7 +12,7 @@
 //   leaves a closed trade closed. The alternative — writing null over an exit
 //   because this file did not know about it — would reopen a finished trade.
 // - **Comparisons happen at the precision the column stores.** A price out of
-//   postgres is `numeric(12,4)` and a time is `HH:MM:SS`; comparing either as
+//   postgres is `numeric(13,5)` and a time is `HH:MM:SS`; comparing either as
 //   it arrives against what the file wrote reports changes that are not real.
 
 import { fromScaledPrice, type TradeDirection, toScaledPrice } from "../pnl.ts";

@@ -78,8 +78,10 @@ describe("derivePoints", () => {
     expect(derivePoints("long", 20000, null)).toBeNull();
   });
 
-  it("keeps the four decimals numeric(12,4) stores", () => {
+  it("keeps the five decimals numeric(13,5) stores", () => {
     expect(derivePoints("long", 1.0001, 1.0004)).toBeCloseTo(0.0003, 10);
+    expect(derivePoints("short", 1.08553, 1.08453)).toBeCloseTo(0.001, 10);
+    expect(derivePoints("long", 1.23456, 1.23457)).toBeCloseTo(0.00001, 10);
     expect(derivePoints("long", 20000.25, 20050.75)).toBe(50.5);
   });
 });
@@ -136,10 +138,10 @@ describe("decideOutcome", () => {
   });
 
   it("compares prices at the precision the column stores, not as floats", () => {
-    // 20000.0000 out of postgres against 20000 from the file is not a change.
+    // 20000.00000 out of postgres against 20000 from the file is not a change.
     const result = decideOutcome(
       row({ entryPrice: 20000 }),
-      existing({ entryPrice: 20000.00001 }),
+      existing({ entryPrice: 20000.000001 }),
     );
     expect(result.kind).toBe("skip");
   });

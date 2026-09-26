@@ -324,7 +324,7 @@ describe("insertImportedTrades", () => {
         .from(trades)
         .where(eq(trades.id, id));
 
-      expect(row.entryPrice).toBe("20000.2500");
+      expect(row.entryPrice).toBe("20000.25000");
     });
   });
 
@@ -409,7 +409,7 @@ describe("updateImportedTrades", () => {
         .from(trades)
         .where(eq(trades.id, id));
 
-      expect(row.exitPrice).toBe("20050.0000");
+      expect(row.exitPrice).toBe("20050.00000");
       expect(row.exitTime).toBe("09:45:00");
       expect(row.result).toBe("Win");
       expect(row.notes).toBe("held it through the news");
@@ -488,9 +488,9 @@ describe("updateImportedTrades", () => {
 
       // Each row keeps its own value: one statement, not one value for all.
       expect(rows.map((row) => row.exitPrice)).toEqual([
-        "20500.0000",
-        "20501.0000",
-        "20502.0000",
+        "20500.00000",
+        "20501.00000",
+        "20502.00000",
       ]);
     });
   });
@@ -541,14 +541,14 @@ describe("updateImportedTrades", () => {
       // a field outside an update's own set is never touched by it.
       expect(rows[0]).toMatchObject({
         contracts: "2.0000",
-        exitPrice: "20050.0000",
+        exitPrice: "20050.00000",
         result: "Win",
       });
       // 20050 is the fixture's exit; the resize never named exitPrice, so it
       // still stands.
       expect(rows[1]).toMatchObject({
         contracts: "7.0000",
-        exitPrice: "20050.0000",
+        exitPrice: "20050.00000",
       });
     });
   });
@@ -873,7 +873,7 @@ describe("insertImportedTrades — FTMO rows", () => {
 
     expect(stored).toEqual({
       contracts: "1.8800",
-      stopPrice: "19990.0000",
+      stopPrice: "19990.00000",
       stopImported: true,
       pnlOverride: "65.05",
       pnlSource: "56.76",

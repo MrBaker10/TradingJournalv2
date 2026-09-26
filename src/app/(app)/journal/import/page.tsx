@@ -24,7 +24,7 @@ export default async function ImportPage() {
           name: account.name,
           isPractice: account.isPractice,
         }))}
-        // `tick_size` is numeric(12,4) and arrives as a string. The browser
+        // `tick_size` is numeric(12,5) and arrives as a string. The browser
         // does the snapping, so it is converted once, here.
         instruments={instruments.map((instrument) => ({
           id: instrument.id,

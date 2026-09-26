@@ -10,7 +10,7 @@ export const fxRates = pgTable(
     currency: text("currency").notNull(),
     rateDate: date("rate_date").notNull(),
     // USD per one unit of `currency`.
-    rateVsUsd: numeric("rate_vs_usd", { precision: 12, scale: 6 }).notNull(),
+    rateVsUsd: numeric("rate_vs_usd", { precision: 18, scale: 10 }).notNull(),
   },
   (table) => [primaryKey({ columns: [table.currency, table.rateDate] })],
 );
