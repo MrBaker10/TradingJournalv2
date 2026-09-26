@@ -51,6 +51,7 @@ One line per merged feature. Newest at the top.
 
 | Date | Feature | Notes |
 | --- | --- | --- |
+| 2026-09-26 | Net P&L all time und Startpunkt der Kurve | Net P&L im Dashboard ist die Summe seit dem ersten Trade im Scope (`getMoneyMetrics` ohne Zeitraum) und damit letzter Kurvenpunkt minus Startguthaben; alle anderen Kacheln bleiben beim Monat. Die Kurve zeichnet das Startguthaben als eigenen ersten Punkt „Start" (`plotted` in `equity.ts`). Keine Migration. |
 | 2026-09-26 | Luft für 7-Zeichen-Kürzel im Tile | Ab sieben Zeichen (`DOGEUSD`, `SOYBEAN`, `HEATOIL`) läuft das Tile-Kürzel mit `-0.06em` Tracking: 34px statt 37,8px im 38px-Tile, Schrift bleibt 9px. `tight` in `tile-label.ts`, Design.md §4.9 ergänzt. |
 | 2026-09-26 | Instrumentenfilter nach Assetklasse | Der Filter im Journal gruppiert seine 117 Instrumente wie das Trade-Formular über `groupByAssetClass`; „All instruments" bleibt ungruppiert vorn, gefiltert wird weiter nach genau einem Instrument. Keine Migration. |
 | 2026-09-26 | FTMO-CFD-Instrumente | 106 FTMO-CFDs ohne Aktien (Forex, Indizes, Metalle, Rohstoffe, Crypto) aus FTMOs Symbolliste, fest im Seeder; USD/CNH fehlt mangels EZB-Kurs. Instrumente haben `asset_class` (gruppiert das Formular) und `profit_currency`; P&L aus Preisen wird mit dem EZB-Kurs des Handelstags nach USD umgerechnet, in `pnl.ts` und SQL gleich, Override bleibt USD. Preise 5 Stellen, Kurse 10, Kreuzkurse über die EUR-Tabelle. Review fand R-Fehler mit Override. Details in `decisions.md`. |

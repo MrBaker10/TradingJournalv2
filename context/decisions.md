@@ -2874,3 +2874,37 @@ Test: `tile-label.test.ts` „tightens the tracking … only from seven characte
   gelöscht.
 
 **Offen geblieben.** Nichts.
+
+## 2026-09-26 — Net P&L all time und Startpunkt der Equity-Kurve — feature/net-pnl-all-time — 8950439
+
+**Gebaut.** Die Kachel Net P&L im Dashboard zeigt die Summe seit dem ersten Trade im
+gewählten Scope (Konto oder „All accounts") mit Kontext „All time"; alle anderen Kacheln
+bleiben beim laufenden Monat. Die Equity-Kurve zeichnet das Startguthaben als eigenen
+ersten Punkt „Start" (Tooltip „Starting balance") und verlässt ihn mit dem ersten Tag —
+25.000 $, dann 25.313 $.
+
+**Dateien.** `src/db/queries/dashboard.ts` (`getMoneyMetrics(scope, range?, executor)`,
+`getMonthMoneyMetrics` delegiert), `src/app/(app)/dashboard/page.tsx`,
+`src/components/dashboard/metric-panel.tsx`, `src/domain/equity.ts` (`plotted`,
+`PlottedPoint`), `src/components/dashboard/equity-curve.tsx`; Tests `equity.test.ts`,
+`db/queries/__tests__/dashboard.test.ts` (Fixture zu `readFixture` verallgemeinert);
+Doku `Design.md` §4.7/§4.15, `project-overview.md`.
+
+**Migration.** Keine.
+
+**Regeln.**
+- Net P&L = Geldaggregat über `moneyContribution` ohne Zeitraum; gleich der Summe der
+  Tageswerte der Kurve. Tests: „getMoneyMetrics" (mehrere Monate mit Copy- und
+  Practice-Konto, ein Monat, gleich Kurvensumme, leer).
+- `points` bleibt ein Punkt je Tag (Monatsmarken, Kalendergrenze); nur `plotted` hat
+  den Startpunkt, und nur wenn es Tage gibt. Tests: „the start point".
+
+**Entschieden unterwegs.**
+- **Nur Net P&L auf All Time** (Sascha).
+- **Startpunkt „Start" ohne Datum**, nicht der Tag vor dem ersten Trade (Sascha).
+- Design.md §4.15 „Der letzte Punkt ist bewusst nicht die Zahl der Tafel" ersetzt:
+  jetzt sind es dieselben Zahlen.
+- Rückfrage von Sascha, ob die Kurve beim Startkapital beginnt: lokal war es schon so,
+  sichtbar war noch der alte Stand in Production.
+
+**Offen geblieben.** Nichts.
