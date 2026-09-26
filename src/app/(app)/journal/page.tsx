@@ -94,6 +94,7 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
         instruments={instruments.map((instrument) => ({
           id: instrument.id,
           symbol: instrument.symbol,
+          assetClass: instrument.assetClass,
         }))}
       />
 

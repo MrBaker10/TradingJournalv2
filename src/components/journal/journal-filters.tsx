@@ -1,11 +1,14 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo } from "react";
+import { groupByAssetClass } from "@/domain/instruments";
 import { buildJournalHref, type JournalSearchParams } from "@/lib/journal/href";
 
 interface InstrumentOption {
   id: number;
   symbol: string;
+  assetClass: string;
 }
 
 interface JournalFiltersProps {
@@ -60,6 +63,12 @@ export function JournalFilters({ instruments }: JournalFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const current = Object.fromEntries(searchParams.entries());
+  // Grouped like the trade form's select (ftmo-cfd-instruments): 117 symbols
+  // in one flat list are not findable.
+  const instrumentGroups = useMemo(
+    () => groupByAssetClass(instruments),
+    [instruments],
+  );
 
   function update(overrides: JournalSearchParams) {
     router.push(buildJournalHref(current, { ...overrides, page: undefined }));
@@ -108,10 +117,14 @@ export function JournalFilters({ instruments }: JournalFiltersProps) {
           className="h-10 rounded-ctl border border-white/12 bg-well px-3 text-fg text-sm focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none"
         >
           <option value="">All instruments</option>
-          {instruments.map((instrument) => (
-            <option key={instrument.id} value={instrument.id}>
-              {instrument.symbol}
-            </option>
+          {instrumentGroups.map((group) => (
+            <optgroup key={group.assetClass} label={group.label}>
+              {group.instruments.map((instrument) => (
+                <option key={instrument.id} value={instrument.id}>
+                  {instrument.symbol}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>
