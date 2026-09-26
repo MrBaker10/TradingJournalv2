@@ -2909,7 +2909,7 @@ Doku `Design.md` §4.7/§4.15, `project-overview.md`.
 
 **Offen geblieben.** Nichts.
 
-## 2026-09-26 — Metric Panel all time außer Today — feature/dashboard-all-time
+## 2026-09-26 — Metric Panel all time außer Today — feature/dashboard-all-time — 2910983
 
 **Gebaut.** Alle Kacheln der Metriktafel im Dashboard rechnen seit dem ersten Trade im
 gewählten Scope, nur Today bleibt der heutige Tag. Kontextzeilen „This month" werden zu
