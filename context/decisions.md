@@ -2832,3 +2832,24 @@ US100.cash, US30.cash und XAUUSD bis dahin unter „Futures".
 - Instrumentenfilter im Journal ist eine flache Liste mit 117 Einträgen.
 - EUR-Trade auf EUR-Konto rechnet über USD zurück, zwei Rundungen, ±1 Cent möglich.
 - `points = rawPoints.toFixed(5)` rechnet weiter mit Floats (altes Muster).
+
+## 2026-09-26 — Instrumentenfilter nach Assetklasse — feature/journal-filter-groups — 37972eb
+
+**Gebaut.** Der Instrumentenfilter im Journal gruppiert seine 117 Instrumente nach
+Assetklasse, wie die Auswahl im Trade-Formular seit ftmo-cfd-instruments.
+
+**Dateien.** `src/app/(app)/journal/page.tsx` (gibt `assetClass` mit),
+`src/components/journal/journal-filters.tsx` (`optgroup` über `groupByAssetClass`).
+
+**Migration.** Keine.
+
+**Regeln.** Gruppierung und Reihenfolge kommen allein aus `groupByAssetClass`
+(`src/domain/instruments.ts`, Tests in `instruments.test.ts`); kein zweites Muster.
+
+**Entschieden unterwegs.**
+- „All instruments" bleibt ungruppiert als erste Option; die Optionen zeigen weiter nur
+  das Symbol, ohne Namen (im Plan freigegeben).
+- Kein Filter nach ganzer Assetklasse — nur die Anzeige ist gruppiert (Sascha).
+
+**Offen geblieben.**
+- Andere Auswahllisten (Import-Wizard) sind nicht gruppiert.
