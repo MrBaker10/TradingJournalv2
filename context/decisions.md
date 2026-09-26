@@ -2758,3 +2758,77 @@ neuen Codes**: der alte Code liest die Spalte in `getCurrentUser` (`select()` ü
 - `tradeDisplayCents` wertet für EUR pro Zeile Unterabfragen aus, in
   `getMonthMoneyMetrics` mehrfach; bei einem Nutzer unkritisch, bei großen Historien
   wäre ein vorberechneter Wert pro Trade die Alternative.
+
+## 2026-09-26 — FTMO-CFD-Instrumente mit Gewinnwährung — feature/ftmo-cfd-instruments — c454632
+
+**Gebaut.** Alle FTMO-CFDs außer Aktien sind Instrumente: 42 Forex, 14 Indizes, 9
+Metalle, 11 Rohstoffe, 30 Crypto (106, dazu 11 Futures = 117). Quelle ist
+`ftmo.com/wp-json/ftmo/symbols`, die Daten hinter `ftmo.com/en/symbols`, Stand
+2026-09-26, fest im Seeder. Instrumente haben eine Assetklasse (gruppiert die Auswahl im
+Trade-Formular) und eine Gewinnwährung. P&L aus Preisen wird aus ihr mit dem EZB-Kurs
+des Handelstags nach USD umgerechnet — in `pnl.ts`, `tradePnlCents` und
+`rMultipleSortKey` gleich. Die Live-P&L im Formular zeigt die Gewinnwährung (¥, €),
+gespeichert und angezeigt wird USD bzw. die Kontowährung.
+
+**Dateien.**
+- Domain: `src/domain/rate.ts` (neu, `toScaledRate`, eine Definition der Kursskala),
+  `src/domain/pnl.ts` (`PRICE_SCALE` 100.000, `profitRateVsUsd`, `calculateUsdPnl`),
+  `src/domain/fx.ts` (`PROFIT_CURRENCIES`, `RateCurrency`, `crossRateVsUsd`),
+  `src/domain/instruments.ts` (neu, `ASSET_CLASSES`, `groupByAssetClass`) — alle mit
+  Tests; Kommentare in `import/fills.ts`, `ftmo.ts`, `match.ts`, `outcome.ts`.
+- DB: `src/db/schema/instruments.ts`, `trades.ts`, `fx-rates.ts`,
+  `src/db/seed-instruments.ts`, `src/db/queries/fx.ts` (`rateOnSql`, `storedRatesOn`,
+  `listProfitCurrencyTradeDates`), `src/db/queries/trades.ts` (`profitRate`,
+  `profitRateText`, `rMultipleSortKey`), `export.ts`, `import.ts` (Casts `numeric(13,5)`).
+- Server/Lib: `src/actions/trades.ts` (`profitRateFor`), `src/actions/import.ts`
+  (`computePnl` gebündelt), `src/lib/fx/frankfurter.ts` (immer Basis EUR),
+  `src/lib/fx/job.ts`, `src/lib/money.ts` (`MoneyCurrency`), `src/lib/csv/trade-export.ts`.
+- UI: `src/components/trades/trade-form.tsx` (`optgroup`, Live-P&L, Button-Text).
+- Doku: `CLAUDE.md` (Trap), `coding-standards.md` (Money), `project-overview.md`
+  (Datenmodell, vier Decisions, offene Frage CFD/Futures beantwortet).
+
+**Migration.** `0019_keen_sleeper.sql`: `instruments.asset_class` (Default `future`),
+`instruments.profit_currency` (Default `USD`), `tick_size` → `numeric(12,5)`, Preise und
+`points` → `numeric(13,5)`, `fx_rates.rate_vs_usd` → `numeric(18,10)`. Nur Erweiterungen,
+alter Code läuft darauf weiter. Danach **sofort** `seed-instruments`, sonst stehen
+US100.cash, US30.cash und XAUUSD bis dahin unter „Futures".
+
+**Regeln.**
+- P&L aus Preisen × Kurs, dann einmal runden (halb Richtung +∞); Override nie umgerechnet.
+  Tests: `pnl.test.ts` „five decimals and profit currency", „calculateUsdPnl"; Gleichlauf
+  gegen Postgres in `db/queries/__tests__/trades.test.ts`.
+- R: Zähler und Risiko beide in USD. Test: „agrees on R for USDJPY/GER40.cash with a USD
+  override".
+- Kurs: letzter an oder vor dem Handelstag, sonst frühester — nur in `rateOnSql`.
+  Ohne jeden Kurs ist die P&L NULL (nicht Yen als Dollar), R bleibt. Tests: `fx.test.ts`
+  „profit-currency rates".
+- Kreuzkurs = USD je EUR ÷ Währung je EUR, 10 Stellen, halb aufwärts. Tests:
+  `fx.test.ts` „crossRateVsUsd", `frankfurter.test.ts`.
+
+**Entschieden unterwegs.**
+- **Gewinnwährung am Instrument mit EZB-Umrechnung, Preise auf 5 Stellen, keine Aktien,
+  Assetklasse am Instrument** (Sascha, vor dem Bau).
+- **Kurse immer aus der EUR-Tabelle der EZB:** frankfurter rundet eigene Kreuzkurse auf
+  fünf signifikante Stellen (JPY→USD 0,00636, bis ~0,8 % daneben). Für EUR identisch
+  zu vorher.
+- **`fx_rates` auf 10 Nachkommastellen**, sonst hätten JPY und HUF drei bis vier
+  signifikante Stellen.
+- **Umrechnung zur Laufzeit, nicht gespeichert** — schränkt „jede Umrechnung über
+  `convertToUsd`" ein; `convertToUsd` bleibt der Weg für gespeicherte Umrechnungen.
+- **USD/CNH weggelassen**, die EZB veröffentlicht keinen CNH-Kurs.
+- **Symbole in MetaTrader-Schreibweise** (`EURUSD`), Namen von FTMO — auch die drei
+  bestehenden CFDs heißen jetzt wie bei FTMO.
+- **Aus dem Review:** R-Fehler in `rMultipleSortKey` mit Override (USDJPY ergab 0,013
+  statt 2,0; betraf Ø R, Analytics, Sortierung); Kursabruf der Import-Vorschau pro Währung
+  gebündelt; Kursskala, Kursregel, „nicht umrechenbar" und Formatter je an eine Stelle
+  zusammengelegt; Button zeigt „Trade saved" statt „Missed setup saved", wenn ein
+  Kurs fehlt (Sascha).
+- **Checkliste `feature-review`** nennt jetzt `numeric(13,5)` und die Gewinnwährung
+  (gitignort, nicht committet) (Sascha).
+
+**Offen geblieben.**
+- Kacheln mit 7 Zeichen (`DOGEUSD`, `SOYBEAN`, `HEATOIL`): 37,8 px Text in 38 px, ohne
+  Luft — Designfrage zu Design.md §4.9.
+- Instrumentenfilter im Journal ist eine flache Liste mit 117 Einträgen.
+- EUR-Trade auf EUR-Konto rechnet über USD zurück, zwei Rundungen, ±1 Cent möglich.
+- `points = rawPoints.toFixed(5)` rechnet weiter mit Floats (altes Muster).
