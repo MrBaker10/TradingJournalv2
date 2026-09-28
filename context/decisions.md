@@ -3171,3 +3171,118 @@ die Check-Definition identisch mit lokal. Neue Tabelle, darf vor dem Deployment 
   der Registrierung. Erster echter Lauf am 03.10. für September.
 - `score_90` kommt erst mit dem nächsten Schreibvorgang nach dem Einfrieren, nicht am
   Stichtag selbst.
+
+---
+
+## 2026-09-28 — Commissions — feature/commissions — 8d53ba3
+
+**Gebaut.** Jede Geldkennzahl ist netto der Kommission. Die Kommission liegt pro
+Zuordnung in `trade_accounts` (jedes Konto zahlt seine eigene), Quelle in dieser
+Reihenfolge: Importdatei → Satz des Kontos pro Instrument → Handeingabe. Der
+Tradovate-Import liest die `commission`-Spalte der Fills. Ein gemittelter Preis aus
+Fills zu verschiedenen Preisen wird nicht mehr auf den Tick gerundet. Anlass: die
+September-Tage von „Lucid 25k Eval“ lagen lokal brutto über Lucid; danach stimmen alle
+16 Handelstage auf den Cent (03.09. = $189.90, vorher $0.50 daneben durch den Tick-Snap
+von Trade 14683).
+
+**Dateien.**
+- Domain: `src/domain/commission.ts` (neu: `parseCommissionCents`, `commissionFromRate`,
+  `commissionShare`, `mayReplaceCommission`, `importCommission`, `commissionOnSave`,
+  `centsToAmount`/`amountToCents`); `src/domain/import/fills.ts` (Kommission pro Round
+  Trip, `entryAveraged`/`exitAveraged`), `normalize.ts` (Kommission je Fill lesen,
+  Snap nur für Einzelpreise), `detect.ts` (optionale Spalte `commission`),
+  `outcome.ts` (`setCommission` neben `fillStop`), `types.ts`, `ftmo.ts` (nur neue
+  Felder, Verhalten unverändert).
+- Schema/DB: `src/db/schema/trades.ts` (`trade_accounts.commission`,
+  `commission_source`), `src/db/schema/accounts.ts` (`account_commission_rates`),
+  Migration `0022_demonic_mach_iv.sql`; `src/db/queries/commission-rates.ts` (neu);
+  `scope.ts` (`moneyContribution` netto, `netWinner`/`netLoser`); `trades.ts`
+  (`commissionDisplayCents`, `realCommissionCents`, `accountCommissionCents`,
+  `tradeCommissionDisplayCents`, `tradeNetDisplayCents`, `listAssignmentCommissions`,
+  Kommission in `insertRelations` und `accountsJson`); `dashboard.ts`, `analytics.ts`,
+  `import.ts` (`setImportedCommissions`, Kandidaten mit Kommission, `TOUCHED`),
+  `export.ts`.
+- Actions/Schemas: `src/actions/import.ts` (`commissionsFor`), `src/actions/trades.ts`
+  (`commissionsOnSave`), `src/actions/accounts.ts` (`setCommissionRate`,
+  `removeCommissionRate`); `src/schemas/trades.ts` (`commissionField`, `commissions`),
+  `accounts.ts`, `import.ts`.
+- UI: `src/components/settings/account-commission-rates.tsx` (neu), `account-row.tsx`,
+  `accounts-manager.tsx`, `settings/page.tsx`; `src/components/trades/trade-form.tsx`,
+  `journal/new/page.tsx`, `journal/[id]/edit/page.tsx`;
+  `src/components/journal/trade-detail.tsx`; CSV: `src/lib/csv/trade-export.ts`.
+- Tests: `commission.test.ts` (neu), Import-Domain-Tests, `dashboard.test.ts`,
+  `analytics.test.ts`, `trade-detail.test.ts`, `import.test.ts`,
+  `display-currency.test.ts`, `trade-export.test.ts`.
+
+**Migration.** `0022`: `trade_accounts.commission numeric(14,2)`,
+`trade_accounts.commission_source text` mit Check (beide null oder Betrag ≥ 0 und Quelle
+`file|rate|manual`); neue Tabelle `account_commission_rates` (`per_side numeric(10,2)`,
+Check ≥ 0, unique `(account_id, instrument_id)`, FK auf `accounts` mit cascade). Über
+`db:generate` + `db:migrate`, lokal eingespielt. Auf Neon `preview` und `main` am
+2026-09-28 über `drizzle-kit migrate` mit der jeweiligen `.env.neon.*`-Datei; vorher
+beide Branches auf Stand 0021 (22 Einträge) geprüft, danach 23 Einträge, beide Spalten
+und die Tabelle vorhanden. Nur neue Spalten und eine neue Tabelle, darf vor dem
+Deployment laufen.
+
+**Regeln.**
+- Geldkennzahlen netto: `moneyContribution` zieht kombiniert die Kommission der echten
+  Konten ab, bei gewähltem Konto dessen eigene. Tests: `dashboard.test.ts` „net of
+  commission“, `analytics.test.ts` „net of commission“.
+- Gewinner/Verlierer für Profit Factor, Ø Gewinner/Verlierer und Win-Rate nach dem
+  Netto-Beitrag. Test: „counts a trade that made less than it cost as a loser“.
+- Kommission in Fremdwährung wird pro Zuordnung gerundet, dann summiert — sonst
+  addieren sich Kontozeilen, Kombi-Zahl und Aufschlüsselung nicht. Test:
+  `display-currency.test.ts` „rounds per account …“.
+- Quelle und Vorrang: `mayReplaceCommission` (Re-Import ersetzt `rate` und `file`, nie
+  `manual`), `commissionOnSave` (Satz nur bei neuer Zuordnung oder geänderter
+  Kontraktzahl/Instrument). Tests: `commission.test.ts`, `outcome.test.ts` „commission“,
+  `import.test.ts` „commission on the importing account“.
+- Kein Satz, solange die P&L die einer Datei ist: eine FTMO-Datei gibt keiner Zeile eine
+  Kommission, auch offenen Positionen nicht (`commissionInFilePnl` nach Dateiform),
+  `importCommission`, `commissionOnSave` mit `pnlFromFile`. Tests in
+  `commission.test.ts`.
+- Kommission pro Round Trip = Summe der Fills; ein Fill, der einen Trip schließt und
+  den nächsten öffnet, wird nach Menge geteilt (`commissionShare`). Tests:
+  `fills.test.ts` „commission“.
+- Tick-Snap nur für Einzelpreise. Tests: `fills.test.ts` „averaged prices“ (Trade 14683 →
+  29132.41667), `normalize.test.ts` „tick snapping“.
+
+**Entschieden unterwegs.**
+- Kommission pro Zuordnung statt pro Trade (Sascha): Copy-Trade-Konten zahlen
+  unterschiedliche Sätze.
+- Satz am Konto statt Gebührentabelle pro Prop Firm (Sascha): Plattform-Preisliste und
+  Firmensatz weichen ab, Sätze ändern sich, und es gäbe keine Konto→Firma-Verbindung.
+- R, Ausführungsanalyse (Haltezeit, MFE/MAE, Captured Share) und `trades.result` bleiben
+  brutto (Sascha): sie messen die Ausführung, nicht das Geld.
+- `commission_source` (`file|rate|manual`) statt eines Booleans `commission_from_file`
+  (Sascha): nur so ersetzt ein Re-Import einen Satz-Betrag, aber nie einen Handwert.
+- Journal-Zeile netto; kombiniert die Summe über die echten Konten, wie das Dashboard
+  (Sascha). Ein reiner Practice-Trade summiert über seine eigenen Konten.
+- Kopie eines importierten Trades auf ein anderes Konto: dessen Satz, sonst null; der
+  Dateiwert wird nicht kopiert (Sascha).
+- Satzänderung lässt gespeicherte Beträge stehen (Sascha).
+- Tick-Snap nur für Einzelpreise, Revision der Regel aus dem Tradovate-Import (Sascha):
+  ein auf den Tick geschobener Durchschnitt verschiebt die P&L.
+- Satz-UI aufklappbar in der Kontozeile (Sascha).
+- Ein von Hand getippter P&L-Override ist brutto; der Satz des Kontos wird davon
+  abgezogen (Sascha, zweites Review).
+- Offene FTMO-Positionen bekommen ebenfalls keine Kommission; entschieden wird nach der
+  Dateiform, nicht nach vorhandener Datei-P&L, damit „FTMO unverändert“ ohne Ausnahme
+  gilt. Die Vorschau bekommt dafür `detectedShape` wie der Commit.
+- Die Aufschlüsselung „Gross · Commission“ erscheint nur, wenn tatsächlich etwas
+  abgezogen wurde.
+- Datei-Kommission auf einem Fremdwährungskonto wird einmal umgerechnet und nicht
+  nachts korrigiert — der Aufwand stand in keinem Verhältnis zum Fall (EUR-Tradovate).
+- Eine getippte Kommission zählt beim Batch-Undo als Handarbeit; Datei- und
+  Satzwerte nicht.
+- Vorschau-Text „sets the commission“ für Updates, die nur die Kommission setzen.
+
+**Offen geblieben.**
+- `Design.md` hat keinen Eintrag für Satz-Bereich, Kommissionsfelder im Formular und
+  die Zeile „Gross · Commission“; Kommissionsbeträge sind neutral gesetzt.
+- Zwei Regeln für „höchstens zwei Dezimalen“: `commissionField` (×100) und
+  `startingBalanceField` (`exactCents`).
+- `getMoneyMetrics` wertet `moneyContribution` fünfmal pro Zeile aus, je mit
+  korrelierten Subqueries; bei vielen Trades mit `EXPLAIN ANALYZE` messen.
+- Die Import-Vorschau nennt jede Exit-Korrektur „closes an open trade“, auch bei
+  geschlossenen Trades.
