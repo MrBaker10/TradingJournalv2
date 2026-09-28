@@ -3111,3 +3111,63 @@ abgewiesen. Next week fehlt, weil noch nicht veröffentlicht.
   Session gestanden; Sascha hat den Lauf selbst im Dashboard ausgelöst.
 - Der Vercel-Connector darf in diesem Team Deployments listen, aber keine Env-Variablen,
   Logs oder Projektdaten lesen (403). Diagnose deshalb über die Antwort der Route selbst.
+
+---
+
+## 2026-09-28 — P2.6 Month-Close — feature/month-close — 5f8c60f
+
+**Gebaut.** Der Consistency Score eines abgelaufenen Monats wird pro Nutzer in
+`monthly_scores` eingefroren und auf `/progress` in der Karte „Past months" gezeigt
+(alle Monate, neueste zuerst, Score plus vier Teilwerte; Design.md §4.24). `score_90`
+ist nicht mehr zurückgestellt: `syncUserBadges` liest den besten eingefrorenen Monat.
+
+**Dateien.**
+- Domain: `src/domain/month-close.ts` (`CLOSE_DAY`, `previousMonth`, `monthToClose`,
+  `shouldWrite`) mit Tests; `src/domain/badges.ts` (`DEFERRED_BADGE_KEYS` →
+  `MONTH_END_BADGE_KEYS`, nur noch für den Hinweis).
+- Schema/DB: `src/db/schema/monthly-scores.ts`, Migration `0021_keen_zarda.sql`;
+  `src/db/queries/monthly-scores.ts` (`monthlyScoreExists`, `upsertMonthlyScore`,
+  `listMonthlyScores`, `getBestMonthlyScore`); `getMonthScoreDays` und
+  `listMonthReviewDates` nehmen optional einen Executor.
+- Job: `src/lib/month-close/job.ts`, `src/db/job-month-close.ts` (`pnpm job:month-close`),
+  `src/app/api/cron/month-close/route.ts`, `vercel.json` (täglich 05:00 UTC).
+- UI: `src/components/progress/score-history.tsx`, `progress/page.tsx`, `badge-grid.tsx`.
+- Tests: `month-close.test.ts` (Domain), `monthly-scores.test.ts` (Job und Queries gegen
+  Postgres), `badges.test.ts`, `user-deletion.test.ts` (Kaskade).
+
+**Migration.** `0021`: neue Tabelle `monthly_scores`, PK `(user_id, month)`, Checks auf
+`YYYY-MM` und 0–100, FK mit `on delete cascade`. Lokal über `db:migrate`. Auf Neon
+`preview` und `main` am 2026-09-28 über den Neon-Connector wie bei 0020 (SQL der Datei
+plus Zeile in `drizzle.__drizzle_migrations` mit SHA-256 und `when` aus dem Journal, in
+einer Transaktion); vorher beide Branches auf Stand 0020 geprüft, danach 22 Einträge und
+die Check-Definition identisch mit lokal. Neue Tabelle, darf vor dem Deployment laufen.
+
+**Regeln.**
+- Stichtag ist der lokale 3. (`users.timezone`): Monatsende plus 48h, dieselbe Frist wie
+  der Streak. Kalendertag 3 ist immer ≥ 48 echte Stunden, auch bei DST am 1. Tests:
+  `month-close.test.ts`; Zone: „reads the close day in the user's own zone".
+- Am Stichtag Upsert, ein zweiter Lauf überschreibt; ab dem 4. nur, wenn die Zeile
+  fehlt (Nachholen). Nur der Vormonat, nie ältere Monate. Tests: „overwrites on a second
+  run on the close day", „leaves a frozen month alone", „catches up".
+- Jeder Monat ab dem Registrierungsmonat (`created_at` in `users.timezone`) bekommt eine
+  Zeile, auch mit 0. Tests: „writes a zero month", „skips a month that ended before the
+  user registered".
+- Berechnung wie live: `getMonthScoreDays` (echte Konten) und `calculateConsistencyScore`;
+  `score` aus den exakten Teilen gerundet, Teile als `numeric(7,4)`.
+
+**Entschieden unterwegs (Sascha).**
+- Täglicher Lauf mit 48h-Nachfrist statt einmal am 1.
+- „Überschreiben" nur am Stichtag — ein täglicher Lauf wäre sonst jeden Tag ein „zweiter
+  Lauf" und der Monat nie eingefroren.
+- Leere Monate bekommen eine Zeile mit 0.
+- Teilwerte `numeric(7,4)` statt `double precision`.
+- `score_90` im Schreibpfad, nicht im Job.
+- Tabelle mit allen Monaten, kein Diagramm.
+
+**Offen geblieben.**
+- Klickpfad im Browser nicht gelaufen (kein Browser-Treiber auf der Maschine): Karte
+  „Past months" mit Zeilen und die Vergabe von `score_90` nach dem nächsten Speichern.
+- Lokal schreibt der Job noch nichts: der Seed-Nutzer ist vom 27.09., August liegt vor
+  der Registrierung. Erster echter Lauf am 03.10. für September.
+- `score_90` kommt erst mit dem nächsten Schreibvorgang nach dem Einfrieren, nicht am
+  Stichtag selbst.

@@ -18,51 +18,11 @@ Two different lists, do not mix them up:
 
 ## Status
 
-**In progress** — `feature/month-close` (P2.6).
+**Nothing in progress.**
 
 ---
 
-## Feature: P2.6 Month-Close
-
-**Goal.** Der Consistency Score eines abgelaufenen Monats wird pro Nutzer eingefroren und
-auf `/progress` als Verlauf gezeigt. `score_90` („Finish a month with 90+") wird damit
-vergebbar.
-
-**Scope.**
-- Tabelle `monthly_scores` (PK `user_id, month`; `score integer` 0–100; vier Teilwerte
-  `numeric(7,4)`; `computed_at`), Migration `0021`, Cascade bei Nutzerlöschung.
-- Domain `src/domain/month-close.ts` (Stichtag, welcher Monat, schreiben ja/nein) mit Tests.
-- Queries `src/db/queries/monthly-scores.ts`; Job `src/lib/month-close/job.ts`; Cron-Route
-  `src/app/api/cron/month-close/route.ts` (Bearer `CRON_SECRET`), `pnpm job:month-close`,
-  Eintrag in `vercel.json` (täglich 05:00 UTC).
-- Regeln (Sascha, 2026-09-28): täglicher Lauf; pro Nutzer wird der **Vormonat** ab dem
-  lokalen **3.** (48h-Nachfrist in `users.timezone`) geschrieben. Am 3. per Upsert, ein
-  zweiter Lauf am selben Tag überschreibt; ab dem 4. nur, wenn noch keine Zeile existiert
-  (Nachholen), danach fest. Jeder Monat ab dem Registrierungsmonat bekommt eine Zeile,
-  auch mit 0.
-- `score_90` im Schreibpfad: `syncUserBadges` liest `bestMonthlyScore` aus
-  `max(monthly_scores.score)`.
-- `/progress`: Tabelle „Past months", alle eingefrorenen Monate, neueste zuerst. Design.md
-  §4.24.
-
-### Do not build
-- Keine Neuberechnung vergangener Monate, kein Backfill von Monaten vor dem Deployment
-- Keine Badge-Vergabe im Job
-- Keine Mail- oder Discord-Benachrichtigung
-- Keine Jahresauswertung
-- Kein Diagramm für den Verlauf, nur die Tabelle
-
-### Acceptance
-- [ ] `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm build` grün
-- [ ] `/api/cron/month-close` ohne oder mit falschem Header → 401
-- [ ] `pnpm job:month-close` zweimal hintereinander: dieselben Zeilen, keine Dubletten
-- [ ] Klickpfad: `/progress` → Karte „Past months" zeigt den eingefrorenen Monat mit
-      Score und vier Teilwerten, neueste zuerst; ohne Zeilen den Leerhinweis
-- [ ] Mit einer Zeile ≥ 90 einen Trade speichern → `score_90` wird vergeben, die
-      Freischalt-Karte erscheint auf `/progress`
-
-### Open questions
-_(keine)_
+## Feature: _(none)_
 
 <!--
 Filled by `/feature load <description>`. Shape:
@@ -91,6 +51,7 @@ One line per merged feature. Newest at the top.
 
 | Date | Feature | Notes |
 | --- | --- | --- |
+| 2026-09-28 | P2.6 — Month-Close | Täglicher Job `job:month-close` / `/api/cron/month-close` (05:00 UTC) friert pro Nutzer den Vormonat in `monthly_scores` ein, ab dem lokalen 3. (48h-Nachfrist in `users.timezone`). Am Stichtag Upsert, danach nur Nachholen einer fehlenden Zeile; jeder Monat ab Registrierung, auch mit 0, kein Backfill. `/progress` zeigt „Past months" (alle Monate, Score plus vier Teilwerte, Design.md §4.24). `score_90` liest den besten eingefrorenen Monat und wird im Schreibpfad vergeben, nie im Job. Migration 0021, auf Neon per Connector eingespielt. Browser-Klickpfad offen. Details in `decisions.md`. |
 | 2026-09-28 | P2.4 — Econ Calendar | `/econ-calendar` zeigt Forex Factory aus `econ_events`: Tabs Today (Default, Nutzerzone) · This week · Next week · Both (Feed-Wochen in New York), High-Impact-Filter, Währungs-Chips, Zeiten in `users.timezone`. Impact als farbiger Ordner vor dem Event (eigene `--color-impact-*`-Tokens, nicht Verlust-Rot), vergangene Termine gedimmt und durchgestrichen. Täglicher Job `job:econ` / `/api/cron/econ` (06:00 UTC) ersetzt die Tabelle in einer Transaktion, schreibt bei jedem Fehler nichts; `nextweek`-404 heißt „noch nicht veröffentlicht“. Cron-Prüfung nach `src/lib/cron-auth.ts` gezogen. Migration 0020, auf Neon per Connector eingespielt. Details in `decisions.md`. |
 | 2026-09-26 | Tradovate-Stop aus dem Orders-Export | Orders-Export als optionale zweite Datei in derselben Auswahl liefert nur den Stop: übernommen bei letzter Änderung in der Entry-Sekunde auf der Verlustseite, sonst Hinweis in der Vorschau. Re-Import füllt fehlende Stops nach, überschreibt nie (`fillImportedStops`, `stop_price is null` im Statement). In der Beispielwoche 3 von 6. Keine Migration. Details in `decisions.md`. |
 | 2026-09-26 | Metriktafel all time außer Today | Alle Kacheln der Dashboard-Metriktafel rechnen seit dem ersten Trade im Scope (`getMoneyMetrics`, `getCountMetrics` ohne Zeitraum); Best/Worst day, Max drawdown und Today kommen aus der Tagesreihe der Kurve. Consistency Score, Streak und Kalender bleiben beim Monat. Keine Migration. |
