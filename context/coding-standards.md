@@ -230,6 +230,12 @@ Non-negotiable, because this is a P&L tool:
 - The user's timezone lives on `users` and decides every **calendar boundary**: what
   "today" and "this month" mean for streak, consistency score and badges, and when a
   trade's 48h logging window closes. Econ events render in it too.
+- **One exception: the econ calendar's week tabs.** "This week" and "Next week" are the
+  Forex Factory feed weeks, Sunday 00:00 to Sunday 00:00 `America/New_York`, because
+  each tab is exactly one feed file (`src/domain/econ.ts`, `weekRange`). A boundary in
+  the user's zone would push a Sunday-evening New York event into a week that is not
+  shown for a trader west of New York. The day an event is listed under, its time and
+  the "Today" tab stay the user's zone (decided 2026-09-28, econ-calendar).
 - `entry_time` / `exit_time` are `time without time zone` and are **never** converted.
   `users.timezone` names the clock they are on — the zone the trader sits in — but is
   never applied to the stored value.

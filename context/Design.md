@@ -134,6 +134,11 @@ Farbmodell aus dem Vision-UI-Vorbild kommt und exakt getroffen werden soll.
   --color-practice:      #FFB547;          /* = warning, eigener Name für eigene Bedeutung */
   --color-practice-dim:  rgba(255,181,71,.16);
   --shadow-practice:     inset 3px 0 0 0 #FFB547;
+
+  /* --- Econ-Impact (nur Ordner-Icon, 4.23) --- */
+  --color-impact-low:    #F2D14B;          /* gelb */
+  --color-impact-medium: #FF8F3F;          /* orange, nicht warning */
+  --color-impact-high:   #F2443A;          /* rot, nicht danger */
 }
 ```
 
@@ -1128,6 +1133,48 @@ und Leiste.
 die Mistake-Labels sind in den Seed-Daten kleingeschrieben, die Confluences nicht;
 das ist Datenpflege, kein Layout.
 
+### 4.23 Econ-Kalender
+
+Entstanden in P2.4, aus vorhandenen Primitiven gebaut, mit demselben Vorbehalt wie
+4.16: **tragfähig, aber nicht entworfen.**
+
+**Filterkarte.** `card-surface edge` über der Liste, drei Gruppen in der Chip-Optik
+der Prop-Firm- und Analytics-Filter: „Show“ (Today · This week · Next week · Both,
+Default Today), „Impact“
+(ein Chip „High impact only“), „Currency“ (Mehrfachauswahl, nur die Währungen der
+gewählten Woche(n), ein gewählter Chip bleibt stehen, auch wenn die Woche ihn nicht
+mehr hat — sonst ließe er sich nicht abwählen). Der ganze Zustand steht in der URL.
+
+**Ein Tag, eine Karte.** `card-surface edge`, Kopf `cap` („Mon 28 Sep“), darunter das
+Zeilenmuster aus 4.16: Kopfzeile `border-white/8`, Zeilen `divide-white/6`. Links Zeit
+(Mono 13px, `--color-fg-muted`), Währung (Mono), Impact direkt vor dem Event, das es
+bewertet, dann der Titel (`truncate`, voller Titel im `title`-Attribut); rechts
+Forecast und Previous (Mono, rechtsbündig, leer = „—“ in `--color-fg-subtle`).
+
+**Vergangene Termine** (Zeitpunkt ≤ jetzt, beim Laden entschieden) bleiben stehen,
+werden aber auf halbe Deckkraft gedimmt — Ordner eingeschlossen — und von einer
+durchgehenden 1px-Linie in `--color-fg-muted` über die volle Zeilenbreite gekreuzt,
+kein `line-through` je Text, das an jeder Spaltenlücke abreißen würde. Für
+Screenreader steht ein unsichtbares „Past:“ vor dem Titel. Kein Timer: eine Zeile,
+die bei offener Seite vergeht, bekommt ihre Linie beim nächsten Laden. Tag und Uhrzeit stehen in `users.timezone`, und die Zeile
+darüber nennt die Zone mit einem Link nach Settings.
+
+**Impact-Ordner.** Vor dem Wort ein gefüllter 14px-Ordner (`Folder` aus
+`lucide-react`, `fill-current`) wie bei Forex Factory: Low gelb
+(`--color-impact-low`), Medium orange (`--color-impact-medium`), High rot
+(`--color-impact-high`), Holiday grau (`--color-fg-subtle`). Die drei Farben sind
+**eigene Tokens mit eigenen Werten**: Rot heißt in dieser App Verlust, Amber heißt
+Übungskonto, und ein Wirtschaftstermin ist keins von beiden — derselbe Grund, aus dem
+`--color-practice` einen eigenen Namen hat. Kein Schein, keine Bewegung. Das Wort
+bleibt daneben stehen (High `--color-fg` halbfett, Medium `--color-fg-muted`, Low und
+Holiday `--color-fg-subtle`), der Ordner ist `aria-hidden` — Farbe ist nie der einzige
+Träger (§8). Entschieden 2026-09-28 auf Wunsch, ersetzt „Impact ist Text, keine
+Farbe“.
+
+**Leerzustände.** „Today“ ohne Zeilen sagt „Nothing on the calendar today.“ „Next week“ ohne Zeilen sagt, dass Forex Factory die Woche erst im
+Laufe der Woche veröffentlicht. Ganz leer heißt „noch nicht synchronisiert“, gefiltert
+leer heißt „No event matches these filters.“
+
 ---
 
 ## 5. Motion
@@ -1290,7 +1337,7 @@ Die fünf Punkte dieses Abschnitts sind abgearbeitet:
 5. **Landing-Page** — bleibt ein separates Dokument und braucht als einzige
    öffentliche Seite eine ausdrückliche Ausnahme von der „no public pages"-Regel.
 
-Offen bleiben zwei, weil sie Gestaltung und nicht Entscheidung sind:
+Offen bleiben drei, weil sie Gestaltung und nicht Entscheidung sind:
 
 - **Analytics und Prop Firm Rules** sind hier nicht auf Komponentenebene
   entworfen. Analytics ist seit S12a in 4.16 beschrieben — aber beschrieben, nicht
@@ -1298,6 +1345,9 @@ Offen bleiben zwei, weil sie Gestaltung und nicht Entscheidung sind:
   gegen die anderen Screens gehalten. Die Regel-Detailtabelle der Prop Firm Rules
   fehlt weiterhin ganz. Beide brauchen dieselbe eigene Runde wie die Progress-Seite
   unten.
+- **Der Econ-Kalender** (4.23) ist aus den Tabellen- und Chip-Primitiven gebaut und
+  nie gegen die anderen Screens gehalten. Offen besonders: ob das Impact-Rot neben
+  einer roten Verlustzahl auf demselben Schirm unterscheidbar genug bleibt.
 - **Die Progress-Seite** ist hier nur über 4.3 (Gamification-Kacheln) und 4.4
   (Grace-Day-Leiste) abgedeckt. Für die Aufschlüsselung des Consistency Score in
   seine vier Teilwerte und für das Raster der zwölf Badges gibt es keine Vorgabe.

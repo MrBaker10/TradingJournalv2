@@ -91,6 +91,14 @@
   --color-practice-dim: rgba(255, 181, 71, 0.16);
   --shadow-practice: inset 3px 0 0 0 #ffb547;
 
+  /* --- Econ-Impact: nur das Ordner-Icon im Econ-Kalender (§4.23) ---
+     Eigene Namen, eigene Werte: das Rot ist nicht --color-danger (Verlust), das
+     Orange nicht --color-warning/--color-practice (Übungskonto). Holiday nimmt
+     --color-fg-subtle. Kein Schein. */
+  --color-impact-low: #f2d14b;
+  --color-impact-medium: #ff8f3f;
+  --color-impact-high: #f2443a;
+
   /* --- Progress: Hinweisleiste (§4.4) und Score-Balken --- */
   /* Eigene Namen trotz gleichem Wert wie beim Übungskonto: die Leiste erklärt
      eine Regel, sie markiert kein Konto. */

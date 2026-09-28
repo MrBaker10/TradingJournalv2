@@ -3,6 +3,8 @@ import {
   calendarDateOf,
   formatDateWithYear,
   formatDayLabel,
+  formatEventDayLabel,
+  formatEventTime,
   formatMonthLabel,
   formatMonthTickLabel,
   monthKeyOf,
@@ -179,5 +181,34 @@ describe("formatMonthTickLabel", () => {
 describe("formatDateWithYear", () => {
   it("names the day, the month and the year", () => {
     expect(formatDateWithYear("2026-08-13")).toBe("13 Aug 2026");
+  });
+});
+
+describe("formatEventTime", () => {
+  // Sunday 19:50 in New York, the first event of the feed week of 09-28.
+  const instant = new Date("2026-09-27T23:50:00Z");
+
+  it("reads the instant in the user's zone, 24-hour", () => {
+    expect(formatEventTime(instant, "Europe/Berlin")).toBe("01:50");
+    expect(formatEventTime(instant, "America/New_York")).toBe("19:50");
+    expect(formatEventTime(instant, "UTC")).toBe("23:50");
+  });
+
+  it("follows the zone's own clock change", () => {
+    // An 08:30 New York release is 12:30Z before 11-01 and 13:30Z after it.
+    // The stored instant moves; the time read in New York does not.
+    expect(
+      formatEventTime(new Date("2026-10-30T12:30:00Z"), "America/New_York"),
+    ).toBe("08:30");
+    expect(
+      formatEventTime(new Date("2026-11-06T13:30:00Z"), "America/New_York"),
+    ).toBe("08:30");
+  });
+});
+
+describe("formatEventDayLabel", () => {
+  it("names the weekday, day and month", () => {
+    expect(formatEventDayLabel("2026-09-28")).toBe("Mon 28 Sep");
+    expect(formatEventDayLabel("2026-10-04")).toBe("Sun 4 Oct");
   });
 });

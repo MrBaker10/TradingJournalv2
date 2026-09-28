@@ -564,6 +564,17 @@ by picking a different answer while coding.
   assigned trades.
 - **Econ calendar** — weekly Forex Factory JSON feed, unofficial, always read from
   `econ_events`, fetch and parse behind an adapter.
+- **Econ calendar weeks and sync** (2026-09-28, econ-calendar) — the page opens on
+  "Today", the user's calendar day in `users.timezone`; the week tabs are the feed
+  weeks, Sunday to Sunday `America/New_York`, not weeks in the user's zone; times and
+  day headings are the user's zone. A past event stays listed, dimmed and struck
+  through, decided at request time. `job:econ` runs once a day (Vercel Cron, 06:00
+  UTC) and replaces the whole table with both feed weeks in one transaction, or writes
+  nothing when a fetch fails. Next week's file answers 404 until Forex Factory
+  publishes it mid-week; that is "not published yet", not a failure. Impact is a
+  filled folder icon in its own tokens (yellow Low, orange Medium, red High, grey
+  Holiday — not the loss red, not the practice amber) plus the word; Holiday events
+  are shown, "High impact only" hides them. Reasoning: `context/decisions.md`, the econ-calendar entry.
 - **Prop firm rules** — idempotent seeder from `PropFirmsData.md`, not a migration.
 - **Post-exit MFE** — separate manual field, shown only when a stop price is set.
 - **CSV export** — the whole journal every time, with account and `is_practice` columns.

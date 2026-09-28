@@ -68,7 +68,9 @@ until the Accounts slice. `test:e2e`, `db:seed:propfirms` and `job:*` still don'
 they land with the slice that creates their target (Playwright, the prop-firm seeder,
 the cron handlers respectively). As of ftmo-import, `job:fx` is real: it converts
 provisionally imported FX amounts again once the ECB rate is published — the same
-handler `/api/cron/fx` runs nightly. `job:econ` and `job:month-close` still don't exist.
+handler `/api/cron/fx` runs nightly. As of econ-calendar, `job:econ` is real: it
+replaces `econ_events` with both Forex Factory feed weeks, the same handler
+`/api/cron/econ` runs daily at 06:00 UTC. `job:month-close` still doesn't exist.
 
 **Neon (P2.2).** Production runs on Neon `tradingjournal` (aws-eu-central-1, PG 18),
 Vercel functions in `fra1`. Previews use the Neon branch `preview`. The Neon URLs live

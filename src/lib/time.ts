@@ -127,3 +127,22 @@ export function rangeForPreset(
   const end = new TZDate(`${today}T00:00:00Z`, "UTC");
   return { from: format(subDays(end, days - 1), "yyyy-MM-dd"), to: today };
 }
+
+/**
+ * An econ event's time as "14:30", read in the user's zone. The one place in
+ * the app where a zone is applied to a stored time for display
+ * (project-overview.md, I) — an instant from `econ_events`, never a trade's
+ * chart-clock `entry_time`.
+ */
+export function formatEventTime(instant: Date, timeZone: string): string {
+  return format(new TZDate(instant, timeZone), "HH:mm");
+}
+
+/**
+ * A date as "Mon 28 Sep", the heading over one day of the econ calendar.
+ * UTC-anchored like the other formatters here: the zone was already applied
+ * when the event was grouped under this date.
+ */
+export function formatEventDayLabel(date: IsoDate): string {
+  return format(new TZDate(`${date}T00:00:00Z`, "UTC"), "EEE d MMM");
+}
