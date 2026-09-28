@@ -760,6 +760,13 @@ by picking a different answer while coding.
 - **FTMO CFDs except equities are instruments** (2026-09-26, ftmo-cfd-instruments) —
   106 symbols from FTMO's symbol list, snapshot in `src/db/seed-instruments.ts`;
   USD/CNH is left out because the ECB publishes no CNH rate.
+- **Month close** (2026-09-28, month-close) — a daily job freezes each user's
+  previous month into `monthly_scores` once the 48h grace is over, from the 3rd of
+  the new month in `users.timezone`. On that close day a repeated run overwrites; from
+  the 4th on it writes only a missing row, so a failed close day is caught up and a
+  written month stays frozen. Every month from the registration month on gets a row,
+  a zero month included; no month before the deployment is backfilled. `score_90`
+  reads the best frozen month and is awarded in the write paths, never by the job.
 
 
 ---

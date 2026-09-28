@@ -70,7 +70,9 @@ the cron handlers respectively). As of ftmo-import, `job:fx` is real: it convert
 provisionally imported FX amounts again once the ECB rate is published — the same
 handler `/api/cron/fx` runs nightly. As of econ-calendar, `job:econ` is real: it
 replaces `econ_events` with both Forex Factory feed weeks, the same handler
-`/api/cron/econ` runs daily at 06:00 UTC. `job:month-close` still doesn't exist.
+`/api/cron/econ` runs daily at 06:00 UTC. As of month-close, `job:month-close` is real:
+it freezes each user's previous month into `monthly_scores` from the local 3rd on — the
+same handler `/api/cron/month-close` runs daily at 05:00 UTC.
 
 **Neon (P2.2).** Production runs on Neon `tradingjournal` (aws-eu-central-1, PG 18),
 Vercel functions in `fra1`. Previews use the Neon branch `preview`. The Neon URLs live

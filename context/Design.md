@@ -1175,6 +1175,27 @@ Farbe“.
 Laufe der Woche veröffentlicht. Ganz leer heißt „noch nicht synchronisiert“, gefiltert
 leer heißt „No event matches these filters.“
 
+### 4.24 Score-Verlauf („Past months")
+
+Entstanden in P2.6 (month-close), aus vorhandenen Primitiven gebaut, mit demselben
+Vorbehalt wie 4.16: **tragfähig, aber nicht entworfen.**
+
+**Die Karte.** Auf `/progress` volle Breite zwischen Streak/Score-Raster und
+Badge-Raster. `card-surface edge-neon`, weil der Score Prozess ist wie in 4.3. Kopf
+`cap cap-neon` „Past months", darunter eine Zeile in `--color-fg-subtle`, dass ein Monat
+zwei Tage nach seinem Ende eingefroren wird.
+
+**Die Zeile.** Das Zeilen-Layout aus 4.16 (die sechste Kopie): Monat links als
+„September 2026", rechts in Mono 13px mit Tabellenziffern der Score als ganze Zahl in
+`text-glow`, dann die vier Teilwerte mit einer Nachkommastelle in `--color-fg-muted` und
+dem Maximum in `--color-fg-subtle` („27.4 / 40"). Die Beschriftungen sind die der
+Live-Aufschlüsselung (Showing up, Journaling, Adherence, Review), damit ein Monat vor und
+nach dem Einfrieren gleich heißt. Neueste zuerst, alle Monate, keine Balken, kein
+Diagramm. Unter `sm` bleiben nur Monat und Score.
+
+**Leerzustand.** Ohne eingefrorenen Monat: „Your first month appears here once it is
+over." zentriert in `--color-fg-subtle`.
+
 ---
 
 ## 5. Motion

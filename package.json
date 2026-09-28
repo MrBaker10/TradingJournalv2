@@ -16,7 +16,8 @@
     "db:seed:badges": "node --env-file=.env.local src/db/seed-badges.ts",
     "db:seed:propfirms": "node --env-file=.env.local src/db/seed-propfirms.ts",
     "job:fx": "node --env-file=.env.local src/db/job-fx.ts",
-    "job:econ": "node --env-file=.env.local src/db/job-econ.ts"
+    "job:econ": "node --env-file=.env.local src/db/job-econ.ts",
+    "job:month-close": "node --env-file=.env.local src/db/job-month-close.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1132.0",

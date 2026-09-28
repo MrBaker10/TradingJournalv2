@@ -304,11 +304,12 @@ export async function getStreakEntryDays(
 export async function getMonthScoreDays(
   userId: number,
   month: string,
+  executor: ReadExecutor = db,
 ): Promise<ScoreDay[]> {
   const range = monthRangeOf(month);
 
   const [entryRows, reviewDates] = await Promise.all([
-    db
+    executor
       .select({
         tradeDate: trades.tradeDate,
         taken: trades.taken,
@@ -341,7 +342,7 @@ export async function getMonthScoreDays(
         ),
       )
       .orderBy(trades.tradeDate),
-    listMonthReviewDates(userId, month),
+    listMonthReviewDates(userId, month, executor),
   ]);
 
   const reviewed = new Set(reviewDates);

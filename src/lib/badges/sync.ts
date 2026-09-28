@@ -1,13 +1,12 @@
 import { insertEarnedBadges, listUserBadges } from "../../db/queries/badges.ts";
 import {
   getBadgeCounters,
-  getMonthScoreDays,
   getStreakEntryDays,
 } from "../../db/queries/dashboard.ts";
+import { getBestMonthlyScore } from "../../db/queries/monthly-scores.ts";
 import { badgesToAward } from "../../domain/badges.ts";
-import { calculateConsistencyScore } from "../../domain/consistency.ts";
 import { calculateStreak } from "../../domain/streak.ts";
-import { monthKeyOf, todayInTimeZone } from "../time.ts";
+import { todayInTimeZone } from "../time.ts";
 
 /**
  * Gives the user every badge their numbers have earned and that they do not
@@ -23,23 +22,26 @@ import { monthKeyOf, todayInTimeZone } from "../time.ts";
  * below take no selected account, because "streak, consistency score and
  * badges see real accounts only" (project-structure.md) is a product rule and
  * not a view option.
+ *
+ * `bestMonthlyScore` is the best *frozen* month (`monthly_scores`), never the
+ * running one: `score_90` says "finish a month", and the running month can
+ * still fall.
  */
 export async function syncUserBadges(
   userId: number,
   timeZone: string,
 ): Promise<string[]> {
   const today = todayInTimeZone(timeZone);
-  const month = monthKeyOf(today);
 
-  const [streakDays, scoreDays, counters, alreadyEarned] = await Promise.all([
-    getStreakEntryDays(userId),
-    getMonthScoreDays(userId, month),
-    getBadgeCounters(userId),
-    listUserBadges(userId),
-  ]);
+  const [streakDays, bestMonthlyScore, counters, alreadyEarned] =
+    await Promise.all([
+      getStreakEntryDays(userId),
+      getBestMonthlyScore(userId),
+      getBadgeCounters(userId),
+      listUserBadges(userId),
+    ]);
 
   const streak = calculateStreak(streakDays, today, timeZone);
-  const score = calculateConsistencyScore(scoreDays, month, today);
 
   const keys = badgesToAward(
     {
@@ -48,7 +50,7 @@ export async function syncUserBadges(
       loggedTradingDays: streakDays.map((day) => day.tradeDate),
       longestStreak: streak.longest,
       byTheBookTrades: counters.byTheBookTrades,
-      bestMonthlyScore: score.score,
+      bestMonthlyScore,
     },
     alreadyEarned.map((badge) => badge.key),
   );

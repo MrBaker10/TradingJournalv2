@@ -36,10 +36,11 @@ export async function getDailyNote(
 export async function listMonthReviewDates(
   userId: number,
   month: string,
+  executor: Pick<typeof db, "select"> = db,
 ): Promise<IsoDate[]> {
   const range = monthRangeOf(month);
 
-  const rows = await db
+  const rows = await executor
     .select({ noteDate: dailyNotes.noteDate })
     .from(dailyNotes)
     .where(

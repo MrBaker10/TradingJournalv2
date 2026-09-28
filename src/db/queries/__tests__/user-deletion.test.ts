@@ -6,6 +6,7 @@ import { authAccounts, authSessions } from "../../schema/auth.ts";
 import { dailyNotes } from "../../schema/daily-notes.ts";
 import { importBatches } from "../../schema/import-batches.ts";
 import { instruments } from "../../schema/instruments.ts";
+import { monthlyScores } from "../../schema/monthly-scores.ts";
 import {
   tradeAccounts,
   tradeScreenshots,
@@ -33,6 +34,7 @@ interface Remaining {
   screenshots: number;
   importBatches: number;
   dailyNotes: number;
+  monthlyScores: number;
   authAccounts: number;
   authSessions: number;
 }
@@ -113,6 +115,15 @@ async function deleteFixtureUser(): Promise<Remaining> {
       await tx
         .insert(dailyNotes)
         .values({ userId: user.id, noteDate: "2026-09-03" });
+      await tx.insert(monthlyScores).values({
+        userId: user.id,
+        month: "2026-08",
+        score: 50,
+        showingUp: "20",
+        completeness: "10",
+        planAdherence: "12.5",
+        reviewHabit: "7.5",
+      });
       await tx.insert(authAccounts).values({
         userId: user.id,
         accountId: String(user.id),
@@ -161,6 +172,12 @@ async function deleteFixtureUser(): Promise<Remaining> {
         dailyNotes: await countWhere(
           tx.select().from(dailyNotes).where(eq(dailyNotes.userId, user.id)),
         ),
+        monthlyScores: await countWhere(
+          tx
+            .select()
+            .from(monthlyScores)
+            .where(eq(monthlyScores.userId, user.id)),
+        ),
         authAccounts: await countWhere(
           tx
             .select()
@@ -194,6 +211,7 @@ describe("deleting a user", () => {
       screenshots: 0,
       importBatches: 0,
       dailyNotes: 0,
+      monthlyScores: 0,
       authAccounts: 0,
       authSessions: 0,
     });

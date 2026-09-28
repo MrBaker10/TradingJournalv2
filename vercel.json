@@ -2,6 +2,7 @@
   "regions": ["fra1"],
   "crons": [
     { "path": "/api/cron/fx", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/month-close", "schedule": "0 5 * * *" },
     { "path": "/api/cron/econ", "schedule": "0 6 * * *" }
   ]
 }

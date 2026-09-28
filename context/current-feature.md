@@ -18,11 +18,51 @@ Two different lists, do not mix them up:
 
 ## Status
 
-**Nothing in progress.**
+**In progress** — `feature/month-close` (P2.6).
 
 ---
 
-## Feature: _(none)_
+## Feature: P2.6 Month-Close
+
+**Goal.** Der Consistency Score eines abgelaufenen Monats wird pro Nutzer eingefroren und
+auf `/progress` als Verlauf gezeigt. `score_90` („Finish a month with 90+") wird damit
+vergebbar.
+
+**Scope.**
+- Tabelle `monthly_scores` (PK `user_id, month`; `score integer` 0–100; vier Teilwerte
+  `numeric(7,4)`; `computed_at`), Migration `0021`, Cascade bei Nutzerlöschung.
+- Domain `src/domain/month-close.ts` (Stichtag, welcher Monat, schreiben ja/nein) mit Tests.
+- Queries `src/db/queries/monthly-scores.ts`; Job `src/lib/month-close/job.ts`; Cron-Route
+  `src/app/api/cron/month-close/route.ts` (Bearer `CRON_SECRET`), `pnpm job:month-close`,
+  Eintrag in `vercel.json` (täglich 05:00 UTC).
+- Regeln (Sascha, 2026-09-28): täglicher Lauf; pro Nutzer wird der **Vormonat** ab dem
+  lokalen **3.** (48h-Nachfrist in `users.timezone`) geschrieben. Am 3. per Upsert, ein
+  zweiter Lauf am selben Tag überschreibt; ab dem 4. nur, wenn noch keine Zeile existiert
+  (Nachholen), danach fest. Jeder Monat ab dem Registrierungsmonat bekommt eine Zeile,
+  auch mit 0.
+- `score_90` im Schreibpfad: `syncUserBadges` liest `bestMonthlyScore` aus
+  `max(monthly_scores.score)`.
+- `/progress`: Tabelle „Past months", alle eingefrorenen Monate, neueste zuerst. Design.md
+  §4.24.
+
+### Do not build
+- Keine Neuberechnung vergangener Monate, kein Backfill von Monaten vor dem Deployment
+- Keine Badge-Vergabe im Job
+- Keine Mail- oder Discord-Benachrichtigung
+- Keine Jahresauswertung
+- Kein Diagramm für den Verlauf, nur die Tabelle
+
+### Acceptance
+- [ ] `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm build` grün
+- [ ] `/api/cron/month-close` ohne oder mit falschem Header → 401
+- [ ] `pnpm job:month-close` zweimal hintereinander: dieselben Zeilen, keine Dubletten
+- [ ] Klickpfad: `/progress` → Karte „Past months" zeigt den eingefrorenen Monat mit
+      Score und vier Teilwerten, neueste zuerst; ohne Zeilen den Leerhinweis
+- [ ] Mit einer Zeile ≥ 90 einen Trade speichern → `score_90` wird vergeben, die
+      Freischalt-Karte erscheint auf `/progress`
+
+### Open questions
+_(keine)_
 
 <!--
 Filled by `/feature load <description>`. Shape:

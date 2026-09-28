@@ -1,9 +1,11 @@
 import { BadgeGrid } from "@/components/progress/badge-grid";
 import { ScoreBreakdown } from "@/components/progress/score-breakdown";
+import { ScoreHistory } from "@/components/progress/score-history";
 import { StreakCard } from "@/components/progress/streak-card";
 import { UnlockedCard } from "@/components/progress/unlocked-card";
 import { getBadgesSeenAt, listUserBadges } from "@/db/queries/badges";
 import { getMonthScoreDays, getStreakEntryDays } from "@/db/queries/dashboard";
+import { listMonthlyScores } from "@/db/queries/monthly-scores";
 import { BADGE_DEFINITIONS } from "@/domain/badges";
 import {
   calculateConsistencyScore,
@@ -23,12 +25,14 @@ export default async function ProgressPage() {
   // Streak, score and badges see real accounts only (project-structure.md),
   // so none of these take the account switcher into account. Selecting a
   // practice account changes money figures, never process figures.
-  const [streakDays, scoreDays, userBadges, badgesSeenAt] = await Promise.all([
-    getStreakEntryDays(user.id),
-    getMonthScoreDays(user.id, month),
-    listUserBadges(user.id),
-    getBadgesSeenAt(user.id),
-  ]);
+  const [streakDays, scoreDays, userBadges, badgesSeenAt, pastMonths] =
+    await Promise.all([
+      getStreakEntryDays(user.id),
+      getMonthScoreDays(user.id, month),
+      listUserBadges(user.id),
+      getBadgesSeenAt(user.id),
+      listMonthlyScores(user.id),
+    ]);
 
   const streak = calculateStreak(streakDays, today, user.timezone);
   const score = calculateConsistencyScore(scoreDays, month, today);
@@ -78,6 +82,8 @@ export default async function ProgressPage() {
           hasEntriesThisMonth={scoreDays.length > 0}
         />
       </div>
+
+      <ScoreHistory months={pastMonths} />
 
       <BadgeGrid earnedAt={earnedAt} timeZone={user.timezone} />
     </div>

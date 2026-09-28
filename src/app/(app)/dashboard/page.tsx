@@ -170,8 +170,8 @@ export default async function DashboardPage({
 
       {/* badgesEarned comes from `user_badges`, the same source /progress
           reads. Computing it live here instead would disagree with that page
-          the moment a badge is earned but deliberately not awarded —
-          score_90 is exactly that case until `monthly_scores` exists. */}
+          whenever the numbers are ahead of the write paths — score_90, for
+          one, arrives with the first write after a month is frozen. */}
       <ProgressTiles
         currentStreak={streak.current}
         longestStreak={streak.longest}

@@ -3,9 +3,9 @@ import {
   BADGE_DEFINITIONS,
   type BadgeProgress,
   badgesToAward,
-  DEFERRED_BADGE_KEYS,
   earnedBadges,
   hasFullLoggedWeek,
+  MONTH_END_BADGE_KEYS,
 } from "../badges.ts";
 
 const nothing: BadgeProgress = {
@@ -229,14 +229,13 @@ describe("badgesToAward", () => {
     expect(badgesToAward(nothing, [])).toEqual([]);
   });
 
-  // score_90 says "finish a month". Until monthly_scores exists there is only
-  // the running month's value, which can still fall — and a badge written from
-  // it could never be taken back.
-  it("holds back score_90 even at a score of 100", () => {
-    expect(keysFor({ bestMonthlyScore: 100 })).toContain("score_90");
-    expect(badgesToAward({ ...nothing, bestMonthlyScore: 100 }, [])).toEqual(
-      [],
-    );
+  // score_90 says "finish a month". bestMonthlyScore comes from the frozen
+  // months in monthly_scores (P2.6), so the badge is awardable like any other.
+  it("awards score_90 from a finished month of ninety or more", () => {
+    expect(badgesToAward({ ...nothing, bestMonthlyScore: 100 }, [])).toEqual([
+      "score_90",
+    ]);
+    expect(badgesToAward({ ...nothing, bestMonthlyScore: 89 }, [])).toEqual([]);
   });
 
   it("keeps the other Craft badge awardable", () => {
@@ -248,10 +247,10 @@ describe("badgesToAward", () => {
     ).toEqual(["by_the_book_20"]);
   });
 
-  it("lists only deferred keys that exist as definitions", () => {
+  it("lists only month-end keys that exist as definitions", () => {
     const keys = BADGE_DEFINITIONS.map((badge) => badge.key);
-    for (const deferred of DEFERRED_BADGE_KEYS) {
-      expect(keys).toContain(deferred);
+    for (const monthEnd of MONTH_END_BADGE_KEYS) {
+      expect(keys).toContain(monthEnd);
     }
   });
 });

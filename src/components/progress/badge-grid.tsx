@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import {
   BADGE_DEFINITIONS,
   type BadgeCategory,
-  DEFERRED_BADGE_KEYS,
+  MONTH_END_BADGE_KEYS,
 } from "@/domain/badges";
 import { formatDayLabel, todayInTimeZone } from "@/lib/time";
 
@@ -27,7 +27,7 @@ const CATEGORY_ICON: Record<BadgeCategory, ReactNode> = {
   Craft: <Hammer className="h-4 w-4" aria-hidden="true" />,
 };
 
-const DEFERRED_HINT = "Evaluated once the month is over.";
+const MONTH_END_HINT = "Evaluated once the month is over.";
 
 // Design.md §1: badges are process, so an earned one is allowed the gradient
 // tile and the neon edge. An open one is matte — never smaller, never pushed
@@ -87,9 +87,9 @@ export function BadgeGrid({ earnedAt, timeZone }: BadgeGridProps) {
                         {formatDayLabel(todayInTimeZone(timeZone, earned))}
                       </span>
                     ) : (
-                      DEFERRED_BADGE_KEYS.includes(badge.key) && (
+                      MONTH_END_BADGE_KEYS.includes(badge.key) && (
                         <span className="mt-1 text-[11.5px] text-warning">
-                          {DEFERRED_HINT}
+                          {MONTH_END_HINT}
                         </span>
                       )
                     )}

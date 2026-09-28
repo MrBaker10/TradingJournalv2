@@ -164,19 +164,19 @@ export function earnedBadges(progress: BadgeProgress): BadgeDefinition[] {
 }
 
 /**
- * Badges that are visible and explained but never written yet, because the
- * number their criterion asks for does not exist in a trustworthy form.
+ * Badges whose criterion is a finished month, so they can only arrive after
+ * the month-close job has frozen one into `monthly_scores`. The hint on
+ * /progress says so; awarding them is no different from any other badge.
  *
- * `score_90` says "finish a month". Until `monthly_scores` and the month-close
- * job exist, the only value available is the running month's score, and that
- * can still fall. A badge written from it would be permanent and wrong, so it
- * stays open and says why.
+ * `bestMonthlyScore` is read from the frozen months only, never from the
+ * running month — that one can still fall, and a badge written from it would
+ * be permanent and wrong.
  */
-export const DEFERRED_BADGE_KEYS: readonly string[] = ["score_90"];
+export const MONTH_END_BADGE_KEYS: readonly string[] = ["score_90"];
 
 /**
- * Which badge keys to write for a user right now: earned by the numbers, not
- * already on the user, not deferred.
+ * Which badge keys to write for a user right now: earned by the numbers and
+ * not already on the user.
  *
  * Awarding is a one-way door — a row in `user_badges` is never removed — so
  * this is deliberately separate from `earnedBadges`, which answers the looser
@@ -189,5 +189,5 @@ export function badgesToAward(
   const already = new Set(alreadyEarnedKeys);
   return earnedBadges(progress)
     .map((badge) => badge.key)
-    .filter((key) => !already.has(key) && !DEFERRED_BADGE_KEYS.includes(key));
+    .filter((key) => !already.has(key));
 }
