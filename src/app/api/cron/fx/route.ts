@@ -1,5 +1,5 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/cron-auth";
 import { env } from "@/lib/env";
 import { runFxJob } from "@/lib/fx/job";
 
@@ -8,16 +8,10 @@ import { runFxJob } from "@/lib/fx/job";
 // session check and authenticates by the secret instead. It reads and returns
 // no user data — only how many trades it checked and corrected.
 
-function isAuthorized(header: string | null): boolean {
-  const secret = env.CRON_SECRET;
-  if (secret === undefined || header === null) return false;
-  const expected = Buffer.from(`Bearer ${secret}`);
-  const given = Buffer.from(header);
-  return given.length === expected.length && timingSafeEqual(given, expected);
-}
-
 export async function GET(request: Request) {
-  if (!isAuthorized(request.headers.get("authorization"))) {
+  if (
+    !isCronAuthorized(request.headers.get("authorization"), env.CRON_SECRET)
+  ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
