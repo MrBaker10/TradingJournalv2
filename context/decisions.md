@@ -3008,3 +3008,77 @@ Einordnung per Kopfzeile), `preview-step.tsx` (Stop in der Hinweiszeile),
   aber nicht im Datenmodell — Entscheidung über neue Spalten steht aus.
 - Die echten Lucid-Trades (14.–18.09) haben noch keinen Stop; das Nachtragen macht
   Sascha per Import von `Tradovate.csv` plus `Orders_Tradovate.csv`.
+
+## 2026-09-28 — P2.4 Econ Calendar — feature/econ-calendar — 4afe651
+
+**Gebaut.** `/econ-calendar` zeigt die Wirtschaftstermine aus dem wöchentlichen
+Forex-Factory-JSON: Tabs Today (Default) · This week · Next week · Both,
+„High impact only“, Währungs-Chips, alles in der URL. Zeiten und Tages-Überschriften
+in `users.timezone`. Impact als gefüllter Ordner (gelb/orange/rot/grau) plus Wort,
+direkt vor dem Event. Vergangene Termine bleiben stehen, gedimmt und mit einer
+durchgehenden Linie gekreuzt. Ein täglicher Job (`pnpm job:econ`, Vercel Cron
+`/api/cron/econ` um 06:00 UTC) ersetzt `econ_events` mit beiden Feed-Wochen; die Seite
+liest nur die Tabelle.
+
+**Dateien.** Neu `src/db/schema/econ-events.ts`, `src/lib/econ/forex-factory.ts`
+(Adapter, einzige Stelle, die den Feed kennt), `src/lib/econ/job.ts`,
+`src/lib/econ/href.ts`, `src/domain/econ.ts` (`feedWeekStart`, `tabRange`,
+`groupByDay`, `isPast`, `isHighImpact`), `src/db/queries/econ.ts`
+(`replaceEconEvents`, `listEconEvents`, `listEconCurrencies`), `src/db/job-econ.ts`,
+`src/app/api/cron/econ/route.ts`, `src/components/econ/*`, `src/lib/cron-auth.ts`
+(aus der fx-Route gezogen, eigener `refactor:`-Commit a6879b5). Geändert
+`src/lib/time.ts` (`formatEventTime`, `formatEventDayLabel`), `globals.css`
+(`--color-impact-*`), `vercel.json`, `package.json` (`job:econ`). Tests für Domain,
+Adapter, URL-State, Zeitformat, Cron-Prüfung und Queries/Job gegen Postgres.
+
+**Migration.** 0020 `econ_events` (Referenzdaten, kein `user_id`, Index auf
+`occurs_at`). Auf Neon `preview` und `main` am 2026-09-28 über den Neon-Connector
+eingespielt statt mit `drizzle-kit migrate`: die `.env.neon.*`-Dateien fehlten auf der
+Maschine, und Postgres-TCP ist von dort gesperrt. Eingespielt wie drizzle-kit es tut —
+SQL der Datei plus Zeile in `drizzle.__drizzle_migrations` (SHA-256 der Datei,
+`when` aus dem Journal) in einer Transaktion; das Schema vorher an 0019 geprüft.
+
+**Regeln.**
+- Die App ruft den Feed nie zur Request-Zeit. Der Job holt beide Wochen, bevor er
+  schreibt, und ersetzt die ganze Tabelle in einer Transaktion; jeder Fehler (auch
+  429) schreibt nichts, der alte Stand bleibt. Tests: `econ.test.ts` „runEconJob“.
+- `nextweek` antwortet früh in der Woche mit 404: „noch nicht veröffentlicht“, kein
+  Fehler; ein 404 auf `thisweek` ist einer. Test: „writes this week alone…“,
+  „refuses a missing current week“.
+- Replace statt Upsert: der Feed hat keine ID, und verschobene oder gestrichene Events
+  sollen verschwinden. Keine Historie über die zwei Feed-Wochen hinaus.
+- Parser wirft bei jeder Zeile außerhalb der Form, mit Zeilennummer; leere
+  Forecast/Previous werden `null`. Test: `forex-factory.test.ts`.
+- Wochen-Tabs = Feed-Wochen, Sonntag 00:00 bis Sonntag 00:00 `America/New_York`,
+  sicher über die Zeitumstellung. Ausnahme von „die Nutzerzone entscheidet jede
+  Kalendergrenze“, in `coding-standards.md` § Time festgehalten. Today, Tagesgruppe
+  und Uhrzeit folgen der Nutzerzone. Tests: `domain/__tests__/econ.test.ts`.
+- Vergangen = `occurs_at <= now`, einmal pro Render entschieden, kein Timer.
+
+**Entschieden unterwegs.**
+- **Feed-Woche statt Nutzerwoche** (Sascha): sonst fallen Sonntagabend-Events eines
+  Traders westlich von New York in eine Woche, die nicht angezeigt wird.
+- **Währung als Spalte und Filter** (Sascha); ein gewählter Chip bleibt stehen, auch
+  wenn die Woche ihn nicht mehr hat, damit er sich abwählen lässt.
+- **Sync einmal täglich um 06:00 UTC** (Sascha): Hobby-tauglich, nach der
+  Sonntagsgrenze in New York.
+- **Impact-Ordner in eigenen Tokens** (Sascha, nach dem ersten Blick; ersetzt „Text
+  ohne Farbe“): `--color-impact-low/-medium/-high`, bewusst nicht `--color-danger`
+  (Verlust) und nicht Warning/Practice-Amber; Holiday grau; Wort bleibt daneben (§8);
+  kein Glow. `Design.md` §4.23.
+- **Today als Default-Tab, vergangene Zeilen gedimmt und durchgestrichen, Impact vor
+  dem Event** (Sascha, nach dem ersten Blick).
+- `pnpm test` war lokal auf `main` rot (`trade-detail.test.ts`), weil die lokale DB
+  keine Confluence- und Mistake-Tags hatte; `pnpm db:seed:trade-tags` behob es. Kein
+  Code-Fehler.
+
+**Offen geblieben.**
+- Der Feed drosselt hart: nach wenigen Abrufen in Minuten HTTP 429, lokal über lange
+  Zeit. Ob der Abruf von Vercels geteilten IPs täglich durchkommt, zeigt erst der
+  erste Production-Lauf.
+- Der Klickpfad im Browser ist nicht von der Session gelaufen, nur die Gates.
+- Am Sonntag löscht der Sync um 06:00 UTC die Samstagabend-Events (NY) der alten
+  Feed-Woche, die in Berlin noch zu „Today“ gehören. Sie liegen zu dem Zeitpunkt
+  bereits in der Vergangenheit.
+- `.env.neon.*` fehlen auf der Maschine; künftige Migrationen gehen entweder über die
+  Dateien oder wieder über den Connector.
