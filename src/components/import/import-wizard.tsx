@@ -101,6 +101,7 @@ export function ImportWizard({
     startTransition(async () => {
       const response = await previewImport({
         accountId: id,
+        detectedShape: parsed.shape,
         rows: parsed.rows,
       });
       if (!response.success) {

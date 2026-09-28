@@ -48,6 +48,7 @@ describe("detectShape", () => {
         price: 7,
         contract: 21,
         orderId: 1,
+        commission: 24,
       },
     });
   });

@@ -550,3 +550,92 @@ describe("deleting a trade", () => {
     });
   });
 });
+
+describe("net P&L of one trade (commissions)", () => {
+  // +10 points × 2 contracts × point value 2 = $40 gross.
+  async function tradeOnBoth(tx: Tx, fixture: Fixture) {
+    const [row] = await tx
+      .insert(trades)
+      .values({ userId: fixture.userId, ...takenTradeColumns(fixture) })
+      .returning({ id: trades.id });
+    await tx.insert(tradeAccounts).values([
+      {
+        tradeId: row.id,
+        accountId: fixture.realAccountId,
+        commission: "3.00",
+        commissionSource: "file",
+      },
+      {
+        tradeId: row.id,
+        accountId: fixture.practiceAccountId,
+        commission: "1.00",
+        commissionSource: "rate",
+      },
+    ]);
+    return row.id;
+  }
+
+  it("shows the net over the real accounts, the gross and each account's commission", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const detail = await withFixture(async (tx, fixture) =>
+      getJournalTradeById(fixture.userId, await tradeOnBoth(tx, fixture), {
+        executor: tx,
+      }),
+    );
+
+    expect(detail?.displayGrossPnlCents).toBe(4000);
+    expect(detail?.displayPnlCents).toBe(4000 - 300);
+    expect(
+      detail?.accounts.map((account) => [
+        account.name,
+        account.commissionCents,
+        account.commissionSource,
+      ]),
+    ).toEqual([
+      ["Eval", 300, "file"],
+      ["Backtest", 100, "rate"],
+    ]);
+  });
+
+  it("shows the selected account's own net in the list", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const listed = await withFixture(async (tx, fixture) => {
+      await tradeOnBoth(tx, fixture);
+      const result = await listJournalTrades(
+        {
+          userId: fixture.userId,
+          selectedAccountId: fixture.practiceAccountId,
+          sortBy: "date",
+          sortDir: "desc",
+          page: 1,
+        },
+        tx,
+      );
+      return result.rows[0];
+    });
+
+    expect(listed.displayPnlCents).toBe(4000 - 100);
+  });
+
+  it("nets a practice-only trade over the accounts it has", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const detail = await withFixture(async (tx, fixture) => {
+      const [row] = await tx
+        .insert(trades)
+        .values({ userId: fixture.userId, ...takenTradeColumns(fixture) })
+        .returning({ id: trades.id });
+      await tx.insert(tradeAccounts).values({
+        tradeId: row.id,
+        accountId: fixture.practiceAccountId,
+        commission: "1.00",
+        commissionSource: "manual",
+      });
+      return getJournalTradeById(fixture.userId, row.id, { executor: tx });
+    });
+
+    expect(detail?.displayPnlCents).toBe(4000 - 100);
+  });
+});

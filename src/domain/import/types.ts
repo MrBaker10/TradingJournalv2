@@ -26,6 +26,11 @@ export interface ImportFill {
   direction: TradeDirection;
   contracts: number;
   price: number;
+  /**
+   * What the broker charged for this fill, in integer cents, or null when the
+   * file has no commission column or leaves the cell empty.
+   */
+  commissionCents: number | null;
   /** Sortable as a string, e.g. `2026-08-20 09:48:02.355`. */
   timestamp: string;
   /** Chart-clock date and time, as the trader's own clock reads them. */
@@ -59,6 +64,18 @@ export interface RawTrade {
    * row does, and that amount becomes the trade's P&L.
    */
   filePnlCents: number | null;
+  /**
+   * The commission the file charged for the whole round trip, in integer
+   * cents, or null when the file reports none for any of its fills.
+   */
+  fileCommissionCents: number | null;
+  /**
+   * Whether a price is a weighted average over fills at different prices.
+   * Such a price is kept exactly: snapping it to the tick would change what
+   * the trade made (decided 2026-09-28, commissions).
+   */
+  entryAveraged: boolean;
+  exitAveraged: boolean;
   /** The initial stop, when the file carries one that can be a stop. */
   stopPrice: number | null;
   /** Why a stop in the file was not taken, shown next to the row. */
@@ -76,7 +93,7 @@ export interface RawTrade {
 
 /**
  * A row that survived normalisation: the symbol resolved to a journal
- * instrument, prices snapped to that instrument's tick, ready to be matched
+ * instrument, single-fill prices snapped to that instrument's tick, ready to be matched
  * and written.
  */
 export interface NormalizedTrade {
@@ -90,6 +107,7 @@ export interface NormalizedTrade {
   exitPrice: number | null;
   brokerTradeKey: string | null;
   filePnlCents: number | null;
+  fileCommissionCents: number | null;
   stopPrice: number | null;
   stopNotice: string | null;
   sourceRow: number;

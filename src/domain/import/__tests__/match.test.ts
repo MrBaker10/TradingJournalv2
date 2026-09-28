@@ -14,6 +14,7 @@ function row(overrides: Partial<NormalizedTrade> = {}): NormalizedTrade {
     exitPrice: 20050,
     brokerTradeKey: null,
     filePnlCents: null,
+    fileCommissionCents: null,
     stopPrice: null,
     stopNotice: null,
     sourceRow: 2,
@@ -36,6 +37,8 @@ function candidate(overrides: Partial<MatchableTrade> = {}): MatchableTrade {
     result: "Win",
     stopPrice: null,
     brokerTradeKey: null,
+    commissionCents: null,
+    commissionSource: null,
     ...overrides,
   };
 }

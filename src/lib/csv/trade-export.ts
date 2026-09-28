@@ -39,6 +39,7 @@ export const EXPORT_COLUMNS = [
   "screenshot_count",
   "accounts",
   "is_practice",
+  "commission",
   "created_at",
 ] as const;
 
@@ -146,6 +147,11 @@ export function tradeToCsvRow(row: ExportTradeRow): string[] {
     row.accounts.map((account) => account.name).join(LIST_SEPARATOR),
     row.accounts
       .map((account) => String(account.isPractice))
+      .join(LIST_SEPARATOR),
+    // Per account, in USD, empty where unknown. `pnl` above stays the gross
+    // of one execution; net is `pnl` minus each account's commission.
+    row.accounts
+      .map((account) => text(account.commission))
       .join(LIST_SEPARATOR),
     row.createdAt.toISOString(),
   ];

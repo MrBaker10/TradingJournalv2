@@ -11,6 +11,12 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
+import {
+  amountToCents,
+  type CommissionSource,
+  centsToAmount,
+  type StoredCommission,
+} from "../../domain/commission.ts";
 import type { AccountCurrency, RateCurrency } from "../../domain/fx.ts";
 import { calculateUsdPnl } from "../../domain/pnl.ts";
 import { dollarsToCents } from "../../lib/money.ts";
@@ -55,6 +61,12 @@ export interface JournalTradeAccount {
   id: number;
   name: string;
   isPractice: boolean;
+  /**
+   * What this account paid for the trade, in integer cents of the view's
+   * display currency, or null when unknown (commissions).
+   */
+  commissionCents: number | null;
+  commissionSource: CommissionSource | null;
 }
 
 export interface JournalTradeScreenshot {
@@ -116,6 +128,11 @@ export interface JournalTradeRow {
    */
   pnlOverride: number | null;
   /**
+   * The P&L is still the one an import file reported (`pnl_source` set), so
+   * the commission is already inside it (commissions).
+   */
+  pnlFromFile: boolean;
+  /**
    * The date of the ECB rate an import converted this trade's P&L with, or
    * null. Whether that rate is still provisional needs the stored rates —
    * `getProvisionalFxRate` in fx.ts answers it for the detail page.
@@ -124,11 +141,20 @@ export interface JournalTradeRow {
   /** The realised P&L in USD cents — the stored currency, which R is read from. */
   pnlCents: number | null;
   /**
-   * The same P&L in the view's display currency, from the same SQL expression
-   * the money figures sum (`tradeDisplayCents`), so a row matches its total.
-   * Equal to `pnlCents` in USD.
+   * The trade's **net** P&L in the view's display currency, from the same SQL
+   * expression the money figures sum (`tradeNetDisplayCents`), so a row
+   * matches its total: with an account selected, that account's gross minus
+   * its commission; with all accounts, the sum over the real accounts it ran
+   * on (decided 2026-09-28, commissions).
    */
   displayPnlCents: number | null;
+  /** One execution's gross P&L in the display currency, before commission. */
+  displayGrossPnlCents: number | null;
+  /**
+   * The commission `displayPnlCents` has taken off, display cents — from the
+   * same expression, so gross = net + this, to the cent.
+   */
+  displayCommissionCents: number;
   rMultiple: number | null;
   accounts: JournalTradeAccount[];
   confluences: JournalTradeConfluence[];
@@ -182,23 +208,31 @@ export function isVisibleForAccount(accountId: number) {
 
 // One JSON array of the accounts a trade is assigned to, built with a
 // correlated subquery so the outer query still returns one row per trade —
-// no GROUP BY, no separate round trip per row.
-const accountsJson = sql<JournalTradeAccount[]>`(
-  select coalesce(
-    jsonb_agg(
-      jsonb_build_object(
-        'id', ${accounts.id},
-        'name', ${accounts.name},
-        'isPractice', ${accounts.isPractice}
-      )
-      order by ${accounts.sortOrder}
-    ),
-    '[]'::jsonb
-  )
-  from ${tradeAccounts}
-  join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
-  where ${tradeAccounts.tradeId} = ${trades.id}
-)`;
+// no GROUP BY, no separate round trip per row. The commission comes along in
+// the display currency, converted like the money figures convert it.
+function accountsJson(currency: AccountCurrency = "USD") {
+  return sql<JournalTradeAccount[]>`(
+    select coalesce(
+      jsonb_agg(
+        jsonb_build_object(
+          'id', ${accounts.id},
+          'name', ${accounts.name},
+          'isPractice', ${accounts.isPractice},
+          'commissionCents', case when ${tradeAccounts.commission} is null
+            then null
+            else ${commissionDisplayCents(sql`${tradeAccounts.commission}`, currency)}
+          end,
+          'commissionSource', ${tradeAccounts.commissionSource}
+        )
+        order by ${accounts.sortOrder}
+      ),
+      '[]'::jsonb
+    )
+    from ${tradeAccounts}
+    join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
+    where ${tradeAccounts.tradeId} = ${trades.id}
+  )`;
+}
 
 // Same correlated-subquery shape as accountsJson, for the same reason: one
 // row per trade, no GROUP BY, no round trip per row. Ordered by tag id so the
@@ -437,6 +471,140 @@ export function tradeDisplayCents(
   )::bigint`;
 }
 
+// --- Commission (decided 2026-09-28, commissions) -------------------------
+// Stored per assignment in USD dollars (`trade_accounts.commission`). A money
+// figure is net of it; `tradePnlCents`, R and points stay gross. Null is
+// unknown and sums as nothing.
+//
+// Every sum below adds **per-assignment amounts already rounded** to display
+// cents, never rounds a sum. In a foreign currency the two differ by a cent
+// now and then, and only this way do the "By account" rows, a row's
+// breakdown and the combined figure add up to one another.
+
+/**
+ * A USD dollar amount of commission as integer cents of the display currency.
+ * Converted with the trade date's rate, like a P&L no file reported in that
+ * currency. Commission is whole cents in USD, so USD needs no rounding rule.
+ */
+export function commissionDisplayCents(
+  usdDollars: SQL,
+  currency: AccountCurrency = "USD",
+): SQL<number> {
+  if (currency === "USD") return sql<number>`round(${usdDollars} * 100)`;
+  return sql<number>`round(${usdDollars} * 100 / ${rateOn(currency)})`;
+}
+
+/** The commission of the assignment row in scope, display cents; 0 unknown. */
+function assignmentCommissionCents(currency: AccountCurrency): SQL<number> {
+  return commissionDisplayCents(
+    sql`coalesce(${tradeAccounts.commission}, 0)`,
+    currency,
+  );
+}
+
+/** Σ commission of the trade's real (non-practice) accounts, display cents. */
+export function realCommissionCents(
+  currency: AccountCurrency = "USD",
+): SQL<number> {
+  return sql<number>`(
+    select coalesce(sum(${assignmentCommissionCents(currency)}), 0)
+    from ${tradeAccounts}
+    join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
+    where ${accounts.isPractice} = false
+      and ${tradeAccounts.tradeId} = ${trades.id}
+  )`;
+}
+
+/** What one account paid for the trade, display cents; 0 when unknown. */
+export function accountCommissionCents(
+  accountId: number,
+  currency: AccountCurrency = "USD",
+): SQL<number> {
+  return sql<number>`coalesce((
+    select ${assignmentCommissionCents(currency)}
+    from ${tradeAccounts}
+    where ${tradeAccounts.tradeId} = ${trades.id}
+      and ${tradeAccounts.accountId} = ${accountId}
+  ), 0)`;
+}
+
+/** Σ commission of every account of the trade, practice ones included. */
+function allCommissionCents(currency: AccountCurrency): SQL<number> {
+  return sql<number>`(
+    select coalesce(sum(${assignmentCommissionCents(currency)}), 0)
+    from ${tradeAccounts}
+    where ${tradeAccounts.tradeId} = ${trades.id}
+  )`;
+}
+
+// How many accounts of each kind the trade ran on. Spelled out here rather
+// than taken from scope.ts, which imports this file.
+const realAssignmentCount = sql<number>`(
+  select count(*)::int
+  from ${tradeAccounts}
+  join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
+  where ${accounts.isPractice} = false
+    and ${tradeAccounts.tradeId} = ${trades.id}
+)`;
+
+const allAssignmentCount = sql<number>`(
+  select count(*)::int
+  from ${tradeAccounts}
+  where ${tradeAccounts.tradeId} = ${trades.id}
+)`;
+
+/**
+ * The commission a row nets out, display cents: the selected account's, or
+ * with all accounts the sum over the real ones — over every account of a
+ * trade that ran on practice accounts only. `tradeNetDisplayCents` subtracts
+ * exactly this, and the detail page shows it as the breakdown, so the two
+ * cannot disagree by a rounding.
+ */
+export function tradeCommissionDisplayCents(
+  selectedAccountId: number | null,
+  currency: AccountCurrency = "USD",
+): SQL<number> {
+  if (selectedAccountId !== null) {
+    return accountCommissionCents(selectedAccountId, currency);
+  }
+  return sql<number>`(
+    case when ${realAssignmentCount} > 0
+      then ${realCommissionCents(currency)}
+      else ${allCommissionCents(currency)}
+    end
+  )`;
+}
+
+/** How many executions a row's gross stands for: the same accounts as above. */
+function tradeAccountMultiplier(selectedAccountId: number | null): SQL<number> {
+  if (selectedAccountId !== null) return sql<number>`1`;
+  return sql<number>`(
+    case when ${realAssignmentCount} > 0
+      then ${realAssignmentCount}
+      else greatest(${allAssignmentCount}, 1)
+    end
+  )`;
+}
+
+/**
+ * One trade's net P&L as a row shows it, display cents — the same number the
+ * money figures add up for it, so a row matches its total.
+ *
+ * With an account selected: that account's gross minus its commission. With
+ * all accounts: the sum over the real accounts it ran on. A trade on practice
+ * accounts only (reachable by id, or through the reveal banner) has no real
+ * account to sum over; it shows the sum over the accounts it does have.
+ */
+export function tradeNetDisplayCents(
+  selectedAccountId: number | null,
+  currency: AccountCurrency = "USD",
+): SQL<number | null> {
+  return sql<number | null>`(
+    ${tradeDisplayCents(currency)} * ${tradeAccountMultiplier(selectedAccountId)}
+      - ${tradeCommissionDisplayCents(selectedAccountId, currency)}
+  )::bigint`;
+}
+
 // Ownership is not in here: queryTradeRows applies it to every caller, so it
 // can't be forgotten by a new one.
 function buildFilterConditions(filters: JournalFilters): SQL[] {
@@ -538,9 +706,18 @@ async function queryTradeRows(
       postExitMfeR: trades.postExitMfeR,
       holdMinutes,
       pnlOverride: trades.pnlOverride,
+      pnlFromFile: sql<boolean>`(${trades.pnlSource} is not null)`,
       fxRateDate: trades.fxRateDate,
-      displayPnlCents: tradeDisplayCents(input.currency),
-      accounts: accountsJson,
+      displayPnlCents: tradeNetDisplayCents(
+        input.selectedAccountId,
+        input.currency,
+      ),
+      displayGrossPnlCents: tradeDisplayCents(input.currency),
+      displayCommissionCents: tradeCommissionDisplayCents(
+        input.selectedAccountId,
+        input.currency,
+      ),
+      accounts: accountsJson(input.currency),
       confluences: confluencesJson,
       mistakes: mistakesJson,
       screenshots: screenshotsJson,
@@ -628,10 +805,17 @@ async function queryTradeRows(
       postExitMfeR: row.postExitMfeR !== null ? Number(row.postExitMfeR) : null,
       holdMinutes: row.holdMinutes !== null ? Number(row.holdMinutes) : null,
       pnlOverride: row.pnlOverride !== null ? Number(row.pnlOverride) : null,
+      pnlFromFile: row.pnlFromFile,
       fxRateDate: row.fxRateDate,
       pnlCents,
       displayPnlCents:
         row.displayPnlCents === null ? null : Number(row.displayPnlCents),
+      displayGrossPnlCents:
+        row.displayGrossPnlCents === null
+          ? null
+          : Number(row.displayGrossPnlCents),
+      // Null only where no rate is stored for a foreign display currency.
+      displayCommissionCents: Number(row.displayCommissionCents ?? 0),
       rMultiple: row.taken
         ? rMultiple
         : row.mfeR !== null
@@ -807,6 +991,11 @@ export type TradeWriteColumns = Omit<
 
 export interface TradeRelationIds {
   accountIds: number[];
+  /**
+   * What each account pays for the trade, from `commissionOnSave`. An account
+   * missing from the map is written with no commission.
+   */
+  accountCommissions?: Map<number, StoredCommission | null>;
   confluenceTagIds: number[];
   mistakeTagIds: number[];
 }
@@ -817,11 +1006,18 @@ async function insertRelations(
   relations: TradeRelationIds,
 ): Promise<void> {
   if (relations.accountIds.length > 0) {
-    await tx
-      .insert(tradeAccounts)
-      .values(
-        relations.accountIds.map((accountId) => ({ tradeId, accountId })),
-      );
+    await tx.insert(tradeAccounts).values(
+      relations.accountIds.map((accountId) => {
+        const commission = relations.accountCommissions?.get(accountId) ?? null;
+        return {
+          tradeId,
+          accountId,
+          commission:
+            commission === null ? null : centsToAmount(commission.cents),
+          commissionSource: commission?.source ?? null,
+        };
+      }),
+    );
   }
   if (relations.confluenceTagIds.length > 0) {
     await tx.insert(tradeConfluences).values(
@@ -906,6 +1102,36 @@ export async function replaceTradeWithRelations(
   await tx.delete(tradeMistakes).where(eq(tradeMistakes.tradeId, tradeId));
 
   await insertRelations(tx, tradeId, relations);
+}
+
+/**
+ * What each account of a trade pays before an edit, in USD cents. The caller
+ * has already checked the trade is this user's; the assignments are replaced
+ * on save, so this is what `commissionOnSave` compares against.
+ */
+export async function listAssignmentCommissions(
+  tradeId: number,
+): Promise<Map<number, StoredCommission | null>> {
+  const rows = await db
+    .select({
+      accountId: tradeAccounts.accountId,
+      commission: tradeAccounts.commission,
+      commissionSource: tradeAccounts.commissionSource,
+    })
+    .from(tradeAccounts)
+    .where(eq(tradeAccounts.tradeId, tradeId));
+
+  return new Map(
+    rows.map((row) => [
+      row.accountId,
+      row.commission === null || row.commissionSource === null
+        ? null
+        : {
+            cents: amountToCents(row.commission),
+            source: row.commissionSource,
+          },
+    ]),
+  );
 }
 
 // A tradeId from the client is only usable once it's checked against the

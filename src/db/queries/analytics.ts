@@ -30,6 +30,7 @@ import {
   toNumber,
 } from "./scope.ts";
 import {
+  commissionDisplayCents,
   holdMinutes,
   rMultipleSortKey,
   tradeDisplayCents,
@@ -109,7 +110,9 @@ function dimensionFields(
     dimension: sql<DimensionId>`${dimension}::text`,
     bucket: sql<string | null>`${bucket}`,
     trades: sql<number>`count(*)::int`,
-    wins: sql<number>`count(*) filter (where ${tradePnlCents} > 0)::int`,
+    // A win is a trade that made money after commission, the same split as
+    // the dashboard's win rate (commissions).
+    wins: sql<number>`count(*) filter (where ${contribution} > 0)::int`,
     netPnlCents: sql<string>`coalesce(sum(${contribution}), 0)::bigint`,
     // NUMERIC out of postgres.js is a string, and it stays one until the
     // domain module divides it. `count` of the same expression is the
@@ -167,11 +170,14 @@ export async function getDimensionBreakdowns(
   // second time. With no account selected only real accounts are joined; a
   // selected account is the one path allowed to read a practice account, and
   // it yields exactly one row.
+  // Net of what that one assignment paid, not of the whole copy-trade.
   const accountKey = DIMENSION_KEYS.account;
+  const accountContribution = sql<number | null>`(
+    ${tradeDisplayCents(scope.currency)}
+      - ${commissionDisplayCents(sql`coalesce(${tradeAccounts.commission}, 0)`, scope.currency)}
+  )`;
   const accountBranch = executor
-    .select(
-      dimensionFields("account", accountKey, tradeDisplayCents(scope.currency)),
-    )
+    .select(dimensionFields("account", accountKey, accountContribution))
     .from(trades)
     .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
     .innerJoin(tradeAccounts, eq(tradeAccounts.tradeId, trades.id))

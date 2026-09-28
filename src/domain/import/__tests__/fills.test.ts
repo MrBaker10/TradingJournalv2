@@ -18,6 +18,7 @@ function fill(overrides: Partial<ImportFill> = {}): ImportFill {
     direction: "long",
     contracts: 1,
     price: 100,
+    commissionCents: null,
     timestamp: `2026-08-20 ${hour}:${minute}:00`,
     tradeDate: "2026-08-20",
     entryTime: `${hour}:${minute}`,
@@ -299,5 +300,60 @@ describe("pairFills", () => {
 
   it("has nothing to pair in an empty file", () => {
     expect(pairFills([])).toEqual([]);
+  });
+
+  describe("commission", () => {
+    it("sums what the fills were charged into the round trip", () => {
+      const [trade] = pairFills([
+        fill({ direction: "long", contracts: 3, commissionCents: 150 }),
+        fill({ direction: "short", contracts: 1, commissionCents: 50 }),
+        fill({ direction: "short", contracts: 2, commissionCents: 100 }),
+      ]);
+      expect(trade.fileCommissionCents).toBe(300);
+    });
+
+    it("splits a fill that closes one trip and opens the next", () => {
+      // Long 1, then sell 3: one closes the long, two open a short.
+      const [first, second] = pairFills([
+        fill({ direction: "long", contracts: 1, commissionCents: 50 }),
+        fill({ direction: "short", contracts: 3, commissionCents: 100 }),
+        fill({ direction: "long", contracts: 2, commissionCents: 60 }),
+      ]);
+      expect(first.fileCommissionCents).toBe(50 + 33);
+      expect(second.fileCommissionCents).toBe(67 + 60);
+    });
+
+    it("is unknown once any fill of the trip carries no charge", () => {
+      const [trade] = pairFills([
+        fill({ direction: "long", commissionCents: 50 }),
+        fill({ direction: "short", commissionCents: null }),
+      ]);
+      expect(trade.fileCommissionCents).toBeNull();
+    });
+  });
+
+  describe("averaged prices", () => {
+    it("marks a leg averaged only when its fills disagree on the price", () => {
+      // Trade 14683 of the sample export: short 3, covered 1 @ 29132.25 and
+      // 2 @ 29132.50 in the same second.
+      const [trade] = pairFills([
+        fill({ direction: "short", contracts: 3, price: 29118.25 }),
+        fill({ direction: "long", contracts: 1, price: 29132.25 }),
+        fill({ direction: "long", contracts: 2, price: 29132.5 }),
+      ]);
+      expect(trade.entryAveraged).toBe(false);
+      expect(trade.exitAveraged).toBe(true);
+      expect(trade.exitPrice).toBe(29132.41667);
+    });
+
+    it("does not call two fills at the same price an average", () => {
+      const [trade] = pairFills([
+        fill({ direction: "long", contracts: 1, price: 100 }),
+        fill({ direction: "long", contracts: 1, price: 100 }),
+        fill({ direction: "short", contracts: 2, price: 101 }),
+      ]);
+      expect(trade.entryAveraged).toBe(false);
+      expect(trade.exitAveraged).toBe(false);
+    });
   });
 });

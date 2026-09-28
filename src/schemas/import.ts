@@ -45,6 +45,9 @@ export const normalizedTradeSchema = z.object({
   exitPrice: priceField.nullable(),
   brokerTradeKey: z.string().min(1).max(500).nullable(),
   filePnlCents: z.number().int().nullable(),
+  // What the file charged for the round trip; the importing account's
+  // commission (commissions).
+  fileCommissionCents: z.number().int().nonnegative().nullable(),
   stopPrice: priceField.nullable(),
   stopNotice: z.string().max(200).nullable(),
   sourceRow: z.number().int().nonnegative(),
@@ -56,6 +59,9 @@ const rowsField = z
 
 export const previewImportSchema = z.object({
   accountId: z.number().int().positive(),
+  // The preview has to decide commissions the way the commit will: an FTMO
+  // file never gets one (commissions).
+  detectedShape: importShapeEnum,
   rows: rowsField,
 });
 

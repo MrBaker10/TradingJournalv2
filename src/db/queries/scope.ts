@@ -4,7 +4,12 @@ import type { IsoDate } from "../../domain/streak.ts";
 import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
 import { tradeAccounts, trades } from "../schema/trades.ts";
-import { hasRealAccount, tradeDisplayCents } from "./trades.ts";
+import {
+  accountCommissionCents,
+  hasRealAccount,
+  realCommissionCents,
+  tradeDisplayCents,
+} from "./trades.ts";
 
 // The account scope every figure in this app is computed inside, in one place
 // so no query invents its own. It came out of src/db/queries/dashboard.ts when
@@ -97,12 +102,31 @@ export function scopeWhere(scope: QueryScope, range?: DateRange) {
  * One trade's contribution to a money figure, in integer cents of the scope's
  * display currency: rounded to cents per trade first, then multiplied, so the
  * rows of a view add up to its total.
+ *
+ * **Net of commission** (decided 2026-09-28, commissions): every account pays
+ * its own, so the combined figure subtracts what the real accounts paid and a
+ * selected account subtracts its own. NULL stays NULL — a trade without a
+ * realised P&L drops out, commission or not.
  */
 export function moneyContribution(scope: QueryScope): SQL<number> {
   const perTrade = tradeDisplayCents(scope.currency);
   return scope.selectedAccountId === null
-    ? sql<number>`(${perTrade} * ${realAccountCount})`
-    : sql<number>`${perTrade}`;
+    ? sql<number>`(${perTrade} * ${realAccountCount} - ${realCommissionCents(scope.currency)})`
+    : sql<number>`(${perTrade} - ${accountCommissionCents(scope.selectedAccountId, scope.currency)})`;
+}
+
+/**
+ * Winner and loser by the **net** contribution, so a trade that made less
+ * than it cost lands with the losers and the win and loss sums stay one sign
+ * each. Every money and win-rate split uses these; the execution section,
+ * which is about R, keeps the gross sign of `tradePnlCents`.
+ */
+export function netWinner(scope: QueryScope): SQL<boolean> {
+  return sql<boolean>`${moneyContribution(scope)} > 0`;
+}
+
+export function netLoser(scope: QueryScope): SQL<boolean> {
+  return sql<boolean>`${moneyContribution(scope)} < 0`;
 }
 
 /**

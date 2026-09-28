@@ -11,6 +11,11 @@ import {
   setStartingBalance,
   togglePractice,
 } from "@/actions/accounts";
+import {
+  AccountCommissionRates,
+  type CommissionRateData,
+  type InstrumentOption,
+} from "@/components/settings/account-commission-rates";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { ACCOUNT_CURRENCIES, type AccountCurrency } from "@/domain/fx";
@@ -30,6 +35,8 @@ export interface AccountRowData {
   hasTrades: boolean;
   /** `accounts.starting_balance`, numeric(14, 2) as a string, in `currency`. */
   startingBalance: string;
+  /** Per-side rates per instrument (commissions). */
+  commissionRates: CommissionRateData[];
 }
 
 /** `50000.00` → `50000`, `1234.50` → `1234.5`: what the field shows. */
@@ -40,11 +47,17 @@ function balanceFieldValue(stored: string): string {
 
 interface AccountRowProps {
   account: AccountRowData;
+  instruments: InstrumentOption[];
   isFirst: boolean;
   isLast: boolean;
 }
 
-export function AccountRow({ account, isFirst, isLast }: AccountRowProps) {
+export function AccountRow({
+  account,
+  instruments,
+  isFirst,
+  isLast,
+}: AccountRowProps) {
   const [name, setName] = useState(account.name);
   const [balance, setBalance] = useState(
     balanceFieldValue(account.startingBalance),
@@ -359,6 +372,12 @@ export function AccountRow({ account, isFirst, isLast }: AccountRowProps) {
           </button>
         </div>
       </div>
+
+      <AccountCommissionRates
+        accountId={account.id}
+        rates={account.commissionRates}
+        instruments={instruments}
+      />
 
       <div className="flex items-center gap-1 border-white/8 border-t pt-3">
         <div className="flex h-10 shrink-0 items-center overflow-hidden rounded-xs border border-white/12">

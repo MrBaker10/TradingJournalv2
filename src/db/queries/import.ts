@@ -1,9 +1,15 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
+import {
+  amountToCents,
+  type CommissionSource,
+  centsToAmount,
+} from "../../domain/commission.ts";
 import type { MatchableTrade } from "../../domain/import/match.ts";
 import {
   BROKER_OWNED_FIELDS,
   type BrokerOwnedField,
   type BrokerValues,
+  type IncomingCommission,
 } from "../../domain/import/outcome.ts";
 import type { TradeDirection } from "../../domain/pnl.ts";
 import { formatCentsPlain } from "../../lib/money.ts";
@@ -61,6 +67,9 @@ export async function listMatchCandidates(
       result: trades.result,
       stopPrice: trades.stopPrice,
       brokerTradeKey: trades.brokerTradeKey,
+      // The importing account's assignment — the join below is that account.
+      commission: tradeAccounts.commission,
+      commissionSource: tradeAccounts.commissionSource,
       occurrence: sql<number>`row_number() over (
         partition by ${trades.tradeDate}, ${trades.instrumentId},
                      ${trades.direction}, ${trades.contracts},
@@ -99,6 +108,9 @@ export async function listMatchCandidates(
     result: row.result,
     stopPrice: row.stopPrice === null ? null : Number(row.stopPrice),
     brokerTradeKey: row.brokerTradeKey,
+    commissionCents:
+      row.commission === null ? null : amountToCents(row.commission),
+    commissionSource: row.commissionSource as CommissionSource | null,
   }));
 }
 
@@ -143,6 +155,8 @@ export interface ImportedTrade {
     usdCents: number;
     fxRateDate: string | null;
   } | null;
+  /** What the importing account paid: the file's charge, else its rate. */
+  commission: IncomingCommission | null;
   importBatchId: number;
 }
 
@@ -195,11 +209,62 @@ export async function insertImportedTrades(
     )
     .returning({ id: trades.id });
 
-  await tx
-    .insert(tradeAccounts)
-    .values(inserted.map((row) => ({ tradeId: row.id, accountId })));
+  // `returning` hands the ids back in insertion order, so index i is rows[i].
+  await tx.insert(tradeAccounts).values(
+    inserted.map((row, index) => {
+      const commission = rows[index].commission;
+      return {
+        tradeId: row.id,
+        accountId,
+        commission:
+          commission === null ? null : centsToAmount(commission.cents),
+        commissionSource: commission?.source ?? null,
+      };
+    }),
+  );
 
   return inserted.map((row) => row.id);
+}
+
+export interface CommissionSet {
+  tradeId: number;
+  commission: IncomingCommission;
+}
+
+/**
+ * Writes the commission `decideOutcome` decided on onto the importing
+ * account's assignment of each matched trade.
+ *
+ * The `manual` guard repeats `mayReplaceCommission` inside the statement: an
+ * amount typed between preview and commit stays, the same race
+ * `fillImportedStops` closes for the stop.
+ */
+export async function setImportedCommissions(
+  tx: Tx,
+  accountId: number,
+  sets: CommissionSet[],
+): Promise<number> {
+  if (sets.length === 0) return 0;
+
+  const tuples = sql.join(
+    sets.map(
+      (set) =>
+        sql`(${set.tradeId}::integer, ${centsToAmount(set.commission.cents)}::numeric(14,2), ${set.commission.source}::text)`,
+    ),
+    sql`, `,
+  );
+
+  const rows = await tx.execute<{ id: number }>(sql`
+    update trade_accounts ta
+    set commission = v.commission, commission_source = v.source
+    from (values ${tuples}) as v(trade_id, commission, source)
+    where ta.trade_id = v.trade_id
+      and ta.account_id = ${accountId}
+      and (ta.commission_source is null or ta.commission_source <> 'manual')
+    returning ta.id
+  `);
+
+  return [...rows].length;
 }
 
 /**
@@ -387,7 +452,9 @@ export async function fillImportedStops(
  *
  * A stop and a P&L override count only when the user set them. An import that
  * writes its own — an FTMO row carries both — marks them (`stop_imported`,
- * `pnl_source`), and a hand edit clears the mark (decided 2026-09-25).
+ * `pnl_source`), and a hand edit clears the mark (decided 2026-09-25). A
+ * commission counts only when it was typed (`commission_source = 'manual'`);
+ * one from the file or the account's rate is the import's own (commissions).
  *
  * `session` is deliberately absent: the import writes it itself, so it is not
  * evidence of handiwork. Were it in this list, every imported trade with an
@@ -411,6 +478,10 @@ const TOUCHED = sql`(
   or t.felt is not null
   or t.by_the_book is not null
   or (t.pnl_override is not null and t.pnl_source is null)
+  or exists (
+    select 1 from trade_accounts ta
+    where ta.trade_id = t.id and ta.commission_source = 'manual'
+  )
   or exists (select 1 from trade_screenshots s where s.trade_id = t.id)
   or exists (select 1 from trade_links l where l.trade_id = t.id)
   or exists (select 1 from trade_confluences c where c.trade_id = t.id)

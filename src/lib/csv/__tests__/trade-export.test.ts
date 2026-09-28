@@ -48,8 +48,8 @@ const takenTrade: ExportTradeRow = {
   ],
   screenshotCount: 2,
   accounts: [
-    { name: "Eval 1", isPractice: false },
-    { name: "Practice A", isPractice: true },
+    { name: "Eval 1", isPractice: false, commission: "3.00" },
+    { name: "Practice A", isPractice: true, commission: null },
   ],
   createdAt: new Date("2026-09-10T18:30:00.000Z"),
 };
@@ -82,6 +82,8 @@ describe("tradeToCsvRow", () => {
     const row = tradeToCsvRow(takenTrade);
     expect(column(row, "accounts")).toBe("Eval 1;Practice A");
     expect(column(row, "is_practice")).toBe("false;true");
+    // Unknown stays an empty slot so the positions still line up.
+    expect(column(row, "commission")).toBe("3.00;");
   });
 
   it("keeps links and link_labels positionally aligned, empty label included", () => {

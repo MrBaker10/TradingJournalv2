@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/index";
 import { findImportAccount } from "@/db/queries/accounts";
+import { listCommissionRates } from "@/db/queries/commission-rates";
 import { ensureFxRates, storedRatesOn } from "@/db/queries/fx";
 import {
+  type CommissionSet,
   createImportBatch,
   fillImportedStops,
   type ImportedTrade,
@@ -12,10 +14,12 @@ import {
   listMatchCandidates,
   removeUntouchedTrades,
   type StopFill,
+  setImportedCommissions,
   type TradeUpdate,
   updateImportedTrades,
 } from "@/db/queries/import";
 import { listInstruments } from "@/db/queries/instruments";
+import { commissionInFilePnl, importCommission } from "@/domain/commission";
 import {
   type AccountCurrency,
   isRateCurrency,
@@ -26,9 +30,10 @@ import {
   decideOutcome,
   derivePoints,
   deriveResult,
+  type IncomingCommission,
 } from "@/domain/import/outcome";
 import { sessionFromEntryTime } from "@/domain/import/session";
-import type { NormalizedTrade } from "@/domain/import/types";
+import type { ImportShape, NormalizedTrade } from "@/domain/import/types";
 import { calculateUsdPnl } from "@/domain/pnl";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { awardBadgesQuietly } from "@/lib/badges/sync";
@@ -200,6 +205,65 @@ async function computePnl(rows: NormalizedTrade[]): Promise<(number | null)[]> {
   });
 }
 
+type RowCommissions =
+  | { ok: true; commissions: (IncomingCommission | null)[] }
+  | { ok: false; error: string };
+
+/**
+ * What the importing account paid per row (commissions): the file's charge,
+ * converted to USD like the file's P&L, else the account's per-side rate for
+ * the instrument, else nothing — and nothing at all for a row whose file
+ * reports its own P&L (`importCommission`). The rate is USD already.
+ *
+ * A file charge on a foreign-currency account is converted once, with the
+ * trade date's rate; unlike `pnl_override` it is not corrected overnight when
+ * that rate was still provisional.
+ */
+async function commissionsFor(
+  userId: number,
+  account: { id: number; currency: AccountCurrency },
+  shape: ImportShape,
+  rows: NormalizedTrade[],
+): Promise<RowCommissions> {
+  const rates = new Map(
+    (await listCommissionRates(userId, [account.id])).map((rate) => [
+      rate.instrumentId,
+      rate.perSideCents,
+    ]),
+  );
+
+  const fileUsd: (number | null)[] = rows.map((row) => row.fileCommissionCents);
+  if (account.currency !== "USD") {
+    const charged = rows.flatMap((row, index) =>
+      row.fileCommissionCents === null
+        ? []
+        : [{ index, cents: row.fileCommissionCents, date: row.tradeDate }],
+    );
+    const result = await convertToUsd(account.currency, charged);
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: `Couldn't convert the file's commission from ${account.currency} to USD. Nothing was imported — try again in a moment.`,
+      };
+    }
+    for (const [position, item] of charged.entries()) {
+      fileUsd[item.index] = result.conversions[position].usdCents;
+    }
+  }
+
+  return {
+    ok: true,
+    commissions: rows.map((row, index): IncomingCommission | null =>
+      importCommission({
+        fileCents: fileUsd[index],
+        commissionInFilePnl: commissionInFilePnl(shape, row.filePnlCents),
+        perSideCents: rates.get(row.instrumentId) ?? null,
+        contracts: row.contracts,
+      }),
+    ),
+  };
+}
+
 /**
  * Matches every row against the journal and reports what would happen. The
  * pairing itself is pure (src/domain/import/match.ts); this only supplies it
@@ -211,9 +275,12 @@ function buildPreview(
   currency: AccountCurrency,
   pnl: (RowPnl | null)[],
   computed: (number | null)[],
+  commissions: (IncomingCommission | null)[],
 ): { preview: ImportPreview; outcomes: ReturnType<typeof decideOutcome>[] } {
   const matched = matchRows(rows, candidates);
-  const outcomes = rows.map((row, index) => decideOutcome(row, matched[index]));
+  const outcomes = rows.map((row, index) =>
+    decideOutcome(row, matched[index], commissions[index]),
+  );
 
   const counters: ImportCounters = { new: 0, update: 0, skip: 0 };
   const previewRows = rows.map((row, index): PreviewRow => {
@@ -245,10 +312,14 @@ function buildPreview(
           ? `updates ${outcome.changed.join(", ")}`
           : null;
       const stop = outcome.fillStop === null ? null : "adds the stop";
+      const commission =
+        outcome.setCommission === null ? null : "sets the commission";
       return {
         sourceRow: row.sourceRow,
         verdict: "update" as const,
-        reason: [changes, stop].filter((part) => part !== null).join(", "),
+        reason: [changes, stop, commission]
+          .filter((part) => part !== null)
+          .join(", "),
         ...money,
       };
     }
@@ -302,12 +373,21 @@ export async function previewImport(
       datesOf(parsed.data.rows),
     );
 
+    const commissions = await commissionsFor(
+      user.id,
+      account,
+      parsed.data.detectedShape,
+      parsed.data.rows,
+    );
+    if (!commissions.ok) return { success: false, error: commissions.error };
+
     const { preview } = buildPreview(
       parsed.data.rows,
       candidates,
       account.currency,
       converted.pnl,
       await computePnl(parsed.data.rows),
+      commissions.commissions,
     );
     return { success: true, data: preview };
   } catch {
@@ -359,12 +439,21 @@ export async function commitImport(
       accountId,
       datesOf(rows),
     );
+    const commissions = await commissionsFor(
+      user.id,
+      account,
+      detectedShape,
+      rows,
+    );
+    if (!commissions.ok) return { success: false, error: commissions.error };
+
     const { preview, outcomes } = buildPreview(
       rows,
       candidates,
       account.currency,
       converted.pnl,
       [],
+      commissions.commissions,
     );
 
     const written = preview.counters.new + preview.counters.update;
@@ -387,6 +476,7 @@ export async function commitImport(
       const toInsert: ImportedTrade[] = [];
       const toUpdate: TradeUpdate[] = [];
       const toFillStop: StopFill[] = [];
+      const toSetCommission: CommissionSet[] = [];
 
       for (const [index, outcome] of outcomes.entries()) {
         const row = rows[index];
@@ -402,6 +492,12 @@ export async function commitImport(
             toFillStop.push({
               tradeId: outcome.tradeId,
               stopPrice: outcome.fillStop,
+            });
+          }
+          if (outcome.setCommission !== null) {
+            toSetCommission.push({
+              tradeId: outcome.tradeId,
+              commission: outcome.setCommission,
             });
           }
           continue;
@@ -437,12 +533,14 @@ export async function commitImport(
           brokerTradeKey: row.brokerTradeKey,
           stopPrice: row.stopPrice,
           pnl: converted.pnl[index],
+          commission: commissions.commissions[index],
           importBatchId: batchId,
         });
       }
 
       await updateImportedTrades(tx, user.id, toUpdate);
       await fillImportedStops(tx, user.id, toFillStop);
+      await setImportedCommissions(tx, accountId, toSetCommission);
       await insertImportedTrades(tx, toInsert, accountId);
 
       return { ...preview.counters, batchId };

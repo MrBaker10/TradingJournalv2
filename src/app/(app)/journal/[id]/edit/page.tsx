@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TradeForm } from "@/components/trades/trade-form";
 import { listAssignableAccounts } from "@/db/queries/accounts";
+import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
 import {
   getJournalTradeById,
@@ -36,6 +37,10 @@ export default async function EditTradePage({ params }: EditTradePageProps) {
       listConfluenceGroups(),
       listMistakeTags(),
     ]);
+  const commissionRates = await listCommissionRates(
+    user.id,
+    accounts.map((account) => account.id),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,6 +62,7 @@ export default async function EditTradePage({ params }: EditTradePageProps) {
         trade={trade}
         instruments={instruments}
         accounts={accounts}
+        commissionRates={commissionRates}
         confluenceGroups={confluenceGroups}
         mistakeTags={mistakeTags}
       />

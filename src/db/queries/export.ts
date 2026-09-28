@@ -17,6 +17,8 @@ import { profitRateText } from "./trades.ts";
 export interface ExportAccount {
   name: string;
   isPractice: boolean;
+  /** What this account paid, `numeric(14,2)` USD as stored, or null. */
+  commission: string | null;
 }
 
 export interface ExportLink {
@@ -64,12 +66,17 @@ export interface ExportTradeRow {
 }
 
 // Ordered by sort_order so the names line up with the account switcher, and
-// so the `accounts` and `is_practice` columns of the CSV stay positionally
-// aligned: both are built from this one array.
+// so the `accounts`, `is_practice` and `commission` columns of the CSV stay
+// positionally aligned: all three are built from this one array. The
+// commission goes out as text so the numeric never passes through a float.
 const accountsJson = sql<ExportAccount[]>`(
   select coalesce(
     jsonb_agg(
-      jsonb_build_object('name', ${accounts.name}, 'isPractice', ${accounts.isPractice})
+      jsonb_build_object(
+        'name', ${accounts.name},
+        'isPractice', ${accounts.isPractice},
+        'commission', ${tradeAccounts.commission}::text
+      )
       order by ${accounts.sortOrder}
     ),
     '[]'::jsonb

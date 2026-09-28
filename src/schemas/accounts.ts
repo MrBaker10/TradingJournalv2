@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { ACCOUNT_CURRENCIES } from "@/domain/fx";
 import { exactCents } from "@/lib/money";
+import { commissionField } from "./trades";
 
 export const accountIdSchema = z.object({
   accountId: z.number().int().positive(),
@@ -67,4 +68,13 @@ export const togglePracticeSchema = accountIdSchema.extend({
 
 export const setSelectedAccountSchema = z.object({
   accountId: z.number().int().positive().nullable(),
+});
+
+export const setCommissionRateSchema = accountIdSchema.extend({
+  instrumentId: z.number().int().positive(),
+  perSide: commissionField,
+});
+
+export const removeCommissionRateSchema = accountIdSchema.extend({
+  instrumentId: z.number().int().positive(),
 });

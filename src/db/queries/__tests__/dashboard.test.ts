@@ -227,6 +227,8 @@ interface TotalsTrade {
   stopPrice?: string;
   taken?: boolean;
   byTheBook?: boolean;
+  /** Commission per account name, in USD dollars, e.g. `{ Live: "3.00" }`. */
+  commission?: Record<string, string>;
 }
 
 interface TotalsFixture {
@@ -311,9 +313,13 @@ async function readFixture<T>(
           if (accountId === undefined) {
             throw new Error(`Fixture account "${name}" was never created`);
           }
-          await tx
-            .insert(tradeAccounts)
-            .values({ tradeId: trade.id, accountId });
+          const commission = fixtureTrade.commission?.[name] ?? null;
+          await tx.insert(tradeAccounts).values({
+            tradeId: trade.id,
+            accountId,
+            commission,
+            commissionSource: commission === null ? null : "file",
+          });
         }
       }
 
@@ -587,5 +593,105 @@ describe("getCountMetrics", () => {
       winRate: null,
       avgR: null,
     });
+  });
+});
+
+describe("net of commission", () => {
+  const accountsWithPractice = { Live: false, Copy: false, Sim: true };
+
+  it("subtracts what every real account paid, and nothing the practice account paid", async () => {
+    // +$500 on Live and Copy, and on Sim which does not count: 2 × 500 − 3 − 5.
+    const all = await readFixture(
+      {
+        accounts: accountsWithPractice,
+        trades: [
+          {
+            on: ["Live", "Copy", "Sim"],
+            tradeDate: "2026-09-03",
+            commission: { Live: "3.00", Copy: "5.00", Sim: "7.00" },
+          },
+        ],
+      },
+      (scope, tx) => getMoneyMetrics(scope, undefined, tx),
+    );
+    expect(all.netPnlCents).toBe(100_000 - 300 - 500);
+  });
+
+  it("subtracts only the selected account's commission", async () => {
+    const copy = await readFixture(
+      {
+        accounts: accountsWithPractice,
+        selected: "Copy",
+        trades: [
+          {
+            on: ["Live", "Copy"],
+            tradeDate: "2026-09-03",
+            commission: { Live: "3.00", Copy: "5.00" },
+          },
+        ],
+      },
+      (scope, tx) => getMoneyMetrics(scope, undefined, tx),
+    );
+    expect(copy.netPnlCents).toBe(50_000 - 500);
+  });
+
+  it("puts the net amount into the day totals the calendar paints", async () => {
+    const totals = await readFixture(
+      {
+        accounts: { Live: false },
+        trades: [
+          {
+            on: ["Live"],
+            tradeDate: "2026-09-03",
+            commission: { Live: "1.60" },
+          },
+          {
+            on: ["Live"],
+            tradeDate: "2026-09-03",
+            exitPrice: "90",
+            commission: { Live: "1.60" },
+          },
+        ],
+      },
+      (scope, tx) => getDayTotals(scope, undefined, tx),
+    );
+    expect(totals.days).toEqual([
+      { date: "2026-09-03", amountCents: -320, entryCount: 2 },
+    ]);
+  });
+
+  it("counts a trade that made less than it cost as a loser", async () => {
+    // Exit 100.01 on point value 50: +$0.50 gross, −$0.50 after $1.00.
+    const fixture: TotalsFixture = {
+      accounts: { Live: false },
+      trades: [
+        {
+          on: ["Live"],
+          tradeDate: "2026-09-03",
+          exitPrice: "100.01",
+          commission: { Live: "1.00" },
+        },
+      ],
+    };
+    const money = await readFixture(fixture, (scope, tx) =>
+      getMoneyMetrics(scope, undefined, tx),
+    );
+    const counts = await readFixture(fixture, (scope, tx) =>
+      getCountMetrics(scope, undefined, tx),
+    );
+    expect(money.grossWinCents).toBe(0);
+    expect(money.grossLossCents).toBe(50);
+    expect(counts.winRate).toBe(0);
+  });
+
+  it("treats an unknown commission as nothing, not as a failure", async () => {
+    const all = await readFixture(
+      {
+        accounts: { Live: false },
+        trades: [{ on: ["Live"], tradeDate: "2026-09-03" }],
+      },
+      (scope, tx) => getMoneyMetrics(scope, undefined, tx),
+    );
+    expect(all.netPnlCents).toBe(50_000);
   });
 });

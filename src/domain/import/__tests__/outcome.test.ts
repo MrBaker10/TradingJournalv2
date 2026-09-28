@@ -20,6 +20,7 @@ function row(overrides: Partial<NormalizedTrade> = {}): NormalizedTrade {
     exitPrice: 20050,
     brokerTradeKey: null,
     filePnlCents: null,
+    fileCommissionCents: null,
     stopPrice: null,
     stopNotice: null,
     sourceRow: 2,
@@ -41,6 +42,8 @@ function existing(overrides: Partial<ExistingTrade> = {}): ExistingTrade {
     points: 50,
     result: "Win",
     stopPrice: null,
+    commissionCents: null,
+    commissionSource: null,
     ...overrides,
   };
 }
@@ -187,6 +190,7 @@ describe("decideOutcome — stop", () => {
       changed: [],
       values: {},
       fillStop: 19990,
+      setCommission: null,
     });
   });
 
@@ -214,5 +218,71 @@ describe("decideOutcome — stop", () => {
 
   it("keeps the stop out of the broker-owned fields", () => {
     expect(BROKER_OWNED_FIELDS).not.toContain("stopPrice");
+  });
+});
+
+describe("decideOutcome — commission", () => {
+  const fromFile = { cents: 300, source: "file" } as const;
+  const fromRate = { cents: 200, source: "rate" } as const;
+
+  it("writes the file commission onto a matched trade that has none", () => {
+    // The re-import that corrects trades imported before commissions existed.
+    expect(decideOutcome(row(), existing(), fromFile)).toEqual({
+      kind: "update",
+      tradeId: 7,
+      changed: [],
+      values: {},
+      fillStop: null,
+      setCommission: fromFile,
+    });
+  });
+
+  it("replaces a rate-derived amount with what the file charged", () => {
+    const outcome = decideOutcome(
+      row(),
+      existing({ commissionCents: 200, commissionSource: "rate" }),
+      fromFile,
+    );
+    expect(outcome).toMatchObject({ kind: "update", setCommission: fromFile });
+  });
+
+  it("never replaces an amount the user typed", () => {
+    expect(
+      decideOutcome(
+        row(),
+        existing({ commissionCents: 999, commissionSource: "manual" }),
+        fromFile,
+      ),
+    ).toEqual({ kind: "skip", tradeId: 7 });
+  });
+
+  it("skips when the stored commission already says the same", () => {
+    expect(
+      decideOutcome(
+        row(),
+        existing({ commissionCents: 300, commissionSource: "file" }),
+        fromFile,
+      ),
+    ).toEqual({ kind: "skip", tradeId: 7 });
+  });
+
+  it("does not let a rate overwrite a file amount", () => {
+    expect(
+      decideOutcome(
+        row(),
+        existing({ commissionCents: 300, commissionSource: "file" }),
+        fromRate,
+      ),
+    ).toEqual({ kind: "skip", tradeId: 7 });
+  });
+
+  it("leaves the commission alone when the import has none to offer", () => {
+    expect(
+      decideOutcome(
+        row(),
+        existing({ commissionCents: 300, commissionSource: "file" }),
+        null,
+      ),
+    ).toEqual({ kind: "skip", tradeId: 7 });
   });
 });

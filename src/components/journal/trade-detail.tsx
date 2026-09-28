@@ -119,6 +119,27 @@ function formatR(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}R`;
 }
 
+/**
+ * The gross and the commission behind the net figure in the header. Both come
+ * from the query (`tradeCommissionDisplayCents`), so they add up to the net to
+ * the cent; nothing is recomputed here. Null when no commission was taken
+ * off, so a trade without one shows no breakdown at all (commissions).
+ */
+function netBreakdown(
+  trade: JournalTradeRow,
+): { grossCents: number; commissionCents: number } | null {
+  // Only what was actually taken off: a commission that sits on a practice
+  // account alone leaves the combined figure untouched, and "Commission
+  // $0.00" would contradict the amount shown on that account.
+  if (trade.displayPnlCents === null || trade.displayCommissionCents === 0) {
+    return null;
+  }
+  return {
+    grossCents: trade.displayPnlCents + trade.displayCommissionCents,
+    commissionCents: trade.displayCommissionCents,
+  };
+}
+
 export function TradeDetail({
   trade,
   fxProvisional,
@@ -149,6 +170,8 @@ export function TradeDetail({
     postExitMfeR: trade.postExitMfeR,
   };
   const hasPriceBand = buildPriceBand(priceBandInput) !== null;
+
+  const breakdown = netBreakdown(trade);
 
   const hasRail =
     trade.accounts.length > 0 ||
@@ -195,6 +218,15 @@ export function TradeDetail({
           ) : (
             <span className="font-bold font-mono text-[26px] text-fg-subtle leading-none">
               —
+            </span>
+          )}
+          {/* Neutral: the parts of the figure above, not money of their own
+              (Design.md §1). */}
+          {breakdown !== null && (
+            <span className="font-mono text-[11.5px] text-fg-subtle tabular-nums">
+              Gross{" "}
+              {formatCents(breakdown.grossCents, { signed: true, currency })} ·
+              Commission {formatCents(-breakdown.commissionCents, { currency })}
             </span>
           )}
           {trade.rMultiple !== null &&
@@ -314,6 +346,14 @@ export function TradeDetail({
                   {trade.accounts.map((account) => (
                     <Chip key={account.id}>
                       <span className={chipLabel}>{account.name}</span>
+                      {account.commissionCents !== null && (
+                        <span
+                          className="font-mono text-[12px] text-fg-muted tabular-nums"
+                          title="Commission"
+                        >
+                          {formatCents(account.commissionCents, { currency })}
+                        </span>
+                      )}
                       {/* §4.12: the marker travels with the account wherever its
                     numbers do. */}
                       {account.isPractice && (

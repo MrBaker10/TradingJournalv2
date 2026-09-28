@@ -49,6 +49,8 @@ interface FixtureTrade {
   mfeR?: string;
   maeR?: string;
   postExitMfeR?: string;
+  /** Commission per account name, in USD dollars, e.g. `{ A: "3.00" }`. */
+  commission?: Record<string, string>;
 }
 
 interface Fixture {
@@ -135,9 +137,13 @@ async function run(fixture: Fixture): Promise<Result> {
           if (accountId === undefined) {
             throw new Error(`Fixture account "${name}" was never created`);
           }
-          await tx
-            .insert(tradeAccounts)
-            .values({ tradeId: trade.id, accountId });
+          const commission = fixtureTrade.commission?.[name] ?? null;
+          await tx.insert(tradeAccounts).values({
+            tradeId: trade.id,
+            accountId,
+            commission,
+            commissionSource: commission === null ? null : "file",
+          });
         }
       }
 
@@ -233,6 +239,49 @@ describe("getDimensionBreakdowns", () => {
       // And the dimension still adds up to the multiplied figure.
       const total = byAccount.reduce((sum, row) => sum + row.netPnlCents, 0);
       expect(total).toBe(150000);
+    });
+  });
+
+  describe("net of commission", () => {
+    it("nets each account's row of its own commission and the total of all", async () => {
+      const { dimensions } = await run({
+        accounts: { A: false, B: false, Demo: true },
+        trades: [
+          {
+            on: ["A", "B", "Demo"],
+            setupType: "Reversal",
+            commission: { A: "3.00", B: "5.00", Demo: "7.00" },
+          },
+        ],
+      });
+
+      expect(bucket(dimensions, "setupType", "Reversal")?.netPnlCents).toBe(
+        100000 - 800,
+      );
+      expect(
+        pick(dimensions, "account").map((row) => [row.bucket, row.netPnlCents]),
+      ).toEqual([
+        ["A", 50000 - 300],
+        ["B", 50000 - 500],
+      ]);
+    });
+
+    it("does not count a trade that lost its gain to commission as a win", async () => {
+      // +$0.50 gross, −$0.50 net.
+      const { dimensions } = await run({
+        accounts: { A: false },
+        trades: [
+          {
+            on: ["A"],
+            setupType: "Reversal",
+            exitPrice: "100.01",
+            commission: { A: "1.00" },
+          },
+        ],
+      });
+
+      expect(bucket(dimensions, "setupType", "Reversal")?.wins).toBe(0);
+      expect(bucket(dimensions, "account", "A")?.wins).toBe(0);
     });
   });
 

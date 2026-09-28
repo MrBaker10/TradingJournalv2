@@ -13,7 +13,10 @@
 //    server zone instead of UTC.
 // 2. `normalizeTrades` runs on the round trips `fills.ts` has paired. It owns
 //    the **instrument**: the symbol is resolved against the journal's own
-//    table and the prices are snapped to that instrument's tick.
+//    table and a price that came from a single fill is snapped to that
+//    instrument's tick. A weighted average over fills at different prices is
+//    kept exactly — snapping it changed what the trade made (decided
+//    2026-09-28, commissions, revising the snap-everything rule).
 //
 // The order matters and is not interchangeable. `fills.ts` groups by the raw
 // symbol, which is the *contract* (`MNQU6`) — resolving it to the journal
@@ -26,6 +29,7 @@
 
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
+import { parseCommissionCents } from "../commission.ts";
 import { fromScaledPrice, type TradeDirection, toScaledPrice } from "../pnl.ts";
 import type { FillColumns } from "./detect.ts";
 import type {
@@ -207,6 +211,16 @@ function readFill(
 
   const orderId = columns.orderId === null ? "" : fieldAt(row, columns.orderId);
 
+  // An empty cell is an unknown commission, not a free fill. A cell that is
+  // there but unreadable rejects the row rather than dropping the charge.
+  const rawCommission =
+    columns.commission === null ? "" : fieldAt(row, columns.commission);
+  const commissionCents =
+    rawCommission === "" ? null : parseCommissionCents(rawCommission);
+  if (rawCommission !== "" && commissionCents === null) {
+    return { sourceRow, reason: `cannot read commission: "${rawCommission}"` };
+  }
+
   return {
     fillId,
     orderId: orderId === "" ? null : orderId,
@@ -214,6 +228,7 @@ function readFill(
     direction,
     contracts,
     price,
+    commissionCents,
     timestamp: clock.instant,
     tradeDate: clock.tradeDate,
     entryTime: clock.entryTime,
@@ -279,8 +294,10 @@ function resolveInstrument(
 /**
  * The nearest multiple of the instrument's tick, in fixed point.
  *
- * A weighted average over several fills lands between ticks by construction,
- * and a price that is not on the grid is not a price the market ever traded.
+ * Only for a price the market actually printed: a single fill, a file's own
+ * per-trade price, a stop. A weighted average over fills at different prices
+ * lands between ticks by construction and is not snapped, because moving it
+ * onto the grid moves the trade's P&L with it.
  */
 function snapToTick(price: number, tickSize: number): number {
   const tick = toScaledPrice(tickSize);
@@ -294,7 +311,7 @@ function snapToTick(price: number, tickSize: number): number {
 
 /**
  * Resolves the round trips against the instrument table and snaps their
- * prices to the tick. This is the first reader of `instruments.tick_size` in
+ * single-fill prices to the tick. This is the first reader of `instruments.tick_size` in
  * the project.
  */
 export function normalizeTrades(
@@ -327,14 +344,17 @@ export function normalizeTrades(
       contracts: trade.contracts,
       tradeDate: trade.tradeDate,
       entryTime: trade.entryTime,
-      entryPrice: snapToTick(trade.entryPrice, instrument.tickSize),
+      entryPrice: trade.entryAveraged
+        ? trade.entryPrice
+        : snapToTick(trade.entryPrice, instrument.tickSize),
       exitTime: trade.exitTime,
       exitPrice:
-        trade.exitPrice === null
-          ? null
+        trade.exitPrice === null || trade.exitAveraged
+          ? trade.exitPrice
           : snapToTick(trade.exitPrice, instrument.tickSize),
       brokerTradeKey: trade.brokerTradeKey,
       filePnlCents: trade.filePnlCents,
+      fileCommissionCents: trade.fileCommissionCents,
       stopPrice:
         trade.stopPrice === null
           ? null

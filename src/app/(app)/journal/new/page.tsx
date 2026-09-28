@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { TradeForm } from "@/components/trades/trade-form";
 import { listActiveAccountsForSwitcher } from "@/db/queries/accounts";
+import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
 import { listConfluenceGroups, listMistakeTags } from "@/db/queries/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
@@ -15,6 +16,10 @@ export default async function NewTradePage() {
       listConfluenceGroups(),
       listMistakeTags(),
     ]);
+  const commissionRates = await listCommissionRates(
+    user.id,
+    accounts.map((account) => account.id),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -32,6 +37,7 @@ export default async function NewTradePage() {
         mode="create"
         instruments={instruments}
         accounts={accounts}
+        commissionRates={commissionRates}
         confluenceGroups={confluenceGroups}
         mistakeTags={mistakeTags}
       />

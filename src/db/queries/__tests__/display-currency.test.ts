@@ -12,10 +12,11 @@ import { importBatches } from "../../schema/import-batches.ts";
 import { instruments } from "../../schema/instruments.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
+import { getDimensionBreakdowns } from "../analytics.ts";
 import { getDayTotals, getStartingBalanceCents } from "../dashboard.ts";
 import { listForeignCurrencies } from "../fx.ts";
 import { listScopeCurrencies } from "../scope.ts";
-import { tradeDisplayCents } from "../trades.ts";
+import { getJournalTradeById, tradeDisplayCents } from "../trades.ts";
 
 // display-currency (decided 2026-09-24/25): figures in the accounts' own
 // currency. Rates sit in 2001 and the fixtures on a user of their own, so no
@@ -404,5 +405,66 @@ describe("listForeignCurrencies", () => {
       foreign: [],
       none: [],
     });
+  });
+});
+
+describe("commission in EUR (commissions)", () => {
+  // $0.05 at 0.92 is 5.43 euro cents. Rounded per account that is 5 + 5 = 10;
+  // rounding the sum would give 11 and leave the account rows a cent short
+  // of the combined figure.
+  it("rounds per account, so the combined figure, the account rows and a row's breakdown agree", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const f = await fixture(tx);
+      const [second] = await tx
+        .insert(accounts)
+        .values({
+          userId: f.userId,
+          name: "FTMO 2",
+          sortOrder: 2,
+          currency: "EUR",
+        })
+        .returning({ id: accounts.id });
+      // Only EUR accounts are real, so the combined view shows EUR.
+      await tx
+        .update(accounts)
+        .set({ isPractice: true })
+        .where(eq(accounts.id, f.usd));
+      const id = await trade(tx, f, {
+        date: "2001-03-12",
+        pnlOverride: "92.00",
+        accountIds: [f.eur, second.id],
+      });
+      await tx
+        .update(tradeAccounts)
+        .set({ commission: "0.05", commissionSource: "rate" })
+        .where(eq(tradeAccounts.tradeId, id));
+
+      const scope = {
+        userId: f.userId,
+        selectedAccountId: null,
+        currency: "EUR" as const,
+      };
+      const byAccount = (await getDimensionBreakdowns(scope, undefined, tx))
+        .filter((row) => row.dimension === "account")
+        .map((row) => row.netPnlCents);
+      const detail = await getJournalTradeById(f.userId, id, {
+        executor: tx,
+        currency: "EUR",
+      });
+      return {
+        day: (await getDayTotals(scope, undefined, tx)).days[0]?.amountCents,
+        byAccount,
+        net: detail?.displayPnlCents,
+        commission: detail?.displayCommissionCents,
+      };
+    });
+
+    // €100.00 on each account, less 5 cents each.
+    expect(result.day).toBe(20_000 - 10);
+    expect(result.byAccount).toEqual([9_995, 9_995]);
+    expect(result.net).toBe(20_000 - 10);
+    expect(result.commission).toBe(10);
   });
 });

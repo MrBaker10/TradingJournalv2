@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
+import type { InstrumentOption } from "@/components/settings/account-commission-rates";
 import { AccountCreateTile } from "@/components/settings/account-create-tile";
 import type { AccountRowData } from "@/components/settings/account-row";
 import { AccountRow } from "@/components/settings/account-row";
@@ -11,12 +12,14 @@ import { ArchivedAccountsList } from "@/components/settings/archived-accounts-li
 interface AccountsManagerProps {
   active: AccountRowData[];
   archived: ArchivedAccountData[];
+  instruments: InstrumentOption[];
   timeZone: string;
 }
 
 export function AccountsManager({
   active,
   archived,
+  instruments,
   timeZone,
 }: AccountsManagerProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -37,6 +40,7 @@ export function AccountsManager({
               >
                 <AccountRow
                   account={account}
+                  instruments={instruments}
                   isFirst={index === 0}
                   isLast={index === active.length - 1}
                 />

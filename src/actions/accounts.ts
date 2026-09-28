@@ -12,6 +12,11 @@ import {
   updateAccountCurrency,
   updateStartingBalance,
 } from "@/db/queries/accounts";
+import {
+  removeCommissionRate as removeCommissionRateRow,
+  setCommissionRate as setCommissionRateRow,
+} from "@/db/queries/commission-rates";
+import { getInstrumentById } from "@/db/queries/instruments";
 import { accounts } from "@/db/schema/accounts";
 import { users } from "@/db/schema/users";
 import type { AccountCurrency } from "@/domain/fx";
@@ -22,8 +27,10 @@ import { todayInTimeZone } from "@/lib/time";
 import {
   createAccountSchema,
   moveAccountSchema,
+  removeCommissionRateSchema,
   renameAccountSchema,
   setAccountCurrencySchema,
+  setCommissionRateSchema,
   setSelectedAccountSchema,
   setStartingBalanceSchema,
   accountIdSchema as togglePracticeAccountIdSchema,
@@ -440,5 +447,59 @@ export async function setSelectedAccount(
     .where(eq(users.id, user.id));
 
   revalidatePath("/", "layout");
+  return { success: true, data: null };
+}
+
+/**
+ * Sets the per-side rate an account pays for an instrument (commissions).
+ * Stored commissions stay as they are; the rate applies to the next save.
+ */
+export async function setCommissionRate(
+  input: unknown,
+): Promise<ActionResult<null>> {
+  const parsed = setCommissionRateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const user = await getCurrentUser();
+  const instrument = await getInstrumentById(parsed.data.instrumentId);
+  if (!instrument) {
+    return { success: false, error: "Instrument not found" };
+  }
+
+  const saved = await setCommissionRateRow(
+    user.id,
+    parsed.data.accountId,
+    instrument.id,
+    exactCents(parsed.data.perSide) ?? 0,
+  );
+  if (!saved) {
+    return { success: false, error: "Account not found" };
+  }
+
+  revalidatePath("/settings");
+  return { success: true, data: null };
+}
+
+export async function removeCommissionRate(
+  input: unknown,
+): Promise<ActionResult<null>> {
+  const parsed = removeCommissionRateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const user = await getCurrentUser();
+  const removed = await removeCommissionRateRow(
+    user.id,
+    parsed.data.accountId,
+    parsed.data.instrumentId,
+  );
+  if (!removed) {
+    return { success: false, error: "Account not found" };
+  }
+
+  revalidatePath("/settings");
   return { success: true, data: null };
 }

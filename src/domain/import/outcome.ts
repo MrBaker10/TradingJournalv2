@@ -15,6 +15,7 @@
 //   postgres is `numeric(13,5)` and a time is `HH:MM:SS`; comparing either as
 //   it arrives against what the file wrote reports changes that are not real.
 
+import { type CommissionSource, mayReplaceCommission } from "../commission.ts";
 import { fromScaledPrice, type TradeDirection, toScaledPrice } from "../pnl.ts";
 import type { NormalizedTrade } from "./types.ts";
 
@@ -56,6 +57,21 @@ export interface ExistingTrade {
   result: string | null;
   /** Typed by the user or written by an earlier import; either way it stays. */
   stopPrice: number | null;
+  /**
+   * The importing account's commission on this trade, integer cents, and
+   * where it came from. Not a trade field: it lives on the assignment.
+   */
+  commissionCents: number | null;
+  commissionSource: CommissionSource | null;
+}
+
+/**
+ * The commission an import has for a row: what the file charged, else what
+ * the importing account's rate gives for it. Null when neither says.
+ */
+export interface IncomingCommission {
+  cents: number;
+  source: Exclude<CommissionSource, "manual">;
 }
 
 export interface BrokerValues {
@@ -85,6 +101,12 @@ export type RowOutcome =
        * only ever fill it where it is empty — never change it.
        */
       fillStop: number | null;
+      /**
+       * The commission to write on the importing account's assignment, else
+       * null. Like the stop it is not a broker-owned field: it follows
+       * `mayReplaceCommission`, so a hand-typed amount is never replaced.
+       */
+      setCommission: IncomingCommission | null;
     };
 
 function atStoredPrecision(price: number): bigint {
@@ -185,6 +207,7 @@ const sameTime = (a: string, b: string) => atStoredTime(a) === atStoredTime(b);
 export function decideOutcome(
   incoming: NormalizedTrade,
   existing: ExistingTrade | null,
+  commission: IncomingCommission | null = null,
 ): RowOutcome {
   if (existing === null) return { kind: "new" };
 
@@ -217,7 +240,14 @@ export function decideOutcome(
     incoming.stopPrice !== null && existing.stopPrice === null
       ? incoming.stopPrice
       : null;
-  if (changed.length === 0 && fillStop === null) {
+  const setCommission =
+    commission !== null &&
+    mayReplaceCommission(existing.commissionSource, commission.source) &&
+    (existing.commissionCents !== commission.cents ||
+      existing.commissionSource !== commission.source)
+      ? commission
+      : null;
+  if (changed.length === 0 && fillStop === null && setCommission === null) {
     return { kind: "skip", tradeId: existing.id };
   }
 
@@ -232,5 +262,6 @@ export function decideOutcome(
     changed: changed.map((comparison) => comparison.field),
     values,
     fillStop,
+    setCommission,
   };
 }

@@ -25,6 +25,12 @@ export interface FillColumns {
    * imports; it is only needed to join a Tradovate Orders export.
    */
   orderId: number | null;
+  /**
+   * `commission`, when the export has it: what the broker charged per fill.
+   * Optional like `orderId` — a file without it still imports, with the
+   * commission left to the account's rate.
+   */
+  commission: number | null;
 }
 
 export interface DetectedFills {
@@ -64,7 +70,10 @@ export type DetectedShape = DetectedFills | DetectedFtmo;
  * whatever zone the platform is set to, which is exactly what the import must
  * not depend on. `_timestamp` is unambiguous UTC.
  */
-const FILL_COLUMNS: Record<Exclude<keyof FillColumns, "orderId">, string> = {
+const FILL_COLUMNS: Record<
+  Exclude<keyof FillColumns, "orderId" | "commission">,
+  string
+> = {
   fillId: "_id",
   timestamp: "_timestamp",
   action: "_action",
@@ -74,6 +83,7 @@ const FILL_COLUMNS: Record<Exclude<keyof FillColumns, "orderId">, string> = {
 };
 
 const FILL_ORDER_ID = "_orderid";
+const FILL_COMMISSION = "commission";
 
 /**
  * The columns an FTMO export is recognised by, lowercased, as the German
@@ -147,6 +157,7 @@ function detectFills(byName: Map<string, number>): DetectedFills | null {
     columns[field as keyof typeof FILL_COLUMNS] = index;
   }
   columns.orderId = byName.get(FILL_ORDER_ID) ?? null;
+  columns.commission = byName.get(FILL_COMMISSION) ?? null;
   return { shape: "fills", columns };
 }
 

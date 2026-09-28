@@ -7,6 +7,7 @@ import {
   listAssignableAccounts,
   listOwnedAccountIds,
 } from "@/db/queries/accounts";
+import { listCommissionRates } from "@/db/queries/commission-rates";
 import {
   ensureFxRates,
   listForeignCurrencies,
@@ -19,9 +20,11 @@ import {
   getNextLinkSortOrder,
   getOwnedTrade,
   insertTradeWithRelations,
+  listAssignmentCommissions,
   replaceTradeWithRelations,
 } from "@/db/queries/trades";
 import { tradeLinks, tradeScreenshots, trades } from "@/db/schema/trades";
+import { commissionOnSave, type StoredCommission } from "@/domain/commission";
 import { isRateCurrency } from "@/domain/fx";
 import { calculateUsdPnl } from "@/domain/pnl";
 import {
@@ -31,7 +34,7 @@ import {
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { awardBadgesQuietly } from "@/lib/badges/sync";
 import { fetchEcbRates } from "@/lib/fx/frankfurter";
-import { dollarsToCents } from "@/lib/money";
+import { dollarsToCents, exactCents } from "@/lib/money";
 import { storage } from "@/lib/storage";
 import {
   addTradeLinkSchema,
@@ -207,6 +210,57 @@ async function findUnknownTagError(
   return null;
 }
 
+interface CommissionContext {
+  userId: number;
+  accountIds: number[];
+  instrumentId: number;
+  contracts: number;
+  /** Amounts the user typed, by account, in dollars as the schema read them. */
+  typed: { accountId: number; amount: number }[];
+  /** Each account's commission before this save; empty on create. */
+  existing: Map<number, StoredCommission | null>;
+  basisChanged: boolean;
+  /** The trade's P&L after this save is still an import file's own. */
+  pnlFromFile: boolean;
+}
+
+/**
+ * What each assigned account pays after this save — `commissionOnSave` per
+ * account, with the account's rate for the trade's instrument (commissions).
+ * An amount typed for an account the trade is not on is ignored.
+ */
+async function commissionsOnSave(
+  context: CommissionContext,
+): Promise<Map<number, StoredCommission | null>> {
+  const rates = await listCommissionRates(context.userId, context.accountIds);
+  const typed = new Map(
+    context.typed.map((entry) => [entry.accountId, entry.amount]),
+  );
+
+  return new Map(
+    context.accountIds.map((accountId) => {
+      const amount = typed.get(accountId);
+      const rate = rates.find(
+        (candidate) =>
+          candidate.accountId === accountId &&
+          candidate.instrumentId === context.instrumentId,
+      );
+      return [
+        accountId,
+        commissionOnSave({
+          typedCents:
+            amount === undefined ? undefined : (exactCents(amount) ?? 0),
+          existing: context.existing.get(accountId) ?? null,
+          perSideCents: rate?.perSideCents ?? null,
+          contracts: context.contracts,
+          basisChanged: context.basisChanged,
+          pnlFromFile: context.pnlFromFile,
+        }),
+      ];
+    }),
+  );
+}
+
 export async function createTrade(input: unknown): Promise<
   ActionResult<{
     id: number;
@@ -251,6 +305,20 @@ export async function createTrade(input: unknown): Promise<
     await profitRateFor(instrument, data.tradeDate),
   );
 
+  const accountCommissions = data.taken
+    ? await commissionsOnSave({
+        userId: user.id,
+        accountIds: ownedAccountIds,
+        instrumentId: instrument.id,
+        contracts: data.contracts,
+        typed: data.commissions,
+        existing: new Map(),
+        basisChanged: false,
+        // A trade logged by hand never carries a file's P&L.
+        pnlFromFile: false,
+      })
+    : new Map();
+
   const createdId = await db.transaction((tx) =>
     insertTradeWithRelations(
       tx,
@@ -258,6 +326,7 @@ export async function createTrade(input: unknown): Promise<
       columns,
       {
         accountIds: ownedAccountIds,
+        accountCommissions,
         confluenceTagIds: data.confluenceTagIds,
         mistakeTagIds: data.mistakeTagIds,
       },
@@ -338,13 +407,35 @@ export async function updateTrade(
     await profitRateFor(instrument, data.tradeDate),
   );
 
+  const marks = importMarksAfterEdit(existing, columns);
+
+  // Only a changed contract count or instrument makes a rate-derived amount
+  // stale; a rate changed in Settings since does not (commissions). While the
+  // P&L is still the file's own, it is net already and no rate applies.
+  const accountCommissions = data.taken
+    ? await commissionsOnSave({
+        userId: user.id,
+        accountIds,
+        instrumentId: instrument.id,
+        contracts: data.contracts,
+        typed: data.commissions,
+        existing: await listAssignmentCommissions(existing.id),
+        basisChanged:
+          existing.instrumentId !== instrument.id ||
+          existing.contracts === null ||
+          Number(existing.contracts) !== data.contracts,
+        pnlFromFile: marks.pnlSource !== null,
+      })
+    : new Map();
+
   await db.transaction((tx) =>
     replaceTradeWithRelations(
       tx,
       existing.id,
-      { ...columns, ...importMarksAfterEdit(existing, columns) },
+      { ...columns, ...marks },
       {
         accountIds,
+        accountCommissions,
         confluenceTagIds: data.confluenceTagIds,
         mistakeTagIds: data.mistakeTagIds,
       },

@@ -13,6 +13,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { ACCOUNT_CURRENCIES } from "../../domain/fx.ts";
+import { instruments } from "./instruments.ts";
 // Thunk-based .references() below lets this file and users.ts import each
 // other: neither dereferences the other table's column until Drizzle calls
 // the callback, so the cycle (accounts -> users for user_id, users ->
@@ -73,5 +74,30 @@ export const accounts = pgTable(
         `currency in (${ACCOUNT_CURRENCIES.map((c) => `'${c}'`).join(", ")})`,
       ),
     ),
+  ],
+);
+
+// What an account pays per contract and side for an instrument, in USD
+// (decided 2026-09-28, commissions). It only fills in where no import file
+// said what was charged, and it is copied into the assignment when a trade is
+// saved: changing a rate never touches a stored commission.
+export const accountCommissionRates = pgTable(
+  "account_commission_rates",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    accountId: integer("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    instrumentId: integer("instrument_id")
+      .notNull()
+      .references(() => instruments.id),
+    perSide: numeric("per_side", { precision: 10, scale: 2 }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("account_commission_rates_unique").on(
+      table.accountId,
+      table.instrumentId,
+    ),
+    check("account_commission_rates_per_side_check", sql`per_side >= 0`),
   ],
 );

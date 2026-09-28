@@ -19,6 +19,7 @@ const COLUMNS: FillColumns = {
   price: 7,
   contract: 21,
   orderId: 1,
+  commission: 24,
 };
 
 // A real row from the sample export, verbatim.
@@ -52,6 +53,9 @@ function trade(overrides: Partial<RawTrade> = {}): RawTrade {
     exitPrice: 30176.75,
     brokerTradeKey: "621235570008",
     filePnlCents: null,
+    fileCommissionCents: null,
+    entryAveraged: false,
+    exitAveraged: false,
     stopPrice: null,
     stopNotice: null,
     entryOrderId: null,
@@ -82,6 +86,7 @@ describe("normalizeFills", () => {
       direction: "long",
       contracts: 2,
       price: 30130.25,
+      commissionCents: 100,
       timestamp: "2026-08-13T15:57:01.616Z",
       tradeDate: "2026-08-13",
       entryTime: "17:57:01",
@@ -264,6 +269,67 @@ describe("normalizeTrades", () => {
       brokerTradeKey: "a|b",
       filePnlCents: 9300,
     });
+  });
+});
+
+describe("normalizeTrades — tick snapping", () => {
+  it("keeps an averaged price exactly and snaps a single-fill one", () => {
+    const { rows } = normalizeTrades(
+      [
+        trade({
+          symbol: "MNQZ6",
+          entryPrice: 29118.25,
+          exitPrice: 29132.41667,
+          exitAveraged: true,
+        }),
+      ],
+      INSTRUMENTS,
+    );
+    expect(rows[0].entryPrice).toBe(29118.25);
+    expect(rows[0].exitPrice).toBe(29132.41667);
+  });
+
+  it("still snaps a price that is not marked averaged", () => {
+    const { rows } = normalizeTrades(
+      [trade({ entryPrice: 30130.3, exitPrice: 30176.6 })],
+      INSTRUMENTS,
+    );
+    expect(rows[0].entryPrice).toBe(30130.25);
+    expect(rows[0].exitPrice).toBe(30176.5);
+  });
+
+  it("carries the file commission through", () => {
+    const { rows } = normalizeTrades(
+      [trade({ fileCommissionCents: 300 })],
+      INSTRUMENTS,
+    );
+    expect(rows[0].fileCommissionCents).toBe(300);
+  });
+});
+
+describe("normalizeFills — commission", () => {
+  it("leaves the commission unknown without the column or with an empty cell", () => {
+    const { fills: without } = normalizeFills(
+      [row()],
+      { ...COLUMNS, commission: null },
+      BERLIN,
+    );
+    expect(without[0].commissionCents).toBeNull();
+
+    const { fills: empty } = normalizeFills([row({ 24: "" })], COLUMNS, BERLIN);
+    expect(empty[0].commissionCents).toBeNull();
+  });
+
+  it("rejects a row whose commission cannot be read", () => {
+    const { fills, invalid } = normalizeFills(
+      [row({ 24: "abc" })],
+      COLUMNS,
+      BERLIN,
+    );
+    expect(fills).toEqual([]);
+    expect(invalid).toEqual([
+      { sourceRow: 2, reason: 'cannot read commission: "abc"' },
+    ]);
   });
 });
 

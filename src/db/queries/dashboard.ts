@@ -18,6 +18,8 @@ import {
   type DateRange,
   moneyContribution,
   moneyWeight,
+  netLoser,
+  netWinner,
   type QueryScope,
   ratioCents,
   scopeConditions,
@@ -74,10 +76,10 @@ export async function getMoneyMetrics(
   const [row] = await executor
     .select({
       netPnlCents: sql<string>`coalesce(sum(${contribution}), 0)::bigint`,
-      grossWinCents: sql<string>`coalesce(sum(${contribution}) filter (where ${tradePnlCents} > 0), 0)::bigint`,
-      grossLossCents: sql<string>`abs(coalesce(sum(${contribution}) filter (where ${tradePnlCents} < 0), 0))::bigint`,
-      winnerWeight: sql<number>`coalesce(sum(${weight}) filter (where ${tradePnlCents} > 0), 0)::int`,
-      loserWeight: sql<number>`coalesce(sum(${weight}) filter (where ${tradePnlCents} < 0), 0)::int`,
+      grossWinCents: sql<string>`coalesce(sum(${contribution}) filter (where ${netWinner(scope)}), 0)::bigint`,
+      grossLossCents: sql<string>`abs(coalesce(sum(${contribution}) filter (where ${netLoser(scope)}), 0))::bigint`,
+      winnerWeight: sql<number>`coalesce(sum(${weight}) filter (where ${netWinner(scope)}), 0)::int`,
+      loserWeight: sql<number>`coalesce(sum(${weight}) filter (where ${netLoser(scope)}), 0)::int`,
       totalWeight: sql<number>`coalesce(sum(${weight}) filter (where ${tradePnlCents} is not null), 0)::int`,
     })
     .from(trades)
@@ -125,7 +127,7 @@ export async function getCountMetrics(
   const [row] = await executor
     .select({
       tradesLogged: sql<number>`count(*) filter (where ${trades.taken})::int`,
-      wins: sql<number>`count(*) filter (where ${tradePnlCents} > 0)::int`,
+      wins: sql<number>`count(*) filter (where ${netWinner(scope)})::int`,
       missedSetups: sql<number>`count(*) filter (where ${trades.taken} = false)::int`,
       byTheBook: sql<number>`count(*) filter (where ${trades.taken} and ${trades.byTheBook})::int`,
       avgR: sql<

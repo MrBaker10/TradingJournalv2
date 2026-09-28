@@ -13,6 +13,23 @@ export const quantityField = z
     "At most four decimals",
   );
 
+/**
+ * A commission in USD, as typed: an account's per-side rate or what one
+ * account paid for a trade (commissions). Two decimals at most, checked on
+ * the value times 100 for the same reason `quantityField` checks times 10^4.
+ * The ceiling only keeps a typo out; no real futures commission comes near.
+ */
+export const MAX_COMMISSION = 10_000;
+
+export const commissionField = z
+  .number({ error: "Enter the commission as a number" })
+  .min(0, "A commission cannot be negative")
+  .max(MAX_COMMISSION, "That commission is too large")
+  .refine(
+    (value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6,
+    "At most two decimals",
+  );
+
 export const sessionEnum = z.enum(["Asia", "London", "NY-AM", "NY-PM"]);
 export const setupTypeEnum = z.enum([
   "Break & Retest",
@@ -111,6 +128,16 @@ export const takenTradeSchema = z
     accountIds: z
       .array(z.number().int().positive())
       .min(1, "Select at least one account"),
+    // Only the amounts the user typed. An account left out keeps what it has
+    // or takes its rate — src/domain/commission.ts, commissionOnSave.
+    commissions: z
+      .array(
+        z.object({
+          accountId: z.number().int().positive(),
+          amount: commissionField,
+        }),
+      )
+      .default([]),
   })
   .superRefine((data, ctx) => {
     // Post-exit MFE is shown only when a stop price is set — cannot be

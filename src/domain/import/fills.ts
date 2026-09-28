@@ -8,8 +8,14 @@
 // Two things this module does not do: it does not resolve the symbol to a
 // journal instrument and it does not snap prices to a tick — both belong to
 // `normalize.ts`, which is the module that knows the instruments table. What
-// comes out here is still a `RawTrade`.
+// comes out here is still a `RawTrade`, which says per leg whether its price
+// is an average so `normalize.ts` knows whether it may snap it.
+//
+// The broker's commission travels with the fills: a round trip carries the
+// sum of what its fills were charged. A fill that closes one position and
+// opens the next splits its charge by quantity (commissionShare).
 
+import { commissionShare } from "../commission.ts";
 import { fromScaledPrice, type TradeDirection, toScaledPrice } from "../pnl.ts";
 import type { ImportFill, RawTrade } from "./types.ts";
 
@@ -23,6 +29,8 @@ interface Leg {
   quantity: number;
   fillIds: string[];
   lastTime: string;
+  /** Every distinct price the leg filled at, at the stored precision. */
+  prices: Set<bigint>;
 }
 
 interface OpenTrip {
@@ -35,17 +43,55 @@ interface OpenTrip {
   entryOrderId: string | null;
   exitOrderIds: string[];
   sourceRow: number;
+  /** Sum of the fills' charges; null once any fill's charge is unknown. */
+  commissionCents: number | null;
 }
 
 function emptyLeg(): Leg {
-  return { notional: BigInt(0), quantity: 0, fillIds: [], lastTime: "" };
+  return {
+    notional: BigInt(0),
+    quantity: 0,
+    fillIds: [],
+    lastTime: "",
+    prices: new Set(),
+  };
 }
 
 function addToLeg(leg: Leg, price: number, quantity: number, fill: ImportFill) {
-  leg.notional += toScaledPrice(price) * BigInt(quantity);
+  const scaled = toScaledPrice(price);
+  leg.notional += scaled * BigInt(quantity);
   leg.quantity += quantity;
   leg.fillIds.push(fill.fillId);
   leg.lastTime = fill.entryTime;
+  leg.prices.add(scaled);
+}
+
+/**
+ * Adds the part of a fill's charge that belongs to `quantity` of it. The
+ * caller passes the rest of the same fill to the next trip, so a split fill
+ * is charged exactly once in total.
+ */
+function addCommission(trip: OpenTrip, cents: number | null) {
+  trip.commissionCents =
+    trip.commissionCents === null || cents === null
+      ? null
+      : trip.commissionCents + cents;
+}
+
+function chargeFor(
+  fill: ImportFill,
+  quantity: number,
+  alreadyCharged: number,
+): number | null {
+  if (fill.commissionCents === null) return null;
+  if (alreadyCharged + quantity === fill.contracts) {
+    // The last part of the fill takes whatever the earlier parts left over.
+    return (
+      fill.commissionCents -
+      commissionShare(fill.commissionCents, alreadyCharged, fill.contracts)
+    );
+  }
+  return commissionShare(fill.commissionCents, quantity, fill.contracts);
 }
 
 /**
@@ -92,6 +138,9 @@ function closeTrip(trip: OpenTrip): RawTrade {
     brokerTradeKey: brokerKeyOf([...trip.entry.fillIds, ...trip.exit.fillIds]),
     // A fill-level file reports prices, not a per-trade P&L, and no stop.
     filePnlCents: null,
+    fileCommissionCents: trip.commissionCents,
+    entryAveraged: trip.entry.prices.size > 1,
+    exitAveraged: trip.exit.prices.size > 1,
     stopPrice: null,
     stopNotice: null,
     entryOrderId: trip.entryOrderId,
@@ -100,7 +149,11 @@ function closeTrip(trip: OpenTrip): RawTrade {
   };
 }
 
-function openTrip(fill: ImportFill, quantity: number): OpenTrip {
+function openTrip(
+  fill: ImportFill,
+  quantity: number,
+  commissionCents: number | null,
+): OpenTrip {
   const trip: OpenTrip = {
     symbol: fill.symbol,
     direction: fill.direction,
@@ -118,6 +171,7 @@ function openTrip(fill: ImportFill, quantity: number): OpenTrip {
     // The line the position was opened on. A round trip spans several lines;
     // the entry is the one the preview points at.
     sourceRow: fill.sourceRow,
+    commissionCents,
   };
   addToLeg(trip.entry, fill.price, quantity, fill);
   return trip;
@@ -167,6 +221,7 @@ export function pairFills(fills: ImportFill[]): RawTrade[] {
         const closing = Math.min(remaining, openQuantity);
 
         addToLeg(open.exit, fill.price, closing, fill);
+        addCommission(open, chargeFor(fill, closing, 0));
         if (
           fill.orderId !== null &&
           !open.exitOrderIds.includes(fill.orderId)
@@ -183,10 +238,12 @@ export function pairFills(fills: ImportFill[]): RawTrade[] {
 
       if (remaining === 0) continue;
 
+      const charge = chargeFor(fill, remaining, fill.contracts - remaining);
       if (open === null) {
-        open = openTrip(fill, remaining);
+        open = openTrip(fill, remaining, charge);
       } else {
         addToLeg(open.entry, fill.price, remaining, fill);
+        addCommission(open, charge);
       }
     }
 

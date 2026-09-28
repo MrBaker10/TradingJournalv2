@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -10,6 +12,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { COMMISSION_SOURCES } from "../../domain/commission.ts";
 import { accounts } from "./accounts.ts";
 import { importBatches } from "./import-batches.ts";
 import { instruments } from "./instruments.ts";
@@ -105,10 +108,27 @@ export const tradeAccounts = pgTable(
     accountId: integer("account_id")
       .notNull()
       .references(() => accounts.id),
+    // What this account paid for the trade, in USD. Per assignment because
+    // every account of a copy-trade pays its own (decided 2026-09-28,
+    // commissions). Null = unknown, which sums as nothing. Money figures net
+    // it out; `tradePnlCents` and R stay gross.
+    commission: numeric("commission", { precision: 14, scale: 2 }),
+    // Where the amount came from, which decides who may replace it —
+    // src/domain/commission.ts, mayReplaceCommission.
+    commissionSource: text("commission_source", {
+      enum: COMMISSION_SOURCES,
+    }),
   },
   (table) => [
     uniqueIndex("trade_accounts_unique").on(table.tradeId, table.accountId),
     index("trade_accounts_account_idx").on(table.accountId),
+    check(
+      "trade_accounts_commission_check",
+      sql.raw(
+        `(commission is null and commission_source is null) or ` +
+          `(commission >= 0 and commission_source in (${COMMISSION_SOURCES.map((s) => `'${s}'`).join(", ")}))`,
+      ),
+    ),
   ],
 );
 

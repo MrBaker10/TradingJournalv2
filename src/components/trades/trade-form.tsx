@@ -23,12 +23,17 @@ import { InlineMessage } from "@/components/ui/inline-message";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import type { JournalTradeRow } from "@/db/queries/trades";
+import {
+  type CommissionSource,
+  commissionOnSave,
+  type StoredCommission,
+} from "@/domain/commission";
 import { isRateCurrency } from "@/domain/fx";
 import { groupByAssetClass } from "@/domain/instruments";
 import { calculatePnl, type TradeDirection } from "@/domain/pnl";
 import type { PriceBandInput } from "@/domain/price-band";
 import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
-import { formatCents, type MoneyCurrency } from "@/lib/money";
+import { formatCents, formatCentsPlain, type MoneyCurrency } from "@/lib/money";
 import { resizeAndCompressImage } from "@/lib/uploads/resize-image";
 import {
   createTradeSchema,
@@ -155,9 +160,24 @@ interface AccountOption {
   isArchived?: boolean;
 }
 
+/** An account's per-side rate for one instrument, USD cents (commissions). */
+interface CommissionRateOption {
+  accountId: number;
+  instrumentId: number;
+  perSideCents: number;
+}
+
+/** Where the amount in an account's commission field comes from. */
+const COMMISSION_HINTS: Record<CommissionSource, string> = {
+  file: "From the import file",
+  rate: "From the account's rate",
+  manual: "Typed",
+};
+
 interface TradeFormBaseProps {
   instruments: InstrumentOption[];
   accounts: AccountOption[];
+  commissionRates: CommissionRateOption[];
   confluenceGroups: TagGroup[];
   mistakeTags: { id: number; label: string }[];
 }
@@ -202,6 +222,11 @@ type FormState = {
   byTheBook: boolean;
   notes: string;
   accountIds: number[];
+  /**
+   * Commission fields the user typed into, by account id. An account left out
+   * shows — and saves — what `commissionOnSave` gives it.
+   */
+  commissions: Record<number, string>;
 };
 
 const emptyState: FormState = {
@@ -230,6 +255,7 @@ const emptyState: FormState = {
   byTheBook: false,
   notes: "",
   accountIds: [],
+  commissions: {},
 };
 
 // Every field is a controlled string, so a stored value has to come back as
@@ -266,11 +292,18 @@ function stateFromTrade(trade: JournalTradeRow): FormState {
     byTheBook: trade.byTheBook ?? false,
     notes: trade.notes ?? "",
     accountIds: trade.accounts.map((account) => account.id),
+    commissions: {},
   };
 }
 
 export function TradeForm(props: TradeFormProps) {
-  const { instruments, accounts, confluenceGroups, mistakeTags } = props;
+  const {
+    instruments,
+    accounts,
+    commissionRates,
+    confluenceGroups,
+    mistakeTags,
+  } = props;
   // Narrowed once so the callbacks below can read it without re-checking
   // props.mode inside every closure.
   const edit = props.mode === "edit" ? props : null;
@@ -382,6 +415,55 @@ export function TradeForm(props: TradeFormProps) {
   function fieldState(key: string, filled: boolean): FieldState {
     if (errors[key]) return "invalid";
     return filled ? "valid" : "default";
+  }
+
+  /**
+   * What an account's commission field shows while nothing is typed into it:
+   * the same `commissionOnSave` the server runs, so the prefilled amount is
+   * the one that gets stored. The edit page loads the trade in USD, so the
+   * stored amounts compare as they are.
+   */
+  function commissionShown(accountId: number): StoredCommission | null {
+    const stored = edit?.trade.accounts.find(
+      (account) => account.id === accountId,
+    );
+    const existing: StoredCommission | null =
+      stored?.commissionCents != null && stored.commissionSource != null
+        ? { cents: stored.commissionCents, source: stored.commissionSource }
+        : null;
+    const contracts = parseNumber(state.contracts);
+    if (contracts === undefined || contracts <= 0) return existing;
+
+    const instrumentId = Number(state.instrumentId);
+    const rate = commissionRates.find(
+      (candidate) =>
+        candidate.accountId === accountId &&
+        candidate.instrumentId === instrumentId,
+    );
+    return commissionOnSave({
+      typedCents: undefined,
+      existing,
+      perSideCents: rate?.perSideCents ?? null,
+      contracts,
+      basisChanged:
+        edit !== null &&
+        (instrumentId !== edit.trade.instrumentId ||
+          contracts !== edit.trade.contracts),
+      // Mirrors importMarksAfterEdit: a hand-changed P&L is no longer the
+      // file's, so from then on the rate may fill in.
+      pnlFromFile:
+        edit?.trade.pnlFromFile === true &&
+        parseNumber(state.pnlOverride) ===
+          (edit.trade.pnlOverride ?? undefined),
+    });
+  }
+
+  function setCommission(accountId: number, value: string) {
+    setState((prev) => ({
+      ...prev,
+      commissions: { ...prev.commissions, [accountId]: value },
+    }));
+    if (errors.commissions) setErrors((prev) => ({ ...prev, commissions: "" }));
   }
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -560,6 +642,12 @@ export function TradeForm(props: TradeFormProps) {
       byTheBook: state.byTheBook,
       postExitMfeR: parseNumber(state.postExitMfeR),
       accountIds: state.accountIds,
+      // Only the fields typed into, and only for accounts still selected.
+      commissions: state.accountIds.flatMap((accountId) => {
+        const typed = state.commissions[accountId];
+        if (typed === undefined || typed.trim() === "") return [];
+        return [{ accountId, amount: parseNumber(typed) }];
+      }),
     };
   }
 
@@ -959,6 +1047,59 @@ export function TradeForm(props: TradeFormProps) {
                 )}
               />
             </FormField>
+          )}
+          {state.taken && state.accountIds.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <span className="cap">Commission (USD)</span>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {state.accountIds.map((accountId) => {
+                  const account = accounts.find(
+                    (candidate) => candidate.id === accountId,
+                  );
+                  const shown = commissionShown(accountId);
+                  const typed = state.commissions[accountId];
+                  const isTyped = typed !== undefined && typed.trim() !== "";
+                  const inputId = `commission-${accountId}`;
+                  return (
+                    <div key={accountId} className="flex flex-col gap-1">
+                      <label
+                        htmlFor={inputId}
+                        className="truncate text-fg-muted text-xs"
+                      >
+                        {account?.name ?? "Account"}
+                      </label>
+                      <input
+                        id={inputId}
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        step="0.01"
+                        placeholder="—"
+                        value={
+                          typed ??
+                          (shown === null ? "" : formatCentsPlain(shown.cents))
+                        }
+                        onChange={(event) =>
+                          setCommission(accountId, event.target.value)
+                        }
+                        disabled={loading || success}
+                        className={getFieldClass(
+                          fieldState("commissions", isTyped || shown !== null),
+                        )}
+                      />
+                      <span className="text-fg-subtle text-xs">
+                        {isTyped
+                          ? COMMISSION_HINTS.manual
+                          : shown === null
+                            ? "No rate set for this account"
+                            : COMMISSION_HINTS[shown.source]}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <InlineMessage message={errors.commissions ?? null} />
+            </div>
           )}
         </FormSection>
 

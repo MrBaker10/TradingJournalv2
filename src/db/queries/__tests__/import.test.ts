@@ -26,6 +26,7 @@ import {
   listImportBatches,
   listMatchCandidates,
   removeUntouchedTrades,
+  setImportedCommissions,
   updateImportedTrades,
 } from "../import.ts";
 
@@ -126,6 +127,7 @@ function importedTrade(
     session: "NY-AM",
     stopPrice: null,
     pnl: null,
+    commission: null,
     brokerTradeKey: null,
     importBatchId: batchId,
     ...overrides,
@@ -1052,5 +1054,124 @@ describe("insertImportedTrades — FTMO rows", () => {
     });
 
     expect(removed).toBe(0);
+  });
+});
+
+describe("commission on the importing account", () => {
+  async function assignment(fixture: Fixture, tradeId: number) {
+    const [row] = await fixture.tx
+      .select({
+        commission: tradeAccounts.commission,
+        commissionSource: tradeAccounts.commissionSource,
+      })
+      .from(tradeAccounts)
+      .where(
+        and(
+          eq(tradeAccounts.tradeId, tradeId),
+          eq(tradeAccounts.accountId, fixture.accountId),
+        ),
+      );
+    return row;
+  }
+
+  it("writes what the file charged onto the new assignment", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      const batchId = await newBatch(fixture);
+      const [id] = await insertImportedTrades(
+        fixture.tx,
+        [
+          importedTrade(fixture, batchId, {
+            commission: { cents: 300, source: "file" },
+          }),
+        ],
+        fixture.accountId,
+      );
+
+      expect(await assignment(fixture, id)).toEqual({
+        commission: "3.00",
+        commissionSource: "file",
+      });
+
+      const [candidate] = await listMatchCandidates(
+        fixture.userId,
+        fixture.accountId,
+        ["2026-08-20"],
+        fixture.tx,
+      );
+      expect(candidate).toMatchObject({
+        commissionCents: 300,
+        commissionSource: "file",
+      });
+    });
+  });
+
+  it("sets a commission on a matched trade but never replaces a typed one", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      const batchId = await newBatch(fixture);
+      const [open, typed] = await insertImportedTrades(
+        fixture.tx,
+        [
+          importedTrade(fixture, batchId),
+          importedTrade(fixture, batchId, { entryPrice: 20100 }),
+        ],
+        fixture.accountId,
+      );
+      // Typed between preview and commit.
+      await fixture.tx
+        .update(tradeAccounts)
+        .set({ commission: "9.99", commissionSource: "manual" })
+        .where(eq(tradeAccounts.tradeId, typed));
+
+      const written = await setImportedCommissions(
+        fixture.tx,
+        fixture.accountId,
+        [
+          { tradeId: open, commission: { cents: 300, source: "file" } },
+          { tradeId: typed, commission: { cents: 300, source: "file" } },
+        ],
+      );
+
+      expect(written).toBe(1);
+      expect(await assignment(fixture, open)).toEqual({
+        commission: "3.00",
+        commissionSource: "file",
+      });
+      expect(await assignment(fixture, typed)).toEqual({
+        commission: "9.99",
+        commissionSource: "manual",
+      });
+    });
+  });
+
+  it("protects a trade with a typed commission from an undo, not one from the file", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      const batchId = await newBatch(fixture);
+      const [, typed] = await insertImportedTrades(
+        fixture.tx,
+        [
+          importedTrade(fixture, batchId, {
+            commission: { cents: 300, source: "file" },
+          }),
+          importedTrade(fixture, batchId, {
+            entryPrice: 20100,
+            commission: { cents: 200, source: "rate" },
+          }),
+        ],
+        fixture.accountId,
+      );
+      await fixture.tx
+        .update(tradeAccounts)
+        .set({ commission: "2.50", commissionSource: "manual" })
+        .where(eq(tradeAccounts.tradeId, typed));
+
+      const [batch] = await listImportBatches(fixture.userId, fixture.tx);
+      expect(batch).toMatchObject({ id: batchId, total: 2, removable: 1 });
+    });
   });
 });

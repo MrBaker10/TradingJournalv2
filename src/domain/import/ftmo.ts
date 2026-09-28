@@ -211,6 +211,13 @@ function readRow(
     exitPrice,
     brokerTradeKey: ticket,
     filePnlCents: exitPrice === null ? null : toMinorUnits(total),
+    // Already inside the file P&L above; kept out of the commission column so
+    // it is not charged twice (current-feature.md, commissions: FTMO
+    // unchanged).
+    fileCommissionCents: null,
+    // One row is one position at one price each way: nothing is averaged.
+    entryAveraged: false,
+    exitAveraged: false,
     stopPrice: stop.stopPrice,
     stopNotice: stop.stopNotice,
     // One row is a whole trade; there is no Orders export to join.
