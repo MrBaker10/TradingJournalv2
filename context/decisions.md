@@ -3082,3 +3082,32 @@ SQL der Datei plus Zeile in `drizzle.__drizzle_migrations` (SHA-256 der Datei,
   bereits in der Vergangenheit.
 - `.env.neon.*` fehlen auf der Maschine; künftige Migrationen gehen entweder über die
   Dateien oder wieder über den Connector.
+
+## 2026-09-28 — P2.4 Nachtrag: CRON_SECRET in Production, erster Econ-Lauf — kein Branch
+
+**Gemacht.** Reine Konfiguration, kein Code. Der manuelle „Run“ von `/api/cron/econ`
+in Vercel lieferte dreimal 401. Ohne Secret aufgerufen antworteten `/api/cron/econ`
+und `/api/cron/fx` auf `tradingjournal-gamma-three.vercel.app` mit dem JSON-401 der
+eigenen Route, nicht mit Vercels Deployment Protection: `CRON_SECRET` war in Production
+nie gesetzt. Vercel hängt `Authorization: Bearer …` nur an, wenn die Variable existiert,
+also kam „Run“ ohne Header an. Sascha hat ein Secret mit 64 Hex-Zeichen erzeugt, es
+unter Settings → Environment Variables als `CRON_SECRET` für Production angelegt und
+redeployt. Das Secret stand nie im Chat und liegt nirgends lokal.
+
+**Verifiziert in Production.** Nach „Run“ hält `econ_events` auf Neon `main` 141 Events
+in 9 Währungen, 27.09. 23:50 UTC bis 03.10. 16:00 UTC, davon 10 High und 4 Holiday —
+dieselben Zahlen wie der lokale Lauf. Der Feed hat den Abruf von Vercel nicht mit 429
+abgewiesen. Next week fehlt, weil noch nicht veröffentlicht.
+
+**Damit erledigt.**
+- „`CRON_SECRET` in Vercel setzen“ aus dem ftmo-import-Eintrag (25.09.). Bis heute lief
+  auch der nächtliche fx-Cron jede Nacht in 401, vorläufig umgerechnete Trades wurden in
+  der Zeit nicht nachkorrigiert; ab der Nacht zum 29.09. läuft er mit.
+- „Ob der Abruf von Vercels geteilten IPs täglich durchkommt“ aus dem Eintrag P2.4 —
+  für den ersten Lauf ja; ein einzelner Lauf ist kein Beleg für jeden Tag.
+
+**Entschieden unterwegs.**
+- **Kein Auslesen des Secrets über den Vercel-Connector.** Es hätte im Verlauf der
+  Session gestanden; Sascha hat den Lauf selbst im Dashboard ausgelöst.
+- Der Vercel-Connector darf in diesem Team Deployments listen, aber keine Env-Variablen,
+  Logs oder Projektdaten lesen (403). Diagnose deshalb über die Antwort der Route selbst.
