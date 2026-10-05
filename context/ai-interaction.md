@@ -1,85 +1,61 @@
-# AI Interaction Guidelines
+# Workflow and verification
 
-Project: **Trading-Journal**. Read `context/project-structure.md`
-for the module map and `context/coding-standards.md` before writing code.
+Source of truth for workflow and gates. Approval boundaries are in `../AGENTS.md`;
+product and implementation rules belong to their topic documents.
 
-## Communication
+## Working loop
 
-- Be concise and direct.
-- Explain non-obvious decisions briefly.
-- **Ask when something is unclear. Never fill a gap with an assumption.** If the spec
-  does not say it, it is not decided.
-- Do not build anything listed under "Do not build" in `context/current-feature.md`.
-- Do not add features that are not in the current feature spec.
-- Never delete files without asking first.
-- Ask before large refactors or architectural changes.
+1. Read the active task in `current-feature.md`. For a new feature or fix, record
+   Goal, Scope, Do not build, Acceptance and Open questions before implementation.
+   User approval of a concrete proposal authorizes that scope; do not ask again.
+2. Work on `feature/[name]` or `fix/[name]`. Preserve unrelated working-tree changes.
+3. Implement the agreed scope using existing patterns. Avoid unrelated refactors.
+4. Verify using the policy below; fix failures caused by the change. Explain existing
+   failures or missing prerequisites rather than claiming a passing gate.
+5. Review the diff against the task and applicable product rules. Ask before commit;
+   do not commit with failing or incomplete required gates.
+6. Use conventional commits (`feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`),
+   one feature/fix per commit. Never mention Claude or AI generation in messages.
+7. Merge after the approved commit; ask before resolving conflicts or deleting a
+   branch. After merge, append a short entry to `history.md` and reset the active task.
+   Durable rationale goes in `decisions.md` (append-only), not in long History entries.
 
-## Workflow
+## Verification policy
 
-Same loop for every feature and every fix:
+**Application code, dependencies, build configuration or schema changes:** run these
+before asking to commit, in order:
 
-1. **Document** — write the feature into `context/current-feature.md`, including its
-   "Do not build" list.
-2. **Branch** — `feature/[name]` or `fix/[name]`.
-3. **Implement** — only what the spec says.
-4. **Verify** — four gates, in this order:
-   - `pnpm lint` (Biome)
-   - `pnpm typecheck` (tsc from TypeScript 7)
-   - `pnpm test` for anything touching `src/domain/**`
-   - `pnpm build`, then click through the affected screens in the browser
-5. **Iterate** — fix and re-verify.
-6. **Commit** — only after all four gates pass. Ask first.
-7. **Merge** to main, then ask before deleting the branch.
-8. **Record** — mark done in `context/current-feature.md` and append one line to History.
+1. `pnpm lint`
+2. `pnpm typecheck`
+3. `pnpm test` (the full suite, not only when domain files change)
+4. `pnpm build`
+5. Exercise the affected user flows in the browser. State the click path and result;
+   if unavailable, mark it pending. For changes with no affected screen, explain why
+   browser verification is not applicable.
 
-If the build fails, fix it before committing. Do not commit around a failing gate.
+During implementation, use focused checks first. After a correction, rerun affected
+checks; the final code must pass the full ordered gate once before commit approval.
+Do not repeat successful checks when neither their inputs nor the environment changed.
 
-## Domain logic is not optional
+**Documentation-only changes:** check accuracy against the relevant source, paths,
+links, consistency and `git diff --check`; inspect new/untracked files too. Application
+lint/typecheck/tests/build and browser checks are not required unless executable code,
+configuration or application behaviour also changes.
 
-Anything in `src/domain/**` (P&L, R multiples, streaks, consistency score, badges,
-CSV shape detection) requires unit tests in the same commit. These
-rules are the product. A silent change to a streak rule is a bug the user only finds
-weeks later, so no PR touching `src/domain/**` is done without tests.
+**Database tests:** `../vitest.setup.ts` reads `.env.local`; query tests use real Postgres
+and some skip when it is unreachable. For SQL/query/schema changes, relevant DB tests
+must execute and pass. Skipped tests are not verification. Report skipped counts and
+missing prerequisites; consult `operations.md` before database setup or migrations.
 
-## Commits
+**Domain changes:** include meaningful Vitest coverage in the same commit. Explain
+changes to existing assertions in terms of the intended product rule; never weaken
+an assertion merely to make a gate pass.
 
-- Ask before committing. Never auto-commit.
-- Conventional messages: `feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`.
-- One feature or fix per commit.
-- Never mention Claude or AI generation in commit messages.
+## Review and reporting
 
-## Code changes
-
-- Minimal change that accomplishes the task.
-- Do not refactor unrelated code unless asked.
-- No "nice to have" additions.
-- Preserve existing patterns. If a pattern seems wrong, say so instead of quietly
-  introducing a second one.
-
-## When stuck
-
-- After 2–3 failed attempts, stop and explain the problem. No random fixes.
-- If a requirement is ambiguous, ask. Do not pick the interpretation that is easiest
-  to build.
-- If external documentation is needed (Next.js 16, Drizzle, Better Auth), read the
-  current docs rather than relying on memory. Version drift is a real cost in this
-  stack.
-
-## Review checklist
-
-Review generated code against these, in this order:
-
-1. **Money** — no floating point on prices, points, P&L or R. See "Money" in
-   `context/coding-standards.md`.
-2. **Ownership** — every query filters by the current user. No route trusts an id from
-   the client without an ownership check. Account ids from the client are verified
-   against the current user before a trade is assigned to them.
-3. **Visibility** — no route is reachable without a session. There is no public page,
-   share token or read-only view anywhere in this project.
-4. **Time** — chart-clock times stay unconverted. Only econ events and audit columns
-   are timezone-aware.
-5. **Domain rules** — streak, consistency and badge behaviour matches
-   `context/project-structure.md`. Any deviation needs a test proving it is intended.
-6. **Performance** — no N+1 in the journal list or analytics; aggregate in SQL, not in
-   TypeScript.
-7. **Migrations** — schema change and its generated migration land in the same commit.
+- Check money/currency/account multipliers, ownership/auth exceptions, chart-clock
+  time, domain rules, SQL aggregation/N+1 and schema/migration pairing as applicable.
+- Be concise. Report what changed, why, verification results and any pending checks.
+- Ask about unresolved requirements; after 2–3 failed attempts at the same problem,
+  stop and explain the evidence. Use current, version-appropriate framework docs
+  when local documentation does not answer the question.

@@ -6,9 +6,9 @@ gibt. Grundlage: Vision-UI-Designsprache in der Palette „Marineblau · Azure",
 Schrift Instrument Sans, plus die Empfehlungen aus Kapitel 09 (Emotional Design
 Case Studies).
 
-Die Landing-Page ist **nicht** Teil dieses Dokuments und kommt später separat.
-Sie wäre die einzige öffentliche Seite des Projekts und braucht dafür eine
-ausdrückliche Ausnahme von der Regel „no public pages" in `project-overview.md`.
+Eine vollständige Landing-Page ist **nicht** Teil dieses Dokuments und kommt später
+separat. Die bestehende Startseite bietet nur Anmeldung und Registrierung; die
+zulässigen öffentlichen Routen stehen in `coding-standards.md` → „Visibility“.
 
 **Stack-Vorgaben aus `coding-standards.md`, die hier gelten:** Tailwind CSS v4 mit
 `@theme` in `src/app/globals.css`, keine `tailwind.config.*`, shadcn/ui wo
@@ -1355,8 +1355,8 @@ Die fünf Punkte dieses Abschnitts sind abgearbeitet:
    unter Future.
 4. **Zusatzkennzahlen** — Missed setups, By the book und Current streak sind
    aufgenommen. „Room to daily loss" ist gestrichen.
-5. **Landing-Page** — bleibt ein separates Dokument und braucht als einzige
-   öffentliche Seite eine ausdrückliche Ausnahme von der „no public pages"-Regel.
+5. **Landing-Page** — bleibt ein separates Dokument. Die bestehende minimale
+   Startseite und Auth-Routen sind in `coding-standards.md` → „Visibility“ geregelt.
 
 Offen bleiben drei, weil sie Gestaltung und nicht Entscheidung sind:
 

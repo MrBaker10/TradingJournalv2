@@ -367,8 +367,8 @@ they do not get forgotten:
 1. **Jobs** — three cron route handlers (FX daily, econ sync, month close), protected
    by a secret header, runnable locally via `pnpm job:*`.
 2. **Ownership** — every query filters by the current user, and `account_id` values
-   from the client are verified against them. There is no public surface at all, which
-   is exactly why an accidental one must never appear.
+   from the client are verified against them. Public route exceptions are limited to
+   those in `coding-standards.md` → “Visibility”; journals remain private.
 3. **Money** — integer minor units in the domain, `numeric` in the database, no
    `number` arithmetic on money, property-based tests on `pnl.ts`.
 4. **Import** — parsed client-side for the preview, written server-side in a chunked
@@ -408,7 +408,8 @@ Also settled there and load-bearing elsewhere:
 - Colours are `@theme` tokens; no hex or `rgba()` literal in a component.
 - A **practice account is marked permanently** while selected, because its numbers
   render in the same green and red as real money.
-- Responsive web only. Sidebar across seven sections. No public pages.
+- Responsive web only. Sidebar across seven sections behind login; route exceptions
+  are defined in `coding-standards.md` → “Visibility”.
 - Empty states carry the rules, since a new account has no data to show.
 
 ---
@@ -440,11 +441,12 @@ flowchart LR
   Session --> App[Journal]
 ```
 
-Every route requires a session. There is no guest surface and no public token.
+User data requires a session and ownership checks. The complete route exceptions and
+their protections are in `coding-standards.md` → “Visibility”. No public journal token.
 
-The current user is reached through `getCurrentUser()` and nothing else. In phase 1 it
-returns the seeded local user; in phase 2 the implementation swaps to Better Auth. No
-component and no query reads a session directly.
+Application code reaches the current user through `getCurrentUser()`, backed by Better
+Auth. Components and queries do not read sessions directly; the proxy and auth
+infrastructure perform their own checks.
 
 ---
 
@@ -534,8 +536,9 @@ Context files: `project-overview.md` (this file), `project-structure.md`,
   leaderboard, no `/shared` route, no read-only views. The journal is visible to its
   owner and to nobody else. If this ever returns it needs a dedicated read model, so it
   is a feature and not a toggle.
-- **No public pages.** The one planned exception is a future landing page, which gets
-  its own document and its own review. Until then an unauthenticated route is a bug.
+- **No public journal data.** Route exceptions are defined in
+  `coding-standards.md` → “Visibility”. A fuller landing page requires its own design
+  and review; the existing front page only offers sign-in and registration.
 - No light mode and no theme toggle in v1.
 - **No raffle, no prizes, no rewards outside the app.** Streak, score and badges are the
   whole feedback loop, and all three are self-contained.
