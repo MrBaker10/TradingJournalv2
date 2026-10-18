@@ -809,7 +809,7 @@ by picking a different answer while coding.
   slice of its own, not a fix inside a page. "Responsive web only" in
   `project-structure.md` makes it a gap, not a scope question. Scheduled 2026-09-25
   as its own slice at the end, after the feature slices. Layout decided 2026-10-18:
-  top bar plus drawer, Phase 3 item 2.
+  top bar plus drawer, Phase 3 item 2. Built and merged 2026-10-19.
 
 - **`datesNeedingFetch` can settle a day that was never fetched.** Found on 2026-09-25
   while testing display-currency; the rule comes from account-currency. A date counts as
@@ -818,7 +818,7 @@ by picking a different answer while coding.
   newer rates were stored). Such a day then gets a rate up to seven days old, for an
   import's conversion as much as for display. Not fixed; needs its own small slice that
   records which date ranges were actually fetched, or re-checks the gap. Decided
-  2026-10-18: record fetched ranges, Phase 3 item 1.
+  2026-10-18: record fetched ranges, Phase 3 item 1. Fixed and merged 2026-10-18.
 
 New questions belong in the Open questions block of `context/current-feature.md` while
 a feature is in progress, and move up here once they affect the project as a whole.
