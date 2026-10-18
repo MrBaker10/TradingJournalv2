@@ -1,0 +1,6 @@
+#!/bin/sh
+# Blocks the commit unless the project gates pass. Enabled via `git config core.hooksPath .githooks`.
+set -e
+pnpm typecheck
+pnpm test
+pnpm build
