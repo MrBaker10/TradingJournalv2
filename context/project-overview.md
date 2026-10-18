@@ -505,24 +505,50 @@ Context files: `project-overview.md` (this file), `project-structure.md`,
 - Screenshots on object storage with signed URLs
 - Econ calendar sync, FX rate job, month-close job (monthly score snapshot)
 
+### **Phase 3 — after account-settings-redesign**
+
+Decided 2026-10-18. Ordered by correctness, then usability, then dependencies; one spec
+and branch per item. Terms in `GLOSSARY.md`.
+
+1. **FX fetch coverage (bugfix).** Store the date ranges actually fetched per currency;
+   a date is settled only inside a fetched range. Fixes the `datesNeedingFetch` gap
+   under Open Questions.
+2. **Mobile app shell.** Below `lg`: a top bar with page title, the always-visible
+   account selector (practice edge stripe included) and a menu button that opens the
+   existing sidebar as a drawer.
+3. **Ledger.** Own page `/ledger`, an eighth nav item. A ledger entry belongs to the user
+   and optionally to one real account, never a practice account. Two kinds: expense
+   (evaluation, reset, activation, subscription, data, other) and payout, entered by
+   hand, stored in USD, shown per the display-currency rule. The ledger net is never
+   combined with trading P&L (`docs/adr/0002`).
+4. **Account ↔ prop firm program link.** Real accounts only. The user enters the account
+   rules when linking, with the program's rule text as reference (`docs/adr/0001`).
+   v1 checks profit target, max drawdown (static or EOD trailing, optional lock level;
+   intraday trailing is shown as not checkable), daily loss limit, consistency percentage
+   and minimum trading days. An attempt runs from the evaluation start or the latest
+   reset expense (a free reset is logged at $0); payouts lower the balance for rule
+   checks. Days are trading days as in the streak rule; copy trades count per account,
+   unmultiplied. A funded account is its own account with its own rules — no phase
+   field, no automatic archiving. A "Rule status" card (ok, close in amber, breached in
+   red) shows on the dashboard only when exactly one linked account is selected; detail
+   lives in account settings. No push notifications, no celebration, no score effect.
+   Overnight and news flags stay deferred.
+5. **Weekly review.** A review week runs Sunday to Friday in `users.timezone`. Three free
+   text fields (what worked, what did not, focus next week) beside a read-only summary
+   over all real accounts: logged days, by-the-book share, top three mistakes, missed
+   setups and Net P&L as a neutral figure. Belongs to the user, not an account. No effect
+   on the consistency score; a badge is decided in its own spec.
+
 ### **Future**
 
 - Light mode — a separate design round, not a token override
 - Landing page — the only public surface, own document
 - Component-level design for Analytics and Prop Firm Rules
-- Weekly review workflow
 - Richer prop firm compare
 - Per-account equity curves side by side
-- **Account ↔ prop firm program link.** A nullable `prop_firm_program_id` on `accounts`
-  turns the rules reference into a warning system for the account being traded:
-  progress toward the profit target, distance to the EOD trailing drawdown floor, the
-  consistency-rule check on best day versus total profit, minimum trading days, and
-  after-the-fact flags for overnight or restricted-window trades using the econ
-  calendar. Deliberately not in Phase 1: it needs numeric rule columns beside the
-  display text (the file says "$2,000 (EOD)" and notes where a firm's own pages
-  conflict), plus a starting balance, an evaluation start date, and payout and reset
-  events per account. None of that exists yet, and a warning computed from the wrong
-  number is worse than no warning.
+- **Personal rulebook** — the trader's own rules (max daily loss, sessions) with daily
+  adherence. Deferred 2026-10-18: it overlaps mistakes and the pre-market plan, and
+  feeding plan adherence would change the consistency score rules.
 
 ---
 
@@ -782,8 +808,8 @@ by picking a different answer while coding.
   detail page on 2026-09-24; it affects every page behind the session, so it is a
   slice of its own, not a fix inside a page. "Responsive web only" in
   `project-structure.md` makes it a gap, not a scope question. Scheduled 2026-09-25
-  as its own slice at the end, after the feature slices; the layout itself is still
-  open.
+  as its own slice at the end, after the feature slices. Layout decided 2026-10-18:
+  top bar plus drawer, Phase 3 item 2.
 
 - **`datesNeedingFetch` can settle a day that was never fetched.** Found on 2026-09-25
   while testing display-currency; the rule comes from account-currency. A date counts as
@@ -791,7 +817,8 @@ by picking a different answer while coding.
   days — even when the days in between were never fetched (an old file imported after
   newer rates were stored). Such a day then gets a rate up to seven days old, for an
   import's conversion as much as for display. Not fixed; needs its own small slice that
-  records which date ranges were actually fetched, or re-checks the gap.
+  records which date ranges were actually fetched, or re-checks the gap. Decided
+  2026-10-18: record fetched ranges, Phase 3 item 1.
 
 New questions belong in the Open questions block of `context/current-feature.md` while
 a feature is in progress, and move up here once they affect the project as a whole.
