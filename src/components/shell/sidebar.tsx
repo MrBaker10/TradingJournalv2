@@ -35,7 +35,7 @@ export function Sidebar({
   }
 
   return (
-    <aside className="card-surface edge sticky top-6 flex h-[calc(100vh-48px)] w-[260px] shrink-0 flex-col overflow-y-auto">
+    <aside className="card-surface edge flex w-full shrink-0 flex-col lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-[260px] lg:overflow-y-auto">
       <div className="flex items-center gap-3 px-5 pt-6 pb-5">
         <div className="h-7 w-7 shrink-0 rounded-xs bg-[image:var(--gradient-info)] shadow-[var(--shadow-neon)]" />
         <span className="cap">Trading Journal</span>
@@ -43,7 +43,10 @@ export function Sidebar({
 
       <div className="mx-5 h-px bg-[linear-gradient(to_right,transparent,var(--color-divider-glow),transparent)] shadow-[0_0_8px_var(--color-divider-glow)]" />
 
-      <nav aria-label="Main" className="flex flex-1 flex-col gap-1 px-3 py-4">
+      <nav
+        aria-label="Main"
+        className="grid grid-cols-2 gap-1 px-3 py-4 sm:grid-cols-3 lg:flex lg:flex-1 lg:flex-col"
+      >
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || pathname.startsWith(`${href}/`);
 
@@ -86,7 +89,7 @@ export function Sidebar({
                 <span className="relative z-10">{label}</span>
               </Link>
               {href === "/progress" && (
-                <div className="mx-2 my-2 h-px bg-[linear-gradient(to_right,transparent,var(--color-divider-glow),transparent)] shadow-[0_0_8px_var(--color-divider-glow)]" />
+                <div className="mx-2 my-2 hidden h-px bg-[linear-gradient(to_right,transparent,var(--color-divider-glow),transparent)] shadow-[0_0_8px_var(--color-divider-glow)] lg:block" />
               )}
             </Fragment>
           );

@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
-import { amountToCents, centsToAmount } from "../../domain/commission.ts";
+import { amountToCents } from "../../domain/commission.ts";
 import { db } from "../index.ts";
 import { accountCommissionRates, accounts } from "../schema/accounts.ts";
 import { instruments } from "../schema/instruments.ts";
@@ -50,59 +50,4 @@ export async function listCommissionRates(
     instrumentSymbol: row.instrumentSymbol,
     perSideCents: amountToCents(row.perSide),
   }));
-}
-
-/**
- * Sets one rate, replacing the account's earlier rate for that instrument.
- * Returns false when the account is not this user's. A stored commission is
- * never touched here — a new rate applies to the next save only.
- */
-export async function setCommissionRate(
-  userId: number,
-  accountId: number,
-  instrumentId: number,
-  perSideCents: number,
-): Promise<boolean> {
-  const [owned] = await db
-    .select({ id: accounts.id })
-    .from(accounts)
-    .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
-    .limit(1);
-  if (owned === undefined) return false;
-
-  await db
-    .insert(accountCommissionRates)
-    .values({ accountId, instrumentId, perSide: centsToAmount(perSideCents) })
-    .onConflictDoUpdate({
-      target: [
-        accountCommissionRates.accountId,
-        accountCommissionRates.instrumentId,
-      ],
-      set: { perSide: centsToAmount(perSideCents) },
-    });
-  return true;
-}
-
-/** Removes one rate. Returns false when the account is not this user's. */
-export async function removeCommissionRate(
-  userId: number,
-  accountId: number,
-  instrumentId: number,
-): Promise<boolean> {
-  const [owned] = await db
-    .select({ id: accounts.id })
-    .from(accounts)
-    .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
-    .limit(1);
-  if (owned === undefined) return false;
-
-  await db
-    .delete(accountCommissionRates)
-    .where(
-      and(
-        eq(accountCommissionRates.accountId, accountId),
-        eq(accountCommissionRates.instrumentId, instrumentId),
-      ),
-    );
-  return true;
 }

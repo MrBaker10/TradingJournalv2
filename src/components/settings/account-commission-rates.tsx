@@ -1,17 +1,12 @@
 "use client";
 
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState, useTransition } from "react";
-import { removeCommissionRate, setCommissionRate } from "@/actions/accounts";
-import { InlineMessage } from "@/components/ui/inline-message";
-import { formatCentsPlain } from "@/lib/money";
-import { setCommissionRateSchema } from "@/schemas/accounts";
+import { useId, useState } from "react";
 
 export interface CommissionRateData {
   instrumentId: number;
   instrumentSymbol: string;
-  /** USD per contract and side, in integer cents. */
   perSideCents: number;
 }
 
@@ -20,93 +15,63 @@ export interface InstrumentOption {
   symbol: string;
 }
 
-interface AccountCommissionRatesProps {
-  accountId: number;
-  rates: CommissionRateData[];
-  instruments: InstrumentOption[];
+export interface CommissionDraft {
+  key: string;
+  instrumentId: string;
+  perSide: string;
 }
 
-/**
- * The per-side rates an account pays, collapsed by default (decided
- * 2026-09-28, commissions). A rate only fills in where no import file said
- * what was charged, and changing it never touches a stored commission.
- */
+export const ACCOUNT_FIELD_CLASS =
+  "h-11 w-full min-w-0 rounded-ctl border border-white/12 bg-well px-3 text-sm text-fg transition-colors placeholder:text-fg-placeholder hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-50";
+
 export function AccountCommissionRates({
-  accountId,
   rates,
   instruments,
-}: AccountCommissionRatesProps) {
+  onChange,
+  errors,
+}: {
+  rates: CommissionDraft[];
+  instruments: InstrumentOption[];
+  onChange: (rates: CommissionDraft[]) => void;
+  errors: Record<string, string>;
+}) {
+  function update(key: string, values: Partial<CommissionDraft>) {
+    onChange(
+      rates.map((rate) => (rate.key === key ? { ...rate, ...values } : rate)),
+    );
+  }
   const [open, setOpen] = useState(false);
-  const [instrumentId, setInstrumentId] = useState<number | "">("");
-  const [amount, setAmount] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const panelId = `account-commission-${accountId}`;
-
-  function handleSet() {
-    const parsed = setCommissionRateSchema.safeParse({
-      accountId,
-      instrumentId: instrumentId === "" ? undefined : instrumentId,
-      perSide: amount.trim() === "" ? undefined : Number(amount),
-    });
-    if (!parsed.success) {
-      setError(
-        instrumentId === ""
-          ? "Pick an instrument"
-          : parsed.error.issues[0].message,
-      );
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await setCommissionRate(parsed.data);
-      if (!result.success) {
-        setError(result.error);
-        return;
-      }
-      setError(null);
-      setInstrumentId("");
-      setAmount("");
-    });
-  }
-
-  function handleRemove(rateInstrumentId: number) {
-    startTransition(async () => {
-      const result = await removeCommissionRate({
-        accountId,
-        instrumentId: rateInstrumentId,
-      });
-      setError(result.success ? null : result.error);
-    });
-  }
-
+  const panelId = useId();
+  // A rejected save must show its rate errors, so they keep the panel open.
+  const expanded =
+    open ||
+    Object.keys(errors).some((key) => key.startsWith("commissionRates"));
   return (
-    <div className="flex flex-col border-white/8 border-t pt-3">
+    <div className="border-t border-white/8 pt-5">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        aria-expanded={open}
+        aria-expanded={expanded}
         aria-controls={panelId}
-        className="flex h-10 items-center justify-between gap-3 text-left"
+        className="flex min-h-11 w-full items-center justify-between gap-3 text-left text-sm font-medium text-fg focus-visible:outline-cyan"
       >
-        <span className="flex flex-col">
-          <span className="text-xs text-fg-muted">Commission</span>
-          <span className="text-xs text-fg-subtle">
-            {rates.length === 0
-              ? "No rates set"
-              : `${rates.length} ${rates.length === 1 ? "rate" : "rates"} set`}
+        <span>
+          Commission{" "}
+          <span className="ml-2 font-normal text-fg-subtle">
+            {rates.length
+              ? `${rates.length} ${rates.length === 1 ? "rate" : "rates"}`
+              : "Optional"}
           </span>
         </span>
         <ChevronDown
           className={`h-4 w-4 shrink-0 text-fg-muted transition-transform duration-300 ${
-            open ? "rotate-180" : ""
+            expanded ? "rotate-180" : ""
           }`}
           aria-hidden="true"
         />
       </button>
-
       <AnimatePresence initial={false}>
-        {open && (
+        {expanded && (
           <motion.div
             id={panelId}
             key="rates"
@@ -116,92 +81,118 @@ export function AccountCommissionRates({
             transition={{ duration: 0.3, ease: [0.2, 0.7, 0.3, 1] }}
             className="overflow-hidden"
           >
-            <div className="flex flex-col gap-2 pt-2">
-              <span className="text-xs text-fg-subtle">
-                USD per contract and side. Used where an import file carries no
-                commission; saved trades keep theirs.
-              </span>
-
-              {rates.length > 0 && (
-                <ul className="flex flex-col">
-                  {rates.map((rate) => (
-                    <li
-                      key={rate.instrumentId}
-                      className="flex items-center justify-between gap-3"
+            <p className="mt-2 max-w-lg text-xs leading-relaxed text-fg-muted">
+              USD per contract and side. Used when an import has no commission.
+              Saved trades keep their existing commissions.
+            </p>
+            <div className="mt-4 flex flex-col gap-3">
+              {rates.map((rate, index) => (
+                <div
+                  key={rate.key}
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_44px] items-start gap-3"
+                >
+                  <div>
+                    <label
+                      htmlFor={`rate-${rate.key}-instrument`}
+                      className="mb-1.5 block text-xs text-fg-muted"
                     >
-                      <span className="font-mono text-fg text-sm">
-                        {rate.instrumentSymbol}
-                      </span>
-                      <span className="ml-auto font-mono text-fg-muted text-sm tabular-nums">
-                        {formatCentsPlain(rate.perSideCents)}
-                      </span>
-                      <button
-                        type="button"
-                        aria-label={`Remove the ${rate.instrumentSymbol} rate`}
-                        title="Remove rate"
-                        disabled={isPending}
-                        onClick={() => handleRemove(rate.instrumentId)}
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xs text-fg-muted transition-colors hover:text-fg disabled:opacity-30"
-                      >
-                        <X className="h-3.5 w-3.5" aria-hidden="true" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <div className="flex items-center gap-2">
-                <label htmlFor={`${panelId}-instrument`} className="sr-only">
-                  Instrument
-                </label>
-                <select
-                  id={`${panelId}-instrument`}
-                  value={instrumentId}
-                  onChange={(event) =>
-                    setInstrumentId(
-                      event.target.value === ""
-                        ? ""
-                        : Number(event.target.value),
-                    )
-                  }
-                  disabled={isPending}
-                  className="h-9 min-w-0 flex-1 rounded-ctl border border-white/12 bg-well px-2 text-sm text-fg transition-colors duration-200 hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60"
-                >
-                  <option value="">Instrument</option>
-                  {instruments.map((instrument) => (
-                    <option key={instrument.id} value={instrument.id}>
-                      {instrument.symbol}
-                    </option>
-                  ))}
-                </select>
-                <label htmlFor={`${panelId}-amount`} className="sr-only">
-                  Commission per side in USD
-                </label>
-                <input
-                  id={`${panelId}-amount`}
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  step="0.01"
-                  value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") handleSet();
-                  }}
-                  placeholder="0.50"
-                  disabled={isPending}
-                  className="h-9 w-20 shrink-0 rounded-ctl border border-white/12 bg-well px-2 text-right font-mono text-sm text-fg tabular-nums transition-colors duration-200 placeholder:text-fg-placeholder hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60"
-                />
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={handleSet}
-                  className="flex h-10 shrink-0 items-center rounded-xs px-2 text-xs text-fg-muted transition-colors hover:text-fg disabled:opacity-30"
-                >
-                  Set
-                </button>
-              </div>
-              <InlineMessage message={error} />
+                      Instrument
+                    </label>
+                    <select
+                      id={`rate-${rate.key}-instrument`}
+                      value={rate.instrumentId}
+                      onChange={(event) =>
+                        update(rate.key, { instrumentId: event.target.value })
+                      }
+                      className={ACCOUNT_FIELD_CLASS}
+                      aria-invalid={
+                        !!errors[`commissionRates.${index}.instrumentId`]
+                      }
+                      aria-describedby={
+                        errors[`commissionRates.${index}.instrumentId`]
+                          ? `rate-${rate.key}-instrument-error`
+                          : undefined
+                      }
+                    >
+                      <option value="">Select instrument</option>
+                      {instruments.map((instrument) => (
+                        <option
+                          key={instrument.id}
+                          value={instrument.id}
+                          disabled={rates.some(
+                            (other) =>
+                              other.key !== rate.key &&
+                              other.instrumentId === String(instrument.id),
+                          )}
+                        >
+                          {instrument.symbol}
+                        </option>
+                      ))}
+                    </select>
+                    <p
+                      id={`rate-${rate.key}-instrument-error`}
+                      className="mt-1 text-xs text-danger-fg"
+                    >
+                      {errors[`commissionRates.${index}.instrumentId`]}
+                    </p>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor={`rate-${rate.key}-amount`}
+                      className="mb-1.5 block text-xs text-fg-muted"
+                    >
+                      Per side (USD)
+                    </label>
+                    <input
+                      id={`rate-${rate.key}-amount`}
+                      inputMode="decimal"
+                      value={rate.perSide}
+                      onChange={(event) =>
+                        update(rate.key, { perSide: event.target.value })
+                      }
+                      placeholder="0.50"
+                      className={`${ACCOUNT_FIELD_CLASS} font-mono tabular-nums`}
+                      aria-invalid={
+                        !!errors[`commissionRates.${index}.perSide`]
+                      }
+                      aria-describedby={
+                        errors[`commissionRates.${index}.perSide`]
+                          ? `rate-${rate.key}-amount-error`
+                          : undefined
+                      }
+                    />
+                    <p
+                      id={`rate-${rate.key}-amount-error`}
+                      className="mt-1 text-xs text-danger-fg"
+                    >
+                      {errors[`commissionRates.${index}.perSide`]}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onChange(rates.filter((other) => other.key !== rate.key))
+                    }
+                    aria-label={`Remove commission rate ${index + 1}`}
+                    className="mt-6 flex h-11 w-11 items-center justify-center rounded-ctl text-fg-muted transition-colors hover:bg-white/5 hover:text-danger-fg focus-visible:outline-cyan"
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  onChange([
+                    ...rates,
+                    { key: crypto.randomUUID(), instrumentId: "", perSide: "" },
+                  ])
+                }
+                className="flex min-h-11 w-fit items-center gap-2 rounded-ctl px-3 text-sm text-cyan transition-colors hover:bg-white/5 focus-visible:outline-cyan"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add rate
+              </button>
             </div>
           </motion.div>
         )}

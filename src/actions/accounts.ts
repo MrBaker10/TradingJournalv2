@@ -4,43 +4,29 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/index";
 import {
+  AccountSaveError,
+  saveAccountDraft,
+} from "@/db/queries/account-editor";
+import {
   countAssignedTrades,
-  getNextSortOrder,
   getOwnedAccount,
   listActiveAccountsForSwitcher,
   type StartingBalanceValues,
-  updateAccountCurrency,
-  updateStartingBalance,
 } from "@/db/queries/accounts";
-import {
-  removeCommissionRate as removeCommissionRateRow,
-  setCommissionRate as setCommissionRateRow,
-} from "@/db/queries/commission-rates";
-import { getInstrumentById } from "@/db/queries/instruments";
 import { accounts } from "@/db/schema/accounts";
 import { users } from "@/db/schema/users";
 import type { AccountCurrency } from "@/domain/fx";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { convertToUsd } from "@/lib/fx/convert";
-import { dollarsToCents, exactCents, formatCentsPlain } from "@/lib/money";
+import { exactCents } from "@/lib/money";
 import { todayInTimeZone } from "@/lib/time";
 import {
+  accountIdSchema,
   createAccountSchema,
   moveAccountSchema,
-  removeCommissionRateSchema,
-  renameAccountSchema,
-  setAccountCurrencySchema,
-  setCommissionRateSchema,
   setSelectedAccountSchema,
-  setStartingBalanceSchema,
-  accountIdSchema as togglePracticeAccountIdSchema,
-  togglePracticeSchema,
+  updateAccountSchema,
 } from "@/schemas/accounts";
-
-/** A stored `numeric(14, 2)` as whole cents; it has two decimals by type. */
-function exactStoredCents(stored: string): number {
-  return dollarsToCents(Number(stored));
-}
 
 /**
  * A validated starting balance as whole cents. The schema has already refused
@@ -49,9 +35,6 @@ function exactStoredCents(stored: string): number {
 function balanceCents(amount: number | undefined): number {
   return amount === undefined ? 0 : (exactCents(amount) ?? 0);
 }
-
-const LOCKED_CURRENCY_ERROR =
-  "This account has trades. Its currency can no longer change.";
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -89,65 +72,66 @@ async function startingBalanceValues(
   };
 }
 
+async function saveAccountInput(
+  input: unknown,
+  editing: boolean,
+): Promise<ActionResult<{ id: number }>> {
+  const parsed = (
+    editing ? updateAccountSchema : createAccountSchema
+  ).safeParse(input);
+  if (!parsed.success)
+    return { success: false, error: parsed.error.issues[0].message };
+  const user = await getCurrentUser();
+  try {
+    const data = parsed.data;
+    const saved = await saveAccountDraft(
+      user.id,
+      {
+        accountId: "accountId" in data ? (data.accountId as number) : undefined,
+        name: data.name,
+        isPractice: data.isPractice,
+        currency: data.currency,
+        balanceCents: balanceCents(data.startingBalance),
+        commissionRates: data.commissionRates.map((rate) => ({
+          instrumentId: rate.instrumentId,
+          perSideCents: exactCents(rate.perSide) ?? 0,
+        })),
+      },
+      async (cents, currency) => {
+        const result = await startingBalanceValues(
+          cents,
+          currency,
+          user.timezone,
+        );
+        if ("error" in result) throw new AccountSaveError(result.error);
+        return result;
+      },
+    );
+    revalidatePath("/", "layout");
+    return { success: true, data: saved };
+  } catch (error) {
+    if (error instanceof AccountSaveError)
+      return { success: false, error: error.message };
+    console.error("Account save failed", {
+      name: error instanceof Error ? error.name : "UnknownError",
+    });
+    return {
+      success: false,
+      error: "Couldn't save the account. Nothing was saved — try again.",
+    };
+  }
+}
+
 export async function createAccount(
   input: unknown,
 ): Promise<ActionResult<{ id: number }>> {
-  const parsed = createAccountSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message };
-  }
-
-  const user = await getCurrentUser();
-  const balance = await startingBalanceValues(
-    balanceCents(parsed.data.startingBalance),
-    parsed.data.currency,
-    user.timezone,
-  );
-  if ("error" in balance) {
-    return { success: false, error: balance.error };
-  }
-  const sortOrder = await getNextSortOrder(user.id);
-
-  const [created] = await db
-    .insert(accounts)
-    .values({
-      userId: user.id,
-      name: parsed.data.name,
-      sortOrder,
-      isDefaultForNewTrades: false,
-      isPractice: parsed.data.isPractice,
-      currency: parsed.data.currency,
-      startingBalance: formatCentsPlain(balance.amountCents),
-      startingBalanceUsd: formatCentsPlain(balance.usdCents),
-      startingBalanceRateDate: balance.rateDate,
-    })
-    .returning({ id: accounts.id });
-
-  revalidatePath("/", "layout");
-  return { success: true, data: { id: created.id } };
+  return saveAccountInput(input, false);
 }
 
-export async function renameAccount(
+export async function updateAccount(
   input: unknown,
-): Promise<ActionResult<null>> {
-  const parsed = renameAccountSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message };
-  }
-
-  const user = await getCurrentUser();
-  const account = await getOwnedAccount(user.id, parsed.data.accountId);
-  if (!account) {
-    return { success: false, error: "Account not found" };
-  }
-
-  await db
-    .update(accounts)
-    .set({ name: parsed.data.name })
-    .where(eq(accounts.id, account.id));
-
-  revalidatePath("/", "layout");
-  return { success: true, data: null };
+): Promise<ActionResult<{ id: number }>> {
+  return saveAccountInput(input, true);
 }
 
 export async function moveAccount(input: unknown): Promise<ActionResult<null>> {
@@ -197,7 +181,7 @@ export async function moveAccount(input: unknown): Promise<ActionResult<null>> {
 export async function archiveAccount(
   input: unknown,
 ): Promise<ActionResult<null>> {
-  const parsed = togglePracticeAccountIdSchema.safeParse(input);
+  const parsed = accountIdSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0].message };
   }
@@ -222,7 +206,7 @@ export async function archiveAccount(
 export async function unarchiveAccount(
   input: unknown,
 ): Promise<ActionResult<null>> {
-  const parsed = togglePracticeAccountIdSchema.safeParse(input);
+  const parsed = accountIdSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0].message };
   }
@@ -245,7 +229,7 @@ export async function unarchiveAccount(
 export async function hardDeleteAccount(
   input: unknown,
 ): Promise<ActionResult<null>> {
-  const parsed = togglePracticeAccountIdSchema.safeParse(input);
+  const parsed = accountIdSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0].message };
   }
@@ -273,7 +257,7 @@ export async function hardDeleteAccount(
 export async function setDefaultAccount(
   input: unknown,
 ): Promise<ActionResult<null>> {
-  const parsed = togglePracticeAccountIdSchema.safeParse(input);
+  const parsed = accountIdSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0].message };
   }
@@ -310,114 +294,6 @@ export async function setDefaultAccount(
   return { success: true, data: null };
 }
 
-export async function togglePractice(
-  input: unknown,
-): Promise<ActionResult<null>> {
-  const parsed = togglePracticeSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message };
-  }
-
-  const user = await getCurrentUser();
-  const account = await getOwnedAccount(user.id, parsed.data.accountId);
-  if (!account) {
-    return { success: false, error: "Account not found" };
-  }
-
-  await db
-    .update(accounts)
-    .set({ isPractice: parsed.data.isPractice })
-    .where(eq(accounts.id, account.id));
-
-  revalidatePath("/", "layout");
-  return { success: true, data: null };
-}
-
-export async function setAccountCurrency(
-  input: unknown,
-): Promise<ActionResult<null>> {
-  const parsed = setAccountCurrencySchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message };
-  }
-
-  const user = await getCurrentUser();
-  const account = await getOwnedAccount(user.id, parsed.data.accountId);
-  if (!account) {
-    return { success: false, error: "Account not found" };
-  }
-
-  // Checked before a rate is fetched: an account with trades cannot change
-  // currency, and asking the ECB first would only turn that answer into a
-  // rate error when the source is down. The UPDATE re-checks it all the same.
-  if ((await countAssignedTrades(account.id)) > 0) {
-    return { success: false, error: LOCKED_CURRENCY_ERROR };
-  }
-
-  // A starting balance keeps its amount, read in the new currency, and is
-  // converted again at today's rate (decided 2026-09-25, account-balance).
-  const balance = await startingBalanceValues(
-    exactStoredCents(account.startingBalance),
-    parsed.data.currency,
-    user.timezone,
-  );
-  if ("error" in balance) {
-    return { success: false, error: balance.error };
-  }
-
-  // The lock is re-checked inside the UPDATE itself; the disabled select in
-  // the UI is only a hint (updateAccountCurrency).
-  const updated = await updateAccountCurrency(
-    user.id,
-    account.id,
-    parsed.data.currency,
-    db,
-    balance,
-  );
-  if (!updated) {
-    return { success: false, error: LOCKED_CURRENCY_ERROR };
-  }
-
-  revalidatePath("/", "layout");
-  return { success: true, data: null };
-}
-
-/**
- * Sets an account's starting balance. Always allowed: it moves where the
- * equity curve starts and changes no trade and no figure of the metric panel.
- */
-export async function setStartingBalance(
-  input: unknown,
-): Promise<ActionResult<null>> {
-  const parsed = setStartingBalanceSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message };
-  }
-
-  const user = await getCurrentUser();
-  const account = await getOwnedAccount(user.id, parsed.data.accountId);
-  if (!account) {
-    return { success: false, error: "Account not found" };
-  }
-
-  const balance = await startingBalanceValues(
-    balanceCents(parsed.data.startingBalance),
-    account.currency,
-    user.timezone,
-  );
-  if ("error" in balance) {
-    return { success: false, error: balance.error };
-  }
-
-  const updated = await updateStartingBalance(user.id, account.id, balance);
-  if (!updated) {
-    return { success: false, error: "Account not found" };
-  }
-
-  revalidatePath("/", "layout");
-  return { success: true, data: null };
-}
-
 export async function setSelectedAccount(
   input: unknown,
 ): Promise<ActionResult<null>> {
@@ -447,59 +323,5 @@ export async function setSelectedAccount(
     .where(eq(users.id, user.id));
 
   revalidatePath("/", "layout");
-  return { success: true, data: null };
-}
-
-/**
- * Sets the per-side rate an account pays for an instrument (commissions).
- * Stored commissions stay as they are; the rate applies to the next save.
- */
-export async function setCommissionRate(
-  input: unknown,
-): Promise<ActionResult<null>> {
-  const parsed = setCommissionRateSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message };
-  }
-
-  const user = await getCurrentUser();
-  const instrument = await getInstrumentById(parsed.data.instrumentId);
-  if (!instrument) {
-    return { success: false, error: "Instrument not found" };
-  }
-
-  const saved = await setCommissionRateRow(
-    user.id,
-    parsed.data.accountId,
-    instrument.id,
-    exactCents(parsed.data.perSide) ?? 0,
-  );
-  if (!saved) {
-    return { success: false, error: "Account not found" };
-  }
-
-  revalidatePath("/settings");
-  return { success: true, data: null };
-}
-
-export async function removeCommissionRate(
-  input: unknown,
-): Promise<ActionResult<null>> {
-  const parsed = removeCommissionRateSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message };
-  }
-
-  const user = await getCurrentUser();
-  const removed = await removeCommissionRateRow(
-    user.id,
-    parsed.data.accountId,
-    parsed.data.instrumentId,
-  );
-  if (!removed) {
-    return { success: false, error: "Account not found" };
-  }
-
-  revalidatePath("/settings");
   return { success: true, data: null };
 }

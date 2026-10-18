@@ -37,24 +37,35 @@ const accountFields = {
   currency: accountCurrencySchema.default("USD"),
 };
 
+const commissionRatesField = z
+  .array(
+    z.object({
+      instrumentId: z.number().int().positive("Pick an instrument"),
+      perSide: commissionField,
+    }),
+  )
+  .superRefine((rates, ctx) => {
+    const seen = new Set<number>();
+    rates.forEach((rate, index) => {
+      if (seen.has(rate.instrumentId)) {
+        ctx.addIssue({
+          code: "custom",
+          path: [index, "instrumentId"],
+          message: "Each instrument can only have one rate",
+        });
+      }
+      seen.add(rate.instrumentId);
+    });
+  });
+
 export const createAccountSchema = z.object({
   ...accountFields,
   startingBalance: startingBalanceField.optional(),
+  commissionRates: commissionRatesField.default([]),
 });
 
-// Built from the shared fields, not from createAccountSchema: a rename must
-// never carry a starting balance it could reset.
-export const renameAccountSchema = z.object({
-  ...accountFields,
+export const updateAccountSchema = createAccountSchema.extend({
   accountId: z.number().int().positive(),
-});
-
-export const setStartingBalanceSchema = accountIdSchema.extend({
-  startingBalance: startingBalanceField,
-});
-
-export const setAccountCurrencySchema = accountIdSchema.extend({
-  currency: accountCurrencySchema,
 });
 
 export const moveAccountSchema = z.object({
@@ -62,19 +73,6 @@ export const moveAccountSchema = z.object({
   direction: z.enum(["up", "down"]),
 });
 
-export const togglePracticeSchema = accountIdSchema.extend({
-  isPractice: z.boolean(),
-});
-
 export const setSelectedAccountSchema = z.object({
   accountId: z.number().int().positive().nullable(),
-});
-
-export const setCommissionRateSchema = accountIdSchema.extend({
-  instrumentId: z.number().int().positive(),
-  perSide: commissionField,
-});
-
-export const removeCommissionRateSchema = accountIdSchema.extend({
-  instrumentId: z.number().int().positive(),
 });
