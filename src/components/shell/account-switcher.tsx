@@ -24,10 +24,11 @@ export function AccountSwitcher({
   selectedAccountId,
 }: AccountSwitcherProps) {
   const [open, setOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{
+  const [menuAnchor, setMenuAnchor] = useState<{
     left: number;
     bottom: number;
     width: number;
+    container: Element;
   } | null>(null);
   const [, startTransition] = useTransition();
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -61,10 +62,13 @@ export function AccountSwitcher({
       // the sidebar's own overflow-y-auto would clip a dropdown positioned
       // relative to it, so this portals to document.body and anchors to the
       // button's screen position instead.
-      setMenuPosition({
+      // Inside the mobile drawer the menu has to portal into its modal
+      // dialog: everything outside an open modal dialog is inert.
+      setMenuAnchor({
         left: rect.left,
         bottom: window.innerHeight - rect.top + 4,
         width: rect.width,
+        container: buttonRef.current.closest("dialog") ?? document.body,
       });
     }
     setOpen((value) => !value);
@@ -109,15 +113,15 @@ export function AccountSwitcher({
       </button>
 
       {open &&
-        menuPosition &&
+        menuAnchor &&
         createPortal(
           <div
             ref={menuRef}
             style={{
               position: "fixed",
-              left: menuPosition.left,
-              bottom: menuPosition.bottom,
-              width: menuPosition.width,
+              left: menuAnchor.left,
+              bottom: menuAnchor.bottom,
+              width: menuAnchor.width,
             }}
             className="z-20 flex flex-col gap-0.5 rounded-ctl border border-white/12 bg-[image:var(--gradient-card)] p-1.5 shadow-[var(--shadow-card)]"
           >
@@ -167,7 +171,7 @@ export function AccountSwitcher({
               </button>
             ))}
           </div>,
-          document.body,
+          menuAnchor.container,
         )}
     </div>
   );

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { MobileShell } from "@/components/shell/mobile-shell";
 import { Sidebar } from "@/components/shell/sidebar";
 import { listActiveAccountsForSwitcher } from "@/db/queries/accounts";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
@@ -24,13 +25,16 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     (account) => account.id === user.selectedAccountId,
   );
 
+  const shell = {
+    displayName: user.displayName,
+    accounts,
+    selectedAccountId: user.selectedAccountId,
+  };
+
   return (
     <div className="flex flex-col gap-6 px-4 py-4 lg:flex-row lg:px-6 lg:py-6">
-      <Sidebar
-        displayName={user.displayName}
-        accounts={accounts}
-        selectedAccountId={user.selectedAccountId}
-      />
+      <MobileShell {...shell} />
+      <Sidebar {...shell} />
       {/* The right padding is the scrollbar's lane. Without it the bar of this
           own scroll container sits on the right edge of every card, and the
           content ends flush against the screen. */}
