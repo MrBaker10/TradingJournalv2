@@ -4,30 +4,27 @@ import { LogOut } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Fragment, useTransition } from "react";
-import type { SwitcherAccount } from "@/components/shell/account-switcher";
-import { AccountSwitcher } from "@/components/shell/account-switcher";
+import { Fragment, type ReactNode, useTransition } from "react";
 import { authClient } from "@/lib/auth/auth-client";
 import { isActiveHref, navItems } from "./nav-items";
 
-export interface SidebarContentProps {
-  displayName: string;
-  accounts: SwitcherAccount[];
-  selectedAccountId: number | null;
-}
-
 /**
- * What the sidebar holds — brand, navigation, account selector, user card —
- * shared by the desktop sidebar and the mobile drawer (Design.md §4.1), so
- * there is one navigation, not two. `onNavigate` lets the drawer close when a
- * page is chosen, the current one included.
+ * What the sidebar holds — brand, navigation, user card — shared by the
+ * desktop sidebar and the mobile drawer (Design.md §4.1), so there is one
+ * navigation, not two. `children` sits above the user card: the sidebar puts
+ * the account selector there, the drawer nothing (it lives in the top bar).
+ * `onNavigate` lets the drawer close when a page is chosen, the current one
+ * included.
  */
 export function SidebarContent({
   displayName,
-  accounts,
-  selectedAccountId,
   onNavigate,
-}: SidebarContentProps & { onNavigate?: () => void }) {
+  children,
+}: {
+  displayName: string;
+  onNavigate?: () => void;
+  children?: ReactNode;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [isSigningOut, startSignOut] = useTransition();
@@ -101,10 +98,7 @@ export function SidebarContent({
         })}
       </nav>
 
-      <AccountSwitcher
-        accounts={accounts}
-        selectedAccountId={selectedAccountId}
-      />
+      {children}
 
       <div className="m-3 flex items-center justify-between rounded-ctl bg-[image:var(--gradient-inset)] px-3 py-2.5">
         <span className="truncate text-sm text-fg">{displayName}</span>

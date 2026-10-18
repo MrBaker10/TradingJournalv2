@@ -270,12 +270,15 @@ in the page. A slim top bar takes its place, sticky at the top of the document:
 - Left: menu button (44px, icon only, `aria-label="Open navigation"`,
   `aria-expanded`), then the active navigation item's label as the page title in
   `--color-fg`, 15px, truncated. Pages keep their own heading; the title only orients.
+- Right: the account selector from 4.12, always visible, at most 45% of the bar; the
+  title gives way first. While a practice account is selected the bar carries
+  `--shadow-practice` as well.
 - No glow on the bar; the menu button follows the sidebar's icon-button hover and
   the focus ring from §8. While the drawer is open the button reports
   `aria-expanded="true"`; the bar itself shows no open state, the drawer covers it.
 
 The menu button opens a **drawer**: the sidebar's own content (brand, divider,
-navigation, account selector, user card) on a `card-surface edge` panel, docked left,
+navigation, user card — the account selector lives in the bar) on a `card-surface edge` panel, docked left,
 `min(85vw, 300px)` wide, full height, its own scroll. A close button (44px) sits in the
 panel's top-right corner. Behind it a backdrop of `rgba(0,0,0,.6)`. It is a modal
 dialog: the page behind is inert and does not scroll, Escape and a backdrop tap close
@@ -538,7 +541,10 @@ plus Neon-Inset. Texte wie im Ist-Stand („Where your edge actually lives",
 ### 4.12 Kontoschalter und Übungskonto
 
 Der Schalter sitzt in der Sidebar über der Nutzerkarte, nicht im Seitenkopf, damit
-er auf jeder Seite an derselben Stelle steht.
+er auf jeder Seite an derselben Stelle steht. Unterhalb des großen Breakpoints sitzt
+er rechts in der Top-Bar aus 4.1 — auch dort auf jeder Seite an derselben Stelle und
+nie hinter dem Menü verborgen. Sein Aufklapper öffnet dort nach unten, rechtsbündig
+am Schalter, mindestens 240px breit und nie über den Bildschirmrand hinaus.
 
 - Fläche mit Inset-Verlauf, `--radius-ctl`, darin `cap`-Label „ACCOUNT", darunter
   der Kontoname in 14px 600.
@@ -554,7 +560,8 @@ wie echtes Geld. Ohne dauerhaften Marker sieht ein Backtest-Ergebnis aus wie ein
 Kontoauszug. Deshalb:
 
 - `--shadow-practice` als 3px-Amber-Streifen an der linken Kante des Inhaltsbereichs,
-  fixiert, scrollt nicht weg.
+  fixiert, scrollt nicht weg — unterhalb des großen Breakpoints zusätzlich an der
+  Top-Bar aus 4.1, die beim Scrollen stehen bleibt.
 - Amber-Chip „PRACTICE" in `cap` neben dem Kontonamen im Schalter, mit
   `--color-practice-dim` als Fläche.
 - Kein Glow, kein Puls, keine Animation. Amber ist hier ruhig, wie bei den

@@ -1,6 +1,6 @@
 # Spec: Mobile app shell
 
-Status: ready-for-agent
+Status: done
 
 Roadmap: `context/project-overview.md` → Phase 3, item 2. Terms: `GLOSSARY.md`.
 

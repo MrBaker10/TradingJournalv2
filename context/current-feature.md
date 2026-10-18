@@ -7,22 +7,22 @@ History and reset this file to “Nothing in progress”.
 
 ## Status
 
-**In progress: mobile-shell, ticket 01** — Branch `feature/mobile-shell`
+**In progress: mobile-shell, ticket 02** (01 done) — Branch `feature/mobile-shell`
 
-## Feature: mobile-shell — 01 Top bar and drawer
+## Feature: mobile-shell — 02 Account selector in the top bar
 
-**Goal.** Below `lg` a slim top bar (page title, menu button) replaces the stacked
-sidebar; the menu opens the sidebar content as a drawer. Spec
-`.scratch/mobile-shell/spec.md`, ticket `.scratch/mobile-shell/issues/01-top-bar-and-drawer.md`.
+**Goal.** Below `lg` the account selector sits in the top bar, always visible, with the
+practice stripe on the bar; the drawer no longer holds it. Spec
+`.scratch/mobile-shell/spec.md`, ticket `.scratch/mobile-shell/issues/02-account-selector-in-top-bar.md`.
 
-**Scope.** Shell components (sidebar split into shared parts, top bar, drawer), app
-layout, `context/Design.md` §4.1 and §5. The account selector's menu portals into the
-drawer while it is open, so the modal dialog does not make it inert.
+**Scope.** Account selector placement variant (top bar: opens downward, right-aligned,
+kept on screen), sidebar content slot for the selector, mobile shell, `context/Design.md`
+§4.1 and §4.12. The ticket-01 portal into the drawer dialog is no longer needed.
 
 ### Do not build
 
-- Account selector in the top bar (ticket 02).
-- No navigation item changes, no page-level redesign, no gestures, no new dependency.
+- No change to how selection is stored or which accounts are offered.
+- No navigation item changes, no page-level redesign, no new dependency.
 
 ### Acceptance
 

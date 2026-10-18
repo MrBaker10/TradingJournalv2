@@ -4,8 +4,10 @@ import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { AccountSwitcher } from "./account-switcher";
 import { activeNavItem } from "./nav-items";
-import { SidebarContent, type SidebarContentProps } from "./sidebar-content";
+import type { ShellProps } from "./sidebar";
+import { SidebarContent } from "./sidebar-content";
 
 // Tailwind's `lg`: from here the desktop sidebar takes over (Design.md §4.1).
 const DESKTOP_QUERY = "(min-width: 64rem)";
@@ -20,13 +22,19 @@ const ICON_BUTTON_CLASS =
   "flex h-11 w-11 shrink-0 items-center justify-center rounded-ctl text-fg-muted transition-colors hover:bg-nav-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-[var(--color-cyan)] focus-visible:outline-offset-2";
 
 /**
- * Below `lg`: a top bar with the page title and a menu button that opens the
- * sidebar's content as a drawer (Design.md §4.1). The drawer is a native modal
+ * Below `lg`: a top bar with the page title, a menu button that opens the
+ * sidebar's content as a drawer, and the account selector, always in view
+ * (Design.md §4.1, §4.12). The drawer is a native modal
  * `<dialog>`, so the page behind is inert, focus stays inside and returns to
  * the menu button on close. It closes after its exit animation has run, except
  * at `lg`, where it is hidden at once and closes at once.
  */
-export function MobileShell(props: SidebarContentProps) {
+export function MobileShell({
+  displayName,
+  accounts,
+  selectedAccountId,
+  practiceSelected,
+}: ShellProps & { practiceSelected: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -69,7 +77,12 @@ export function MobileShell(props: SidebarContentProps) {
   return (
     <>
       <header
-        className={`card-surface edge ${OPAQUE_CARD} sticky top-4 z-30 flex h-14 items-center gap-2 px-3 lg:hidden`}
+        className={`card-surface edge ${OPAQUE_CARD} sticky top-4 z-30 flex h-14 items-center gap-2 px-3 lg:hidden ${
+          // The practice stripe sits beside the card's own shadow (§4.12).
+          practiceSelected
+            ? "shadow-[var(--shadow-practice),var(--shadow-card)]"
+            : ""
+        }`}
       >
         <button
           type="button"
@@ -81,7 +94,14 @@ export function MobileShell(props: SidebarContentProps) {
         >
           <Menu className="h-5 w-5" aria-hidden="true" />
         </button>
-        {title && <span className="truncate text-[15px] text-fg">{title}</span>}
+        <span className="min-w-0 flex-1 truncate text-[15px] text-fg">
+          {title}
+        </span>
+        <AccountSwitcher
+          accounts={accounts}
+          selectedAccountId={selectedAccountId}
+          placement="topBar"
+        />
       </header>
 
       <dialog
@@ -127,7 +147,10 @@ export function MobileShell(props: SidebarContentProps) {
                 >
                   <X className="h-5 w-5" aria-hidden="true" />
                 </button>
-                <SidebarContent {...props} onNavigate={() => setOpen(false)} />
+                <SidebarContent
+                  displayName={displayName}
+                  onNavigate={() => setOpen(false)}
+                />
               </motion.div>
             </>
           )}

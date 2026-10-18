@@ -21,9 +21,9 @@ export const dynamic = "force-dynamic";
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
   const accounts = await listActiveAccountsForSwitcher(user.id);
-  const selectedAccount = accounts.find(
-    (account) => account.id === user.selectedAccountId,
-  );
+  const practiceSelected =
+    accounts.find((account) => account.id === user.selectedAccountId)
+      ?.isPractice ?? false;
 
   const shell = {
     displayName: user.displayName,
@@ -33,14 +33,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex flex-col gap-6 px-4 py-4 lg:flex-row lg:px-6 lg:py-6">
-      <MobileShell {...shell} />
+      <MobileShell {...shell} practiceSelected={practiceSelected} />
       <Sidebar {...shell} />
       {/* The right padding is the scrollbar's lane. Without it the bar of this
           own scroll container sits on the right edge of every card, and the
           content ends flush against the screen. */}
       <main
         className={`min-w-0 flex-1 lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:overflow-y-auto lg:pr-4 ${
-          selectedAccount?.isPractice ? "shadow-[var(--shadow-practice)]" : ""
+          practiceSelected ? "shadow-[var(--shadow-practice)]" : ""
         }`}
       >
         {children}
