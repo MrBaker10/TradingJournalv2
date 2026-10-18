@@ -104,8 +104,8 @@ version upgrades belong in a separate commit that changes nothing else.
 
 ## Motion
 
-- `motion` for row expansion, disclosure panels, the streak bump, the load-in of
-  calendar and score, and the sidebar's active-nav-indicator (`AnimatePresence`
+- `motion` for row expansion, disclosure panels, the mobile navigation drawer, the
+  streak bump, the load-in of calendar and score, and the sidebar's active-nav-indicator (`AnimatePresence`
   scale/opacity spring, independent per item). CSS transitions for everything else:
   hover, focus, colour and border changes.
 - **Hover is CSS even when `motion` already wraps the component.** Reaching for

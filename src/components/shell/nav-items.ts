@@ -24,3 +24,13 @@ export const navItems: NavItem[] = [
   { label: "Econ Calendar", href: "/econ-calendar", icon: CalendarDays },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
+
+/** Whether `pathname` is `href` itself or a page below it. */
+export function isActiveHref(href: string, pathname: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** The navigation item the current page belongs to, if any. */
+export function activeNavItem(pathname: string): NavItem | undefined {
+  return navItems.find((item) => isActiveHref(item.href, pathname));
+}

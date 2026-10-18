@@ -17,18 +17,31 @@ export interface SwitcherAccount {
 interface AccountSwitcherProps {
   accounts: SwitcherAccount[];
   selectedAccountId: number | null;
+  /** Where it sits: the sidebar (desktop) or the mobile top bar (Design.md §4.12). */
+  placement?: "sidebar" | "topBar";
+}
+
+// The narrowest the top bar's menu gets, its distance to the screen edge, and
+// the gap between the switcher and its menu.
+const TOP_BAR_MENU_MIN_WIDTH = 240;
+const SCREEN_GUTTER = 16;
+const MENU_OFFSET = 4;
+
+/** The menu's measured screen position: opening up sets `bottom`, down `top`. */
+interface MenuPosition {
+  left: number;
+  width: number;
+  top?: number;
+  bottom?: number;
 }
 
 export function AccountSwitcher({
   accounts,
   selectedAccountId,
+  placement = "sidebar",
 }: AccountSwitcherProps) {
   const [open, setOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{
-    left: number;
-    bottom: number;
-    width: number;
-  } | null>(null);
+  const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
   const [, startTransition] = useTransition();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -46,8 +59,18 @@ export function AccountSwitcher({
       }
     }
 
+    // The position was measured on open; after a resize it is stale, and
+    // across `lg` the switcher it belongs to may not even be on screen.
+    function close() {
+      setOpen(false);
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("resize", close);
+    };
   }, [open]);
 
   const { real, practice } = groupAccountsForSwitcher(accounts);
@@ -57,15 +80,28 @@ export function AccountSwitcher({
   function toggleOpen() {
     if (!open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      // Opens upward: the switcher sits near the bottom of the sidebar, and
-      // the sidebar's own overflow-y-auto would clip a dropdown positioned
+      // The sidebar's own overflow-y-auto would clip a dropdown positioned
       // relative to it, so this portals to document.body and anchors to the
-      // button's screen position instead.
-      setMenuPosition({
-        left: rect.left,
-        bottom: window.innerHeight - rect.top + 4,
-        width: rect.width,
-      });
+      // button's screen position instead. In the sidebar it opens upward —
+      // the switcher sits near its bottom. In the top bar it opens downward,
+      // right-aligned to the switcher and kept inside the screen.
+      if (placement === "topBar") {
+        const width = Math.min(
+          Math.max(rect.width, TOP_BAR_MENU_MIN_WIDTH),
+          window.innerWidth - 2 * SCREEN_GUTTER,
+        );
+        setMenuPosition({
+          left: Math.max(SCREEN_GUTTER, rect.right - width),
+          top: rect.bottom + MENU_OFFSET,
+          width,
+        });
+      } else {
+        setMenuPosition({
+          left: rect.left,
+          bottom: window.innerHeight - rect.top + MENU_OFFSET,
+          width: rect.width,
+        });
+      }
     }
     setOpen((value) => !value);
   }
@@ -78,13 +114,21 @@ export function AccountSwitcher({
   }
 
   return (
-    <div className="relative mx-3 mt-3">
+    <div
+      className={
+        placement === "topBar"
+          ? "relative min-w-0 max-w-[45%] shrink-0"
+          : "relative mx-3 mt-3"
+      }
+    >
       <button
         ref={buttonRef}
         type="button"
         onClick={toggleOpen}
         aria-expanded={open}
-        className="flex w-full flex-col gap-0.5 rounded-ctl bg-[image:var(--gradient-inset)] px-3 py-2 text-left"
+        className={`flex w-full flex-col gap-0.5 rounded-ctl bg-[image:var(--gradient-inset)] px-3 text-left ${
+          placement === "topBar" ? "py-1" : "py-2"
+        }`}
       >
         <span className="cap">Account</span>
         <span className="flex items-center gap-1.5 text-sm font-semibold text-fg">
@@ -113,12 +157,7 @@ export function AccountSwitcher({
         createPortal(
           <div
             ref={menuRef}
-            style={{
-              position: "fixed",
-              left: menuPosition.left,
-              bottom: menuPosition.bottom,
-              width: menuPosition.width,
-            }}
+            style={{ position: "fixed", ...menuPosition }}
             className="z-20 flex flex-col gap-0.5 rounded-ctl border border-white/12 bg-[image:var(--gradient-card)] p-1.5 shadow-[var(--shadow-card)]"
           >
             <button
