@@ -119,9 +119,9 @@ counts against the user until it is over.
 plan adherence 25, review habit 15. Entries are averaged **per day first**, so twenty
 trades in one day count exactly as much as one. P&L, win rate and R affect nothing here.
 
-**Visibility.** There is none. Every route requires a session, every query filters by
-the current user, and no public or read-only surface exists. If an unauthenticated
-route ever appears, that is a bug.
+**Visibility.** Journal data is private and ownership-filtered. Session requirements
+and the limited auth/cron/front-page exceptions are defined in
+`coding-standards.md` → “Visibility”. There is no journal sharing.
 
 **Accounts.** Figures default to all accounts combined, switchable to one account and
 remembered per user. "All accounts" means all accounts with `is_practice` off; practice
@@ -143,6 +143,10 @@ The CSV export and prop firm limits stay in USD.
 
 ## Phases
 
+Historical delivery sequence, not current task status. Better Auth and the cron jobs
+are implemented. See `current-feature.md` for active work and `history.md` for delivery
+history.
+
 **Phase 1 — local, no auth.** Postgres 18 locally, seeded single user,
 `getCurrentUser()` returns it. The seed creates one default account, since a trade
 cannot exist without one. Instruments, user-created accounts, trades, missed
@@ -159,7 +163,8 @@ econ calendar sync and the cron jobs.
 
 - No sharing, publishing, leaderboard or read-only views of any kind.
 - No light mode and no theme toggle. Dark only.
-- No public pages; a future landing page is the single planned exception.
+- No public journal data; route exceptions are in coding standards → “Visibility”.
+  A fuller landing page remains a separate design task.
 - No raffle, prizes or rewards outside the app.
 - No native mobile app. Responsive web only.
 - No broker API integration. Trades arrive by hand or by CSV.
@@ -172,5 +177,5 @@ econ calendar sync and the cron jobs.
 
 ## Open decisions
 
-None. Everything technical is settled — see the Decisions list in
-`project-overview.md`.
+See `project-overview.md` → “Open Questions”; active task questions belong in
+`current-feature.md`. Do not infer answers from the historical phase plan.

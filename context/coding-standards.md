@@ -1,7 +1,9 @@
 # Coding Standards
 
-Stack of record, pinned as of 2026-09-08. Do not upgrade a line without a separate
-commit that changes nothing else.
+Version policy and technical patterns. Read the sections relevant to the task.
+`../package.json` records installed versions; this table also includes planned tools.
+A listed pin is not permission to install it. Ask before dependencies or upgrades;
+version upgrades belong in a separate commit that changes nothing else.
 
 | | |
 |---|---|
@@ -149,8 +151,8 @@ commit that changes nothing else.
 ## Database
 
 - Drizzle ORM. Schema in `src/db/schema/`, one file per domain area.
-- Migrations: `pnpm db:generate` then `pnpm db:migrate`. **Never `push`** outside a
-  throwaway local database. Schema change and migration in the same commit.
+- Migrations: `pnpm db:generate` then `pnpm db:migrate`. **Never `push`**.
+  Schema change and migration in the same commit.
 - Analytics and aggregation use the Drizzle **core API** (`select`, `groupBy`, window
   functions), not the Relational Query Builder. Drizzle 1.0 rewrites the RQB and this
   keeps the future upgrade small.
@@ -199,8 +201,8 @@ Non-negotiable, because this is a P&L tool:
 - Point value comes from the `instruments` table, never a literal in a component.
 - Derived P&L and R are computed in `src/domain/pnl.ts` and stay overridable by the
   user, exactly as the New Trade form shows.
-- Currency conversion is display-only. Trades stay in USD. Prop firm limits stay in
-  USD and are never converted.
+- After import/price-derived P&L has been converted to stored USD, further currency
+  conversion is display-only. Prop firm limits stay in USD and are never converted.
 - **Money aggregates multiply by assigned account count, count aggregates do not.** A
   trade on three accounts contributes three times to net P&L and once to trades logged.
   Getting this wrong misstates P&L silently, so every aggregate query states which of
@@ -267,9 +269,9 @@ Non-negotiable, because this is a P&L tool:
 
 ## Auth and storage seams
 
-- Access the current user only through `getCurrentUser()` in `src/lib/auth/`. In phase 1
-  it returns the seeded local user; in phase 2 the implementation swaps to Better Auth.
-  No component or query reads a session directly.
+- Access the current user through `getCurrentUser()` in `src/lib/auth/`; it reads
+  Better Auth. No component or query reads a session directly. Auth infrastructure
+  (including `proxy.ts`) performs its own session checks.
 - File access goes through the storage interface in `src/lib/storage/`. Local disk in
   development, Cloudflare R2 in production. Screenshots are private and served through
   signed URLs only.
@@ -288,8 +290,9 @@ Non-negotiable, because this is a P&L tool:
 
 - Validate on write: `https` scheme only, parsed with the URL API, length capped. No
   `http`, no `javascript:`, no `data:`.
-- **Never fetch a user-supplied URL server-side.** No link previews, no metadata
-  scraping, no thumbnail generation. That is an SSRF hole and it buys nothing here.
+- **Never fetch a user-supplied URL server-side.** No metadata scraping or server-side
+  thumbnail discovery. Browser-loaded preview images may be derived by the pure string
+  rule `snapshotImageUrl` in `src/lib/links.ts`; see `Design.md` §4.13.
 - Never embed a third-party URL in an iframe. Render an anchor with
   `target="_blank" rel="noopener noreferrer"`.
 - Links are per-trade data and, like notes and screenshots, never leave the owner's
@@ -297,10 +300,15 @@ Non-negotiable, because this is a P&L tool:
 
 ## Visibility
 
-- There is no public route, no share token and no read-only view. Every page and every
-  action runs behind a session and filters by the current user.
-- An unauthenticated route is a bug, not a feature. If one is needed later it needs its
-  own read model, reviewed on its own.
+- User data is private: application pages/actions/handlers require a session and
+  ownership checks. No share tokens, public journals or read-only sharing.
+- The route exceptions are `/`, `/login`, `/register`, `/api/auth/*` and `/api/cron/*`
+  (plus framework assets excluded by `src/proxy.ts`). `/` only offers sign-in and
+  registration and reads neither session nor user data. Better Auth handles its
+  protocol routes, including authentication required by individual operations. Cron
+  handlers check `CRON_SECRET` and return no user data.
+- New exceptions require an explicit product decision; keep this list and the proxy
+  aligned. Session/ownership checks in application code remain required even with proxy.
 
 ## Error handling
 
@@ -333,4 +341,4 @@ Non-negotiable, because this is a P&L tool:
 - No commented-out code.
 - No unused imports or variables.
 - Functions under 50 lines where possible.
-- `pnpm typecheck`, `pnpm test` and `pnpm build` all pass before a commit.
+- Verification policy and commit gates: `ai-interaction.md` → “Verification policy”.
