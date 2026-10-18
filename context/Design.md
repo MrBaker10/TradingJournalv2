@@ -261,6 +261,14 @@ Kapitälchen und muss gekürzt werden, nicht umgebrochen.
 
 ### 4.1 Sidebar
 
+**Small screens (account-settings-redesign).** Below the large breakpoint, stack
+the navigation above the content instead of squeezing forms beside a 260px sidebar.
+Navigation links form two columns (three from the small breakpoint); the account
+switcher and user controls remain reachable. The document scrolls normally. At the
+large breakpoint and above, retain the existing fixed-width sidebar and separate
+content scroll area. This is a CSS layout correction, not a second navigation system.
+
+
 - Karte mit `card-surface edge`, `position: sticky`, `top: 24px`,
   `height: calc(100vh - 48px)`, eigener Scroll.
 - Marke: 28px Tile mit `--gradient-info` und `--shadow-neon`, darunter Wortmarke
@@ -539,13 +547,31 @@ Kontoauszug. Deshalb:
 Der Wechsel des Kontos ist ein Farb- und Zahlenwechsel, kein Seitenwechsel: 200 ms
 Crossfade auf den Werten, das Layout bleibt stehen.
 
-**Kontowährung (Settings).** Die Kontokachel trägt die Währung als neutrales Tag in
-Mono neben „Default" auf der neutralen Fläche aus 4.20 (`--gradient-dark-soft`,
-`--shadow-dark-soft`, Schrift `--color-fg-muted`), kein Akzent — die Währung ist eine
-Eigenschaft, kein Zustand. Gewählt wird sie über ein natives `<select>` in der
-Feldoptik aus 4.22, beim Anlegen und in der Kachel. Hat das Konto Trades, ist das
-Select deaktiviert, und darunter steht „Locked — this account has trades" in
-`--color-fg-subtle`; ausgegraut ohne Begründung reicht nicht.
+**Account management (Settings, account-settings-redesign).** Replace the tile grid
+with a vertical list, maximum width 56rem. Each compact row shows account name,
+a neutral Default tag, the amber Practice marker, and currency and starting balance
+in mono. Edit is a labeled action; default, order and archive remain separate controls.
+A header-level Add account button replaces the large empty tile.
+
+Only one editor is open: directly below the edited row, or above the list for a new
+account. It uses the existing card surface, 20–24px padding, sentence-case labels,
+44px controls, and a two-column currency/balance group that stacks on mobile.
+Field order: name, currency/balance, Practice, collapsed Commission disclosure.
+The footer shows unsaved status, Cancel, and Create account / Save account, using
+the quiet blue process surface from 4.14. No glow on balances.
+
+All fields and commission rows are a local draft until explicit save. Input blur,
+toggle changes and Enter in a field do not save. Cancel/close/account switching
+confirm before discarding a changed draft. Navigation is guarded; reload uses the
+native browser warning. Saving locks the editor and competing account actions;
+errors retain the draft. Success closes the editor and announces the saved result.
+Default selection, ordering and archive remain independent and are disabled while
+an editor is open. Commission changes never update existing trade commissions.
+
+**Account currency.** Use a native select in the shared editor. Once trades exist,
+disable it and explain: “Locked — this account has trades”. Currency changes retain
+the entered starting-balance amount in the newly selected currency. An unchanged
+amount and currency preserve the existing USD conversion and rate date.
 
 **Anzeigewährung (display-currency, 2026-09-25).** Geldbeträge stehen in der Währung der
 Konten, die eine Ansicht zeigt — `€1,234.56` neben `$1,234.56`, beide in derselben

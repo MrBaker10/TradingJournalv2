@@ -25,7 +25,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="flex gap-6 px-6 py-6">
+    <div className="flex flex-col gap-6 px-4 py-4 lg:flex-row lg:px-6 lg:py-6">
       <Sidebar
         displayName={user.displayName}
         accounts={accounts}
@@ -35,7 +35,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           own scroll container sits on the right edge of every card, and the
           content ends flush against the screen. */}
       <main
-        className={`sticky top-6 h-[calc(100vh-48px)] min-w-0 flex-1 overflow-y-auto pr-4 ${
+        className={`min-w-0 flex-1 lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:overflow-y-auto lg:pr-4 ${
           selectedAccount?.isPractice ? "shadow-[var(--shadow-practice)]" : ""
         }`}
       >

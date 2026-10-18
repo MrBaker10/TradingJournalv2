@@ -1,213 +1,304 @@
 "use client";
 
-import { Check } from "lucide-react";
-import { motion } from "motion/react";
-import { useState, useTransition } from "react";
-import { createAccount } from "@/actions/accounts";
-import { InlineMessage } from "@/components/ui/inline-message";
+import { Check, X } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { createAccount, updateAccount } from "@/actions/accounts";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { ACCOUNT_CURRENCIES, type AccountCurrency } from "@/domain/fx";
+import { useUnsavedAccount } from "@/hooks/use-unsaved-account";
+import { formatCentsPlain } from "@/lib/money";
 import { createAccountSchema } from "@/schemas/accounts";
+import {
+  ACCOUNT_FIELD_CLASS,
+  AccountCommissionRates,
+  type CommissionDraft,
+  type InstrumentOption,
+} from "./account-commission-rates";
+import type { AccountRowData } from "./account-row";
 
-const SUCCESS_HOLD_MS = 800;
-
-interface AccountCreateFormProps {
-  onCreated?: () => void;
+interface AccountFormProps {
+  account?: AccountRowData;
+  instruments: InstrumentOption[];
+  onClose: () => void;
+  onSaved: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+  onPendingChange: (pending: boolean) => void;
 }
 
-export function AccountCreateForm({ onCreated }: AccountCreateFormProps) {
-  const [name, setName] = useState("");
-  const [isPractice, setIsPractice] = useState(false);
-  const [currency, setCurrency] = useState<AccountCurrency>("USD");
-  const [startingBalance, setStartingBalance] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [phase, setPhase] = useState<"idle" | "success">("idle");
+function initialDraft(account?: AccountRowData) {
+  return {
+    name: account?.name ?? "",
+    currency: account?.currency ?? ("USD" as AccountCurrency),
+    isPractice: account?.isPractice ?? false,
+    startingBalance:
+      account?.startingBalance === "0.00"
+        ? ""
+        : (account?.startingBalance ?? ""),
+    rates: (account?.commissionRates ?? []).map(
+      (rate): CommissionDraft => ({
+        key: String(rate.instrumentId),
+        instrumentId: String(rate.instrumentId),
+        perSide: formatCentsPlain(rate.perSideCents),
+      }),
+    ),
+  };
+}
+
+export function AccountForm({
+  account,
+  instruments,
+  onClose,
+  onSaved,
+  onDirtyChange,
+  onPendingChange,
+}: AccountFormProps) {
+  const [initial] = useState(() => initialDraft(account));
+  const [draft, setDraft] = useState(initial);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
+  const dirty = JSON.stringify(initial) !== JSON.stringify(draft);
+  useUnsavedAccount(dirty, isPending);
 
-  const loading = isPending;
-  const success = phase === "success";
+  useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
+  useEffect(() => onPendingChange(isPending), [isPending, onPendingChange]);
+  useEffect(() => {
+    formRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+  }, []);
 
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  function change(values: Partial<typeof draft>) {
+    setDraft((current) => ({ ...current, ...values }));
+    setErrors({});
+  }
 
+  function save() {
+    if (isPending) return;
     const parsed = createAccountSchema.safeParse({
-      name,
-      isPractice,
-      currency,
+      name: draft.name,
+      currency: draft.currency,
+      isPractice: draft.isPractice,
       startingBalance:
-        startingBalance.trim() === "" ? undefined : Number(startingBalance),
+        draft.startingBalance.trim() === ""
+          ? undefined
+          : Number(draft.startingBalance),
+      commissionRates: draft.rates.map((rate) => ({
+        instrumentId: Number(rate.instrumentId),
+        perSide: rate.perSide.trim() === "" ? undefined : Number(rate.perSide),
+      })),
     });
     if (!parsed.success) {
-      setError(parsed.error.issues[0].message);
+      const next: Record<string, string> = {};
+      for (const issue of parsed.error.issues)
+        next[issue.path.join(".")] ??= issue.message;
+      setErrors(next);
+      const details = formRef.current?.querySelector("details");
+      if (
+        details &&
+        Object.keys(next).some((key) => key.startsWith("commissionRates"))
+      )
+        details.open = true;
+      requestAnimationFrame(() =>
+        formRef.current
+          ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+          ?.focus(),
+      );
       return;
     }
-
     startTransition(async () => {
-      const result = await createAccount(parsed.data);
-      if (!result.success) {
-        setError(result.error);
-        return;
+      try {
+        const result = account
+          ? await updateAccount({ ...parsed.data, accountId: account.id })
+          : await createAccount(parsed.data);
+        if (!result.success) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success(account ? "Account saved" : "Account created");
+        onDirtyChange(false);
+        onPendingChange(false);
+        onSaved();
+      } catch {
+        toast.error(
+          "Couldn't confirm the save. Your changes are still here — check your connection and try again.",
+        );
       }
-      setPhase("success");
-      setTimeout(() => {
-        setPhase("idle");
-        setName("");
-        setIsPractice(false);
-        setCurrency("USD");
-        setStartingBalance("");
-        setError(null);
-        onCreated?.();
-      }, SUCCESS_HOLD_MS);
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <span className="cap">Account name</span>
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-              if (error) setError(null);
-            }}
-            placeholder="e.g. Live, Backtesting"
-            disabled={loading || success}
-            className="h-10 flex-1 rounded-ctl border border-white/12 bg-well px-3 text-sm text-fg transition-colors duration-200 placeholder:text-fg-placeholder hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60"
-          />
-
-          <motion.button
-            type="submit"
-            disabled={loading || success}
-            whileHover={
-              loading || success
-                ? undefined
-                : {
-                    y: -1,
-                    filter: "brightness(1.1)",
-                    boxShadow: "var(--shadow-button-primary-hover)",
-                    transition: { duration: 0.15, ease: "easeOut" },
-                  }
-            }
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            whileTap={
-              loading || success
-                ? undefined
-                : {
-                    scale: 0.978,
-                    transition: { duration: 0.1, ease: "easeIn" },
-                  }
-            }
-            className={`relative h-10 w-32 shrink-0 rounded-ctl text-sm font-medium text-fg shadow-[var(--shadow-button-primary)] ${
-              success
-                ? "bg-[image:var(--gradient-success)]"
-                : "bg-[image:var(--gradient-info)]"
-            }`}
-          >
-            <span
-              className={`inline-flex items-center justify-center transition-opacity duration-200 ease-linear ${
-                loading || success ? "opacity-0" : "opacity-100"
-              }`}
-            >
-              Add account
-            </span>
-            <span
-              className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ease-linear ${
-                loading ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              <PendingIndicator label="Saving…" />
-            </span>
-            <span
-              className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200 ease-linear ${
-                success ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              <Check className="h-4 w-4" aria-hidden="true" />
-              Added
-            </span>
-          </motion.button>
+    <form
+      ref={formRef}
+      noValidate
+      onSubmit={(event) => event.preventDefault()}
+      className="border-t border-white/8 p-5 sm:p-6"
+    >
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-base font-medium text-fg">
+            {account ? "Edit account" : "New account"}
+          </h3>
+          <p className="mt-1 text-sm text-fg-muted">
+            {account
+              ? "Review your changes, then save them together."
+              : "Set up your trading account before adding trades."}
+          </p>
         </div>
-        <InlineMessage message={error} />
-      </div>
-
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-sm text-fg">Practice account</span>
-          <span className="text-xs text-fg-subtle">
-            Excluded from combined P&L, streak, consistency score and badges.
-            Numbers show only when this account is selected on its own.
-          </span>
-        </div>
-        <ToggleSwitch
-          checked={isPractice}
-          onCheckedChange={setIsPractice}
-          disabled={loading || success}
-          ariaLabel="Create as practice account"
-        />
-      </div>
-
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <label htmlFor="new-account-currency" className="text-sm text-fg">
-            Currency
-          </label>
-          <span className="text-xs text-fg-subtle">
-            The currency your broker reports this account in. Fixed once the
-            account has trades.
-          </span>
-        </div>
-        <select
-          id="new-account-currency"
-          value={currency}
-          onChange={(event) =>
-            setCurrency(event.target.value as AccountCurrency)
-          }
-          disabled={loading || success}
-          className="h-9 w-24 shrink-0 rounded-ctl border border-white/12 bg-well px-2 text-sm text-fg transition-colors duration-200 hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60"
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isPending}
+          aria-label="Close account form"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-ctl text-fg-muted hover:bg-white/5 hover:text-fg focus-visible:outline-cyan disabled:opacity-40"
         >
-          {ACCOUNT_CURRENCIES.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
-
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <label
-            htmlFor="new-account-starting-balance"
-            className="text-sm text-fg"
-          >
-            Starting balance
+      <fieldset
+        disabled={isPending}
+        className="flex min-w-0 flex-col gap-5 disabled:opacity-60"
+      >
+        <div>
+          <label htmlFor="account-name" className="mb-2 block text-sm text-fg">
+            Account name <span className="text-fg-subtle">*</span>
           </label>
-          <span className="text-xs text-fg-subtle">
-            The account size. Your equity curve starts here. Optional, and you
-            can change it later.
-          </span>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
           <input
-            id="new-account-starting-balance"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step="0.01"
-            value={startingBalance}
-            onChange={(event) => {
-              setStartingBalance(event.target.value);
-              if (error) setError(null);
-            }}
-            placeholder="0"
-            disabled={loading || success}
-            className="h-9 w-32 rounded-ctl border border-white/12 bg-well px-2 text-right font-mono text-sm text-fg tabular-nums transition-colors duration-200 placeholder:text-fg-placeholder hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60"
+            id="account-name"
+            required
+            maxLength={100}
+            autoComplete="off"
+            value={draft.name}
+            onChange={(event) => change({ name: event.target.value })}
+            placeholder="e.g. Live, Evaluation, Backtesting"
+            className={ACCOUNT_FIELD_CLASS}
+            aria-invalid={!!errors.name}
+            aria-describedby={errors.name ? "account-name-error" : undefined}
           />
-          <span className="w-8 text-fg-subtle text-xs">{currency}</span>
+          <p id="account-name-error" className="mt-1 text-xs text-danger-fg">
+            {errors.name}
+          </p>
         </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label
+              htmlFor="account-currency"
+              className="mb-2 block text-sm text-fg"
+            >
+              Currency
+            </label>
+            <select
+              id="account-currency"
+              value={draft.currency}
+              onChange={(event) =>
+                change({ currency: event.target.value as AccountCurrency })
+              }
+              disabled={account?.hasTrades || isPending}
+              className={ACCOUNT_FIELD_CLASS}
+              aria-describedby="account-currency-help"
+            >
+              {ACCOUNT_CURRENCIES.map((currency) => (
+                <option key={currency} value={currency}>
+                  {currency}
+                </option>
+              ))}
+            </select>
+            <p
+              id="account-currency-help"
+              className="mt-2 text-xs leading-relaxed text-fg-subtle"
+            >
+              {account?.hasTrades
+                ? "Locked — this account has trades"
+                : "Your broker's account currency. Fixed once trades are assigned."}
+            </p>
+          </div>
+          <div>
+            <label
+              htmlFor="account-balance"
+              className="mb-2 block text-sm text-fg"
+            >
+              Starting balance{" "}
+              <span className="text-fg-subtle">({draft.currency})</span>
+            </label>
+            <input
+              id="account-balance"
+              inputMode="decimal"
+              value={draft.startingBalance}
+              onChange={(event) =>
+                change({ startingBalance: event.target.value })
+              }
+              placeholder="0.00"
+              className={`${ACCOUNT_FIELD_CLASS} font-mono tabular-nums`}
+              aria-invalid={!!errors.startingBalance}
+              aria-describedby="account-balance-help account-balance-error"
+            />
+            <p
+              id="account-balance-error"
+              className="mt-1 text-xs text-danger-fg"
+            >
+              {errors.startingBalance}
+            </p>
+            <p
+              id="account-balance-help"
+              className="mt-2 text-xs leading-relaxed text-fg-subtle"
+            >
+              Optional. Your equity curve starts here.
+            </p>
+          </div>
+        </div>
+        <div
+          className={`flex items-start justify-between gap-5 rounded-ctl border p-4 ${draft.isPractice ? "border-practice/40 bg-practice-dim" : "border-white/8 bg-well"}`}
+        >
+          <div>
+            <span className="text-sm font-medium text-fg">
+              Practice account
+            </span>
+            <p className="mt-1 max-w-lg text-xs leading-relaxed text-fg-muted">
+              Excluded from combined figures and progress. View its numbers by
+              selecting this account.
+            </p>
+          </div>
+          <ToggleSwitch
+            checked={draft.isPractice}
+            onCheckedChange={(isPractice) => change({ isPractice })}
+            disabled={isPending}
+            ariaLabel="Practice account"
+          />
+        </div>
+        <AccountCommissionRates
+          rates={draft.rates}
+          instruments={instruments}
+          onChange={(rates) => change({ rates })}
+          errors={errors}
+        />
+      </fieldset>
+      <div className="mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-white/8 pt-5">
+        <span role="status" className="mr-auto text-xs text-fg-muted">
+          {dirty ? "Unsaved changes" : account ? "No changes" : "* Required"}
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isPending}
+          className="h-11 rounded-ctl px-4 text-sm text-fg-muted transition-colors hover:bg-white/5 hover:text-fg focus-visible:outline-cyan disabled:opacity-40"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={isPending || (!!account && !dirty)}
+          className="flex h-11 min-w-36 items-center justify-center gap-2 rounded-ctl bg-[image:var(--gradient-info-soft)] px-4 text-sm font-medium text-fg shadow-[var(--shadow-info-soft)] transition-colors hover:bg-white/5 focus-visible:outline-cyan disabled:opacity-40"
+        >
+          {isPending ? (
+            <PendingIndicator label="Saving…" />
+          ) : (
+            <>
+              <Check className="h-4 w-4 text-cyan" aria-hidden="true" />
+              {account ? "Save account" : "Create account"}
+            </>
+          )}
+        </button>
       </div>
     </form>
   );

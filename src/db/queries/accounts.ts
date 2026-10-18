@@ -17,15 +17,20 @@ import { accounts } from "../schema/accounts.ts";
 import { tradeAccounts } from "../schema/trades.ts";
 
 /** Any trade assigned to this account — the lock on changing its currency. */
-function hasAssignedTrades() {
+export function hasAssignedTrades() {
+  // Drizzle strips column qualifiers in a SELECT projection. Keep this
+  // correlation explicit so `id` cannot resolve to trade_accounts.id.
   return sql`exists (
     select 1 from ${tradeAccounts}
-    where ${tradeAccounts.accountId} = ${accounts.id}
+    where "trade_accounts"."account_id" = "accounts"."id"
   )`;
 }
 
-export async function listAllAccountsForSettings(userId: number) {
-  return db
+export async function listAllAccountsForSettings(
+  userId: number,
+  executor: Pick<typeof db, "select"> = db,
+) {
+  return executor
     .select({
       ...getTableColumns(accounts),
       hasTrades: hasAssignedTrades().mapWith(Boolean),
@@ -53,8 +58,11 @@ export async function getOwnedAccount(userId: number, accountId: number) {
   return account;
 }
 
-export async function getNextSortOrder(userId: number): Promise<number> {
-  const [{ maxSortOrder }] = await db
+export async function getNextSortOrder(
+  userId: number,
+  executor: Pick<typeof db, "select"> = db,
+): Promise<number> {
+  const [{ maxSortOrder }] = await executor
     .select({ maxSortOrder: max(accounts.sortOrder) })
     .from(accounts)
     .where(eq(accounts.userId, userId));

@@ -1,30 +1,24 @@
 "use client";
 
-import { Archive, Check, ChevronDown, ChevronUp, Landmark } from "lucide-react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  Archive,
+  ChevronDown,
+  ChevronUp,
+  Landmark,
+  Pencil,
+  Star,
+} from "lucide-react";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import {
   archiveAccount,
   moveAccount,
-  renameAccount,
-  setAccountCurrency,
   setDefaultAccount,
-  setStartingBalance,
-  togglePractice,
 } from "@/actions/accounts";
-import {
-  AccountCommissionRates,
-  type CommissionRateData,
-  type InstrumentOption,
-} from "@/components/settings/account-commission-rates";
-import { InlineMessage } from "@/components/ui/inline-message";
-import { ToggleSwitch } from "@/components/ui/toggle-switch";
-import { ACCOUNT_CURRENCIES, type AccountCurrency } from "@/domain/fx";
-import {
-  renameAccountSchema,
-  setStartingBalanceSchema,
-} from "@/schemas/accounts";
-
-const CONFIRM_TIMEOUT_MS = 3000;
+import { amountToCents } from "@/domain/commission";
+import type { AccountCurrency } from "@/domain/fx";
+import { formatCents } from "@/lib/money";
+import type { CommissionRateData } from "./account-commission-rates";
 
 export interface AccountRowData {
   id: number;
@@ -39,386 +33,159 @@ export interface AccountRowData {
   commissionRates: CommissionRateData[];
 }
 
-/** `50000.00` → `50000`, `1234.50` → `1234.5`: what the field shows. */
-function balanceFieldValue(stored: string): string {
-  const value = Number(stored);
-  return value === 0 ? "" : String(value);
-}
-
-interface AccountRowProps {
-  account: AccountRowData;
-  instruments: InstrumentOption[];
-  isFirst: boolean;
-  isLast: boolean;
-}
+const ACTION_CLASS =
+  "flex h-10 w-10 items-center justify-center rounded-ctl text-fg-muted transition-colors hover:bg-white/5 hover:text-fg focus-visible:outline-cyan disabled:opacity-30";
 
 export function AccountRow({
   account,
-  instruments,
   isFirst,
   isLast,
-}: AccountRowProps) {
-  const [name, setName] = useState(account.name);
-  const [balance, setBalance] = useState(
-    balanceFieldValue(account.startingBalance),
-  );
-  const [error, setError] = useState<string | null>(null);
-  const [confirmingArchive, setConfirmingArchive] = useState(false);
-  const [confirmingDefault, setConfirmingDefault] = useState(false);
+  disabled,
+  pending,
+  onEdit,
+}: {
+  account: AccountRowData;
+  isFirst: boolean;
+  isLast: boolean;
+  disabled: boolean;
+  pending: boolean;
+  onEdit: () => void;
+}) {
   const [isPending, startTransition] = useTransition();
-  const archiveConfirmTimeout = useRef<ReturnType<typeof setTimeout> | null>(
+  const [confirming, setConfirming] = useState<"archive" | "default" | null>(
     null,
   );
-  const defaultConfirmTimeout = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-
-  useEffect(() => {
-    setName(account.name);
-  }, [account.name]);
-
-  useEffect(() => {
-    setBalance(balanceFieldValue(account.startingBalance));
-  }, [account.startingBalance]);
-
-  useEffect(() => {
-    return () => {
-      if (archiveConfirmTimeout.current)
-        clearTimeout(archiveConfirmTimeout.current);
-      if (defaultConfirmTimeout.current)
-        clearTimeout(defaultConfirmTimeout.current);
-    };
-  }, []);
-
-  function commitRename() {
-    const trimmed = name.trim();
-    if (trimmed === account.name) {
-      setName(account.name);
-      return;
-    }
-
-    const parsed = renameAccountSchema.safeParse({
-      accountId: account.id,
-      name: trimmed,
-    });
-    if (!parsed.success) {
-      setError(parsed.error.issues[0].message);
-      setName(account.name);
-      return;
-    }
-
+  const busy = disabled || isPending;
+  function run(action: () => Promise<{ success: boolean; error?: string }>) {
+    setConfirming(null);
     startTransition(async () => {
-      const result = await renameAccount(parsed.data);
-      if (!result.success) {
-        setError(result.error);
-        setName(account.name);
-      } else {
-        setError(null);
+      try {
+        const result = await action();
+        if (!result.success)
+          toast.error(result.error ?? "Couldn't update the account");
+      } catch {
+        toast.error("Couldn't update the account. Try again.");
       }
     });
   }
-
-  // Saved on Enter or when the field loses focus, like the name.
-  function commitBalance() {
-    const current = balanceFieldValue(account.startingBalance);
-    if (balance.trim() === current) return;
-
-    const parsed = setStartingBalanceSchema.safeParse({
-      accountId: account.id,
-      startingBalance: balance.trim() === "" ? 0 : Number(balance),
-    });
-    if (!parsed.success) {
-      setError(parsed.error.issues[0].message);
-      setBalance(current);
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await setStartingBalance(parsed.data);
-      if (!result.success) {
-        setError(result.error);
-        setBalance(current);
-      } else {
-        setError(null);
-      }
-    });
-  }
-
-  function handleMove(direction: "up" | "down") {
-    startTransition(async () => {
-      const result = await moveAccount({ accountId: account.id, direction });
-      if (!result.success) setError(result.error);
-    });
-  }
-
-  function handleTogglePractice(next: boolean) {
-    startTransition(async () => {
-      const result = await togglePractice({
-        accountId: account.id,
-        isPractice: next,
-      });
-      if (!result.success) setError(result.error);
-    });
-  }
-
-  function handleCurrencyChange(next: AccountCurrency) {
-    startTransition(async () => {
-      const result = await setAccountCurrency({
-        accountId: account.id,
-        currency: next,
-      });
-      if (!result.success) setError(result.error);
-    });
-  }
-
-  function handleSetDefaultClick() {
-    if (!confirmingDefault) {
-      setConfirmingDefault(true);
-      defaultConfirmTimeout.current = setTimeout(
-        () => setConfirmingDefault(false),
-        CONFIRM_TIMEOUT_MS,
-      );
-      return;
-    }
-
-    if (defaultConfirmTimeout.current)
-      clearTimeout(defaultConfirmTimeout.current);
-    setConfirmingDefault(false);
-    startTransition(async () => {
-      const result = await setDefaultAccount({ accountId: account.id });
-      if (!result.success) setError(result.error);
-    });
-  }
-
-  function handleArchiveClick() {
-    if (!confirmingArchive) {
-      setConfirmingArchive(true);
-      archiveConfirmTimeout.current = setTimeout(
-        () => setConfirmingArchive(false),
-        CONFIRM_TIMEOUT_MS,
-      );
-      return;
-    }
-
-    if (archiveConfirmTimeout.current)
-      clearTimeout(archiveConfirmTimeout.current);
-    setConfirmingArchive(false);
-    startTransition(async () => {
-      const result = await archiveAccount({ accountId: account.id });
-      if (!result.success) setError(result.error);
-    });
-  }
-
   return (
-    <div className="card-surface edge relative flex flex-col gap-3 p-4">
-      <div className="flex items-start gap-3">
-        <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xs bg-[image:var(--gradient-info)]">
-          <Landmark className="h-4 w-4 text-white" aria-hidden="true" />
+    <div className="p-4 sm:px-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-ctl bg-[image:var(--gradient-info-soft)] shadow-[var(--shadow-info-soft)]">
+          <Landmark className="h-4 w-4 text-cyan" aria-hidden="true" />
         </div>
-
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            onBlur={commitRename}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.currentTarget.blur();
-              } else if (event.key === "Escape") {
-                setName(account.name);
-                event.currentTarget.blur();
-              }
-            }}
-            className="h-9 min-w-0 flex-1 rounded-xs border border-transparent bg-transparent px-2 text-sm font-medium text-fg transition-colors duration-200 hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none"
-          />
-
-          <div className="flex min-h-[20px] items-center gap-2 px-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="break-words text-sm font-medium text-fg">
+              {account.name}
+            </h3>
             {account.isPractice && (
-              <span className="cap-practice rounded-xs px-1.5 py-0.5">
+              <span className="rounded-xs bg-practice-dim px-2 py-0.5 text-xs text-practice">
                 Practice
               </span>
             )}
             {account.isDefaultForNewTrades && (
-              <span className="rounded-xs bg-cyan-dim px-1.5 py-0.5 text-xs font-semibold text-cyan">
+              <span className="rounded-xs bg-white/5 px-2 py-0.5 text-xs text-fg-muted">
                 Default
               </span>
             )}
-            <span className="rounded-xs bg-[image:var(--gradient-dark-soft)] px-1.5 py-0.5 font-mono text-fg-muted text-xs shadow-[var(--shadow-dark-soft)]">
-              {account.currency}
+          </div>
+          <p className="mt-1 text-xs text-fg-subtle">
+            <span className="font-mono">{account.currency}</span>
+            <span className="mx-2 text-fg-placeholder">/</span>Starting balance{" "}
+            <span className="font-mono tabular-nums text-fg-muted">
+              {formatCents(amountToCents(account.startingBalance), {
+                currency: account.currency,
+              })}
             </span>
-          </div>
+          </p>
         </div>
-      </div>
-
-      <div className="flex flex-col gap-2 border-white/8 border-t pt-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-fg-muted">Practice account</span>
-          <ToggleSwitch
-            checked={account.isPractice}
-            onCheckedChange={handleTogglePractice}
-            disabled={isPending}
-            ariaLabel="Practice account"
-          />
-        </div>
-
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex flex-col">
-            <label
-              htmlFor={`account-currency-${account.id}`}
-              className="text-xs text-fg-muted"
-            >
-              Currency
-            </label>
-            {account.hasTrades && (
-              <span
-                id={`account-currency-lock-${account.id}`}
-                className="text-xs text-fg-subtle"
-              >
-                Locked — this account has trades
-              </span>
-            )}
-          </div>
-          <select
-            id={`account-currency-${account.id}`}
-            value={account.currency}
-            onChange={(event) =>
-              handleCurrencyChange(event.target.value as AccountCurrency)
-            }
-            disabled={account.hasTrades || isPending}
-            aria-describedby={
-              account.hasTrades
-                ? `account-currency-lock-${account.id}`
-                : undefined
-            }
-            className="h-9 w-24 shrink-0 rounded-ctl border border-white/12 bg-well px-2 text-sm text-fg transition-colors duration-200 hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60 disabled:hover:border-white/12"
-          >
-            {ACCOUNT_CURRENCIES.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex flex-col">
-            <label
-              htmlFor={`account-balance-${account.id}`}
-              className="text-xs text-fg-muted"
-            >
-              Starting balance
-            </label>
-            <span className="text-xs text-fg-subtle">
-              Where the equity curve starts
-            </span>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <input
-              id={`account-balance-${account.id}`}
-              type="number"
-              inputMode="decimal"
-              min={0}
-              step="0.01"
-              value={balance}
-              onChange={(event) => setBalance(event.target.value)}
-              onBlur={commitBalance}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") event.currentTarget.blur();
-              }}
-              placeholder="0"
-              disabled={isPending}
-              className="h-9 w-32 rounded-ctl border border-white/12 bg-well px-2 text-right font-mono text-sm text-fg tabular-nums transition-colors duration-200 placeholder:text-fg-placeholder hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60"
-            />
-            <span className="w-8 text-fg-subtle text-xs">
-              {account.currency}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span
-            className={`text-xs ${confirmingDefault ? "text-cyan" : "text-fg-muted"}`}
-          >
-            {confirmingDefault
-              ? "Click again to confirm"
-              : "Default for new trades"}
-          </span>
+        <button
+          type="button"
+          onClick={onEdit}
+          disabled={pending || isPending}
+          aria-label={`Edit ${account.name}`}
+          className="flex h-10 items-center gap-2 rounded-ctl px-3 text-sm text-fg-muted transition-colors hover:bg-white/5 hover:text-fg focus-visible:outline-cyan disabled:opacity-30"
+        >
+          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+          Edit
+        </button>
+        <div className="flex w-full items-center justify-end border-t border-white/8 pt-2 sm:w-auto sm:border-t-0 sm:border-l sm:pt-0 sm:pl-3">
           <button
             type="button"
-            aria-label={
-              account.isDefaultForNewTrades
-                ? "Default account for new trades"
-                : confirmingDefault
-                  ? "Confirm set as default for new trades"
-                  : "Set as default for new trades"
-            }
-            title={
-              account.isDefaultForNewTrades
-                ? "Default account for new trades"
-                : "Set as default for new trades"
-            }
-            disabled={account.isDefaultForNewTrades || isPending}
-            onClick={handleSetDefaultClick}
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xs transition-colors ${
-              account.isDefaultForNewTrades
-                ? "text-cyan"
-                : confirmingDefault
-                  ? "bg-cyan-glow text-cyan"
-                  : "text-fg-muted hover:text-fg"
-            }`}
+            onClick={() => setConfirming("default")}
+            disabled={busy || account.isDefaultForNewTrades}
+            title="Set as default"
+            aria-label={`Set ${account.name} as default`}
+            className={ACTION_CLASS}
           >
-            <Check className="h-4 w-4" aria-hidden="true" />
+            <Star className="h-4 w-4" aria-hidden="true" />
           </button>
-        </div>
-      </div>
-
-      <AccountCommissionRates
-        accountId={account.id}
-        rates={account.commissionRates}
-        instruments={instruments}
-      />
-
-      <div className="flex items-center gap-1 border-white/8 border-t pt-3">
-        <div className="flex h-10 shrink-0 items-center overflow-hidden rounded-xs border border-white/12">
           <button
             type="button"
-            aria-label="Move up"
-            title="Move up in list order"
-            disabled={isFirst || isPending}
-            onClick={() => handleMove("up")}
-            className="flex h-full w-8 items-center justify-center text-fg-muted transition-colors hover:text-fg disabled:opacity-30"
+            onClick={() =>
+              run(() => moveAccount({ accountId: account.id, direction: "up" }))
+            }
+            disabled={busy || isFirst}
+            aria-label={`Move ${account.name} up`}
+            className={ACTION_CLASS}
           >
             <ChevronUp className="h-4 w-4" aria-hidden="true" />
           </button>
-          <div className="h-full w-px bg-white/12" />
           <button
             type="button"
-            aria-label="Move down"
-            title="Move down in list order"
-            disabled={isLast || isPending}
-            onClick={() => handleMove("down")}
-            className="flex h-full w-8 items-center justify-center text-fg-muted transition-colors hover:text-fg disabled:opacity-30"
+            onClick={() =>
+              run(() =>
+                moveAccount({ accountId: account.id, direction: "down" }),
+              )
+            }
+            disabled={busy || isLast}
+            aria-label={`Move ${account.name} down`}
+            className={ACTION_CLASS}
           >
             <ChevronDown className="h-4 w-4" aria-hidden="true" />
           </button>
+          <button
+            type="button"
+            onClick={() => setConfirming("archive")}
+            disabled={busy}
+            aria-label={`Archive ${account.name}`}
+            className={ACTION_CLASS}
+          >
+            <Archive className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
-
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={handleArchiveClick}
-          className={`ml-auto flex h-10 shrink-0 items-center gap-1.5 rounded-xs px-2 text-xs transition-colors ${
-            confirmingArchive
-              ? "bg-practice-dim text-practice"
-              : "text-fg-muted hover:text-fg"
-          }`}
-        >
-          <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-          {confirmingArchive ? "Confirm" : "Archive"}
-        </button>
       </div>
-      <InlineMessage message={error} />
+      {confirming && !disabled && (
+        <div className="mt-3 flex flex-wrap items-center justify-end gap-3 border-t border-white/8 pt-3 text-sm">
+          <span className="mr-auto text-fg-muted">
+            {confirming === "archive"
+              ? "Archive this account? Its trades will be kept."
+              : "Use this account by default for new trades?"}
+          </span>
+          <button
+            type="button"
+            onClick={() => setConfirming(null)}
+            className="h-10 px-3 text-fg-muted"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() =>
+              run(() =>
+                confirming === "archive"
+                  ? archiveAccount({ accountId: account.id })
+                  : setDefaultAccount({ accountId: account.id }),
+              )
+            }
+            className="h-10 rounded-ctl bg-white/5 px-3 text-fg"
+          >
+            {confirming === "archive" ? "Archive account" : "Set default"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
