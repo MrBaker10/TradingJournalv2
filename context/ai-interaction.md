@@ -31,7 +31,9 @@ before asking to commit, in order:
 4. `pnpm build`
 5. Exercise the affected user flows in the browser. State the click path and result;
    if unavailable, mark it pending. For changes with no affected screen, explain why
-   browser verification is not applicable.
+   browser verification is not applicable. For a width the browser window cannot be
+   resized to, open a same-origin page without React (`/api/auth/get-session`) and load
+   the app into an iframe of that width; read errors from the iframe's window.
 
 During implementation, use focused checks first. After a correction, rerun affected
 checks; the final code must pass the full ordered gate once before commit approval.
