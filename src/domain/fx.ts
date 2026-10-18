@@ -152,28 +152,36 @@ export function rateFor(date: string, rates: FxRate[]): string | null {
 }
 
 /**
+ * A stretch of days one fetch covered: from its window's start to the last
+ * rate it returned, both inclusive.
+ */
+export interface FetchedRange {
+  from: string;
+  to: string;
+}
+
+/**
  * The dates whose rate the stored set cannot settle yet.
  *
- * A date is settled when `rateFor` finds a rate for it **and** some rate is
- * stored on or after it. The second half matters: with Friday stored and
+ * A date is settled when it lies inside a fetched range **and** `rateFor`
+ * finds a rate for it. The range is what matters: with Friday stored and
  * Monday asked for, `rateFor` would happily return Friday's rate — but only
  * because Monday's has not been fetched, not because the ECB skipped Monday.
- * A later stored rate proves the fetch already covered the day, so a gap
- * before it is a real non-publishing day.
+ * Inside a range a missing day is a real non-publishing day. A later stored
+ * rate is no such proof: two fetches at different times leave the days
+ * between them unfetched (fx-fetch-coverage).
  */
 export function datesNeedingFetch(
   dates: string[],
   storedDates: string[],
+  fetched: FetchedRange[],
 ): string[] {
   const stored = storedDates.map((date) => ({ date, rateVsUsd: "1" }));
-  const latest = storedDates.reduce<string | null>(
-    (max, date) => (max === null || date > max ? date : max),
-    null,
-  );
   const needed = new Set<string>();
   for (const date of dates) {
     const covered =
-      latest !== null && latest >= date && rateFor(date, stored) !== null;
+      fetched.some((range) => range.from <= date && date <= range.to) &&
+      rateFor(date, stored) !== null;
     if (!covered) needed.add(date);
   }
   return [...needed].sort();
@@ -182,8 +190,9 @@ export function datesNeedingFetch(
 /**
  * The rate `date` will keep for good, or null while that is not known yet.
  *
- * Final means the same as settled in `datesNeedingFetch`: a rate is stored on
- * or after the date, so any gap before it is a day the ECB did not publish.
+ * Final means a rate is stored on or after the date, so any gap before it is a
+ * day the ECB did not publish. That holds for rates read after `ensureFxRates`
+ * covered the date, which fetches the days between two earlier fetches.
  * Until then the applicable rate is only the latest one there happens to be.
  */
 export function finalRateFor(date: string, rates: FxRate[]): FxRate | null {

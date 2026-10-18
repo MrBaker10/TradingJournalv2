@@ -14,3 +14,22 @@ export const fxRates = pgTable(
   },
   (table) => [primaryKey({ columns: [table.currency, table.rateDate] })],
 );
+
+// The stretches of days a fetch has covered, per currency (fx-fetch-coverage):
+// from the start of the fetch window to the last rate it returned. Every rate
+// the ECB published inside one is stored, so a day without a row there is a
+// day the ECB did not publish. A later stored rate alone proves nothing — two
+// fetches at different times can leave unfetched days between them.
+export const fxFetchRanges = pgTable(
+  "fx_fetch_ranges",
+  {
+    currency: text("currency").notNull(),
+    coveredFrom: date("covered_from").notNull(),
+    coveredTo: date("covered_to").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.currency, table.coveredFrom, table.coveredTo],
+    }),
+  ],
+);

@@ -12,6 +12,7 @@ import {
 import {
   type AccountCurrency,
   datesNeedingFetch,
+  type FetchedRange,
   type ForeignCurrency,
   type FxRate,
   isProvisional,
@@ -23,7 +24,7 @@ import {
 import { formatCentsPlain } from "../../lib/money.ts";
 import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
-import { fxRates } from "../schema/fx-rates.ts";
+import { fxFetchRanges, fxRates } from "../schema/fx-rates.ts";
 import { toNumber } from "./scope.ts";
 
 /** Anything that can read and upsert: `db`, or a transaction in a test. */
@@ -55,6 +56,25 @@ async function listStoredRates(
     .orderBy(asc(fxRates.rateDate));
 }
 
+/** The fetched ranges of `currency` that overlap `from`..`to`. */
+async function listFetchedRanges(
+  executor: FxExecutor,
+  currency: RateCurrency,
+  from: string,
+  to: string,
+): Promise<FetchedRange[]> {
+  return executor
+    .select({ from: fxFetchRanges.coveredFrom, to: fxFetchRanges.coveredTo })
+    .from(fxFetchRanges)
+    .where(
+      and(
+        eq(fxFetchRanges.currency, currency),
+        lte(fxFetchRanges.coveredFrom, to),
+        gte(fxFetchRanges.coveredTo, from),
+      ),
+    );
+}
+
 /**
  * The stored rates that cover `dates`, after fetching whatever the table
  * cannot settle yet (src/domain/fx.ts, `datesNeedingFetch`).
@@ -77,8 +97,8 @@ export async function ensureFxRates(
 
   const sorted = [...dates].sort();
   const windowFrom = shiftDate(sorted[0], -MAX_RATE_LOOKBACK_DAYS);
-  // A later stored rate is what proves a date settled, so the read reaches
-  // past the last date by the same margin.
+  // `finalRateFor` needs a later stored rate to call a rate final, so the
+  // read reaches past the last date by the same margin.
   const windowTo = shiftDate(sorted[sorted.length - 1], MAX_RATE_LOOKBACK_DAYS);
 
   const stored = await listStoredRates(
@@ -90,12 +110,14 @@ export async function ensureFxRates(
   const missing = datesNeedingFetch(
     sorted,
     stored.map((rate) => rate.date),
+    await listFetchedRanges(executor, currency, windowFrom, windowTo),
   );
   if (missing.length === 0) return stored;
 
+  const fetchFrom = shiftDate(missing[0], -MAX_RATE_LOOKBACK_DAYS);
   const fetched = await fetcher(
     currency,
-    shiftDate(missing[0], -MAX_RATE_LOOKBACK_DAYS),
+    fetchFrom,
     missing[missing.length - 1],
   );
   if (fetched.length > 0) {
@@ -112,6 +134,16 @@ export async function ensureFxRates(
         target: [fxRates.currency, fxRates.rateDate],
         set: { rateVsUsd: sql`excluded.rate_vs_usd` },
       });
+    // Covered up to the last rate returned, not to the window's end: a day
+    // after it may simply not be published yet.
+    const coveredTo = fetched.reduce(
+      (last, rate) => (rate.date > last ? rate.date : last),
+      fetched[0].date,
+    );
+    await executor
+      .insert(fxFetchRanges)
+      .values({ currency, coveredFrom: fetchFrom, coveredTo })
+      .onConflictDoNothing();
   }
 
   return listStoredRates(executor, currency, windowFrom, windowTo);

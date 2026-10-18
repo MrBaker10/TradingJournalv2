@@ -103,10 +103,17 @@ describe("rateFor", () => {
 
 describe("datesNeedingFetch", () => {
   const stored = week.map((rate) => rate.date);
+  // One fetch that returned the whole week: from its window's start to the
+  // last rate it brought.
+  const fetched = [{ from: "2026-09-10", to: "2026-09-22" }];
 
   it("needs nothing for days the stored set settles, weekend included", () => {
     expect(
-      datesNeedingFetch(["2026-09-18", "2026-09-19", "2026-09-21"], stored),
+      datesNeedingFetch(
+        ["2026-09-18", "2026-09-19", "2026-09-21"],
+        stored,
+        fetched,
+      ),
     ).toEqual([]);
   });
 
@@ -114,20 +121,49 @@ describe("datesNeedingFetch", () => {
     // rateFor("2026-09-23") returns Tuesday's rate — but Wednesday's simply
     // has not been fetched yet.
     expect(rateFor("2026-09-23", week)).toBe("1.1463");
-    expect(datesNeedingFetch(["2026-09-23"], stored)).toEqual(["2026-09-23"]);
+    expect(datesNeedingFetch(["2026-09-23"], stored, fetched)).toEqual([
+      "2026-09-23",
+    ]);
   });
 
   it("needs a day before the first stored rate", () => {
-    expect(datesNeedingFetch(["2026-09-10"], stored)).toEqual(["2026-09-10"]);
+    expect(datesNeedingFetch(["2026-09-10"], stored, fetched)).toEqual([
+      "2026-09-10",
+    ]);
   });
 
   it("needs everything when nothing is stored", () => {
-    expect(datesNeedingFetch(["2026-09-18"], [])).toEqual(["2026-09-18"]);
+    expect(datesNeedingFetch(["2026-09-18"], [], [])).toEqual(["2026-09-18"]);
+  });
+
+  it("needs a day between two fetches, though a later rate is stored", () => {
+    // Thursday and Tuesday came from two fetches; Friday and Monday never did.
+    const twoFetches = [
+      { from: "2026-09-10", to: "2026-09-17" },
+      { from: "2026-09-22", to: "2026-09-22" },
+    ];
+    expect(
+      datesNeedingFetch(
+        ["2026-09-18", "2026-09-21"],
+        ["2026-09-17", "2026-09-22"],
+        twoFetches,
+      ),
+    ).toEqual(["2026-09-18", "2026-09-21"]);
+  });
+
+  it("needs a stored day that no fetch range covers", () => {
+    expect(datesNeedingFetch(["2026-09-18"], stored, [])).toEqual([
+      "2026-09-18",
+    ]);
   });
 
   it("returns each date once, sorted", () => {
     expect(
-      datesNeedingFetch(["2026-09-24", "2026-09-10", "2026-09-24"], stored),
+      datesNeedingFetch(
+        ["2026-09-24", "2026-09-10", "2026-09-24"],
+        stored,
+        fetched,
+      ),
     ).toEqual(["2026-09-10", "2026-09-24"]);
   });
 });
