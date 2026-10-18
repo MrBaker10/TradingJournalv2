@@ -1,6 +1,6 @@
 import { and, eq, sql, TransactionRollbackError } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
-import type { FxRate, RateCurrency } from "../../../domain/fx.ts";
+import { type FxRate, type RateCurrency, rateFor } from "../../../domain/fx.ts";
 import { runFxJob } from "../../../lib/fx/job.ts";
 import { db } from "../../index.ts";
 import { accounts } from "../../schema/accounts.ts";
@@ -117,6 +117,32 @@ describe("ensureFxRates", () => {
       from: "2001-03-05",
       to: "2001-03-12",
     });
+  });
+
+  it("fetches a date that lies between two separate fetches", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    // Every weekday of March 2001 has a rate of its own.
+    const march = Array.from({ length: 31 }, (_, index) => {
+      const date = `2001-03-${String(index + 1).padStart(2, "0")}`;
+      return { date, rateVsUsd: `0.9${String(index + 1).padStart(2, "0")}` };
+    }).filter(({ date }) => {
+      const day = new Date(`${date}T00:00:00Z`).getUTCDay();
+      return day !== 0 && day !== 6;
+    });
+
+    const result = await inRollback(async (tx) => {
+      const { calls, fetcher } = recordingFetcher(march);
+      // Two imports at different times store 2001-02-26..03-05 and
+      // 03-13..03-20; nothing between them was ever fetched.
+      await ensureFxRates("EUR", ["2001-03-05"], fetcher, tx);
+      await ensureFxRates("EUR", ["2001-03-20"], fetcher, tx);
+      const rates = await ensureFxRates("EUR", ["2001-03-08"], fetcher, tx);
+      return { calls, rates };
+    });
+
+    expect(rateFor("2001-03-08", result.rates)).toBe("0.9080000000");
+    expect(result.calls).toHaveLength(3);
   });
 
   it("overwrites a stored rate the source has revised", async (ctx) => {
