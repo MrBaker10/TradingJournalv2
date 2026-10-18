@@ -86,7 +86,9 @@ version upgrades belong in a separate commit that changes nothing else.
 ## Styling
 
 - Tailwind for all styling. shadcn/ui where a primitive exists.
-- No inline styles.
+- No inline styles, with one exception: a screen position measured at runtime (an
+  anchored portal's `left`/`top`/`bottom`/`width`), which no class can express. Type
+  it narrowly so nothing else rides along.
 - **Dark only.** There is no light mode and no theme toggle. `next-themes` is not a
   dependency. Light mode is a Future item and a separate design round, not a token
   override — see `Design.md`.
@@ -137,7 +139,7 @@ version upgrades belong in a separate commit that changes nothing else.
   Recharts colour prop does nothing. Give the element a class and set the property
   from `globals.css` instead — a CSS rule on the element beats its own presentation
   attribute. That covers everything, including `stop-color` on a gradient stop, so
-  "no inline styles" under Styling stands without an exception. Every colour of the
+  charts need no exception to "no inline styles" under Styling. Every colour of the
   equity curve is set that way.
 - **A gradient that has to line up with the axis uses
   `gradientUnits="userSpaceOnUse"`** over the plot area from `usePlotArea()`. The
@@ -331,8 +333,8 @@ Non-negotiable, because this is a P&L tool:
 
 ## Naming
 
-- Components: PascalCase (`TradeRow.tsx`)
-- All other files: kebab-case (`consistency-score.ts`)
+- Files: kebab-case, components included (`trade-row.tsx` exports `TradeRow`,
+  `consistency-score.ts`).
 - Functions: camelCase. Constants: SCREAMING_SNAKE_CASE. Types: PascalCase, no prefix.
 - DB columns: snake_case. Drizzle fields: camelCase.
 

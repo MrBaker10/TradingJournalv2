@@ -24,12 +24,15 @@ in the gitignored `.env.neon.production` and `.env.neon.preview` (`DATABASE_URL`
 load the Neon file second so it wins, and check the host first:
 
 ```bash
-node --env-file=.env.local --env-file=.env.neon.production ./node_modules/drizzle-kit/bin.cjs migrate
+pnpm db:migrate:preview      # Neon branch preview
+pnpm db:migrate:production   # Neon production — run by Sascha, not by an agent
 node --env-file=.env.local --env-file=.env.neon.production src/db/seed-propfirms.ts
 ```
 
-A new migration goes to both Neon branches. Never run `vercel env pull` — it writes
-into `.env.local`.
+A new migration goes to both Neon branches before `main` is pushed: the push deploys
+production. `.githooks/pre-push` blocks a push to `main` that adds a migration; push
+with `MIGRATIONS_APPLIED=1` once both branches are migrated. Never run `vercel env pull`
+— it writes into `.env.local`.
 
 ## Scheduled jobs
 

@@ -1,0 +1,20 @@
+#!/bin/sh
+# Blocks a push to main that brings a new migration until it is applied on Neon.
+# A push to main deploys production, and Neon migrations run by hand
+# (context/operations.md): code that reads a missing table would ship first.
+# After migrating both Neon branches, push with MIGRATIONS_APPLIED=1.
+zero=0000000000000000000000000000000000000000
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$remote_ref" = "refs/heads/main" ] || continue
+  # A deleted main or a main the remote does not have yet: nothing to compare.
+  [ "$local_sha" = "$zero" ] || [ "$remote_sha" = "$zero" ] && continue
+  migrations=$(git diff --name-only --diff-filter=A "$remote_sha" "$local_sha" -- 'src/db/migrations/*.sql' 2>/dev/null)
+  if [ -n "$migrations" ] && [ "$MIGRATIONS_APPLIED" != "1" ]; then
+    echo "pre-push: this push to main adds migrations:" >&2
+    echo "$migrations" | sed 's/^/  /' >&2
+    echo "Apply them to the Neon branches preview and production first (context/operations.md)," >&2
+    echo "then push again with MIGRATIONS_APPLIED=1." >&2
+    exit 1
+  fi
+done
+exit 0
