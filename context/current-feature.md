@@ -7,15 +7,21 @@ History and reset this file to “Nothing in progress”.
 
 ## Status
 
-**Nothing in progress.**
+**In progress:** Ledger, ticket 01 (`feature/ledger`).
 
-## Feature: _(none)_
+## Feature: Ledger — 01 Record and list entries without an account
 
-<!--
-For each new task, record:
-- Goal: the intended result.
-- Scope: affected modules/files and any schema or domain changes.
-- Do not build: concrete exclusions for this task.
-- Acceptance: observable results and applicable verification from ai-interaction.md.
-- Open questions: unresolved requirements; never invent product decisions.
--->
+- Goal: `/ledger` as the eighth nav item. The user records an expense (one fixed
+  category) or a payout with date, USD amount (≥ 0) and optional note; the page lists
+  entries newest first, with an empty state.
+- Scope: new table `ledger_entries` (generated migration), pure domain
+  module `src/domain/ledger.ts`, Zod schema, query module `ledger` (create, list), server
+  action, page, form and list components, nav item, `Design.md` section, user-deletion
+  test extended.
+- Do not build: account picker or account column (ticket 02), totals and ledger net
+  (03), filters (04), edit and delete (05); anything on dashboard, analytics, progress
+  or the CSV export; recurring entries; currencies other than USD.
+- Acceptance: `.scratch/ledger/issues/01-record-and-list-entries.md`; full gate from
+  `ai-interaction.md` with DB tests executing; browser path empty state → expense →
+  payout → both listed newest first.
+- Open questions: none. Spec `.scratch/ledger/spec.md`.

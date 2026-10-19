@@ -6,6 +6,7 @@ import { authAccounts, authSessions } from "../../schema/auth.ts";
 import { dailyNotes } from "../../schema/daily-notes.ts";
 import { importBatches } from "../../schema/import-batches.ts";
 import { instruments } from "../../schema/instruments.ts";
+import { ledgerEntries } from "../../schema/ledger.ts";
 import { monthlyScores } from "../../schema/monthly-scores.ts";
 import {
   tradeAccounts,
@@ -20,7 +21,8 @@ import { users } from "../../schema/users.ts";
 // reaches every table, and that `trade_accounts → accounts` does not block
 // it. That key has no cascade on purpose (an account with trades is archived,
 // never deleted); it is deferred instead (0013), so its check waits until the
-// cascade through `trades` has removed the assignments.
+// cascade through `trades` has removed the assignments. `ledger_entries →
+// accounts` needs no deferral: the cascade from `users` reaches it directly.
 //
 // Runs inside a rolled-back transaction, like the other query tests.
 
@@ -35,6 +37,7 @@ interface Remaining {
   importBatches: number;
   dailyNotes: number;
   monthlyScores: number;
+  ledgerEntries: number;
   authAccounts: number;
   authSessions: number;
 }
@@ -124,6 +127,16 @@ async function deleteFixtureUser(): Promise<Remaining> {
         planAdherence: "12.5",
         reviewHabit: "7.5",
       });
+      // Tied to the account, so the user cascade has to remove it before
+      // the check on the account key runs.
+      await tx.insert(ledgerEntries).values({
+        userId: user.id,
+        accountId: account.id,
+        entryDate: "2026-09-01",
+        kind: "expense",
+        category: "evaluation",
+        amount: "150.00",
+      });
       await tx.insert(authAccounts).values({
         userId: user.id,
         accountId: String(user.id),
@@ -178,6 +191,12 @@ async function deleteFixtureUser(): Promise<Remaining> {
             .from(monthlyScores)
             .where(eq(monthlyScores.userId, user.id)),
         ),
+        ledgerEntries: await countWhere(
+          tx
+            .select()
+            .from(ledgerEntries)
+            .where(eq(ledgerEntries.userId, user.id)),
+        ),
         authAccounts: await countWhere(
           tx
             .select()
@@ -212,6 +231,7 @@ describe("deleting a user", () => {
       importBatches: 0,
       dailyNotes: 0,
       monthlyScores: 0,
+      ledgerEntries: 0,
       authAccounts: 0,
       authSessions: 0,
     });

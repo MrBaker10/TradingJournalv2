@@ -304,8 +304,8 @@ content scroll area stay as they are.
   ist die Unterscheidung aktiv/hover weg.
 - Fuß: Nutzerkarte mit Inset-Verlauf, darin Sign-out als einzelner Icon-Button.
   Kein Theme-Toggle, die App ist dark only.
-- Sieben Items in dieser Reihenfolge: Dashboard, Trade Journal, Analytics,
-  Progress, Prop Firm Rules, Econ Calendar, Settings.
+- Acht Items in dieser Reihenfolge: Dashboard, Trade Journal, Analytics,
+  Progress, Prop Firm Rules, Econ Calendar, Ledger, Settings.
 - Über der Nutzerkarte sitzt der Kontoschalter aus 4.12.
 
 ### 4.2 Buttons
@@ -1246,6 +1246,61 @@ Diagramm. Unter `sm` bleiben nur Monat und Score.
 
 **Leerzustand.** Ohne eingefrorenen Monat: „Your first month appears here once it is
 over." zentriert in `--color-fg-subtle`.
+
+### 4.25 Ledger
+
+Entstanden mit dem Ledger (Phase 3), aus vorhandenen Primitiven gebaut, mit demselben
+Vorbehalt wie 4.16: **tragfähig, aber nicht entworfen.** Der Ledger ist echtes Geld,
+kein Prozess: **nirgends Neon, kein `text-glow`, keine Feier** — weder beim ersten
+Eintrag noch bei einer Auszahlung. Er steht neben dem Trading-P&L, nie darin (ADR 0002).
+
+**Die Seite.** `/ledger`, achtes Navigations-Item zwischen Econ Calendar und Settings,
+Icon `Wallet`. Titel „Ledger", darunter eine Zeile in `--color-fg-subtle`: „Real money
+around your prop trading — kept apart from your trading P&L." Von oben: Summen, Formular,
+Liste. Der Kontoschalter aus 4.12 wirkt hier nicht; die Seite bekommt ihren eigenen
+Kontofilter.
+
+**Summen.** Eine `card-surface edge`-Karte als Raster wie die Metrik-Tafel 4.7, drei
+Zellen: Payouts, Expenses, Ledger net. `cap`-Label, Wert 21px Mono mit Tabellenziffern,
+Kontextzeile mit der Anzeigewährung. Payouts `--color-success-fg`, Expenses
+`--color-danger-fg`, Ledger net nach Vorzeichen, 0 in `--color-fg`. Kein Glow. Unter `sm`
+stehen die Zellen untereinander.
+
+**Formular „Add entry".** `card-surface edge`, Kopf `cap`. Felder nach 4.5, Label über
+dem Feld, Meldungszeile immer vorhanden:
+
+- **Kind** als zwei Chips in der Filter-Optik (Expense · Payout), Default Expense:
+  native Radios in `fieldset`/`legend`, das Radio selbst `sr-only`, der Fokusring
+  auf dem Chip.
+- **Category** als Select (Evaluation, Reset, Activation, Subscription, Data, Other),
+  nur bei Expense sichtbar, in eigener Zeile; bei Payout fällt das Feld weg, statt
+  gesperrt zu stehen.
+- **Date** als Datumsfeld, Default heute in `users.timezone`.
+- **Amount (USD)** Mono, `inputMode="decimal"`, Hilfszeile „0 is fine — a free reset
+  still counts." Höchstens $100 Mio. je Eintrag („That amount is too large").
+- **Note** einzeilig, optional, höchstens 500 Zeichen.
+
+Unter `sm` eine Spalte, ab `sm` Date und Amount nebeneinander. Speichern explizit mit
+dem Primärbutton aus 4.2 („Add entry"), Bestätigung als Toast („Entry added"). Danach
+leeren sich Amount und Note, Kind, Category und Date bleiben — wer drei Monate
+Abo nachträgt, wählt nicht dreimal dieselbe Kategorie.
+
+**Die Liste.** `card-surface edge`, Kopf `cap` „Entries", Zeilenmuster aus 4.16
+(`divide-white/6`). Neueste zuerst, bei gleichem Datum der zuletzt angelegte oben.
+Links das Datum („12 Oct 2026", Mono 13px, `--color-fg-muted`), dann die Art („Expense ·
+Reset" bzw. „Payout") in `--color-fg`, darunter die Notiz in `--color-fg-subtle`,
+abgeschnitten, voller Text im `title`. Rechts der Betrag in USD, so wie erfasst, Mono mit
+Tabellenziffern: Payout `+$500.00` in `--color-success-fg`, Expense `-$150.00` in
+`--color-danger-fg`, ein Betrag von 0 ohne Vorzeichen in `--color-fg-muted`. Die Art
+steht immer als Text daneben; Farbe ist nie der einzige Träger (§8).
+
+**Leerzustand.** In der Listenkarte zentriert, `--color-fg-subtle`: „Nothing in the
+ledger yet. Add what prop trading costs you — evaluations, resets, activations,
+subscriptions, data — and every payout you receive."
+
+**Microcopy.** Betrag ungültig: „Amount in USD — digits and up to two decimals."
+Kategorie fehlt: „Pick a category for this expense." Speichern fehlgeschlagen:
+„Couldn't add the entry. Your input is still here — try again."
 
 ---
 

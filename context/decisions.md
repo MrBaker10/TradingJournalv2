@@ -3286,3 +3286,16 @@ Deployment laufen.
   korrelierten Subqueries; bei vielen Trades mit `EXPLAIN ANALYZE` messen.
 - Die Import-Vorschau nennt jede Exit-Korrektur „closes an open trade“, auch bei
   geschlossenen Trades.
+
+## 2026-10-19 — Ledger, Ticket 01 — feature/ledger
+
+- **Kontoschlüssel RESTRICT, ohne Deferral.** Anders als `trade_accounts` (0013) braucht
+  `ledger_entries.account_id` kein `DEFERRABLE`: Der Löschtest mit einem Eintrag an einem
+  Konto ist grün, mit RESTRICT wie mit NO ACTION. Gegengeprüft, indem die Constraint
+  lokal kurzzeitig umgestellt wurde. Beobachtete Erklärung, nicht in der Postgres-Doku
+  nachgelesen: Die Prüfung des Schlüssels feuert erst nach den Kaskaden, die das Löschen
+  von `users` schon eingereiht hat. `ledger_entries` hängt direkt an `users` und ist
+  dann leer; `trade_accounts` hängt hinter `trades` und wird erst später erreicht. Für
+  `trade_accounts` gilt die Notiz zu 0013 weiter.
+- **Obergrenze $100 Mio. je Eintrag**, aus demselben Grund wie `MAX_STARTING_BALANCE`:
+  `exactCents` liest einen getippten Betrag nur bis rund eine Milliarde exakt.

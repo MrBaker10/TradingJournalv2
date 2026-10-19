@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 
 // Every page behind the session renders at request time. Route segment config
 // in a layout applies to every segment below it, so this one line covers all
-// seven pages — including the ones that are still empty and the ones that do
+// eight pages — including the ones that are still empty and the ones that do
 // not exist yet, which is the point: a new page cannot forget it.
 //
 // Without it Next prerenders at build time and freezes one user's figures into

@@ -4,6 +4,7 @@ import { Check, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createAccount, updateAccount } from "@/actions/accounts";
+import { FIELD_CLASS } from "@/components/ui/field-class";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { ACCOUNT_CURRENCIES, type AccountCurrency } from "@/domain/fx";
@@ -11,7 +12,6 @@ import { useUnsavedAccount } from "@/hooks/use-unsaved-account";
 import { formatCentsPlain } from "@/lib/money";
 import { createAccountSchema } from "@/schemas/accounts";
 import {
-  ACCOUNT_FIELD_CLASS,
   AccountCommissionRates,
   type CommissionDraft,
   type InstrumentOption,
@@ -171,7 +171,7 @@ export function AccountForm({
             value={draft.name}
             onChange={(event) => change({ name: event.target.value })}
             placeholder="e.g. Live, Evaluation, Backtesting"
-            className={ACCOUNT_FIELD_CLASS}
+            className={FIELD_CLASS}
             aria-invalid={!!errors.name}
             aria-describedby={errors.name ? "account-name-error" : undefined}
           />
@@ -194,7 +194,7 @@ export function AccountForm({
                 change({ currency: event.target.value as AccountCurrency })
               }
               disabled={account?.hasTrades || isPending}
-              className={ACCOUNT_FIELD_CLASS}
+              className={FIELD_CLASS}
               aria-describedby="account-currency-help"
             >
               {ACCOUNT_CURRENCIES.map((currency) => (
@@ -228,7 +228,7 @@ export function AccountForm({
                 change({ startingBalance: event.target.value })
               }
               placeholder="0.00"
-              className={`${ACCOUNT_FIELD_CLASS} font-mono tabular-nums`}
+              className={`${FIELD_CLASS} font-mono tabular-nums`}
               aria-invalid={!!errors.startingBalance}
               aria-describedby="account-balance-help account-balance-error"
             />

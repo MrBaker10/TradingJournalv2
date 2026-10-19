@@ -7,6 +7,7 @@ import {
   NotebookText,
   Settings,
   TrendingUp,
+  Wallet,
 } from "lucide-react";
 
 export interface NavItem {
@@ -22,6 +23,7 @@ export const navItems: NavItem[] = [
   { label: "Progress", href: "/progress", icon: TrendingUp },
   { label: "Prop Firm Rules", href: "/prop-firms", icon: Landmark },
   { label: "Econ Calendar", href: "/econ-calendar", icon: CalendarDays },
+  { label: "Ledger", href: "/ledger", icon: Wallet },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
