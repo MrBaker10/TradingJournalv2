@@ -1,6 +1,6 @@
 # Spec: Account ↔ prop firm program link
 
-Status: ready-for-agent
+Status: done
 
 Roadmap: `context/project-overview.md` → Phase 3, item 4. Terms: `GLOSSARY.md`.
 Decisions: `docs/adr/0001-user-entered-account-rules.md`,
