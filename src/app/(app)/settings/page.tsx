@@ -1,26 +1,32 @@
 import { AccountsManager } from "@/components/settings/accounts-manager";
 import { ExportCard } from "@/components/settings/export-card";
 import { SecuritySection } from "@/components/settings/security-section";
+import { listAccountRules } from "@/db/queries/account-rules";
 import { listAllAccountsForSettings } from "@/db/queries/accounts";
 import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
+import { listProgramOptions } from "@/db/queries/prop-firms";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { todayInTimeZone } from "@/lib/time";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   const accounts = await listAllAccountsForSettings(user.id);
-  const [rates, instruments] = await Promise.all([
+  const [rates, instruments, rules, programs] = await Promise.all([
     listCommissionRates(
       user.id,
       accounts.map((account) => account.id),
     ),
     listInstruments(),
+    listAccountRules(user.id),
+    listProgramOptions(),
   ]);
   const active = accounts
     .filter((account) => account.archivedAt === null)
     .map((account) => ({
       ...account,
       commissionRates: rates.filter((rate) => rate.accountId === account.id),
+      rules: rules.find((link) => link.accountId === account.id) ?? null,
     }));
   const archived = accounts
     .filter((account) => account.archivedAt !== null)
@@ -40,6 +46,8 @@ export default async function SettingsPage() {
           id: instrument.id,
           symbol: instrument.symbol,
         }))}
+        programs={programs}
+        today={todayInTimeZone(user.timezone)}
         timeZone={user.timezone}
       />
       <div className="max-w-4xl">

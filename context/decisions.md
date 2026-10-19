@@ -3306,3 +3306,24 @@ Deployment laufen.
   den Agenten nach Host-Check) und Production (`pnpm db:migrate:production`, durch Sascha)
   vor dem Push von `main`. Danach auf beiden Branches geprüft: 25 Einträge in
   `drizzle.__drizzle_migrations`, Tabelle `ledger_entries` vorhanden.
+
+## 2026-10-19 — Prop firm link, Ticket 01 — feature/prop-firm-link
+
+- **Der Link ist Teil des Account-Drafts.** `account_rules` wird in `saveAccountDraft`
+  in derselben Transaktion wie Account und Commission-Rates geschrieben; ein erneuter
+  Save ersetzt die eine Zeile pro Account (`account_id` ist Primärschlüssel), „Not
+  linked“ löscht sie.
+- **Kein `user_id` in `account_rules`**, wie bei `account_commission_rates`: Die Zeile
+  gehört ihrem Account, jeder Lesezugriff joint `accounts` mit Filter auf den User
+  (`listAccountRules`), geschrieben wird nur unter dem gesperrten Account-Row. Ausnahme
+  von coding-standards → Database („Every table that holds user data has `user_id`“).
+- **Practice-Sperre gegen den Endzustand.** Abgelehnt wird ein Save, der einen Practice-
+  Account mit Link hinterließe. Link entfernen und auf Practice umstellen im selben Save
+  ist erlaubt: Der Account verlässt dabei jede Regel. Ein verlinkter Account, der mit Link
+  Practice werden soll, bekommt „Remove the link to make it a practice account.“ Im
+  Formular ist der Toggle gesperrt, solange ein Programm gewählt ist.
+- **Consistency als ganze Prozentzahl 1–100**, Mindest-Tradingtage ≥ 1. **Lock level** ist
+  ein Kontostand in USD, bei dem der EOD-trailing-Floor stehen bleibt; nur bei
+  `eod_trailing` (Domain, Zod und Check-Constraint).
+- **Programm RESTRICT.** Der Seeder legt an und aktualisiert, er löscht nicht; ein
+  verlinktes Programm kann nur von Hand und dann nicht still verschwinden.

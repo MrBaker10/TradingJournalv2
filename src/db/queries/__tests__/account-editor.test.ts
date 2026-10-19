@@ -1,12 +1,15 @@
 import { eq, TransactionRollbackError } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { db } from "../../index.ts";
+import { accountRules } from "../../schema/account-rules.ts";
 import { accountCommissionRates, accounts } from "../../schema/accounts.ts";
 import { instruments } from "../../schema/instruments.ts";
 import { ledgerEntries } from "../../schema/ledger.ts";
+import { propFirmPrograms, propFirms } from "../../schema/prop-firms.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
 import { type AccountDraftWrite, saveAccountDraft } from "../account-editor.ts";
+import { type AccountRulesWrite, listAccountRules } from "../account-rules.ts";
 import {
   deleteUnusedAccount,
   listAllAccountsForSettings,
@@ -14,7 +17,12 @@ import {
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 async function fixture(
-  body: (tx: Tx, userId: number, instrumentId: number) => Promise<void>,
+  body: (
+    tx: Tx,
+    userId: number,
+    instrumentId: number,
+    programId: number,
+  ) => Promise<void>,
 ) {
   try {
     await db.transaction(async (tx) => {
@@ -36,7 +44,19 @@ async function fixture(
           tickSize: "0.25",
         })
         .returning();
-      await body(tx, user.id, instrument.id);
+      const [firm] = await tx
+        .insert(propFirms)
+        .values({ name: "Account editor test firm" })
+        .returning();
+      const [program] = await tx
+        .insert(propFirmPrograms)
+        .values({
+          firmId: firm.id,
+          name: "50k EOD",
+          maxDrawdown: "$2,000 (EOD)",
+        })
+        .returning();
+      await body(tx, user.id, instrument.id, program.id);
       tx.rollback();
     });
   } catch (error) {
@@ -49,7 +69,19 @@ const draft: AccountDraftWrite = {
   currency: "USD",
   balanceCents: 5_000_000,
   commissionRates: [],
+  rules: null,
 };
+const rules = (programId: number): AccountRulesWrite => ({
+  programId,
+  evaluationStart: "2026-10-01",
+  profitTargetCents: 300_000,
+  drawdownAmountCents: 200_000,
+  drawdownType: "eod_trailing",
+  lockLevelCents: 5_010_000,
+  dailyLossLimitCents: 100_000,
+  consistencyPercent: 50,
+  minTradingDays: 5,
+});
 const usd = async (amountCents: number) => ({
   amountCents,
   usdCents: amountCents,
@@ -453,5 +485,207 @@ it("refuses to delete an account for good while a trade is assigned", async () =
     await tx.insert(tradeAccounts).values({ tradeId: trade.id, accountId: id });
 
     expect(await deleteUnusedAccount(userId, id, tx)).toBe("in-use");
+  });
+});
+
+describe("saveAccountDraft with a prop firm program link", () => {
+  async function readRules(tx: Tx, id: number) {
+    return tx.select().from(accountRules).where(eq(accountRules.accountId, id));
+  }
+
+  it("links, edits and removes the link together with the account", async () => {
+    await fixture(async (tx, userId, _instrumentId, programId) => {
+      const { id } = await saveAccountDraft(
+        userId,
+        { ...draft, rules: rules(programId) },
+        usd,
+        tx,
+      );
+      expect(await readRules(tx, id)).toEqual([
+        expect.objectContaining({
+          programId,
+          evaluationStart: "2026-10-01",
+          profitTarget: "3000.00",
+          drawdownAmount: "2000.00",
+          drawdownType: "eod_trailing",
+          lockLevel: "50100.00",
+          dailyLossLimit: "1000.00",
+          consistencyPercent: 50,
+          minTradingDays: 5,
+        }),
+      ]);
+
+      await saveAccountDraft(
+        userId,
+        {
+          ...draft,
+          accountId: id,
+          rules: {
+            ...rules(programId),
+            drawdownType: "static",
+            lockLevelCents: null,
+            dailyLossLimitCents: null,
+            consistencyPercent: null,
+            minTradingDays: null,
+          },
+        },
+        usd,
+        tx,
+      );
+      expect(await readRules(tx, id)).toEqual([
+        expect.objectContaining({
+          drawdownType: "static",
+          lockLevel: null,
+          dailyLossLimit: null,
+          consistencyPercent: null,
+          minTradingDays: null,
+        }),
+      ]);
+
+      await saveAccountDraft(userId, { ...draft, accountId: id }, usd, tx);
+      expect(await readRules(tx, id)).toEqual([]);
+      expect((await read(tx, id)).account.name).toBe("Evaluation");
+    });
+  });
+
+  it("refuses to link a practice account", async () => {
+    await fixture(async (tx, userId, _instrumentId, programId) => {
+      await expect(
+        saveAccountDraft(
+          userId,
+          { ...draft, isPractice: true, rules: rules(programId) },
+          usd,
+          tx,
+        ),
+      ).rejects.toThrow("Practice accounts can't be linked");
+      expect(
+        await tx.select().from(accounts).where(eq(accounts.userId, userId)),
+      ).toEqual([]);
+    });
+  });
+
+  it("refuses to switch a linked account to practice", async () => {
+    await fixture(async (tx, userId, _instrumentId, programId) => {
+      const { id } = await saveAccountDraft(
+        userId,
+        { ...draft, rules: rules(programId) },
+        usd,
+        tx,
+      );
+      const before = await read(tx, id);
+      await expect(
+        saveAccountDraft(
+          userId,
+          {
+            ...draft,
+            accountId: id,
+            isPractice: true,
+            rules: rules(programId),
+          },
+          usd,
+          tx,
+        ),
+      ).rejects.toThrow("Remove the link to make it a practice account");
+      expect(await read(tx, id)).toEqual(before);
+      expect(await readRules(tx, id)).toHaveLength(1);
+
+      // Removing the link in the same save is not a linked account turning
+      // practice: the account leaves every rule at once.
+      await saveAccountDraft(
+        userId,
+        { ...draft, accountId: id, isPractice: true },
+        usd,
+        tx,
+      );
+      expect(await readRules(tx, id)).toEqual([]);
+    });
+  });
+
+  it("refuses to link an account without a starting balance", async () => {
+    await fixture(async (tx, userId, _instrumentId, programId) => {
+      const { id } = await saveAccountDraft(
+        userId,
+        { ...draft, balanceCents: 0 },
+        usd,
+        tx,
+      );
+      await expect(
+        saveAccountDraft(
+          userId,
+          { ...draft, accountId: id, balanceCents: 0, rules: rules(programId) },
+          usd,
+          tx,
+        ),
+      ).rejects.toThrow("Enter a starting balance");
+      expect(await readRules(tx, id)).toEqual([]);
+
+      // A balance entered in the same save is enough.
+      await saveAccountDraft(
+        userId,
+        { ...draft, accountId: id, rules: rules(programId) },
+        usd,
+        tx,
+      );
+      expect(await readRules(tx, id)).toHaveLength(1);
+    });
+  });
+
+  it("refuses another user's account, an unknown program and a misplaced lock level", async () => {
+    await fixture(async (tx, userId, _instrumentId, programId) => {
+      const { id } = await saveAccountDraft(userId, draft, usd, tx);
+      await expect(
+        saveAccountDraft(
+          userId + 1,
+          { ...draft, accountId: id, rules: rules(programId) },
+          usd,
+          tx,
+        ),
+      ).rejects.toThrow("Account not found");
+      await expect(
+        saveAccountDraft(
+          userId,
+          { ...draft, accountId: id, rules: rules(-1) },
+          usd,
+          tx,
+        ),
+      ).rejects.toThrow("Pick a prop firm program");
+      await expect(
+        saveAccountDraft(
+          userId,
+          {
+            ...draft,
+            accountId: id,
+            rules: { ...rules(programId), drawdownType: "static" },
+          },
+          usd,
+          tx,
+        ),
+      ).rejects.toThrow("A lock level only applies");
+      expect(await readRules(tx, id)).toEqual([]);
+    });
+  });
+
+  it("lists links with firm and program for the current user only", async () => {
+    await fixture(async (tx, userId, _instrumentId, programId) => {
+      const { id } = await saveAccountDraft(
+        userId,
+        { ...draft, rules: rules(programId) },
+        usd,
+        tx,
+      );
+      await saveAccountDraft(userId, { ...draft, name: "Unlinked" }, usd, tx);
+      expect(await listAccountRules(userId, tx)).toEqual([
+        expect.objectContaining({
+          accountId: id,
+          programId,
+          firmName: "Account editor test firm",
+          programName: "50k EOD",
+          profitTargetCents: 300_000,
+          lockLevelCents: 5_010_000,
+          drawdownType: "eod_trailing",
+        }),
+      ]);
+      expect(await listAccountRules(userId + 1, tx)).toEqual([]);
+    });
   });
 });

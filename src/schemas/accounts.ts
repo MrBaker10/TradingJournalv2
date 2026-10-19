@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { ACCOUNT_CURRENCIES } from "@/domain/fx";
 import { exactCents } from "@/lib/money";
+import { accountRulesSchema } from "./account-rules";
 import { commissionField } from "./trades";
 
 export const accountIdSchema = z.object({
@@ -62,6 +63,8 @@ export const createAccountSchema = z.object({
   ...accountFields,
   startingBalance: startingBalanceField.optional(),
   commissionRates: commissionRatesField.default([]),
+  // The prop firm program link; null means not linked (docs/adr/0001).
+  rules: accountRulesSchema.nullable().default(null),
 });
 
 export const updateAccountSchema = createAccountSchema.extend({

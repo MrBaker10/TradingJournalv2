@@ -7,6 +7,8 @@ import { createAccount, updateAccount } from "@/actions/accounts";
 import { FIELD_CLASS } from "@/components/ui/field-class";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import type { ProgramOption } from "@/db/queries/prop-firms";
+import { ACCOUNT_RULES_MESSAGES } from "@/domain/account-rules";
 import { ACCOUNT_CURRENCIES, type AccountCurrency } from "@/domain/fx";
 import { useUnsavedAccount } from "@/hooks/use-unsaved-account";
 import { formatCentsPlain } from "@/lib/money";
@@ -16,11 +18,19 @@ import {
   type CommissionDraft,
   type InstrumentOption,
 } from "./account-commission-rates";
+import {
+  AccountProgramLink,
+  initialLinkDraft,
+  linkInput,
+} from "./account-program-link";
 import type { AccountRowData } from "./account-row";
 
 interface AccountFormProps {
   account?: AccountRowData;
   instruments: InstrumentOption[];
+  programs: ProgramOption[];
+  /** Today in `users.timezone`, the default evaluation start. */
+  today: string;
   onClose: () => void;
   onSaved: () => void;
   onDirtyChange: (dirty: boolean) => void;
@@ -33,7 +43,7 @@ function isPracticeLocked(account?: AccountRowData) {
   return !!account?.hasLedgerEntries && !account.isPractice;
 }
 
-function initialDraft(account?: AccountRowData) {
+function initialDraft(today: string, account?: AccountRowData) {
   return {
     name: account?.name ?? "",
     currency: account?.currency ?? ("USD" as AccountCurrency),
@@ -49,18 +59,21 @@ function initialDraft(account?: AccountRowData) {
         perSide: formatCentsPlain(rate.perSideCents),
       }),
     ),
+    link: initialLinkDraft(account?.rules, today),
   };
 }
 
 export function AccountForm({
   account,
   instruments,
+  programs,
+  today,
   onClose,
   onSaved,
   onDirtyChange,
   onPendingChange,
 }: AccountFormProps) {
-  const [initial] = useState(() => initialDraft(account));
+  const [initial] = useState(() => initialDraft(today, account));
   const [draft, setDraft] = useState(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
@@ -79,6 +92,10 @@ export function AccountForm({
     setErrors({});
   }
 
+  const linked = draft.link.programId !== "";
+  // A practice account carries no link; the server refuses it either way.
+  const practiceLocked = isPracticeLocked(account) || linked;
+
   function save() {
     if (isPending) return;
     const parsed = createAccountSchema.safeParse({
@@ -93,11 +110,16 @@ export function AccountForm({
         instrumentId: Number(rate.instrumentId),
         perSide: rate.perSide.trim() === "" ? undefined : Number(rate.perSide),
       })),
+      rules: linkInput(draft.link),
     });
+    const next: Record<string, string> = {};
     if (!parsed.success) {
-      const next: Record<string, string> = {};
       for (const issue of parsed.error.issues)
         next[issue.path.join(".")] ??= issue.message;
+    }
+    if (linked && !(Number(draft.startingBalance) > 0))
+      next.startingBalance ??= ACCOUNT_RULES_MESSAGES.startingBalance;
+    if (!parsed.success || Object.keys(next).length) {
       setErrors(next);
       const details = formRef.current?.querySelector("details");
       if (
@@ -112,11 +134,12 @@ export function AccountForm({
       );
       return;
     }
+    const data = parsed.data;
     startTransition(async () => {
       try {
         const result = account
-          ? await updateAccount({ ...parsed.data, accountId: account.id })
-          : await createAccount(parsed.data);
+          ? await updateAccount({ ...data, accountId: account.id })
+          : await createAccount(data);
         if (!result.success) {
           toast.error(result.error);
           return;
@@ -266,27 +289,36 @@ export function AccountForm({
               Excluded from combined figures and progress. View its numbers by
               selecting this account.
             </p>
-            {isPracticeLocked(account) && (
+            {practiceLocked && (
               <p
                 id="account-practice-lock"
                 className="mt-2 text-xs leading-relaxed text-fg-subtle"
               >
-                Locked — this account has ledger entries
+                {isPracticeLocked(account)
+                  ? "Locked — this account has ledger entries"
+                  : "Locked — linked to a prop firm program"}
               </p>
             )}
           </div>
           <ToggleSwitch
             checked={draft.isPractice}
             onCheckedChange={(isPractice) => change({ isPractice })}
-            disabled={isPracticeLocked(account) || isPending}
+            disabled={practiceLocked || isPending}
             ariaLabel="Practice account"
             ariaDescribedBy={
-              isPracticeLocked(account)
+              practiceLocked
                 ? "account-practice-help account-practice-lock"
                 : "account-practice-help"
             }
           />
         </div>
+        <AccountProgramLink
+          link={draft.link}
+          programs={programs}
+          isPractice={draft.isPractice}
+          onChange={(link) => change({ link })}
+          errors={errors}
+        />
         <AccountCommissionRates
           rates={draft.rates}
           instruments={instruments}

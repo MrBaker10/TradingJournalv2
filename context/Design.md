@@ -602,6 +602,44 @@ amount and currency preserve the existing USD conversion and rate date.
 toggle the same way and explain below its description: “Locked — this account has
 ledger entries”. The server refuses the switch either way.
 
+**Prop firm program link (prop-firm-link, ticket 01).** A section in the same editor,
+between Practice and the Commission disclosure, part of the same draft and the same
+explicit save. Heading “Prop firm program” with the help line “Link the program you
+bought and enter its rules as your firm states them for this account.” A native select
+“Program”: first option “Not linked”, then the programs grouped by firm (`optgroup`).
+Picking a program reveals the rule fields; picking “Not linked” hides them and saving
+removes the link — the typed values stay in the draft until the editor closes.
+
+- Fields, labels above (4.5), two columns from `sm`, one below: Evaluation start (date,
+  default today in `users.timezone`) and Profit target; Max drawdown and Drawdown type
+  (select: Static, EOD trailing, Intraday trailing); Lock level, only for EOD trailing —
+  for any other type the field falls away rather than standing locked; Daily loss
+  limit, Consistency (%) and Minimum trading days, each optional. Amounts in mono with
+  “(USD)” in the label, since prop firm limits stay in USD.
+- Below each field, in `--color-fg-subtle`, the program's text for that rule, verbatim,
+  prefixed with “Program:” — “Program: $2,000 (EOD)”. Nothing is parsed into
+  the field (ADR 0001). A rule the program has no text for shows no line.
+- Below the select, the program's account size as reference and the line “The
+  account's starting balance is the attempt's starting balance.”
+- Help lines in `--color-fg-subtle`: Evaluation start “Trades before this day don't
+  count.” Drawdown type, per type: Static “The floor stays at starting balance minus the
+  drawdown.”, EOD trailing “The floor follows your highest end-of-day balance.”,
+  Intraday trailing “Shown as not checkable — the journal has no intraday balance.”
+  Lock level “Optional. The floor stops trailing at this balance.” Consistency
+  “Optional. The largest share of total profit one day may hold.” Daily loss limit and
+  Minimum trading days “Optional.”
+- Messages: an empty Profit target or Max drawdown reads “Enter the profit target” /
+  “Enter the max drawdown”; typed text that is no number reads “Enter the amount as a
+  number”; zero “Enter an amount above 0”.
+- Practice: on a practice draft the select is disabled with “Practice accounts can't be
+  linked.” While a program is selected, the Practice toggle is locked like the ledger
+  lock: “Locked — linked to a prop firm program”. The server refuses both either way.
+- Linking needs a starting balance: without one, the Starting balance field shows
+  “Enter a starting balance to link a prop firm program.”
+- The account row names the link in its detail line after the starting balance:
+  “/ Firm · Program” in `--color-fg-muted`. No status, no colour — rule status is its
+  own surface (tickets 02 and 06).
+
 **Archived accounts.** Each archived row offers Restore. Delete permanently appears only
 for an account with no trades and no ledger entries; otherwise its place holds a quiet
 note in `--color-fg-subtle`: “Has trades or ledger entries — stays archived”. The

@@ -15,6 +15,7 @@ import {
   moveAccount,
   setDefaultAccount,
 } from "@/actions/accounts";
+import type { AccountRulesRow } from "@/db/queries/account-rules";
 import { amountToCents } from "@/domain/commission";
 import type { AccountCurrency } from "@/domain/fx";
 import { formatCents } from "@/lib/money";
@@ -32,6 +33,8 @@ export interface AccountRowData {
   startingBalance: string;
   /** Per-side rates per instrument (commissions). */
   commissionRates: CommissionRateData[];
+  /** The prop firm program link, or null when not linked. */
+  rules: AccountRulesRow | null;
 }
 
 const ACTION_CLASS =
@@ -99,6 +102,14 @@ export function AccountRow({
                 currency: account.currency,
               })}
             </span>
+            {account.rules && (
+              <>
+                <span className="mx-2 text-fg-placeholder">/</span>
+                <span className="text-fg-muted">
+                  {account.rules.firmName} · {account.rules.programName}
+                </span>
+              </>
+            )}
           </p>
         </div>
         <button
