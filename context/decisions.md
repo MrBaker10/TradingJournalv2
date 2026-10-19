@@ -3375,3 +3375,10 @@ Deployment laufen.
   Tagesschluss und kann den Floor reißen.
 - **`getAttempt` ist ein Statement** (`unionAll`: Start, Tage, Payouts); `null` für ein
   nicht verlinktes oder fremdes Konto.
+
+## 2026-10-20 — Prop firm link, Nachtrag: Migration 0025 auf Neon — main — 04090a3
+
+- Migration `0025` (`account_rules`) auf Neon Production (`pnpm db:migrate:production`,
+  durch Sascha) und `preview` (`pnpm db:migrate:preview`, durch den Agenten nach
+  Host-Check) vor dem Push von `main`. Danach auf beiden Branches lesend geprüft: 26
+  Einträge in `drizzle.__drizzle_migrations`, Tabelle `account_rules` vorhanden.
