@@ -86,3 +86,18 @@ export function validateLedgerEntry(
   }
   return { success: true };
 }
+
+/** Payouts and expenses as sums of whole cents, each in one currency. */
+export interface LedgerTotalsCents {
+  payoutsCents: number;
+  expensesCents: number;
+}
+
+/**
+ * Payouts minus expenses. Both sums arrive already converted and rounded per
+ * entry, so the net needs no rounding of its own and the three figures on the
+ * page add up to one another.
+ */
+export function ledgerNetCents(totals: LedgerTotalsCents): number {
+  return totals.payoutsCents - totals.expensesCents;
+}

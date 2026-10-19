@@ -1268,7 +1268,8 @@ Kontofilter.
 **Summen.** Eine `card-surface edge`-Karte als Raster wie die Metrik-Tafel 4.7, drei
 Zellen: Payouts, Expenses, Ledger net. `cap`-Label, Wert 21px Mono mit Tabellenziffern,
 Kontextzeile mit der Anzeigewährung. Payouts `--color-success-fg`, Expenses
-`--color-danger-fg`, Ledger net nach Vorzeichen, 0 in `--color-fg`. Kein Glow. Unter `sm`
+`--color-danger-fg`, Ledger net nach Vorzeichen; jeder der drei Werte bei 0 ohne
+Vorzeichen in `--color-fg`. Kein Glow. Unter `sm`
 stehen die Zellen untereinander.
 
 **Formular „Add entry".** `card-surface edge`, Kopf `cap`. Felder nach 4.5, Label über

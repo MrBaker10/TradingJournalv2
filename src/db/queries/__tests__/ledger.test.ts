@@ -2,6 +2,7 @@ import { eq, TransactionRollbackError } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "../../index.ts";
 import { accounts } from "../../schema/accounts.ts";
+import { fxRates } from "../../schema/fx-rates.ts";
 import { ledgerEntries } from "../../schema/ledger.ts";
 import { users } from "../../schema/users.ts";
 import {
@@ -10,6 +11,7 @@ import {
 } from "../accounts.ts";
 import {
   createLedgerEntry,
+  getLedgerTotals,
   LedgerEntryError,
   type LedgerEntryWrite,
   listLedgerAccounts,
@@ -301,6 +303,94 @@ describe("deleting an account for good", () => {
       expect(await deleteUnusedAccount(userId, accountId, tx)).toBe(
         "not-found",
       );
+    });
+  });
+});
+
+describe("ledger totals", () => {
+  it("sums payouts and expenses and nets them, in USD as entered", async () => {
+    await fixture(async (tx, userId) => {
+      await createLedgerEntry(userId, evaluation, tx);
+      await createLedgerEntry(
+        userId,
+        { ...evaluation, category: "reset", amountCents: 9_999 },
+        tx,
+      );
+      await createLedgerEntry(userId, payout, tx);
+
+      expect(await getLedgerTotals(userId, "USD", tx)).toEqual({
+        payoutsCents: 123_456,
+        expensesCents: 24_999,
+        netCents: 98_457,
+      });
+    });
+  });
+
+  it("is zero everywhere without entries", async () => {
+    await fixture(async (tx, userId) => {
+      expect(await getLedgerTotals(userId, "USD", tx)).toEqual({
+        payoutsCents: 0,
+        expensesCents: 0,
+        netCents: 0,
+      });
+    });
+  });
+
+  it("never counts another user's entries", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      await createLedgerEntry(userId, evaluation, tx);
+      await createLedgerEntry(otherUserId, payout, tx);
+      await createLedgerEntry(otherUserId, evaluation, tx);
+
+      expect(await getLedgerTotals(userId, "USD", tx)).toEqual({
+        payoutsCents: 0,
+        expensesCents: 15_000,
+        netCents: -15_000,
+      });
+    });
+  });
+
+  it("converts each entry with its own date's ECB rate, rounded per entry", async () => {
+    await fixture(async (tx, userId) => {
+      // Dates long before any rate the app stores, so nothing collides.
+      await tx.insert(fxRates).values([
+        { currency: "EUR", rateDate: "2001-06-04", rateVsUsd: "0.800000" },
+        { currency: "EUR", rateDate: "2001-06-05", rateVsUsd: "0.900000" },
+        { currency: "EUR", rateDate: "2001-06-06", rateVsUsd: "0.600000" },
+      ]);
+      // $100.00 / 0.8 = €125.00
+      await createLedgerEntry(
+        userId,
+        { ...evaluation, entryDate: "2001-06-04", amountCents: 10_000 },
+        tx,
+      );
+      // $10.01 / 0.9 = €11.1222… → €11.12
+      await createLedgerEntry(
+        userId,
+        { ...payout, entryDate: "2001-06-05", amountCents: 1_001 },
+        tx,
+      );
+      // Twice $0.01 / 0.6 = €0.0166… → €0.02 each, €0.04 together; the
+      // rounded sum would be €0.03.
+      for (let i = 0; i < 2; i++) {
+        await createLedgerEntry(
+          userId,
+          { ...evaluation, entryDate: "2001-06-06", amountCents: 1 },
+          tx,
+        );
+      }
+      // A Saturday has no ECB rate and takes Wednesday's: $6.00 / 0.6 = €10.00
+      await createLedgerEntry(
+        userId,
+        { ...payout, entryDate: "2001-06-09", amountCents: 600 },
+        tx,
+      );
+
+      expect(await getLedgerTotals(userId, "EUR", tx)).toEqual({
+        payoutsCents: 2_112,
+        expensesCents: 12_504,
+        netCents: -10_392,
+      });
     });
   });
 });

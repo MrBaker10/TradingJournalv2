@@ -1,12 +1,17 @@
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, type SQL, sql } from "drizzle-orm";
+import type { AccountCurrency } from "../../domain/fx.ts";
 import {
   type LedgerEntryCheck,
+  type LedgerTotalsCents,
+  ledgerNetCents,
   validateLedgerEntry,
 } from "../../domain/ledger.ts";
 import { formatCentsPlain } from "../../lib/money.ts";
 import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
 import { ledgerEntries } from "../schema/ledger.ts";
+import { rateOnSql } from "./fx.ts";
+import { toNumber } from "./scope.ts";
 
 // Ledger entries are the user's own real money and stay on the ledger page:
 // nothing here is read by trading P&L, the equity curve, the calendar or
@@ -127,4 +132,48 @@ export async function listLedgerEntries(
     .orderBy(desc(ledgerEntries.entryDate), desc(ledgerEntries.id));
 
   return rows.map((row) => ({ ...row, amountCents: Number(row.amountCents) }));
+}
+
+/** The page's three figures, in integer cents of the display currency. */
+export type LedgerTotals = LedgerTotalsCents & { netCents: number };
+
+/**
+ * One entry's amount in integer cents of the display currency. USD is the
+ * amount as entered; any other currency divides by the ECB rate of the entry
+ * date and rounds per entry, the same rule as a trade's USD P&L
+ * (`tradeDisplayCents`), so the totals are sums of rounded entries.
+ */
+function entryDisplayCents(currency: AccountCurrency): SQL<number> {
+  const usdCents = sql`${ledgerEntries.amount} * 100`;
+  if (currency === "USD") return sql<number>`round(${usdCents})`;
+  return sql<number>`round(${usdCents} / ${rateOnSql(
+    currency,
+    sql`${ledgerEntries.entryDate}`,
+  )})`;
+}
+
+/**
+ * Payouts, expenses and the ledger net over the user's entries, in one
+ * statement. The currency is the "All accounts" display currency: the
+ * account selector does not scope the ledger (docs/adr/0002).
+ */
+export async function getLedgerTotals(
+  userId: number,
+  currency: AccountCurrency,
+  executor: Pick<typeof db, "select"> = db,
+): Promise<LedgerTotals> {
+  const cents = entryDisplayCents(currency);
+  const [row] = await executor
+    .select({
+      payoutsCents: sql<string>`coalesce(sum(${cents}) filter (where ${ledgerEntries.kind} = 'payout'), 0)`,
+      expensesCents: sql<string>`coalesce(sum(${cents}) filter (where ${ledgerEntries.kind} = 'expense'), 0)`,
+    })
+    .from(ledgerEntries)
+    .where(eq(ledgerEntries.userId, userId));
+
+  const totals = {
+    payoutsCents: toNumber(row.payoutsCents),
+    expensesCents: toNumber(row.expensesCents),
+  };
+  return { ...totals, netCents: ledgerNetCents(totals) };
 }

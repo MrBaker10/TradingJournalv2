@@ -1,17 +1,31 @@
 import { LedgerEntryForm } from "@/components/ledger/ledger-entry-form";
 import { LedgerList } from "@/components/ledger/ledger-list";
-import { listLedgerAccounts, listLedgerEntries } from "@/db/queries/ledger";
+import { LedgerTotalsCard } from "@/components/ledger/ledger-totals-card";
+import {
+  getLedgerTotals,
+  listLedgerAccounts,
+  listLedgerEntries,
+} from "@/db/queries/ledger";
+import { withDisplayCurrency } from "@/db/queries/scope";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { todayInTimeZone } from "@/lib/time";
 
 // Real money around the user's prop trading, kept apart from trading P&L
 // (docs/adr/0002). The account selector does not scope this page: an entry
-// without an account would otherwise vanish whenever one is selected.
+// without an account would otherwise vanish whenever one is selected. Totals
+// are therefore in the "All accounts" display currency.
 export default async function LedgerPage() {
   const user = await getCurrentUser();
-  const [entries, accounts] = await Promise.all([
+  // Only the totals wait for the currency.
+  const [entries, accounts, { currency, totals }] = await Promise.all([
     listLedgerEntries(user.id),
     listLedgerAccounts(user.id),
+    withDisplayCurrency({ userId: user.id, selectedAccountId: null }).then(
+      async ({ currency }) => ({
+        currency,
+        totals: await getLedgerTotals(user.id, currency),
+      }),
+    ),
   ]);
 
   return (
@@ -21,6 +35,7 @@ export default async function LedgerPage() {
         Real money around your prop trading — kept apart from your trading P&L.
       </p>
 
+      <LedgerTotalsCard totals={totals} currency={currency} />
       <LedgerEntryForm
         today={todayInTimeZone(user.timezone)}
         accounts={accounts}

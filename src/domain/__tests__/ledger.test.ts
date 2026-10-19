@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { validateLedgerCategory, validateLedgerEntry } from "../ledger.ts";
+import {
+  ledgerNetCents,
+  validateLedgerCategory,
+  validateLedgerEntry,
+} from "../ledger.ts";
 
 describe("validateLedgerEntry", () => {
   it("passes an expense with a category", () => {
@@ -85,5 +89,23 @@ describe("validateLedgerCategory", () => {
     expect(validateLedgerCategory("payout", null)).toEqual({ success: true });
     expect(validateLedgerCategory("expense", null).success).toBe(false);
     expect(validateLedgerCategory("payout", "reset").success).toBe(false);
+  });
+});
+
+describe("ledgerNetCents", () => {
+  it("is payouts minus expenses", () => {
+    expect(
+      ledgerNetCents({ payoutsCents: 50_000, expensesCents: 15_099 }),
+    ).toBe(34_901);
+  });
+
+  it("goes negative when expenses outweigh payouts", () => {
+    expect(ledgerNetCents({ payoutsCents: 0, expensesCents: 30_000 })).toBe(
+      -30_000,
+    );
+  });
+
+  it("is zero with nothing recorded", () => {
+    expect(ledgerNetCents({ payoutsCents: 0, expensesCents: 0 })).toBe(0);
   });
 });

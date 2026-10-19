@@ -7,19 +7,18 @@ History and reset this file to “Nothing in progress”.
 
 ## Status
 
-**In progress:** Ledger, ticket 02 (`feature/ledger`).
+**In progress:** Ledger, ticket 03 (`feature/ledger`).
 
-## Feature: Ledger — 02 Tie an entry to a real account
+## Feature: Ledger — 03 Totals and ledger net in the display currency
 
-- Goal: an entry can be tied to one of the user's real, non-archived accounts or to
-  none; the list shows the account (archived ones keep their name); an account with
-  ledger entries cannot be hard-deleted.
-- Scope: ledger query module (account check on create, account name in the list,
-  pickable accounts), schema/action/form/list, account hard-delete moves into a query
-  that refuses accounts with trades or ledger entries, `Design.md` §4.25 account column.
-  No migration (column exists since ticket 01).
-- Do not build: totals (03), filters (04), edit and delete of entries (05); nothing on
+- Goal: the ledger page shows payouts, expenses and the ledger net above the form and
+  list, in the "All accounts" display currency; outside USD each entry converts with
+  its entry date's ECB rate, rounded per entry, then summed.
+- Scope: `ledgerNetCents` in `src/domain/ledger.ts`, `getLedgerTotals` in the ledger
+  query module (one SQL statement, filtered by user), a totals card on `/ledger` built
+  from the §4.7 metric cell (`Design.md` §4.25). No migration.
+- Do not build: filters (04), edit and delete (05), practice toggle lock (06); nothing on
   dashboard, analytics, progress or the CSV export.
-- Acceptance: `.scratch/ledger/issues/02-tie-entry-to-account.md`; full gate with DB
-  tests executing; browser path from the ticket.
+- Acceptance: `.scratch/ledger/issues/03-totals-and-ledger-net.md`; full gate with DB
+  tests executing; browser check in USD and EUR display currency.
 - Open questions: none. Spec `.scratch/ledger/spec.md`.
