@@ -534,7 +534,7 @@ and branch per item. Terms in `GLOSSARY.md`.
    field, no automatic archiving. A "Rule status" card (ok, close in amber, breached in
    red) shows on the dashboard only when exactly one linked account is selected; detail
    lives in account settings. No push notifications, no celebration, no score effect.
-   Overnight and news flags stay deferred.
+   Overnight and news flags stay deferred. Built and merged 2026-10-20.
 5. **Weekly review.** A review week runs Sunday to Friday in `users.timezone`. Three free
    text fields (what worked, what did not, focus next week) beside a read-only summary
    over all real accounts: logged days, by-the-book share, top three mistakes, missed
