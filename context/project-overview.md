@@ -67,7 +67,9 @@ A trade must belong to at least one account.
 Each account carries one switch, **Practice account** (`is_practice`), off by default.
 On means the account is for practice — Backtesting, Demo — and its entries no longer
 feed streak, consistency score or badges. It is a plain toggle in
-account settings, set per account and changeable at any time. The account name stays
+account settings, set per account and changeable at any time — except that an account
+with ledger entries cannot be switched to practice, because ledger money belongs to real
+accounts only (`docs/adr/0002`). The account name stays
 free text; nothing is ever inferred from what an account is called, because a user may
 well name a live account "Backtest results".
 

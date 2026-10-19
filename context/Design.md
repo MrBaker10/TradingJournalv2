@@ -598,6 +598,10 @@ disable it and explain: “Locked — this account has trades”. Currency chang
 the entered starting-balance amount in the newly selected currency. An unchanged
 amount and currency preserve the existing USD conversion and rate date.
 
+**Practice lock (ledger, ticket 06).** Once ledger entries exist, disable the Practice
+toggle the same way and explain below its description: “Locked — this account has
+ledger entries”. The server refuses the switch either way.
+
 **Archived accounts.** Each archived row offers Restore. Delete permanently appears only
 for an account with no trades and no ledger entries; otherwise its place holds a quiet
 note in `--color-fg-subtle`: “Has trades or ledger entries — stays archived”. The

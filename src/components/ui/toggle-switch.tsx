@@ -3,6 +3,7 @@ interface ToggleSwitchProps {
   onCheckedChange: (next: boolean) => void;
   disabled?: boolean;
   ariaLabel: string;
+  ariaDescribedBy?: string;
 }
 
 export function ToggleSwitch({
@@ -10,6 +11,7 @@ export function ToggleSwitch({
   onCheckedChange,
   disabled,
   ariaLabel,
+  ariaDescribedBy,
 }: ToggleSwitchProps) {
   return (
     <button
@@ -17,9 +19,10 @@ export function ToggleSwitch({
       role="switch"
       aria-checked={checked}
       aria-label={ariaLabel}
+      aria-describedby={ariaDescribedBy}
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
-      className="relative flex h-10 w-10 shrink-0 items-center justify-center"
+      className="relative flex h-10 w-10 shrink-0 items-center justify-center disabled:opacity-50"
     >
       <span
         className={`relative h-5 w-9 overflow-hidden rounded-full transition-colors duration-150 ${

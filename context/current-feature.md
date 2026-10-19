@@ -7,22 +7,16 @@ History and reset this file to “Nothing in progress”.
 
 ## Status
 
-**In progress:** Ledger, ticket 05 (`feature/ledger`).
+**In progress:** Ledger, ticket 06 (`feature/ledger`).
 
-## Feature: Ledger — 05 Edit and delete entries
+## Feature: Ledger — 06 Lock the practice toggle while ledger entries exist
 
-- Goal: the user edits an entry inline under its row with an explicit save, and deletes
-  it with the two-click confirm; another user's entry can be neither changed nor
-  deleted; an unchanged archived account stays on edit, a new or changed one must be
-  real and active.
-- Scope: update and delete in the ledger query module, Zod schema for update, server
-  actions, the entry fields shared by an add and an edit form, two-click delete,
-  `Design.md` §4.25 edit and delete. No migration. From the review (approved by Sascha):
-  the two-click confirm becomes `src/hooks/use-two-click-confirm.ts`, used by the trade
-  form, screenshot slots, archived accounts and the ledger.
-- Do not build: practice toggle lock (06); nothing on dashboard, analytics, progress or
-  the CSV export.
-- Acceptance: `.scratch/ledger/issues/05-edit-and-delete-entries.md`; full gate with DB
+- Goal: an account with ledger entries cannot be switched to practice; the editor
+  disables the Practice toggle and says why, the server refuses the switch in the
+  update statement like the currency lock.
+- Scope: the lock in `saveAccountDraft`, the toggle lock and its note in the account
+  editor, `Design.md` practice lock, the rule in `project-overview.md`. No migration.
+- Do not build: nothing on dashboard, analytics, progress or the CSV export.
+- Acceptance: `.scratch/ledger/issues/06-lock-practice-toggle.md`; full gate with DB
   tests executing; browser path from the ticket.
-- Open questions: none (inline edit decided by Sascha 2026-10-19). Spec
-  `.scratch/ledger/spec.md`.
+- Open questions: none (decided by Sascha 2026-10-19). Spec `.scratch/ledger/spec.md`.

@@ -7,6 +7,7 @@ import { instruments } from "../schema/instruments.ts";
 import {
   getNextSortOrder,
   hasAssignedTrades,
+  hasLedgerEntries,
   type StartingBalanceValues,
 } from "./accounts.ts";
 
@@ -88,13 +89,36 @@ export async function saveAccountDraft(
               eq(accounts.currency, draft.currency),
               sql`not ${hasAssignedTrades()}`,
             ),
+            // Ledger money belongs to real accounts only (docs/adr/0002):
+            // the switch to practice is refused, staying practice is not.
+            draft.isPractice
+              ? or(
+                  eq(accounts.isPractice, true),
+                  sql`not ${hasLedgerEntries()}`,
+                )
+              : undefined,
           ),
         )
         .returning({ id: accounts.id });
-      if (!updated)
-        throw new AccountSaveError(
-          "This account has trades. Its currency can no longer change.",
-        );
+      if (!updated) {
+        // The update refused one of the locks; name the one that applies.
+        const [locks] = await tx
+          .select({
+            hasTrades: hasAssignedTrades().mapWith(Boolean),
+            hasLedgerEntries: hasLedgerEntries().mapWith(Boolean),
+          })
+          .from(accounts)
+          .where(and(eq(accounts.id, current.id), eq(accounts.userId, userId)));
+        if (locks?.hasTrades && current.currency !== draft.currency)
+          throw new AccountSaveError(
+            "This account has trades. Its currency can no longer change.",
+          );
+        if (locks?.hasLedgerEntries && draft.isPractice && !current.isPractice)
+          throw new AccountSaveError(
+            "This account has ledger entries. It can't become a practice account.",
+          );
+        throw new AccountSaveError("Account not found or archived");
+      }
       saved = updated;
     } else {
       [saved] = await tx

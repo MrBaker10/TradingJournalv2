@@ -27,6 +27,12 @@ interface AccountFormProps {
   onPendingChange: (pending: boolean) => void;
 }
 
+/** Ledger money belongs to real accounts only: one with entries can't become
+ * practice (docs/adr/0002). */
+function isPracticeLocked(account?: AccountRowData) {
+  return !!account?.hasLedgerEntries && !account.isPractice;
+}
+
 function initialDraft(account?: AccountRowData) {
   return {
     name: account?.name ?? "",
@@ -253,16 +259,32 @@ export function AccountForm({
             <span className="text-sm font-medium text-fg">
               Practice account
             </span>
-            <p className="mt-1 max-w-lg text-xs leading-relaxed text-fg-muted">
+            <p
+              id="account-practice-help"
+              className="mt-1 max-w-lg text-xs leading-relaxed text-fg-muted"
+            >
               Excluded from combined figures and progress. View its numbers by
               selecting this account.
             </p>
+            {isPracticeLocked(account) && (
+              <p
+                id="account-practice-lock"
+                className="mt-2 text-xs leading-relaxed text-fg-subtle"
+              >
+                Locked — this account has ledger entries
+              </p>
+            )}
           </div>
           <ToggleSwitch
             checked={draft.isPractice}
             onCheckedChange={(isPractice) => change({ isPractice })}
-            disabled={isPending}
+            disabled={isPracticeLocked(account) || isPending}
             ariaLabel="Practice account"
+            ariaDescribedBy={
+              isPracticeLocked(account)
+                ? "account-practice-help account-practice-lock"
+                : "account-practice-help"
+            }
           />
         </div>
         <AccountCommissionRates

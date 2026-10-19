@@ -27,7 +27,7 @@ export function hasAssignedTrades() {
 }
 
 /** Any ledger entry tied to this account (docs/adr/0002). */
-function hasLedgerEntries() {
+export function hasLedgerEntries() {
   // Spelled out like `hasAssignedTrades`, for the same reason.
   return sql`exists (
     select 1 from ${ledgerEntries}
