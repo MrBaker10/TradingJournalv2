@@ -3299,3 +3299,10 @@ Deployment laufen.
   `trade_accounts` gilt die Notiz zu 0013 weiter.
 - **Obergrenze $100 Mio. je Eintrag**, aus demselben Grund wie `MAX_STARTING_BALANCE`:
   `exactCents` liest einen getippten Betrag nur bis rund eine Milliarde exakt.
+
+## 2026-10-19 — Ledger, Nachtrag: Migration 0024 auf Neon — main — 70e5fb0
+
+- Migration `0024` (`ledger_entries`) auf Neon `preview` (`pnpm db:migrate:preview`, durch
+  den Agenten nach Host-Check) und Production (`pnpm db:migrate:production`, durch Sascha)
+  vor dem Push von `main`. Danach auf beiden Branches geprüft: 25 Einträge in
+  `drizzle.__drizzle_migrations`, Tabelle `ledger_entries` vorhanden.
