@@ -640,22 +640,30 @@ removes the link — the typed values stay in the draft until the editor closes.
   “/ Firm · Program” in `--color-fg-muted`. No status, no colour — rule status is its
   own surface (tickets 02 and 06).
 
-**Rule status (prop-firm-link, ticket 02).** A linked account's row carries a panel
+**Rule status (prop-firm-link, tickets 02–03).** A linked account's row carries a panel
 below its main line, separated by the row's `border-white/8` rule, with `cap` label
 “Rule status” and beside it, in `--color-fg-subtle`, “Since {evaluation start}”. Below,
 one line per rule, label left in `--color-fg-muted`, figures right in mono, all in USD:
 
 - **Profit target:** “{progress} of {target}”, progress signed (`+$1,200.00`). Always
   `--color-fg`, never green, also once reached — it informs, it does not reward.
-- **Max drawdown (static):** “{distance} to floor {floor}”, followed by the state word.
+- **Max drawdown (static and EOD trailing, ticket 03):** “{distance} to floor {floor}”,
+  followed by the state word. The EOD trailing floor is the highest end-of-day balance
+  minus the drawdown, rises only on a new end-of-day high, never falls and stops at the
+  lock level (a lock level under the starting floor leaves the floor where it is); it
+  reads the same as a static one.
   Ok: figures in `--color-fg`, no word. Close: “Close” and the distance in
   `--color-warning`, when the distance to the floor is at most **20 %** of the drawdown
   amount (`DRAWDOWN_CLOSE_PERCENT`, exactly 20 % is close). Breached: “Breached” and the
   distance in `--color-danger-fg`, once any end-of-day balance of the attempt reached
-  the floor — also after it recovered.
+  the floor — also after it recovered. A trailing floor is measured against the floor
+  as it stood at the previous day's close.
+- **Intraday trailing:** “Not checkable — no intraday balance” in `--color-fg-subtle`,
+  no floor and no distance: the journal has no intraday balance, and a guessed floor
+  would be a wrong number.
 - **Minimum trading days:** “{done} of {required} days”, `--color-fg`, no close state.
-- Daily loss limit and Consistency, and an EOD or intraday trailing drawdown: “Pending”
-  while a value is set (tickets 03 and 04), otherwise “Not set”.
+- Daily loss limit and Consistency: “Pending” while a value is set (ticket 04),
+  otherwise “Not set”.
 - Every rule left empty reads “Not set” in `--color-fg-subtle`.
 - No glow, no icon, no badge, no animation; the state word carries the meaning, colour
   only repeats it.

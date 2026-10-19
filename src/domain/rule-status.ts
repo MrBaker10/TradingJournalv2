@@ -30,6 +30,8 @@ export interface RuleStatusRules {
   profitTargetCents: number;
   drawdownAmountCents: number;
   drawdownType: DrawdownType;
+  /** The balance an EOD trailing floor stops at, in cents. */
+  lockLevelCents: number | null;
   minTradingDays: number | null;
 }
 
@@ -49,6 +51,11 @@ export interface DrawdownStatus {
   distanceCents: number;
 }
 
+/** The journal has no intraday balance, so an intraday trailing floor is never guessed. */
+export interface NotCheckableStatus {
+  status: "not_checkable";
+}
+
 /** A figure, not a judgement: reaching the target informs, it does not reward. */
 export interface ProfitTargetStatus {
   status: "ok";
@@ -63,8 +70,7 @@ export type MinTradingDaysStatus =
 
 export interface RuleStatus {
   profitTarget: ProfitTargetStatus;
-  /** Null for a drawdown type this module does not evaluate yet (tickets 03). */
-  drawdown: DrawdownStatus | null;
+  drawdown: DrawdownStatus | NotCheckableStatus;
   minTradingDays: MinTradingDaysStatus;
 }
 
@@ -86,29 +92,21 @@ export function evaluateRules(input: RuleStatusInput): RuleStatus {
   const { rules, startingBalanceCents } = input;
   const todayTradingDay = toRuleTradingDay(input.today);
   const days = input.days.filter((day) => day.tradingDay <= todayTradingDay);
-  // End-of-day balances in day order: the last is the balance now, the
-  // lowest decides whether the floor was ever reached.
-  let balanceCents = startingBalanceCents;
-  let lowestCents = startingBalanceCents;
+  // End-of-day balances in day order; the last one is the balance now.
+  const closesCents: number[] = [];
+  let runningCents = startingBalanceCents;
   for (const day of days) {
-    balanceCents += day.netCents;
-    lowestCents = Math.min(lowestCents, balanceCents);
+    runningCents += day.netCents;
+    closesCents.push(runningCents);
   }
+  const balanceCents = closesCents.at(-1) ?? startingBalanceCents;
   return {
     profitTarget: {
       status: "ok",
       progressCents: balanceCents - startingBalanceCents,
       targetCents: rules.profitTargetCents,
     },
-    drawdown:
-      rules.drawdownType === "static"
-        ? staticDrawdown(
-            startingBalanceCents - rules.drawdownAmountCents,
-            rules.drawdownAmountCents,
-            balanceCents,
-            lowestCents,
-          )
-        : null,
+    drawdown: evaluateDrawdown(rules, startingBalanceCents, closesCents),
     // Every day in the series carries a taken trade, so its length is the count.
     minTradingDays:
       rules.minTradingDays === null
@@ -121,17 +119,58 @@ export function evaluateRules(input: RuleStatusInput): RuleStatus {
   };
 }
 
-// The floor never moves. Reaching it on any day's close breaches the attempt,
-// even when a later day climbs back above it.
-function staticDrawdown(
-  floorCents: number,
+function evaluateDrawdown(
+  rules: RuleStatusRules,
+  startingBalanceCents: number,
+  closesCents: number[],
+): DrawdownStatus | NotCheckableStatus {
+  const amountCents = rules.drawdownAmountCents;
+  switch (rules.drawdownType) {
+    case "static":
+      return walkFloor(startingBalanceCents, amountCents, closesCents, null);
+    case "eod_trailing":
+      return walkFloor(startingBalanceCents, amountCents, closesCents, {
+        lockLevelCents: rules.lockLevelCents,
+      });
+    case "intraday_trailing":
+      return { status: "not_checkable" };
+    default: {
+      const unknown: never = rules.drawdownType;
+      throw new Error(`Unknown drawdown type: ${unknown}`);
+    }
+  }
+}
+
+// Walks the closes in day order. Each close is measured against the floor as
+// it stood after the previous close; reaching it breaches the attempt, even
+// when a later day climbs back above it. Without `trailing` the floor never
+// moves. With it, the floor follows the highest close minus the amount: it
+// rises only on a new high, stops at the lock level and never falls — a lock
+// level under the starting floor leaves the floor where it is.
+function walkFloor(
+  startingBalanceCents: number,
   amountCents: number,
-  balanceCents: number,
-  lowestCents: number,
+  closesCents: number[],
+  trailing: { lockLevelCents: number | null } | null,
 ): DrawdownStatus {
+  let highCents = startingBalanceCents;
+  let floorCents = startingBalanceCents - amountCents;
+  let breached = false;
+  for (const closeCents of closesCents) {
+    if (closeCents <= floorCents) breached = true;
+    if (trailing && closeCents > highCents) {
+      highCents = closeCents;
+      const trailedCents =
+        trailing.lockLevelCents === null
+          ? highCents - amountCents
+          : Math.min(highCents - amountCents, trailing.lockLevelCents);
+      floorCents = Math.max(floorCents, trailedCents);
+    }
+  }
+  const balanceCents = closesCents.at(-1) ?? startingBalanceCents;
   const distanceCents = balanceCents - floorCents;
   let status: DrawdownStatus["status"] = "ok";
-  if (lowestCents <= floorCents) status = "breached";
+  if (breached) status = "breached";
   else if (isClose(distanceCents, amountCents)) status = "close";
   return { status, floorCents, balanceCents, distanceCents };
 }

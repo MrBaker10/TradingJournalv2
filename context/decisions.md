@@ -3343,3 +3343,12 @@ Deployment laufen.
 - **Settings liest die Day-Series pro verlinktem aktivem Account** (`Promise.all`), statt
   einer Mehr-Account-Query: Das Ticket verlangt die Query für einen Account, und die
   Zahl verlinkter Accounts ist klein.
+
+## 2026-10-19 — Prop firm link, Ticket 03 — feature/prop-firm-link
+
+- **EOD trailing: jeder Tagesschluss gegen den Floor nach dem Vortag.** Der Floor steigt
+  erst nach dem Vergleich, auf ein neues Hoch (Start: Startsaldo); ein Tagesschluss
+  kann den aus ihm selbst abgeleiteten Floor nicht reißen.
+- **Der Floor fällt nie.** `max(floor, min(high − amount, lock))`: Ein Lock level unter
+  dem Start-Floor (Startsaldo − Drawdown) lässt den Floor stehen, statt ihn zu senken.
+  Beim Linken wird ein solcher Lock nicht abgelehnt.

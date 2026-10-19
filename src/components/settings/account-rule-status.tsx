@@ -70,8 +70,8 @@ export function AccountRuleStatus({
           </span>
         </RuleLine>
         <RuleLine label="Max drawdown">
-          {drawdown === null ? (
-            <Unevaluated set />
+          {drawdown.status === "not_checkable" ? (
+            <SubtleText>Not checkable — no intraday balance</SubtleText>
           ) : (
             <span className={DRAWDOWN_TONE[drawdown.status]}>
               {formatCents(drawdown.distanceCents)}{" "}
