@@ -1261,9 +1261,17 @@ Eintrag noch bei einer Auszahlung. Er steht neben dem Trading-P&L, nie darin (AD
 
 **Die Seite.** `/ledger`, achtes Navigations-Item zwischen Econ Calendar und Settings,
 Icon `Wallet`. Titel „Ledger", darunter eine Zeile in `--color-fg-subtle`: „Real money
-around your prop trading — kept apart from your trading P&L." Von oben: Summen, Formular,
-Liste. Der Kontoschalter aus 4.12 wirkt hier nicht; die Seite bekommt ihren eigenen
-Kontofilter.
+around your prop trading — kept apart from your trading P&L." Von oben: Filter, Summen,
+Formular, Liste. Der Kontoschalter aus 4.12 wirkt hier nicht; die Seite bekommt ihren
+eigenen Kontofilter.
+
+**Filter.** Eine `card-surface edge`-Leiste wie der Zeitraumfilter der Analytics-Seite,
+Felder nach 4.5 mit Label darüber: **Account** als Select, erste Option „All accounts"
+(Default), danach die echten Konten in der Reihenfolge des Kontoschalters, archivierte
+nur, wenn sie Einträge haben, ohne Markierung; dann **From** und **To** als Datumsfelder
+auf das Eintragsdatum. Der Zustand steht in den searchParams (`account`, `from`, `to`),
+ein Reload zeigt dieselbe Auswahl. Summen und Liste folgen demselben Filter; ohne
+Kontofilter zählen Einträge ohne Konto mit. Unter `sm` stehen die Felder untereinander.
 
 **Summen.** Eine `card-surface edge`-Karte als Raster wie die Metrik-Tafel 4.7, drei
 Zellen: Payouts, Expenses, Ledger net. `cap`-Label, Wert 21px Mono mit Tabellenziffern,
@@ -1311,7 +1319,8 @@ steht immer als Text daneben; Farbe ist nie der einzige Träger (§8).
 
 **Leerzustand.** In der Listenkarte zentriert, `--color-fg-subtle`: „Nothing in the
 ledger yet. Add what prop trading costs you — evaluations, resets, activations,
-subscriptions, data — and every payout you receive."
+subscriptions, data — and every payout you receive." Findet ein aktiver Filter nichts:
+„No entries match this filter."
 
 **Microcopy.** Betrag ungültig: „Amount in USD — digits and up to two decimals."
 Kategorie fehlt: „Pick a category for this expense." Speichern fehlgeschlagen:

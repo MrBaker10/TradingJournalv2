@@ -5,6 +5,8 @@ import { ledgerEntryLabel } from "./ledger-labels";
 
 interface LedgerListProps {
   entries: LedgerEntryRow[];
+  /** A filter is active: an empty list then means no match, not no ledger. */
+  filtered: boolean;
 }
 
 /**
@@ -37,16 +39,16 @@ function LedgerAccountName({ name }: { name: string | null }) {
 }
 
 // Design.md §4.25, with the row layout from §4.16.
-export function LedgerList({ entries }: LedgerListProps) {
+export function LedgerList({ entries, filtered }: LedgerListProps) {
   return (
     <section className="card-surface edge flex flex-col gap-3 p-5">
       <h2 className="cap">Entries</h2>
 
       {entries.length === 0 ? (
         <p className="mx-auto max-w-md py-6 text-center text-fg-subtle text-sm">
-          Nothing in the ledger yet. Add what prop trading costs you —
-          evaluations, resets, activations, subscriptions, data — and every
-          payout you receive.
+          {filtered
+            ? "No entries match this filter."
+            : "Nothing in the ledger yet. Add what prop trading costs you — evaluations, resets, activations, subscriptions, data — and every payout you receive."}
         </p>
       ) : (
         <ul className="flex flex-col divide-y divide-white/6">

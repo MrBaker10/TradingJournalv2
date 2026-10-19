@@ -1,4 +1,14 @@
-import { and, asc, desc, eq, isNull, type SQL, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  isNull,
+  lte,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import type { AccountCurrency } from "../../domain/fx.ts";
 import {
   type LedgerEntryCheck,
@@ -11,7 +21,7 @@ import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
 import { ledgerEntries } from "../schema/ledger.ts";
 import { rateOnSql } from "./fx.ts";
-import { toNumber } from "./scope.ts";
+import { type DateRange, toNumber } from "./scope.ts";
 
 // Ledger entries are the user's own real money and stay on the ledger page:
 // nothing here is read by trading P&L, the equity curve, the calendar or
@@ -79,6 +89,33 @@ export async function listLedgerAccounts(
     .orderBy(asc(accounts.sortOrder));
 }
 
+/**
+ * The accounts the page's filter offers: the user's real accounts in the
+ * selector's order, an archived one only while entries point at it — its
+ * history stays reachable, an unused one would only be noise. Practice never:
+ * no entry can belong to one (docs/adr/0002).
+ */
+export async function listLedgerFilterAccounts(
+  userId: number,
+  executor: Pick<typeof db, "select"> = db,
+): Promise<LedgerAccount[]> {
+  return executor
+    .select({ id: accounts.id, name: accounts.name })
+    .from(accounts)
+    .where(
+      and(
+        eq(accounts.userId, userId),
+        eq(accounts.isPractice, false),
+        sql`(${accounts.archivedAt} is null or exists (
+          select 1 from ${ledgerEntries}
+          where ${ledgerEntries.userId} = ${userId}
+            and ${ledgerEntries.accountId} = ${accounts.id}
+        ))`,
+      ),
+    )
+    .orderBy(asc(accounts.sortOrder));
+}
+
 export async function createLedgerEntry(
   userId: number,
   entry: LedgerEntryWrite,
@@ -110,9 +147,36 @@ export async function createLedgerEntry(
   return created;
 }
 
+/**
+ * What the ledger page narrows to: one account, a range of entry dates, both
+ * or neither. Without an account every entry counts, those without one too.
+ */
+export type LedgerFilter = DateRange & { accountId?: number };
+
+/** Whether `filter` narrows anything: an empty list then means no match. */
+export function isLedgerFilterActive(filter: LedgerFilter): boolean {
+  return filter.accountId !== undefined || Boolean(filter.from || filter.to);
+}
+
+/**
+ * The one condition the list and the totals share, so the figures always
+ * match the visible list. The user filter comes first: an account id from the
+ * URL can never reach another user's entries.
+ */
+function ledgerFilterWhere(userId: number, filter: LedgerFilter) {
+  const conditions: SQL[] = [eq(ledgerEntries.userId, userId)];
+  if (filter.accountId !== undefined) {
+    conditions.push(eq(ledgerEntries.accountId, filter.accountId));
+  }
+  if (filter.from) conditions.push(gte(ledgerEntries.entryDate, filter.from));
+  if (filter.to) conditions.push(lte(ledgerEntries.entryDate, filter.to));
+  return and(...conditions);
+}
+
 /** The user's entries, newest first; on the same date the later-added first. */
 export async function listLedgerEntries(
   userId: number,
+  filter: LedgerFilter = {},
   executor: Pick<typeof db, "select"> = db,
 ): Promise<LedgerEntryRow[]> {
   const rows = await executor
@@ -128,7 +192,7 @@ export async function listLedgerEntries(
     })
     .from(ledgerEntries)
     .leftJoin(accounts, eq(accounts.id, ledgerEntries.accountId))
-    .where(eq(ledgerEntries.userId, userId))
+    .where(ledgerFilterWhere(userId, filter))
     .orderBy(desc(ledgerEntries.entryDate), desc(ledgerEntries.id));
 
   return rows.map((row) => ({ ...row, amountCents: Number(row.amountCents) }));
@@ -153,13 +217,14 @@ function entryDisplayCents(currency: AccountCurrency): SQL<number> {
 }
 
 /**
- * Payouts, expenses and the ledger net over the user's entries, in one
- * statement. The currency is the "All accounts" display currency: the
+ * Payouts, expenses and the ledger net over the entries `filter` lists, in
+ * one statement. The currency is the "All accounts" display currency: the
  * account selector does not scope the ledger (docs/adr/0002).
  */
 export async function getLedgerTotals(
   userId: number,
   currency: AccountCurrency,
+  filter: LedgerFilter = {},
   executor: Pick<typeof db, "select"> = db,
 ): Promise<LedgerTotals> {
   const cents = entryDisplayCents(currency);
@@ -169,7 +234,7 @@ export async function getLedgerTotals(
       expensesCents: sql<string>`coalesce(sum(${cents}) filter (where ${ledgerEntries.kind} = 'expense'), 0)`,
     })
     .from(ledgerEntries)
-    .where(eq(ledgerEntries.userId, userId));
+    .where(ledgerFilterWhere(userId, filter));
 
   const totals = {
     payoutsCents: toNumber(row.payoutsCents),

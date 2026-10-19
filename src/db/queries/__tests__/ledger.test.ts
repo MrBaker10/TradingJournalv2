@@ -16,6 +16,7 @@ import {
   type LedgerEntryWrite,
   listLedgerAccounts,
   listLedgerEntries,
+  listLedgerFilterAccounts,
 } from "../ledger.ts";
 
 // Drives the ledger query module against real Postgres, inside a rolled-back
@@ -100,7 +101,7 @@ describe("ledger entries", () => {
       await createLedgerEntry(userId, evaluation, tx);
       await createLedgerEntry(userId, payout, tx);
 
-      expect(await listLedgerEntries(userId, tx)).toMatchObject([
+      expect(await listLedgerEntries(userId, {}, tx)).toMatchObject([
         {
           entryDate: "2026-10-12",
           kind: "payout",
@@ -128,7 +129,7 @@ describe("ledger entries", () => {
         tx,
       );
 
-      const ids = (await listLedgerEntries(userId, tx)).map((e) => e.id);
+      const ids = (await listLedgerEntries(userId, {}, tx)).map((e) => e.id);
       expect(ids).toEqual([second.id, first.id]);
     });
   });
@@ -141,7 +142,7 @@ describe("ledger entries", () => {
         tx,
       );
 
-      const [entry] = await listLedgerEntries(userId, tx);
+      const [entry] = await listLedgerEntries(userId, {}, tx);
       expect(entry).toMatchObject({ category: "reset", amountCents: 0 });
     });
   });
@@ -150,8 +151,8 @@ describe("ledger entries", () => {
     await fixture(async (tx, userId, otherUserId) => {
       await createLedgerEntry(otherUserId, payout, tx);
 
-      expect(await listLedgerEntries(userId, tx)).toEqual([]);
-      expect(await listLedgerEntries(otherUserId, tx)).toHaveLength(1);
+      expect(await listLedgerEntries(userId, {}, tx)).toEqual([]);
+      expect(await listLedgerEntries(otherUserId, {}, tx)).toHaveLength(1);
     });
   });
 
@@ -207,7 +208,7 @@ describe("ledger entries on an account", () => {
       await createLedgerEntry(userId, { ...evaluation, accountId }, tx);
       await createLedgerEntry(userId, payout, tx);
 
-      expect(await listLedgerEntries(userId, tx)).toMatchObject([
+      expect(await listLedgerEntries(userId, {}, tx)).toMatchObject([
         { kind: "payout", accountId: null, accountName: null },
         { kind: "expense", accountId, accountName: "Lucid 50k" },
       ]);
@@ -229,7 +230,7 @@ describe("ledger entries on an account", () => {
           createLedgerEntry(userId, { ...evaluation, accountId }, tx),
         ).rejects.toThrow(LedgerEntryError);
       }
-      expect(await listLedgerEntries(userId, tx)).toEqual([]);
+      expect(await listLedgerEntries(userId, {}, tx)).toEqual([]);
     });
   });
 
@@ -257,7 +258,7 @@ describe("ledger entries on an account", () => {
         .set({ archivedAt: new Date("2026-10-15T00:00:00Z") })
         .where(eq(accounts.id, accountId));
 
-      const [entry] = await listLedgerEntries(userId, tx);
+      const [entry] = await listLedgerEntries(userId, {}, tx);
       expect(entry.accountName).toBe("Lucid 50k");
     });
   });
@@ -286,7 +287,7 @@ describe("deleting an account for good", () => {
         hasTrades: false,
         hasLedgerEntries: true,
       });
-      expect(await listLedgerEntries(userId, tx)).toHaveLength(1);
+      expect(await listLedgerEntries(userId, {}, tx)).toHaveLength(1);
     });
   });
 
@@ -318,7 +319,7 @@ describe("ledger totals", () => {
       );
       await createLedgerEntry(userId, payout, tx);
 
-      expect(await getLedgerTotals(userId, "USD", tx)).toEqual({
+      expect(await getLedgerTotals(userId, "USD", {}, tx)).toEqual({
         payoutsCents: 123_456,
         expensesCents: 24_999,
         netCents: 98_457,
@@ -328,7 +329,7 @@ describe("ledger totals", () => {
 
   it("is zero everywhere without entries", async () => {
     await fixture(async (tx, userId) => {
-      expect(await getLedgerTotals(userId, "USD", tx)).toEqual({
+      expect(await getLedgerTotals(userId, "USD", {}, tx)).toEqual({
         payoutsCents: 0,
         expensesCents: 0,
         netCents: 0,
@@ -342,7 +343,7 @@ describe("ledger totals", () => {
       await createLedgerEntry(otherUserId, payout, tx);
       await createLedgerEntry(otherUserId, evaluation, tx);
 
-      expect(await getLedgerTotals(userId, "USD", tx)).toEqual({
+      expect(await getLedgerTotals(userId, "USD", {}, tx)).toEqual({
         payoutsCents: 0,
         expensesCents: 15_000,
         netCents: -15_000,
@@ -386,11 +387,149 @@ describe("ledger totals", () => {
         tx,
       );
 
-      expect(await getLedgerTotals(userId, "EUR", tx)).toEqual({
+      expect(await getLedgerTotals(userId, "EUR", {}, tx)).toEqual({
         payoutsCents: 2_112,
         expensesCents: 12_504,
         netCents: -10_392,
       });
+    });
+  });
+});
+
+describe("ledger filter", () => {
+  it("narrows list and totals to one account", async () => {
+    await fixture(async (tx, userId) => {
+      const eval50k = await addAccount(tx, userId, "50k eval");
+      const live = await addAccount(tx, userId, "Live", { sortOrder: 1 });
+      await createLedgerEntry(
+        userId,
+        { ...evaluation, accountId: eval50k },
+        tx,
+      );
+      await createLedgerEntry(
+        userId,
+        { ...payout, accountId: eval50k, amountCents: 40_000 },
+        tx,
+      );
+      await createLedgerEntry(userId, { ...payout, accountId: live }, tx);
+      await createLedgerEntry(userId, { ...evaluation, category: "data" }, tx);
+
+      const filter = { accountId: eval50k };
+      expect(
+        (await listLedgerEntries(userId, filter, tx)).map((e) => e.accountId),
+      ).toEqual([eval50k, eval50k]);
+      expect(await getLedgerTotals(userId, "USD", filter, tx)).toEqual({
+        payoutsCents: 40_000,
+        expensesCents: 15_000,
+        netCents: 25_000,
+      });
+    });
+  });
+
+  it("narrows list and totals to a range of entry dates, both ends included", async () => {
+    await fixture(async (tx, userId) => {
+      for (const [entryDate, amountCents] of [
+        ["2026-09-30", 1_000],
+        ["2026-10-01", 2_000],
+        ["2026-10-31", 4_000],
+        ["2026-11-01", 8_000],
+      ] as const) {
+        await createLedgerEntry(
+          userId,
+          { ...evaluation, entryDate, amountCents },
+          tx,
+        );
+      }
+
+      const october = { from: "2026-10-01", to: "2026-10-31" };
+      expect(
+        (await listLedgerEntries(userId, october, tx)).map((e) => e.entryDate),
+      ).toEqual(["2026-10-31", "2026-10-01"]);
+      expect(await getLedgerTotals(userId, "USD", october, tx)).toEqual({
+        payoutsCents: 0,
+        expensesCents: 6_000,
+        netCents: -6_000,
+      });
+      // Only one end set: open on the other side.
+      expect(
+        (await getLedgerTotals(userId, "USD", { from: "2026-10-31" }, tx))
+          .expensesCents,
+      ).toBe(12_000);
+    });
+  });
+
+  it("combines account and range, and counts entries without an account when no account is set", async () => {
+    await fixture(async (tx, userId) => {
+      const live = await addAccount(tx, userId, "Live");
+      await createLedgerEntry(userId, { ...payout, accountId: live }, tx);
+      await createLedgerEntry(
+        userId,
+        { ...payout, accountId: live, entryDate: "2026-09-12" },
+        tx,
+      );
+      await createLedgerEntry(userId, evaluation, tx);
+
+      const range = { from: "2026-10-01" };
+      expect(
+        await getLedgerTotals(userId, "USD", { ...range, accountId: live }, tx),
+      ).toEqual({ payoutsCents: 123_456, expensesCents: 0, netCents: 123_456 });
+      expect(await getLedgerTotals(userId, "USD", range, tx)).toEqual({
+        payoutsCents: 123_456,
+        expensesCents: 15_000,
+        netCents: 108_456,
+      });
+    });
+  });
+
+  it("never reaches another user's entries through their account id", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      const theirs = await addAccount(tx, otherUserId, "Theirs");
+      await createLedgerEntry(
+        otherUserId,
+        { ...payout, accountId: theirs },
+        tx,
+      );
+
+      const filter = { accountId: theirs };
+      expect(await listLedgerEntries(userId, filter, tx)).toEqual([]);
+      expect(await getLedgerTotals(userId, "USD", filter, tx)).toEqual({
+        payoutsCents: 0,
+        expensesCents: 0,
+        netCents: 0,
+      });
+    });
+  });
+
+  it("offers real accounts, archived ones only with entries, never practice or another user's", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      const live = await addAccount(tx, userId, "Live", { sortOrder: 2 });
+      const eval50k = await addAccount(tx, userId, "50k eval", {
+        sortOrder: 1,
+      });
+      const oldEval = await addAccount(tx, userId, "Old eval", {
+        sortOrder: 0,
+      });
+      await addAccount(tx, userId, "Unused archived", {
+        archived: true,
+        sortOrder: 3,
+      });
+      await addAccount(tx, userId, "Sim", { isPractice: true });
+      await addAccount(tx, otherUserId, "Theirs");
+      await createLedgerEntry(
+        userId,
+        { ...evaluation, accountId: oldEval },
+        tx,
+      );
+      await tx
+        .update(accounts)
+        .set({ archivedAt: new Date("2026-10-15T00:00:00Z") })
+        .where(eq(accounts.id, oldEval));
+
+      expect(await listLedgerFilterAccounts(userId, tx)).toEqual([
+        { id: oldEval, name: "Old eval" },
+        { id: eval50k, name: "50k eval" },
+        { id: live, name: "Live" },
+      ]);
     });
   });
 });

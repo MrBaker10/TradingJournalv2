@@ -7,18 +7,19 @@ History and reset this file to “Nothing in progress”.
 
 ## Status
 
-**In progress:** Ledger, ticket 03 (`feature/ledger`).
+**In progress:** Ledger, ticket 04 (`feature/ledger`).
 
-## Feature: Ledger — 03 Totals and ledger net in the display currency
+## Feature: Ledger — 04 Filter by account and date range
 
-- Goal: the ledger page shows payouts, expenses and the ledger net above the form and
-  list, in the "All accounts" display currency; outside USD each entry converts with
-  its entry date's ECB rate, rounded per entry, then summed.
-- Scope: `ledgerNetCents` in `src/domain/ledger.ts`, `getLedgerTotals` in the ledger
-  query module (one SQL statement, filtered by user), a totals card on `/ledger` built
-  from the §4.7 metric cell (`Design.md` §4.25). No migration.
-- Do not build: filters (04), edit and delete (05), practice toggle lock (06); nothing on
-  dashboard, analytics, progress or the CSV export.
-- Acceptance: `.scratch/ledger/issues/03-totals-and-ledger-net.md`; full gate with DB
-  tests executing; browser check in USD and EUR display currency.
+- Goal: the ledger page has its own account filter and a date range on the entry date;
+  list and totals follow the same filter, so the totals always match the visible list.
+  Without an account filter, entries without an account are listed and counted.
+- Scope: one filter condition in the ledger query module shared by list and totals,
+  the accounts the filter offers (real ones, archived ones only with entries), the
+  filter value checked server-side, a filter bar on `/ledger` mirrored into
+  searchParams, `Design.md` §4.25 filter. No migration.
+- Do not build: edit and delete (05), practice toggle lock (06), a "No account" filter
+  option, date presets; nothing on dashboard, analytics, progress or the CSV export.
+- Acceptance: `.scratch/ledger/issues/04-filter-by-account-and-date.md`; full gate with
+  DB tests executing; browser path from the ticket.
 - Open questions: none. Spec `.scratch/ledger/spec.md`.
