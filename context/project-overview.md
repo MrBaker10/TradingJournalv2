@@ -522,7 +522,7 @@ and branch per item. Terms in `GLOSSARY.md`.
    and optionally to one real account, never a practice account. Two kinds: expense
    (evaluation, reset, activation, subscription, data, other) and payout, entered by
    hand, stored in USD, shown per the display-currency rule. The ledger net is never
-   combined with trading P&L (`docs/adr/0002`).
+   combined with trading P&L (`docs/adr/0002`). Built and merged 2026-10-19.
 4. **Account ↔ prop firm program link.** Real accounts only. The user enters the account
    rules when linking, with the program's rule text as reference (`docs/adr/0001`).
    v1 checks profit target, max drawdown (static or EOD trailing, optional lock level;
