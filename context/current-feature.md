@@ -7,15 +7,18 @@ History and reset this file to “Nothing in progress”.
 
 ## Status
 
-**Nothing in progress.**
+**In progress:** Prop firm link, ticket 06 (`feature/prop-firm-link`).
 
-## Feature: _(none)_
+## Feature: Prop firm link — 06 Dashboard "Rule status" card
 
-<!--
-For each new task, record:
-- Goal: the intended result.
-- Scope: affected modules/files and any schema or domain changes.
-- Do not build: concrete exclusions for this task.
-- Acceptance: observable results and applicable verification from ai-interaction.md.
-- Open questions: unresolved requirements; never invent product decisions.
--->
+- Goal: with exactly one linked account selected, the dashboard shows a "Rule status"
+  card with the same rules and figures as the account's settings; hidden for "All
+  accounts" and for an unlinked account. No notification, badge, score effect or
+  celebration.
+- Scope: `getAccountRules` (one account's link, user-filtered) in
+  `src/db/queries/account-rules.ts`, a shared loader in `src/lib/prop-firms/`, the rule
+  lines shared by settings and the new dashboard card, `Design.md`.
+- Do not build: rule status for "All accounts"; notifications; changes to the rules.
+- Acceptance: `.scratch/prop-firm-link/issues/06-dashboard-rule-status-card.md`; full
+  gate; browser: card with one linked account selected, hidden for "All accounts".
+- Open questions: none. Spec `.scratch/prop-firm-link/spec.md`.

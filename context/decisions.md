@@ -3306,3 +3306,72 @@ Deployment laufen.
   den Agenten nach Host-Check) und Production (`pnpm db:migrate:production`, durch Sascha)
   vor dem Push von `main`. Danach auf beiden Branches geprüft: 25 Einträge in
   `drizzle.__drizzle_migrations`, Tabelle `ledger_entries` vorhanden.
+
+## 2026-10-19 — Prop firm link, Ticket 01 — feature/prop-firm-link
+
+- **Der Link ist Teil des Account-Drafts.** `account_rules` wird in `saveAccountDraft`
+  in derselben Transaktion wie Account und Commission-Rates geschrieben; ein erneuter
+  Save ersetzt die eine Zeile pro Account (`account_id` ist Primärschlüssel), „Not
+  linked“ löscht sie.
+- **Kein `user_id` in `account_rules`**, wie bei `account_commission_rates`: Die Zeile
+  gehört ihrem Account, jeder Lesezugriff joint `accounts` mit Filter auf den User
+  (`listAccountRules`), geschrieben wird nur unter dem gesperrten Account-Row. Ausnahme
+  von coding-standards → Database („Every table that holds user data has `user_id`“).
+- **Practice-Sperre gegen den Endzustand.** Abgelehnt wird ein Save, der einen Practice-
+  Account mit Link hinterließe. Link entfernen und auf Practice umstellen im selben Save
+  ist erlaubt: Der Account verlässt dabei jede Regel. Ein verlinkter Account, der mit Link
+  Practice werden soll, bekommt „Remove the link to make it a practice account.“ Im
+  Formular ist der Toggle gesperrt, solange ein Programm gewählt ist.
+- **Consistency als ganze Prozentzahl 1–100**, Mindest-Tradingtage ≥ 1. **Lock level** ist
+  ein Kontostand in USD, bei dem der EOD-trailing-Floor stehen bleibt; nur bei
+  `eod_trailing` (Domain, Zod und Check-Constraint).
+- **Programm RESTRICT.** Der Seeder legt an und aktualisiert, er löscht nicht; ein
+  verlinktes Programm kann nur von Hand und dann nicht still verschwinden.
+
+## 2026-10-19 — Prop firm link, Ticket 02 — feature/prop-firm-link
+
+- **Samstag rollt in der Rule status auf Montag** (Sascha), wie Sonntag. `toTradingDay`
+  lässt einen Samstag fallen, was für die Streak richtig ist, hier aber P&L aus dem
+  Kontostand streichen würde. Eigene Regel `toRuleTradingDay` (Domain) und dieselbe
+  Rechnung in SQL in `getAttemptDays`; die Streak bleibt unverändert.
+- **Static breach über den niedrigsten Tagesschluss.** Erreicht ein Tagesschluss des
+  Attempts den Floor (`≤`), bleibt der Status „breached“, auch wenn der Saldo später
+  wieder darüber liegt. „Close“ bei Abstand ≤ 20 % des Drawdown-Betrags, genau 20 %
+  eingeschlossen (`DRAWDOWN_CLOSE_PERCENT`).
+- **Tage nach dem heutigen Trading Day zählen nicht**: Der Attempt läuft bis heute. Ein
+  Sonntag-Trade von heute zählt, weil heute dann schon auf Montag rollt.
+- **Settings liest die Day-Series pro verlinktem aktivem Account** (`Promise.all`), statt
+  einer Mehr-Account-Query: Das Ticket verlangt die Query für einen Account, und die
+  Zahl verlinkter Accounts ist klein.
+
+## 2026-10-19 — Prop firm link, Ticket 03 — feature/prop-firm-link
+
+- **EOD trailing: jeder Tagesschluss gegen den Floor nach dem Vortag.** Der Floor steigt
+  erst nach dem Vergleich, auf ein neues Hoch (Start: Startsaldo); ein Tagesschluss
+  kann den aus ihm selbst abgeleiteten Floor nicht reißen.
+- **Der Floor fällt nie.** `max(floor, min(high − amount, lock))`: Ein Lock level unter
+  dem Start-Floor (Startsaldo − Drawdown) lässt den Floor stehen, statt ihn zu senken.
+  Beim Linken wird ein solcher Lock nicht abgelehnt.
+
+## 2026-10-19 — Prop firm link, Ticket 04 — feature/prop-firm-link
+
+- **Daily loss ab Tagesbeginn** (Sascha). Raum = Limit + heutiges Netto des Trading
+  Days; ein grüner Tag vergrößert ihn, kein Deckel beim Limit. Ein Intraday-Hoch kennt
+  das Journal nicht. Breached, sobald der heutige Verlust das Limit erreicht (`≤ 0`),
+  wie beim Floor.
+- **Consistency: genau das Limit ist erlaubt**, breached erst darüber; Close ab 5 Punkten
+  darunter. Ohne Gewinn (≤ 0) übersprungen. Limits von 1–5 % sind dadurch immer
+  mindestens Close (Sascha: akzeptiert, echte Programme 20–50 %).
+
+## 2026-10-20 — Prop firm link, Ticket 05 — feature/prop-firm-link
+
+- **Attempt-Start = später von Evaluation start und letztem Reset-Expense** des Accounts,
+  auch $0; der Reset-Tag zählt mit. Ein Reset mit Datum nach heute (Kalender des Users)
+  zählt erst ab seinem Tag (Sascha).
+- **Payouts senken das Saldo an ihrem Trading Day** (Sa/So → Montag wie Trades): Profit
+  target (Sascha: auch der Fortschritt sinkt) und Drawdown lesen es. Daily loss,
+  Consistency-Gesamtgewinn und Trading-Tage zählen nur Trading-P&L (ADR 0002). Ein
+  EOD-trailing-Floor fällt durch einen Payout nicht; ein Tag nur mit Payout hat einen
+  Tagesschluss und kann den Floor reißen.
+- **`getAttempt` ist ein Statement** (`unionAll`: Start, Tage, Payouts); `null` für ein
+  nicht verlinktes oder fremdes Konto.

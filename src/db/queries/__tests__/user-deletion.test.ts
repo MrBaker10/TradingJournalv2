@@ -1,6 +1,7 @@
 import { eq, sql, TransactionRollbackError } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "../../index.ts";
+import { accountRules } from "../../schema/account-rules.ts";
 import { accounts } from "../../schema/accounts.ts";
 import { authAccounts, authSessions } from "../../schema/auth.ts";
 import { dailyNotes } from "../../schema/daily-notes.ts";
@@ -8,6 +9,7 @@ import { importBatches } from "../../schema/import-batches.ts";
 import { instruments } from "../../schema/instruments.ts";
 import { ledgerEntries } from "../../schema/ledger.ts";
 import { monthlyScores } from "../../schema/monthly-scores.ts";
+import { propFirmPrograms, propFirms } from "../../schema/prop-firms.ts";
 import {
   tradeAccounts,
   tradeScreenshots,
@@ -38,6 +40,7 @@ interface Remaining {
   dailyNotes: number;
   monthlyScores: number;
   ledgerEntries: number;
+  accountRules: number;
   authAccounts: number;
   authSessions: number;
 }
@@ -137,6 +140,24 @@ async function deleteFixtureUser(): Promise<Remaining> {
         category: "evaluation",
         amount: "150.00",
       });
+      // The link cascades with its account; its RESTRICT key points at the
+      // program, which outlives the user.
+      const [firm] = await tx
+        .insert(propFirms)
+        .values({ name: "Deletion fixture firm" })
+        .returning({ id: propFirms.id });
+      const [program] = await tx
+        .insert(propFirmPrograms)
+        .values({ firmId: firm.id, name: "Fixture program" })
+        .returning({ id: propFirmPrograms.id });
+      await tx.insert(accountRules).values({
+        accountId: account.id,
+        programId: program.id,
+        evaluationStart: "2026-09-01",
+        profitTarget: "3000.00",
+        drawdownAmount: "2000.00",
+        drawdownType: "static",
+      });
       await tx.insert(authAccounts).values({
         userId: user.id,
         accountId: String(user.id),
@@ -197,6 +218,12 @@ async function deleteFixtureUser(): Promise<Remaining> {
             .from(ledgerEntries)
             .where(eq(ledgerEntries.userId, user.id)),
         ),
+        accountRules: await countWhere(
+          tx
+            .select()
+            .from(accountRules)
+            .where(eq(accountRules.accountId, account.id)),
+        ),
         authAccounts: await countWhere(
           tx
             .select()
@@ -232,6 +259,7 @@ describe("deleting a user", () => {
       dailyNotes: 0,
       monthlyScores: 0,
       ledgerEntries: 0,
+      accountRules: 0,
       authAccounts: 0,
       authSessions: 0,
     });

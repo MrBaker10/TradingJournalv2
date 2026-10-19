@@ -1,9 +1,18 @@
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import {
+  ACCOUNT_RULES_MESSAGES,
+  checkLinkable,
+  validateAccountRules,
+} from "../../domain/account-rules.ts";
+import { amountToCents } from "../../domain/commission.ts";
 import type { AccountCurrency } from "../../domain/fx.ts";
 import { formatCentsPlain } from "../../lib/money.ts";
 import { db } from "../index.ts";
+import { accountRules } from "../schema/account-rules.ts";
 import { accountCommissionRates, accounts } from "../schema/accounts.ts";
 import { instruments } from "../schema/instruments.ts";
+import { propFirmPrograms } from "../schema/prop-firms.ts";
+import type { AccountRulesWrite } from "./account-rules.ts";
 import {
   getNextSortOrder,
   hasAssignedTrades,
@@ -20,6 +29,8 @@ export interface AccountDraftWrite {
   currency: AccountCurrency;
   balanceCents: number;
   commissionRates: { instrumentId: number; perSideCents: number }[];
+  /** The prop firm program link; null means not linked (any link is removed). */
+  rules: AccountRulesWrite | null;
 }
 
 type BalanceResolver = (
@@ -27,7 +38,7 @@ type BalanceResolver = (
   currency: AccountCurrency,
 ) => Promise<StartingBalanceValues>;
 
-/** All account fields and rates commit together. The resolver is only called when
+/** All account fields, rates and the program link commit together. The resolver is only called when
  * the amount or currency changes, preserving the historical USD conversion. */
 export async function saveAccountDraft(
   userId: number,
@@ -156,6 +167,78 @@ export async function saveAccountDraft(
         })),
       );
     }
+    await saveAccountRules(
+      tx,
+      saved.id,
+      draft,
+      balance
+        ? balance.usdCents
+        : amountToCents(current?.startingBalanceUsd ?? "0"),
+    );
     return saved;
   });
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Writes or removes the account's one link, against the account as this save
+ * leaves it: a practice account or one without a starting balance carries no
+ * link (decided 2026-10-18, prop-firm-link). Checked here, inside the
+ * transaction that holds the account row, so no other save can slip between
+ * the check and the write.
+ */
+async function saveAccountRules(
+  tx: Tx,
+  accountId: number,
+  draft: AccountDraftWrite,
+  startingBalanceUsdCents: number,
+) {
+  const rules = draft.rules;
+  if (!rules) {
+    await tx.delete(accountRules).where(eq(accountRules.accountId, accountId));
+    return;
+  }
+  if (draft.isPractice) {
+    // A linked account turning practice hears how to get there.
+    const [linked] = await tx
+      .select({ accountId: accountRules.accountId })
+      .from(accountRules)
+      .where(eq(accountRules.accountId, accountId));
+    if (linked)
+      throw new AccountSaveError(ACCOUNT_RULES_MESSAGES.practiceLinked);
+  }
+  const linkable = checkLinkable({
+    isPractice: draft.isPractice,
+    startingBalanceUsdCents,
+  });
+  if (!linkable.success) throw new AccountSaveError(linkable.error);
+  const valid = validateAccountRules(rules);
+  if (!valid.success) throw new AccountSaveError(valid.error);
+  const [program] = await tx
+    .select({ id: propFirmPrograms.id })
+    .from(propFirmPrograms)
+    .where(eq(propFirmPrograms.id, rules.programId));
+  if (!program) throw new AccountSaveError("Pick a prop firm program");
+
+  const cents = (value: number | null) =>
+    value === null ? null : formatCentsPlain(value);
+  const values = {
+    programId: rules.programId,
+    evaluationStart: rules.evaluationStart,
+    profitTarget: formatCentsPlain(rules.profitTargetCents),
+    drawdownAmount: formatCentsPlain(rules.drawdownAmountCents),
+    drawdownType: rules.drawdownType,
+    lockLevel: cents(rules.lockLevelCents),
+    dailyLossLimit: cents(rules.dailyLossLimitCents),
+    consistencyPercent: rules.consistencyPercent,
+    minTradingDays: rules.minTradingDays,
+  };
+  await tx
+    .insert(accountRules)
+    .values({ accountId, ...values })
+    .onConflictDoUpdate({
+      target: accountRules.accountId,
+      set: { ...values, updatedAt: new Date() },
+    });
 }

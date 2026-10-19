@@ -30,11 +30,17 @@ import {
 } from "@/schemas/accounts";
 
 /**
- * A validated starting balance as whole cents. The schema has already refused
- * anything `exactCents` cannot read, so the fallback never applies.
+ * A validated starting balance or rule amount as whole cents. The schema has
+ * already refused anything `exactCents` cannot read, so the fallback never
+ * applies.
  */
 function balanceCents(amount: number | undefined): number {
   return amount === undefined ? 0 : (exactCents(amount) ?? 0);
+}
+
+/** The same for an optional rule amount: null stays null. */
+function optionalCents(amount: number | null): number | null {
+  return amount === null ? null : balanceCents(amount);
 }
 
 type ActionResult<T> =
@@ -97,6 +103,17 @@ async function saveAccountInput(
           instrumentId: rate.instrumentId,
           perSideCents: exactCents(rate.perSide) ?? 0,
         })),
+        rules: data.rules && {
+          programId: data.rules.programId,
+          evaluationStart: data.rules.evaluationStart,
+          profitTargetCents: balanceCents(data.rules.profitTarget),
+          drawdownAmountCents: balanceCents(data.rules.drawdownAmount),
+          drawdownType: data.rules.drawdownType,
+          lockLevelCents: optionalCents(data.rules.lockLevel),
+          dailyLossLimitCents: optionalCents(data.rules.dailyLossLimit),
+          consistencyPercent: data.rules.consistencyPercent,
+          minTradingDays: data.rules.minTradingDays,
+        },
       },
       async (cents, currency) => {
         const result = await startingBalanceValues(

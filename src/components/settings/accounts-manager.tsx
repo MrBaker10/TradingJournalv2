@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState } from "react";
+import type { ProgramOption } from "@/db/queries/prop-firms";
 import { DISCARD_ACCOUNT_CHANGES } from "@/hooks/use-unsaved-account";
 import type { InstrumentOption } from "./account-commission-rates";
 import { AccountForm } from "./account-create-form";
@@ -16,6 +17,9 @@ interface AccountsManagerProps {
   active: AccountRowData[];
   archived: ArchivedAccountData[];
   instruments: InstrumentOption[];
+  programs: ProgramOption[];
+  /** Today in `users.timezone`. */
+  today: string;
   timeZone: string;
 }
 
@@ -31,6 +35,8 @@ export function AccountsManager({
   active,
   archived,
   instruments,
+  programs,
+  today,
   timeZone,
 }: AccountsManagerProps) {
   const [editor, setEditor] = useState<number | "new" | null>(null);
@@ -65,6 +71,8 @@ export function AccountsManager({
   }
   const formProps = {
     instruments,
+    programs,
+    today,
     onClose: () => open(null),
     onSaved: close,
     onDirtyChange: setDirty,

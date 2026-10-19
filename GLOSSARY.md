@@ -58,7 +58,7 @@ The account preselected for new trades.
 ## Progress
 
 **Trading day**:
-The day an entry belongs to: its trade date, with a Sunday rolling onto the following Monday; the one day definition for streaks and account rules alike.
+The day an entry belongs to: its trade date, with a Sunday rolling onto the following Monday. A Saturday belongs to no trading day for streaks; for account rules it rolls onto Monday too, so its P&L stays in the balance.
 _Avoid_: Session day, calendar day
 
 **Logged day**:

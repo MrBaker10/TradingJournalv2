@@ -134,3 +134,46 @@ export async function listSummaryTags(): Promise<string[]> {
 
   return rows.map((row) => row.tag);
 }
+
+export interface ProgramOption {
+  id: number;
+  firmName: string;
+  name: string;
+  /** The program's rule text, verbatim, shown beside each rule field. */
+  reference: Pick<
+    ProgramFields,
+    | "accountSize"
+    | "profitTarget"
+    | "maxDrawdown"
+    | "dailyLossLimit"
+    | "consistencyRule"
+    | "minTradingDays"
+  >;
+}
+
+// Every program for the link form in the account editor, grouped by firm in
+// the select. Reference text only: nothing here becomes a rule value
+// (docs/adr/0001).
+export async function listProgramOptions(): Promise<ProgramOption[]> {
+  const rows = await db
+    .select({
+      id: propFirmPrograms.id,
+      firmName: propFirms.name,
+      name: propFirmPrograms.name,
+      accountSize: propFirmPrograms.accountSize,
+      profitTarget: propFirmPrograms.profitTarget,
+      maxDrawdown: propFirmPrograms.maxDrawdown,
+      dailyLossLimit: propFirmPrograms.dailyLossLimit,
+      consistencyRule: propFirmPrograms.consistencyRule,
+      minTradingDays: propFirmPrograms.minTradingDays,
+    })
+    .from(propFirmPrograms)
+    .innerJoin(propFirms, eq(propFirms.id, propFirmPrograms.firmId))
+    .orderBy(asc(propFirms.name), asc(propFirmPrograms.name));
+  return rows.map(({ id, firmName, name, ...reference }) => ({
+    id,
+    firmName,
+    name,
+    reference,
+  }));
+}

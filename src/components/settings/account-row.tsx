@@ -15,10 +15,13 @@ import {
   moveAccount,
   setDefaultAccount,
 } from "@/actions/accounts";
+import type { AccountRulesRow } from "@/db/queries/account-rules";
 import { amountToCents } from "@/domain/commission";
 import type { AccountCurrency } from "@/domain/fx";
 import { formatCents } from "@/lib/money";
+import type { AttemptStatus } from "@/lib/prop-firms/rule-status";
 import type { CommissionRateData } from "./account-commission-rates";
+import { AccountRuleStatus } from "./account-rule-status";
 
 export interface AccountRowData {
   id: number;
@@ -32,6 +35,10 @@ export interface AccountRowData {
   startingBalance: string;
   /** Per-side rates per instrument (commissions). */
   commissionRates: CommissionRateData[];
+  /** The prop firm program link, or null when not linked. */
+  rules: AccountRulesRow | null;
+  /** The current attempt and its rule status, null when not linked. */
+  attempt: AttemptStatus | null;
 }
 
 const ACTION_CLASS =
@@ -99,6 +106,14 @@ export function AccountRow({
                 currency: account.currency,
               })}
             </span>
+            {account.rules && (
+              <>
+                <span className="mx-2 text-fg-placeholder">/</span>
+                <span className="text-fg-muted">
+                  {account.rules.firmName} · {account.rules.programName}
+                </span>
+              </>
+            )}
           </p>
         </div>
         <button
@@ -157,6 +172,7 @@ export function AccountRow({
           </button>
         </div>
       </div>
+      {account.attempt && <AccountRuleStatus attempt={account.attempt} />}
       {confirming && !disabled && (
         <div className="mt-3 flex flex-wrap items-center justify-end gap-3 border-t border-white/8 pt-3 text-sm">
           <span className="mr-auto text-fg-muted">
