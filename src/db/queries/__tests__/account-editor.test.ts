@@ -3,10 +3,14 @@ import { describe, expect, it, vi } from "vitest";
 import { db } from "../../index.ts";
 import { accountCommissionRates, accounts } from "../../schema/accounts.ts";
 import { instruments } from "../../schema/instruments.ts";
+import { ledgerEntries } from "../../schema/ledger.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
 import { type AccountDraftWrite, saveAccountDraft } from "../account-editor.ts";
-import { listAllAccountsForSettings } from "../accounts.ts";
+import {
+  deleteUnusedAccount,
+  listAllAccountsForSettings,
+} from "../accounts.ts";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 async function fixture(
@@ -319,6 +323,78 @@ describe("saveAccountDraft", () => {
       expect((await read(tx, id)).account.name).toBe("Allowed");
     });
   });
+
+  it("refuses practice for an account with ledger entries, allows it without", async () => {
+    await fixture(async (tx, userId) => {
+      const withEntry = await saveAccountDraft(
+        userId,
+        { ...draft, name: "With entry" },
+        usd,
+        tx,
+      );
+      const without = await saveAccountDraft(
+        userId,
+        { ...draft, name: "Without entry" },
+        usd,
+        tx,
+      );
+      await tx.insert(ledgerEntries).values({
+        userId,
+        accountId: withEntry.id,
+        entryDate: "2026-09-01",
+        kind: "expense",
+        category: "evaluation",
+        amount: "150.00",
+      });
+      const before = await read(tx, withEntry.id);
+      await expect(
+        saveAccountDraft(
+          userId,
+          { ...draft, accountId: withEntry.id, isPractice: true },
+          usd,
+          tx,
+        ),
+      ).rejects.toThrow("can't become a practice account");
+      expect(await read(tx, withEntry.id)).toEqual(before);
+
+      await saveAccountDraft(
+        userId,
+        { ...draft, accountId: without.id, isPractice: true },
+        usd,
+        tx,
+      );
+      expect((await read(tx, without.id)).account.isPractice).toBe(true);
+    });
+  });
+
+  it("still saves a practice account that already has a ledger entry", async () => {
+    await fixture(async (tx, userId) => {
+      // Not reachable through the app; pins that the lock is on the switch,
+      // so such an account is never stuck.
+      const { id } = await saveAccountDraft(
+        userId,
+        { ...draft, isPractice: true },
+        usd,
+        tx,
+      );
+      await tx.insert(ledgerEntries).values({
+        userId,
+        accountId: id,
+        entryDate: "2026-09-01",
+        kind: "payout",
+        amount: "100.00",
+      });
+      await saveAccountDraft(
+        userId,
+        { ...draft, accountId: id, isPractice: true, name: "Renamed" },
+        usd,
+        tx,
+      );
+      expect((await read(tx, id)).account.name).toBe("Renamed");
+      await saveAccountDraft(userId, { ...draft, accountId: id }, usd, tx);
+      expect((await read(tx, id)).account.isPractice).toBe(false);
+    });
+  });
 });
 
 it("reports the currency lock for the account that actually owns the trade", async () => {
@@ -355,5 +431,27 @@ it("reports the currency lock for the account that actually owns the trade", asy
     expect(rows.find((row) => row.id === assigned.id)?.hasTrades).toBe(true);
     expect(rows.find((row) => row.id === empty.id)?.hasTrades).toBe(false);
     expect(await listAllAccountsForSettings(userId + 1, tx)).toEqual([]);
+  });
+});
+
+it("refuses to delete an account for good while a trade is assigned", async () => {
+  await fixture(async (tx, userId, instrumentId) => {
+    const { id } = await saveAccountDraft(userId, draft, usd, tx);
+    const [trade] = await tx
+      .insert(trades)
+      .values({
+        userId,
+        instrumentId,
+        tradeDate: "2026-09-01",
+        taken: true,
+        contracts: "1",
+        entryTime: "09:31:00",
+        direction: "long",
+        entryPrice: "100.0000",
+      })
+      .returning();
+    await tx.insert(tradeAccounts).values({ tradeId: trade.id, accountId: id });
+
+    expect(await deleteUnusedAccount(userId, id, tx)).toBe("in-use");
   });
 });

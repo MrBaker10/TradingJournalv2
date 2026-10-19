@@ -169,6 +169,13 @@
       "when": 1792360261629,
       "tag": "0023_burly_vulcan",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792396860984,
+      "tag": "0024_graceful_valkyrie",
+      "breakpoints": true
     }
   ]
 }

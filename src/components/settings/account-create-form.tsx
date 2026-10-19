@@ -4,6 +4,7 @@ import { Check, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createAccount, updateAccount } from "@/actions/accounts";
+import { FIELD_CLASS } from "@/components/ui/field-class";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { ACCOUNT_CURRENCIES, type AccountCurrency } from "@/domain/fx";
@@ -11,7 +12,6 @@ import { useUnsavedAccount } from "@/hooks/use-unsaved-account";
 import { formatCentsPlain } from "@/lib/money";
 import { createAccountSchema } from "@/schemas/accounts";
 import {
-  ACCOUNT_FIELD_CLASS,
   AccountCommissionRates,
   type CommissionDraft,
   type InstrumentOption,
@@ -25,6 +25,12 @@ interface AccountFormProps {
   onSaved: () => void;
   onDirtyChange: (dirty: boolean) => void;
   onPendingChange: (pending: boolean) => void;
+}
+
+/** Ledger money belongs to real accounts only: one with entries can't become
+ * practice (docs/adr/0002). */
+function isPracticeLocked(account?: AccountRowData) {
+  return !!account?.hasLedgerEntries && !account.isPractice;
 }
 
 function initialDraft(account?: AccountRowData) {
@@ -171,7 +177,7 @@ export function AccountForm({
             value={draft.name}
             onChange={(event) => change({ name: event.target.value })}
             placeholder="e.g. Live, Evaluation, Backtesting"
-            className={ACCOUNT_FIELD_CLASS}
+            className={FIELD_CLASS}
             aria-invalid={!!errors.name}
             aria-describedby={errors.name ? "account-name-error" : undefined}
           />
@@ -194,7 +200,7 @@ export function AccountForm({
                 change({ currency: event.target.value as AccountCurrency })
               }
               disabled={account?.hasTrades || isPending}
-              className={ACCOUNT_FIELD_CLASS}
+              className={FIELD_CLASS}
               aria-describedby="account-currency-help"
             >
               {ACCOUNT_CURRENCIES.map((currency) => (
@@ -228,7 +234,7 @@ export function AccountForm({
                 change({ startingBalance: event.target.value })
               }
               placeholder="0.00"
-              className={`${ACCOUNT_FIELD_CLASS} font-mono tabular-nums`}
+              className={`${FIELD_CLASS} font-mono tabular-nums`}
               aria-invalid={!!errors.startingBalance}
               aria-describedby="account-balance-help account-balance-error"
             />
@@ -253,16 +259,32 @@ export function AccountForm({
             <span className="text-sm font-medium text-fg">
               Practice account
             </span>
-            <p className="mt-1 max-w-lg text-xs leading-relaxed text-fg-muted">
+            <p
+              id="account-practice-help"
+              className="mt-1 max-w-lg text-xs leading-relaxed text-fg-muted"
+            >
               Excluded from combined figures and progress. View its numbers by
               selecting this account.
             </p>
+            {isPracticeLocked(account) && (
+              <p
+                id="account-practice-lock"
+                className="mt-2 text-xs leading-relaxed text-fg-subtle"
+              >
+                Locked — this account has ledger entries
+              </p>
+            )}
           </div>
           <ToggleSwitch
             checked={draft.isPractice}
             onCheckedChange={(isPractice) => change({ isPractice })}
-            disabled={isPending}
+            disabled={isPracticeLocked(account) || isPending}
             ariaLabel="Practice account"
+            ariaDescribedBy={
+              isPracticeLocked(account)
+                ? "account-practice-help account-practice-lock"
+                : "account-practice-help"
+            }
           />
         </div>
         <AccountCommissionRates

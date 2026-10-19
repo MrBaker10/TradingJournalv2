@@ -3,6 +3,7 @@
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useId, useState } from "react";
+import { FIELD_CLASS } from "@/components/ui/field-class";
 
 export interface CommissionRateData {
   instrumentId: number;
@@ -20,9 +21,6 @@ export interface CommissionDraft {
   instrumentId: string;
   perSide: string;
 }
-
-export const ACCOUNT_FIELD_CLASS =
-  "h-11 w-full min-w-0 rounded-ctl border border-white/12 bg-well px-3 text-sm text-fg transition-colors placeholder:text-fg-placeholder hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-50";
 
 export function AccountCommissionRates({
   rates,
@@ -104,7 +102,7 @@ export function AccountCommissionRates({
                       onChange={(event) =>
                         update(rate.key, { instrumentId: event.target.value })
                       }
-                      className={ACCOUNT_FIELD_CLASS}
+                      className={FIELD_CLASS}
                       aria-invalid={
                         !!errors[`commissionRates.${index}.instrumentId`]
                       }
@@ -151,7 +149,7 @@ export function AccountCommissionRates({
                         update(rate.key, { perSide: event.target.value })
                       }
                       placeholder="0.50"
-                      className={`${ACCOUNT_FIELD_CLASS} font-mono tabular-nums`}
+                      className={`${FIELD_CLASS} font-mono tabular-nums`}
                       aria-invalid={
                         !!errors[`commissionRates.${index}.perSide`]
                       }

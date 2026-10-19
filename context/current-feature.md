@@ -7,15 +7,16 @@ History and reset this file to “Nothing in progress”.
 
 ## Status
 
-**Nothing in progress.**
+**In progress:** Ledger, ticket 06 (`feature/ledger`).
 
-## Feature: _(none)_
+## Feature: Ledger — 06 Lock the practice toggle while ledger entries exist
 
-<!--
-For each new task, record:
-- Goal: the intended result.
-- Scope: affected modules/files and any schema or domain changes.
-- Do not build: concrete exclusions for this task.
-- Acceptance: observable results and applicable verification from ai-interaction.md.
-- Open questions: unresolved requirements; never invent product decisions.
--->
+- Goal: an account with ledger entries cannot be switched to practice; the editor
+  disables the Practice toggle and says why, the server refuses the switch in the
+  update statement like the currency lock.
+- Scope: the lock in `saveAccountDraft`, the toggle lock and its note in the account
+  editor, `Design.md` practice lock, the rule in `project-overview.md`. No migration.
+- Do not build: nothing on dashboard, analytics, progress or the CSV export.
+- Acceptance: `.scratch/ledger/issues/06-lock-practice-toggle.md`; full gate with DB
+  tests executing; browser path from the ticket.
+- Open questions: none (decided by Sascha 2026-10-19). Spec `.scratch/ledger/spec.md`.

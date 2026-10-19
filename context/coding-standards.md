@@ -16,7 +16,7 @@ version upgrades belong in a separate commit that changes nothing else.
 | Better Auth | 1.7.5 (phase 2; installed with P2.1, 1.7.3 was the pre-install pin) |
 | uqr (TOTP QR code) | 0.1.3 |
 | Tailwind CSS | 4.3.3 |
-| Zod / RHF / resolvers | 4.5.4 / 7.87.0 / 5.9.1 |
+| Zod | 4.5.4 |
 | Recharts | 3.10.1 |
 | motion (ex framer-motion) | 13.2.0 |
 | Sonner (Toasts) | 2.0.8 |
@@ -266,7 +266,8 @@ Non-negotiable, because this is a P&L tool:
 - Server Components read directly through the Drizzle client.
 - Client Components call Server Actions.
 - Every action input is validated with Zod. The schema lives in `src/schemas/` and is
-  **shared** with the form via `@hookform/resolvers`. One validation truth.
+  **shared** with the form. One validation truth.
+- Forms validate with the shared Zod schema via `safeParse`; no form library.
 - Never trust a client-supplied id. Re-check ownership in the action.
 
 ## Auth and storage seams

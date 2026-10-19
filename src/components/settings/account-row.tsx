@@ -27,6 +27,7 @@ export interface AccountRowData {
   isDefaultForNewTrades: boolean;
   currency: AccountCurrency;
   hasTrades: boolean;
+  hasLedgerEntries: boolean;
   /** `accounts.starting_balance`, numeric(14, 2) as a string, in `currency`. */
   startingBalance: string;
   /** Per-side rates per instrument (commissions). */

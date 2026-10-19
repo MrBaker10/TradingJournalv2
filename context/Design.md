@@ -304,8 +304,8 @@ content scroll area stay as they are.
   ist die Unterscheidung aktiv/hover weg.
 - Fuß: Nutzerkarte mit Inset-Verlauf, darin Sign-out als einzelner Icon-Button.
   Kein Theme-Toggle, die App ist dark only.
-- Sieben Items in dieser Reihenfolge: Dashboard, Trade Journal, Analytics,
-  Progress, Prop Firm Rules, Econ Calendar, Settings.
+- Acht Items in dieser Reihenfolge: Dashboard, Trade Journal, Analytics,
+  Progress, Prop Firm Rules, Econ Calendar, Ledger, Settings.
 - Über der Nutzerkarte sitzt der Kontoschalter aus 4.12.
 
 ### 4.2 Buttons
@@ -597,6 +597,15 @@ an editor is open. Commission changes never update existing trade commissions.
 disable it and explain: “Locked — this account has trades”. Currency changes retain
 the entered starting-balance amount in the newly selected currency. An unchanged
 amount and currency preserve the existing USD conversion and rate date.
+
+**Practice lock (ledger, ticket 06).** Once ledger entries exist, disable the Practice
+toggle the same way and explain below its description: “Locked — this account has
+ledger entries”. The server refuses the switch either way.
+
+**Archived accounts.** Each archived row offers Restore. Delete permanently appears only
+for an account with no trades and no ledger entries; otherwise its place holds a quiet
+note in `--color-fg-subtle`: “Has trades or ledger entries — stays archived”. The
+server refuses the delete either way (ledger, ticket 02).
 
 **Anzeigewährung (display-currency, 2026-09-25).** Geldbeträge stehen in der Währung der
 Konten, die eine Ansicht zeigt — `€1,234.56` neben `$1,234.56`, beide in derselben
@@ -1246,6 +1255,101 @@ Diagramm. Unter `sm` bleiben nur Monat und Score.
 
 **Leerzustand.** Ohne eingefrorenen Monat: „Your first month appears here once it is
 over." zentriert in `--color-fg-subtle`.
+
+### 4.25 Ledger
+
+Entstanden mit dem Ledger (Phase 3), aus vorhandenen Primitiven gebaut, mit demselben
+Vorbehalt wie 4.16: **tragfähig, aber nicht entworfen.** Der Ledger ist echtes Geld,
+kein Prozess: **nirgends Neon, kein `text-glow`, keine Feier** — weder beim ersten
+Eintrag noch bei einer Auszahlung. Er steht neben dem Trading-P&L, nie darin (ADR 0002).
+
+**Die Seite.** `/ledger`, achtes Navigations-Item zwischen Econ Calendar und Settings,
+Icon `Wallet`. Titel „Ledger", darunter eine Zeile in `--color-fg-subtle`: „Real money
+around your prop trading — kept apart from your trading P&L." Von oben: Filter, Summen,
+Formular, Liste. Der Kontoschalter aus 4.12 wirkt hier nicht; die Seite bekommt ihren
+eigenen Kontofilter.
+
+**Filter.** Eine `card-surface edge`-Leiste wie der Zeitraumfilter der Analytics-Seite,
+Felder nach 4.5 mit Label darüber: **Account** als Select, erste Option „All accounts"
+(Default), danach die echten Konten in der Reihenfolge des Kontoschalters, archivierte
+nur, wenn sie Einträge haben, ohne Markierung; dann **From** und **To** als Datumsfelder
+auf das Eintragsdatum. Der Zustand steht in den searchParams (`account`, `from`, `to`),
+ein Reload zeigt dieselbe Auswahl. Summen und Liste folgen demselben Filter; ohne
+Kontofilter zählen Einträge ohne Konto mit. Unter `sm` stehen die Felder untereinander.
+
+**Summen.** Eine `card-surface edge`-Karte als Raster wie die Metrik-Tafel 4.7, drei
+Zellen: Payouts, Expenses, Ledger net. `cap`-Label, Wert 21px Mono mit Tabellenziffern,
+Kontextzeile mit der Anzeigewährung. Payouts `--color-success-fg`, Expenses
+`--color-danger-fg`, Ledger net nach Vorzeichen; jeder der drei Werte bei 0 ohne
+Vorzeichen in `--color-fg`. Kein Glow. Unter `sm`
+stehen die Zellen untereinander.
+
+**Formular „Add entry".** `card-surface edge`, Kopf `cap`. Felder nach 4.5, Label über
+dem Feld, Meldungszeile immer vorhanden:
+
+- **Kind** als zwei Chips in der Filter-Optik (Expense · Payout), Default Expense:
+  native Radios in `fieldset`/`legend`, das Radio selbst `sr-only`, der Fokusring
+  auf dem Chip.
+- **Category** als Select (Evaluation, Reset, Activation, Subscription, Data, Other),
+  nur bei Expense sichtbar; bei Payout fällt das Feld weg, statt gesperrt zu stehen.
+- **Account** als Select, erste Option „No account" (Default), danach die echten,
+  nicht archivierten Konten in der Reihenfolge des Kontoschalters. Übungskonten
+  erscheinen nie — der Ledger ist echtes Geld (ADR 0002). Hilfszeile „Leave empty for
+  costs no account owns, like a data feed."
+- **Date** als Datumsfeld, Default heute in `users.timezone`.
+- **Amount (USD)** Mono, `inputMode="decimal"`, Hilfszeile „0 is fine — a free reset
+  still counts." Höchstens $100 Mio. je Eintrag („That amount is too large").
+- **Note** einzeilig, optional, höchstens 500 Zeichen.
+
+Unter `sm` eine Spalte. Ab `sm` zwei Spalten: Category und Account in der ersten Zeile
+(bei Payout steht Account allein links), Date und Amount in der zweiten. Speichern
+explizit mit dem Primärbutton aus 4.2 („Add entry"), Bestätigung als Toast („Entry
+added"). Danach leeren sich Amount und Note, Kind, Category, Account und Date bleiben —
+wer drei Monate Abo nachträgt, wählt nicht dreimal dieselbe Kategorie.
+
+**Die Liste.** `card-surface edge`, Kopf `cap` „Entries", Zeilenmuster aus 4.16
+(`divide-white/6`). Neueste zuerst, bei gleichem Datum der zuletzt angelegte oben.
+Links das Datum („12 Oct 2026", Mono 13px, `--color-fg-muted`), dann die Art („Expense ·
+Reset" bzw. „Payout") in `--color-fg`, darunter die Notiz in `--color-fg-subtle`,
+abgeschnitten, voller Text im `title`. Ab `sm` eine Spalte **Account** vor dem Betrag,
+`--color-fg-muted`, abgeschnitten; ohne Konto „No account" in `--color-fg-subtle`. Ein
+später archiviertes Konto behält seinen Namen, ohne Markierung — der Eintrag gehört
+zu diesem Konto, egal ob es noch aktiv ist. Unter `sm` steht das Konto in der Zeile
+unter der Art, vor der Notiz, getrennt durch „ · ". Rechts der Betrag in USD, so wie
+erfasst, Mono mit Tabellenziffern, in fester Breite rechtsbündig, damit die Konto-Spalte
+über alle Zeilen fluchtet: Payout `+$500.00` in `--color-success-fg`, Expense `-$150.00` in
+`--color-danger-fg`, ein Betrag von 0 ohne Vorzeichen in `--color-fg-muted`. Die Art
+steht immer als Text daneben; Farbe ist nie der einzige Träger (§8).
+
+**Bearbeiten.** Inline unter der Zeile (entschieden 2026-10-19): rechts in jeder Zeile
+ein Ghost-Button „Edit" (`--color-fg-muted`, Hover `--color-cyan`). Er klappt unter der
+Zeile dasselbe Formular wie „Add entry" auf, vorbefüllt, Kopf `cap` „Edit entry", auf
+`--color-well`-Fläche abgesetzt. Nur eine Zeile ist zugleich offen; „Edit" an einer
+anderen schließt die erste ohne Speichern, „Edit" an der offenen schließt sie. Unten
+links „Save changes" (Primärbutton 4.2) und „Cancel" (Ghost), rechts „Delete" (Ghost,
+`text-danger-fg`). Speichern explizit, Toast „Entry saved", danach schließt das
+Formular. Ein archiviertes Konto, auf dem der Eintrag schon liegt, bleibt als Option
+„Name · Archived" wählbar, wie beim Trade (4.20); jedes andere archivierte Konto und
+jedes Übungskonto nie. Ist das Konto des Eintrags inzwischen ein Übungskonto, steht es
+als „Name · Practice" gesperrt in der Liste, damit sichtbar ist, warum Speichern damit
+abgelehnt wird.
+
+**Löschen.** Zwei Klicks wie in 4.20: der erste macht aus „Delete" „Click again to
+confirm" mit `border-danger-fg/60` und `--color-danger` bei 15 %, der zweite löscht;
+nach drei Sekunden ohne zweiten Klick fällt er zurück. Kein `window.confirm`, kein
+Modal. Toast „Entry deleted". Liste und Summen folgen sofort.
+
+**Leerzustand.** In der Listenkarte zentriert, `--color-fg-subtle`: „Nothing in the
+ledger yet. Add what prop trading costs you — evaluations, resets, activations,
+subscriptions, data — and every payout you receive." Findet ein aktiver Filter nichts:
+„No entries match this filter."
+
+**Microcopy.** Betrag ungültig: „Amount in USD — digits and up to two decimals."
+Kategorie fehlt: „Pick a category for this expense." Speichern fehlgeschlagen:
+„Couldn't add the entry. Your input is still here — try again." bzw. beim Bearbeiten
+„Couldn't save the changes. Your input is still here — try again." Löschen
+fehlgeschlagen: „Couldn't delete the entry — try again." Eintrag inzwischen weg (anderer
+Tab): „This entry no longer exists."
 
 ---
 
