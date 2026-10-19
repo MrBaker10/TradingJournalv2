@@ -21,6 +21,12 @@ import type { IsoDate } from "./streak.ts";
 /** "Close" starts when the distance to the floor is at most this share of the drawdown amount. */
 export const DRAWDOWN_CLOSE_PERCENT = 20;
 
+/** "Close" starts when what today may still lose is at most this share of the daily loss limit. */
+export const DAILY_LOSS_CLOSE_PERCENT = 20;
+
+/** "Close" starts when the best day's share is within this many percentage points of the consistency limit. */
+export const CONSISTENCY_CLOSE_POINTS = 5;
+
 export interface RuleDay {
   tradingDay: IsoDate;
   netCents: number;
@@ -32,6 +38,8 @@ export interface RuleStatusRules {
   drawdownType: DrawdownType;
   /** The balance an EOD trailing floor stops at, in cents. */
   lockLevelCents: number | null;
+  dailyLossLimitCents: number | null;
+  consistencyPercent: number | null;
   minTradingDays: number | null;
 }
 
@@ -43,8 +51,11 @@ export interface RuleStatusInput {
   today: IsoDate;
 }
 
+/** Where a checked rule stands; "close" and "breached" read amber and red. */
+export type RuleState = "ok" | "close" | "breached";
+
 export interface DrawdownStatus {
-  status: "ok" | "close" | "breached";
+  status: RuleState;
   floorCents: number;
   balanceCents: number;
   /** Balance − floor; zero or below once the balance stands on the floor. */
@@ -64,6 +75,36 @@ export interface ProfitTargetStatus {
   targetCents: number;
 }
 
+export type DailyLossStatus =
+  | { status: "not_set" }
+  | {
+      status: RuleState;
+      /** Net of today's trading day; 0 without a trade today. */
+      todayNetCents: number;
+      limitCents: number;
+      /** Limit + today's net: what today may still lose. */
+      distanceCents: number;
+    };
+
+export type ConsistencyStatus =
+  | { status: "not_set" }
+  /** Skipped: without profit there is no share to hold. */
+  | {
+      status: "ok";
+      checked: false;
+      totalProfitCents: number;
+      limitPercent: number;
+    }
+  | {
+      status: RuleState;
+      checked: true;
+      bestDayCents: number;
+      totalProfitCents: number;
+      /** Best day ÷ total profit in tenths of a percent: 504 = 50.4 %. */
+      shareTenthsPercent: number;
+      limitPercent: number;
+    };
+
 export type MinTradingDaysStatus =
   | { status: "not_set" }
   | { status: "ok"; doneDays: number; requiredDays: number };
@@ -71,6 +112,8 @@ export type MinTradingDaysStatus =
 export interface RuleStatus {
   profitTarget: ProfitTargetStatus;
   drawdown: DrawdownStatus | NotCheckableStatus;
+  dailyLoss: DailyLossStatus;
+  consistency: ConsistencyStatus;
   minTradingDays: MinTradingDaysStatus;
 }
 
@@ -107,6 +150,16 @@ export function evaluateRules(input: RuleStatusInput): RuleStatus {
       targetCents: rules.profitTargetCents,
     },
     drawdown: evaluateDrawdown(rules, startingBalanceCents, closesCents),
+    dailyLoss: evaluateDailyLoss(
+      rules.dailyLossLimitCents,
+      days,
+      todayTradingDay,
+    ),
+    consistency: evaluateConsistency(
+      rules.consistencyPercent,
+      days,
+      balanceCents - startingBalanceCents,
+    ),
     // Every day in the series carries a taken trade, so its length is the count.
     minTradingDays:
       rules.minTradingDays === null
@@ -169,13 +222,72 @@ function walkFloor(
   }
   const balanceCents = closesCents.at(-1) ?? startingBalanceCents;
   const distanceCents = balanceCents - floorCents;
-  let status: DrawdownStatus["status"] = "ok";
-  if (breached) status = "breached";
-  else if (isClose(distanceCents, amountCents)) status = "close";
+  const status = ruleState(
+    breached,
+    isClose(distanceCents, amountCents, DRAWDOWN_CLOSE_PERCENT),
+  );
   return { status, floorCents, balanceCents, distanceCents };
 }
 
-// distance ≤ 20 % of the allowance, compared in integers: 100·d ≤ 20·a.
-function isClose(distanceCents: number, allowanceCents: number): boolean {
-  return distanceCents * 100 <= allowanceCents * DRAWDOWN_CLOSE_PERCENT;
+// Only today's trading day counts. The limit is measured from where today
+// started, so a green day so far widens the room rather than resetting it.
+function evaluateDailyLoss(
+  limitCents: number | null,
+  days: RuleDay[],
+  todayTradingDay: IsoDate,
+): DailyLossStatus {
+  if (limitCents === null) return { status: "not_set" };
+  const todayNetCents =
+    days.find((day) => day.tradingDay === todayTradingDay)?.netCents ?? 0;
+  const distanceCents = limitCents + todayNetCents;
+  const status = ruleState(
+    distanceCents <= 0,
+    isClose(distanceCents, limitCents, DAILY_LOSS_CLOSE_PERCENT),
+  );
+  return { status, todayNetCents, limitCents, distanceCents };
+}
+
+// The best day's share of total profit against the limit, compared in
+// integers: share > limit ⇔ 100·best > limit·total. Exactly the limit is
+// still allowed; it is the largest share one day may hold.
+function evaluateConsistency(
+  limitPercent: number | null,
+  days: RuleDay[],
+  totalProfitCents: number,
+): ConsistencyStatus {
+  if (limitPercent === null) return { status: "not_set" };
+  if (totalProfitCents <= 0) {
+    return { status: "ok", checked: false, totalProfitCents, limitPercent };
+  }
+  const bestDayCents = Math.max(...days.map((day) => day.netCents));
+  const bestTimes100 = bestDayCents * 100;
+  const status = ruleState(
+    bestTimes100 > limitPercent * totalProfitCents,
+    bestTimes100 >=
+      (limitPercent - CONSISTENCY_CLOSE_POINTS) * totalProfitCents,
+  );
+  return {
+    status,
+    checked: true,
+    bestDayCents,
+    totalProfitCents,
+    // A ratio for display, rounded to a tenth of a percent; the state above
+    // is decided in integers, not from this figure.
+    shareTenthsPercent: Math.round((bestDayCents * 1000) / totalProfitCents),
+    limitPercent,
+  };
+}
+
+function ruleState(breached: boolean, close: boolean): RuleState {
+  if (breached) return "breached";
+  return close ? "close" : "ok";
+}
+
+// distance ≤ percent of the allowance, compared in integers: 100·d ≤ p·a.
+function isClose(
+  distanceCents: number,
+  allowanceCents: number,
+  percent: number,
+): boolean {
+  return distanceCents * 100 <= allowanceCents * percent;
 }

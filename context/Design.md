@@ -640,7 +640,7 @@ removes the link — the typed values stay in the draft until the editor closes.
   “/ Firm · Program” in `--color-fg-muted`. No status, no colour — rule status is its
   own surface (tickets 02 and 06).
 
-**Rule status (prop-firm-link, tickets 02–03).** A linked account's row carries a panel
+**Rule status (prop-firm-link, tickets 02–04).** A linked account's row carries a panel
 below its main line, separated by the row's `border-white/8` rule, with `cap` label
 “Rule status” and beside it, in `--color-fg-subtle`, “Since {evaluation start}”. Below,
 one line per rule, label left in `--color-fg-muted`, figures right in mono, all in USD:
@@ -662,8 +662,16 @@ one line per rule, label left in `--color-fg-muted`, figures right in mono, all 
   no floor and no distance: the journal has no intraday balance, and a guessed floor
   would be a wrong number.
 - **Minimum trading days:** “{done} of {required} days”, `--color-fg`, no close state.
-- Daily loss limit and Consistency: “Pending” while a value is set (ticket 04),
-  otherwise “Not set”.
+- **Daily loss limit (ticket 04):** “Today {net} · {distance} left of {limit}”, today's
+  net signed. Only today's trading day counts; the distance is the limit plus today's
+  net, so a green day widens it. Close at most **20 %** of the limit left
+  (`DAILY_LOSS_CLOSE_PERCENT`, exactly 20 % is close), breached once today's loss
+  reaches the limit; word and colour as for the drawdown.
+- **Consistency (ticket 04):** “Best day {best} · {share} % of {total} · limit {limit} %”,
+  share with one decimal. Close within **5 percentage points** below the limit
+  (`CONSISTENCY_CLOSE_POINTS`, exactly limit − 5 is close), breached above the limit —
+  exactly the limit is still allowed. While total profit is zero or negative: “No
+  profit yet” in `--color-fg-subtle`, no share.
 - Every rule left empty reads “Not set” in `--color-fg-subtle`.
 - No glow, no icon, no badge, no animation; the state word carries the meaning, colour
   only repeats it.

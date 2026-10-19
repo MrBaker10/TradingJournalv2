@@ -1,5 +1,5 @@
-import type { AccountRulesRow } from "@/db/queries/account-rules";
-import type { DrawdownStatus, RuleStatus } from "@/domain/rule-status";
+import type { RuleState, RuleStatus } from "@/domain/rule-status";
+import type { IsoDate } from "@/domain/streak";
 import { formatCents } from "@/lib/money";
 import { formatDateWithYear } from "@/lib/time";
 
@@ -7,13 +7,13 @@ import { formatDateWithYear } from "@/lib/time";
 // "Rule status"). Figures in USD; the state word carries the meaning, colour
 // only repeats it. No glow, nothing celebrates.
 
-const DRAWDOWN_TONE: Record<DrawdownStatus["status"], string> = {
+const STATE_TONE: Record<RuleState, string> = {
   ok: "text-fg",
   close: "text-warning",
   breached: "text-danger-fg",
 };
 
-const DRAWDOWN_WORD: Record<DrawdownStatus["status"], string | null> = {
+const STATE_WORD: Record<RuleState, string | null> = {
   ok: null,
   close: "Close",
   breached: "Breached",
@@ -38,19 +38,61 @@ function SubtleText({ children }: { children: React.ReactNode }) {
   return <span className="font-sans text-fg-subtle">{children}</span>;
 }
 
-/** "Pending" for a rule a later ticket evaluates, "Not set" when left empty. */
-function Unevaluated({ set }: { set: boolean }) {
-  return <SubtleText>{set ? "Pending" : "Not set"}</SubtleText>;
+/**
+ * A checked rule's line: the figure the state is about in its tone, the text
+ * around it in `--color-fg`, then the state word in the same tone.
+ */
+function JudgedFigure({
+  state,
+  before = "",
+  figure,
+  after = "",
+}: {
+  state: RuleState;
+  before?: string;
+  figure: string;
+  after?: string;
+}) {
+  const word = STATE_WORD[state];
+  return (
+    <span className="text-fg">
+      {before}
+      <span className={STATE_TONE[state]}>{figure}</span>
+      {after}
+      {word && (
+        <span className={`ml-2 font-sans ${STATE_TONE[state]}`}>{word}</span>
+      )}
+    </span>
+  );
+}
+
+function ConsistencyFigure({
+  consistency,
+}: {
+  consistency: RuleStatus["consistency"];
+}) {
+  if (consistency.status === "not_set") return <SubtleText>Not set</SubtleText>;
+  if (!consistency.checked) return <SubtleText>No profit yet</SubtleText>;
+  const share = (consistency.shareTenthsPercent / 10).toFixed(1);
+  return (
+    <JudgedFigure
+      state={consistency.status}
+      before={`Best day ${formatCents(consistency.bestDayCents)} · `}
+      figure={`${share} %`}
+      after={` of ${formatCents(consistency.totalProfitCents)} · limit ${consistency.limitPercent} %`}
+    />
+  );
 }
 
 export function AccountRuleStatus({
-  rules,
+  evaluationStart,
   status,
 }: {
-  rules: AccountRulesRow;
+  evaluationStart: IsoDate;
   status: RuleStatus;
 }) {
-  const { profitTarget, drawdown, minTradingDays } = status;
+  const { profitTarget, drawdown, dailyLoss, consistency, minTradingDays } =
+    status;
   return (
     <section
       aria-label="Rule status"
@@ -59,7 +101,7 @@ export function AccountRuleStatus({
       <div className="mb-2 flex flex-wrap items-baseline gap-x-3">
         <h4 className="cap">Rule status</h4>
         <span className="text-xs text-fg-subtle">
-          Since {formatDateWithYear(rules.evaluationStart)}
+          Since {formatDateWithYear(evaluationStart)}
         </span>
       </div>
       <dl className="flex flex-col gap-1.5">
@@ -73,28 +115,31 @@ export function AccountRuleStatus({
           {drawdown.status === "not_checkable" ? (
             <SubtleText>Not checkable — no intraday balance</SubtleText>
           ) : (
-            <span className={DRAWDOWN_TONE[drawdown.status]}>
-              {formatCents(drawdown.distanceCents)}{" "}
-              <span className="text-fg">
-                to floor {formatCents(drawdown.floorCents)}
-              </span>
-              {DRAWDOWN_WORD[drawdown.status] && (
-                <span className="ml-2 font-sans">
-                  {DRAWDOWN_WORD[drawdown.status]}
-                </span>
-              )}
-            </span>
+            <JudgedFigure
+              state={drawdown.status}
+              figure={formatCents(drawdown.distanceCents)}
+              after={` to floor ${formatCents(drawdown.floorCents)}`}
+            />
           )}
         </RuleLine>
         <RuleLine label="Daily loss limit">
-          <Unevaluated set={rules.dailyLossLimitCents !== null} />
+          {dailyLoss.status === "not_set" ? (
+            <SubtleText>Not set</SubtleText>
+          ) : (
+            <JudgedFigure
+              state={dailyLoss.status}
+              before={`Today ${formatCents(dailyLoss.todayNetCents, { signed: true })} · `}
+              figure={formatCents(dailyLoss.distanceCents)}
+              after={` left of ${formatCents(dailyLoss.limitCents)}`}
+            />
+          )}
         </RuleLine>
         <RuleLine label="Consistency">
-          <Unevaluated set={rules.consistencyPercent !== null} />
+          <ConsistencyFigure consistency={consistency} />
         </RuleLine>
         <RuleLine label="Minimum trading days">
           {minTradingDays.status === "not_set" ? (
-            <Unevaluated set={false} />
+            <SubtleText>Not set</SubtleText>
           ) : (
             <span className="text-fg">
               {minTradingDays.doneDays} of {minTradingDays.requiredDays} days

@@ -3352,3 +3352,13 @@ Deployment laufen.
 - **Der Floor fällt nie.** `max(floor, min(high − amount, lock))`: Ein Lock level unter
   dem Start-Floor (Startsaldo − Drawdown) lässt den Floor stehen, statt ihn zu senken.
   Beim Linken wird ein solcher Lock nicht abgelehnt.
+
+## 2026-10-19 — Prop firm link, Ticket 04 — feature/prop-firm-link
+
+- **Daily loss ab Tagesbeginn** (Sascha). Raum = Limit + heutiges Netto des Trading
+  Days; ein grüner Tag vergrößert ihn, kein Deckel beim Limit. Ein Intraday-Hoch kennt
+  das Journal nicht. Breached, sobald der heutige Verlust das Limit erreicht (`≤ 0`),
+  wie beim Floor.
+- **Consistency: genau das Limit ist erlaubt**, breached erst darüber; Close ab 5 Punkten
+  darunter. Ohne Gewinn (≤ 0) übersprungen. Limits von 1–5 % sind dadurch immer
+  mindestens Close (Sascha: akzeptiert, echte Programme 20–50 %).

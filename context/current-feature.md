@@ -7,18 +7,16 @@ History and reset this file to “Nothing in progress”.
 
 ## Status
 
-**In progress:** Prop firm link, ticket 03 (`feature/prop-firm-link`).
+**In progress:** Prop firm link, ticket 04 (`feature/prop-firm-link`).
 
-## Feature: Prop firm link — 03 EOD trailing drawdown; intraday not checkable
+## Feature: Prop firm link — 04 Daily loss limit and consistency rule
 
-- Goal: the rule status shows an EOD trailing floor (highest end-of-day balance minus
-  the amount, rising only on new end-of-day highs, capped at the lock level) with the
-  same ok/close/breached thresholds as the static floor; an intraday trailing drawdown
-  reads "Not checkable" with no floor.
+- Goal: the rule status shows today's net against the daily loss limit with the distance
+  left, and the best day against total profit and the consistency limit, each ok, close
+  or breached; consistency is skipped while total profit is zero or negative.
 - Scope: `src/domain/rule-status.ts` and its Vitest suite, the rule status panel in
   settings, `Design.md` rule status paragraph.
-- Do not build: daily loss and consistency (04), resets and payouts (05), the dashboard
-  card (06); intraday trailing computation.
-- Acceptance: `.scratch/prop-firm-link/issues/03-eod-trailing-drawdown.md`; full gate;
-  browser: settings for an EOD trailing and an intraday trailing link.
+- Do not build: resets and payouts (05), the dashboard card (06); notifications.
+- Acceptance: `.scratch/prop-firm-link/issues/04-daily-loss-and-consistency.md`; full
+  gate; browser: settings detail shows both rules.
 - Open questions: none. Spec `.scratch/prop-firm-link/spec.md`.

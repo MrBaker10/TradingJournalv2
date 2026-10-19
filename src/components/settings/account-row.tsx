@@ -173,7 +173,10 @@ export function AccountRow({
         </div>
       </div>
       {account.rules && account.ruleStatus && (
-        <AccountRuleStatus rules={account.rules} status={account.ruleStatus} />
+        <AccountRuleStatus
+          evaluationStart={account.rules.evaluationStart}
+          status={account.ruleStatus}
+        />
       )}
       {confirming && !disabled && (
         <div className="mt-3 flex flex-wrap items-center justify-end gap-3 border-t border-white/8 pt-3 text-sm">

@@ -14,6 +14,8 @@ function input(overrides: Partial<RuleStatusInput> = {}): RuleStatusInput {
       drawdownAmountCents: 200_000,
       drawdownType: "static",
       lockLevelCents: null,
+      dailyLossLimitCents: null,
+      consistencyPercent: null,
       minTradingDays: 5,
     },
     startingBalanceCents: 5_000_000,
@@ -208,6 +210,155 @@ describe("evaluateRules — intraday trailing drawdown", () => {
       }),
     );
     expect(status.drawdown).toEqual({ status: "not_checkable" });
+  });
+});
+
+describe("evaluateRules — daily loss limit", () => {
+  // $1,000 limit; today is Monday 19 October.
+  const daily = (days: RuleStatusInput["days"]) =>
+    input({ rules: { ...input().rules, dailyLossLimitCents: 100_000 }, days });
+
+  it("measures only today's trading day; earlier losses never count", () => {
+    const status = evaluateRules(
+      daily([
+        { tradingDay: "2026-10-16", netCents: -500_000 },
+        { tradingDay: "2026-10-19", netCents: -30_000 },
+      ]),
+    );
+    expect(status.dailyLoss).toEqual({
+      status: "ok",
+      todayNetCents: -30_000,
+      limitCents: 100_000,
+      distanceCents: 70_000,
+    });
+  });
+
+  it("turns close exactly at 20 % of the limit left", () => {
+    const today = (netCents: number) =>
+      evaluateRules(daily([{ tradingDay: "2026-10-19", netCents }])).dailyLoss;
+    expect(today(-80_000)).toMatchObject({
+      status: "close",
+      distanceCents: 20_000,
+    });
+    expect(today(-79_999)).toMatchObject({
+      status: "ok",
+      distanceCents: 20_001,
+    });
+  });
+
+  it("is breached once today's loss reaches the limit", () => {
+    const status = evaluateRules(
+      daily([{ tradingDay: "2026-10-19", netCents: -100_000 }]),
+    );
+    expect(status.dailyLoss).toMatchObject({
+      status: "breached",
+      distanceCents: 0,
+    });
+  });
+
+  it("widens the room by today's profit so far", () => {
+    expect(
+      evaluateRules(daily([{ tradingDay: "2026-10-19", netCents: 30_000 }]))
+        .dailyLoss,
+    ).toEqual({
+      status: "ok",
+      todayNetCents: 30_000,
+      limitCents: 100_000,
+      distanceCents: 130_000,
+    });
+  });
+
+  it("is ok with a full limit when today has no trade yet, and not set without a limit", () => {
+    expect(
+      evaluateRules(daily([{ tradingDay: "2026-10-16", netCents: -99_000 }]))
+        .dailyLoss,
+    ).toEqual({
+      status: "ok",
+      todayNetCents: 0,
+      limitCents: 100_000,
+      distanceCents: 100_000,
+    });
+    expect(evaluateRules(input()).dailyLoss).toEqual({ status: "not_set" });
+  });
+});
+
+describe("evaluateRules — consistency", () => {
+  // 50 % limit: no single day may hold more than half of total profit.
+  const consistency = (days: RuleStatusInput["days"]) =>
+    evaluateRules(
+      input({ rules: { ...input().rules, consistencyPercent: 50 }, days }),
+    ).consistency;
+  it("compares the best day's share of total profit with the limit", () => {
+    expect(
+      consistency([
+        { tradingDay: "2026-10-12", netCents: 40_000 },
+        { tradingDay: "2026-10-13", netCents: 35_000 },
+        { tradingDay: "2026-10-14", netCents: 25_000 },
+      ]),
+    ).toEqual({
+      status: "ok",
+      checked: true,
+      bestDayCents: 40_000,
+      totalProfitCents: 100_000,
+      shareTenthsPercent: 400,
+      limitPercent: 50,
+    });
+  });
+
+  it("turns close exactly 5 points under the limit", () => {
+    expect(
+      consistency([
+        { tradingDay: "2026-10-12", netCents: 45_000 },
+        { tradingDay: "2026-10-13", netCents: 30_000 },
+        { tradingDay: "2026-10-14", netCents: 25_000 },
+      ]),
+    ).toMatchObject({ status: "close", bestDayCents: 45_000 });
+    expect(
+      consistency([
+        { tradingDay: "2026-10-12", netCents: 44_999 },
+        { tradingDay: "2026-10-13", netCents: 30_001 },
+        { tradingDay: "2026-10-14", netCents: 25_000 },
+      ]),
+    ).toMatchObject({ status: "ok", bestDayCents: 44_999 });
+  });
+
+  it("allows exactly the limit and is breached above it", () => {
+    expect(
+      consistency([
+        { tradingDay: "2026-10-12", netCents: 50_000 },
+        { tradingDay: "2026-10-13", netCents: 30_000 },
+        { tradingDay: "2026-10-14", netCents: 20_000 },
+      ]),
+    ).toMatchObject({ status: "close", bestDayCents: 50_000 });
+    expect(
+      consistency([
+        { tradingDay: "2026-10-12", netCents: 50_001 },
+        { tradingDay: "2026-10-13", netCents: 29_999 },
+        { tradingDay: "2026-10-14", netCents: 20_000 },
+      ]),
+    ).toMatchObject({ status: "breached", bestDayCents: 50_001 });
+  });
+
+  it("is skipped while total profit is zero or negative, and not set without a limit", () => {
+    expect(
+      consistency([
+        { tradingDay: "2026-10-12", netCents: 40_000 },
+        { tradingDay: "2026-10-13", netCents: -40_000 },
+      ]),
+    ).toEqual({
+      status: "ok",
+      checked: false,
+      totalProfitCents: 0,
+      limitPercent: 50,
+    });
+    expect(
+      consistency([{ tradingDay: "2026-10-12", netCents: -10_000 }]),
+    ).toMatchObject({
+      status: "ok",
+      checked: false,
+      totalProfitCents: -10_000,
+    });
+    expect(evaluateRules(input()).consistency).toEqual({ status: "not_set" });
   });
 });
 
