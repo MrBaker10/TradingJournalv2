@@ -4,6 +4,7 @@ import { MilestoneCard } from "@/components/dashboard/milestone-card";
 import { PlanCard } from "@/components/dashboard/plan-card";
 import { PnlCalendar } from "@/components/dashboard/pnl-calendar";
 import { ProgressTiles } from "@/components/dashboard/progress-tiles";
+import { RuleStatusCard } from "@/components/dashboard/rule-status-card";
 import { TradeRow } from "@/components/journal/trade-row";
 import { listUserBadges } from "@/db/queries/badges";
 import { getDailyNote } from "@/db/queries/daily-notes";
@@ -28,6 +29,7 @@ import {
 import { buildEquitySeries } from "@/domain/equity";
 import { calculateStreak, pendingStreakMilestone } from "@/domain/streak";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { loadSelectedRuleStatus } from "@/lib/prop-firms/rule-status";
 import { firstValue } from "@/lib/search-params";
 import { monthKeyOf, todayInTimeZone } from "@/lib/time";
 
@@ -102,6 +104,7 @@ export default async function DashboardPage({
     recentTrades,
     rewards,
     startingBalanceCents,
+    ruleStatus,
   ] = await Promise.all([
     getMoneyMetrics(scope),
     getCountMetrics(scope),
@@ -118,6 +121,8 @@ export default async function DashboardPage({
     ),
     getDashboardRewardState(user.id),
     getStartingBalanceCents(scope),
+    // Only for exactly one linked account; never against a combined figure.
+    loadSelectedRuleStatus(user.id, user.selectedAccountId, today),
   ]);
 
   const streak = calculateStreak(streakDays, today, user.timezone);
@@ -198,6 +203,8 @@ export default async function DashboardPage({
         today={today}
         currency={scope.currency}
       />
+
+      {ruleStatus && <RuleStatusCard ruleStatus={ruleStatus} />}
 
       <EquityCurve series={equity} currency={scope.currency} />
 

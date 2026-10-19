@@ -1,4 +1,4 @@
-import { sql, TransactionRollbackError } from "drizzle-orm";
+import { eq, sql, TransactionRollbackError } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { IsoDate } from "../../../domain/streak.ts";
 import { db } from "../../index.ts";
@@ -9,7 +9,7 @@ import { ledgerEntries } from "../../schema/ledger.ts";
 import { propFirmPrograms, propFirms } from "../../schema/prop-firms.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
-import { getAttempt } from "../account-rules.ts";
+import { getAccountRules, getAttempt } from "../account-rules.ts";
 
 // The attempt's day series for the rule status (prop-firm-link, ticket 02).
 // Every case runs in a rolled-back transaction on users of its own.
@@ -473,5 +473,54 @@ describe("getAttempt — resets and payouts", () => {
     });
 
     expect(result).toEqual({ before: "2026-10-12", onTheDay: "2026-10-26" });
+  });
+});
+
+describe("getAccountRules", () => {
+  it("returns an active account's link with its starting balance, only to its owner", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const f = await fixture(tx);
+      const owner = await newUser(f, "rules-owner");
+      const other = await newUser(f, "rules-other");
+      const eval1 = await linkedAccount(f, owner, "Eval", "2026-10-01");
+      const [unlinked] = await tx
+        .insert(accounts)
+        .values({
+          userId: owner,
+          name: "Unlinked",
+          sortOrder: 1,
+          startingBalance: "25000.00",
+          startingBalanceUsd: "25000.00",
+        })
+        .returning({ id: accounts.id });
+      const archived = await linkedAccount(f, owner, "Old eval", "2026-09-01");
+      await tx
+        .update(accounts)
+        .set({ archivedAt: new Date("2026-10-15T00:00:00Z") })
+        .where(eq(accounts.id, archived));
+      return {
+        own: await getAccountRules(owner, eval1, tx),
+        archived: await getAccountRules(owner, archived, tx),
+        unlinked: await getAccountRules(owner, unlinked.id, tx),
+        foreign: await getAccountRules(other, eval1, tx),
+      };
+    });
+
+    expect(result.own).toMatchObject({
+      accountId: expect.any(Number),
+      programName: "50k Static",
+      evaluationStart: "2026-10-01",
+      profitTargetCents: 300_000,
+      drawdownAmountCents: 200_000,
+      drawdownType: "static",
+      startingBalanceUsdCents: 5_000_000,
+    });
+    expect(result.unlinked).toBeNull();
+    expect(result.foreign).toBeNull();
+    // Archiving keeps `users.selected_account_id`, while the switcher already
+    // reads "All accounts": the card must not show for it.
+    expect(result.archived).toBeNull();
   });
 });

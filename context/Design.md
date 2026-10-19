@@ -640,7 +640,7 @@ removes the link — the typed values stay in the draft until the editor closes.
   “/ Firm · Program” in `--color-fg-muted`. No status, no colour — rule status is its
   own surface (tickets 02 and 06).
 
-**Rule status (prop-firm-link, tickets 02–05).** A linked account's row carries a panel
+**Rule status (prop-firm-link, tickets 02–06).** A linked account's row carries a panel
 below its main line, separated by the row's `border-white/8` rule, with `cap` label
 “Rule status” and beside it, in `--color-fg-subtle`, “Since {attempt start}” — the
 evaluation start, or the latest reset expense on the account in the ledger when that is
@@ -679,6 +679,13 @@ trading days count trading P&L only:
 - Every rule left empty reads “Not set” in `--color-fg-subtle`.
 - No glow, no icon, no badge, no animation; the state word carries the meaning, colour
   only repeats it.
+- **Dashboard card (ticket 06):** the same lines in a `card-surface edge` card, `p-5`,
+  between the metric panel and the equity curve — `edge`, not `edge-neon`: rules are
+  money, not process. Heading `cap` “Rule status”, beside it in `--color-fg-subtle`
+  “{Firm} · {Program} · Since {attempt start}”. Shown only while exactly one linked
+  account is selected; for “All accounts” and an unlinked account the card is absent,
+  not empty. Figures stay in USD whatever the dashboard's display currency. No link,
+  no motion, no effect on any tile or score.
 
 **Archived accounts.** Each archived row offers Restore. Delete permanently appears only
 for an account with no trades and no ledger entries; otherwise its place holds a quiet

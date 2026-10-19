@@ -1,14 +1,13 @@
 import { AccountsManager } from "@/components/settings/accounts-manager";
 import { ExportCard } from "@/components/settings/export-card";
 import { SecuritySection } from "@/components/settings/security-section";
-import { getAttempt, listAccountRules } from "@/db/queries/account-rules";
+import { listAccountRules } from "@/db/queries/account-rules";
 import { listAllAccountsForSettings } from "@/db/queries/accounts";
 import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
 import { listProgramOptions } from "@/db/queries/prop-firms";
-import { amountToCents } from "@/domain/commission";
-import { evaluateRules } from "@/domain/rule-status";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { loadRuleStatus } from "@/lib/prop-firms/rule-status";
 import { todayInTimeZone } from "@/lib/time";
 
 export default async function SettingsPage() {
@@ -31,28 +30,13 @@ export default async function SettingsPage() {
       .filter((account) => account.archivedAt === null)
       .map(async (account) => {
         const link = rules.find((row) => row.accountId === account.id) ?? null;
-        const attempt = link && (await getAttempt(user.id, account.id, today));
         return {
           ...account,
           commissionRates: rates.filter(
             (rate) => rate.accountId === account.id,
           ),
           rules: link,
-          attempt:
-            link && attempt
-              ? {
-                  start: attempt.start,
-                  status: evaluateRules({
-                    rules: link,
-                    startingBalanceCents: amountToCents(
-                      account.startingBalanceUsd,
-                    ),
-                    days: attempt.days,
-                    payouts: attempt.payouts,
-                    today,
-                  }),
-                }
-              : null,
+          attempt: link && (await loadRuleStatus(user.id, link, today)),
         };
       }),
   );

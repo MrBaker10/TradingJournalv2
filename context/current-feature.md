@@ -7,18 +7,18 @@ History and reset this file to “Nothing in progress”.
 
 ## Status
 
-**In progress:** Prop firm link, ticket 05 (`feature/prop-firm-link`).
+**In progress:** Prop firm link, ticket 06 (`feature/prop-firm-link`).
 
-## Feature: Prop firm link — 05 Resets and payouts shape the attempt
+## Feature: Prop firm link — 06 Dashboard "Rule status" card
 
-- Goal: a reset expense on a linked account starts a new attempt from its date (also at
-  $0); payouts on the account inside the attempt lower the balance from their date for
-  every balance-based rule, without counting as trading P&L or a trading day.
-- Scope: `getAttempt` (one statement: attempt start, day series, payouts by day) in
-  `src/db/queries/account-rules.ts`, `src/domain/rule-status.ts`, settings page and
-  rule status panel header, `Design.md` rule status paragraph.
-- Do not build: the dashboard card (06); payout eligibility, scaling plans; ledger
-  changes.
-- Acceptance: `.scratch/prop-firm-link/issues/05-resets-and-payouts.md`; full gate with
-  DB tests executing; browser: a reset moves the attempt, a payout lowers the balance.
+- Goal: with exactly one linked account selected, the dashboard shows a "Rule status"
+  card with the same rules and figures as the account's settings; hidden for "All
+  accounts" and for an unlinked account. No notification, badge, score effect or
+  celebration.
+- Scope: `getAccountRules` (one account's link, user-filtered) in
+  `src/db/queries/account-rules.ts`, a shared loader in `src/lib/prop-firms/`, the rule
+  lines shared by settings and the new dashboard card, `Design.md`.
+- Do not build: rule status for "All accounts"; notifications; changes to the rules.
+- Acceptance: `.scratch/prop-firm-link/issues/06-dashboard-rule-status-card.md`; full
+  gate; browser: card with one linked account selected, hidden for "All accounts".
 - Open questions: none. Spec `.scratch/prop-firm-link/spec.md`.
