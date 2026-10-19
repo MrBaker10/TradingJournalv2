@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLedgerEntrySchema } from "../ledger.ts";
+import { createLedgerEntrySchema, updateLedgerEntrySchema } from "../ledger.ts";
 
 const valid = {
   kind: "expense",
@@ -46,5 +46,26 @@ describe("createLedgerEntrySchema", () => {
     expect(fieldErrors({ ...valid, amount: -1 })).toEqual({
       amount: "The amount cannot be negative.",
     });
+  });
+});
+
+describe("updateLedgerEntrySchema", () => {
+  it("needs the entry's id", () => {
+    expect(updateLedgerEntrySchema.safeParse(valid).success).toBe(false);
+    expect(
+      updateLedgerEntrySchema.safeParse({ ...valid, entryId: 7 }).success,
+    ).toBe(true);
+  });
+
+  it("holds the same category rule as create", () => {
+    const result = updateLedgerEntrySchema.safeParse({
+      ...valid,
+      entryId: 7,
+      kind: "payout",
+    });
+    expect(result.success).toBe(false);
+    expect(!result.success && result.error.issues[0].message).toBe(
+      "A payout has no category.",
+    );
   });
 });

@@ -7,19 +7,22 @@ History and reset this file to “Nothing in progress”.
 
 ## Status
 
-**In progress:** Ledger, ticket 04 (`feature/ledger`).
+**In progress:** Ledger, ticket 05 (`feature/ledger`).
 
-## Feature: Ledger — 04 Filter by account and date range
+## Feature: Ledger — 05 Edit and delete entries
 
-- Goal: the ledger page has its own account filter and a date range on the entry date;
-  list and totals follow the same filter, so the totals always match the visible list.
-  Without an account filter, entries without an account are listed and counted.
-- Scope: one filter condition in the ledger query module shared by list and totals,
-  the accounts the filter offers (real ones, archived ones only with entries), the
-  filter value checked server-side, a filter bar on `/ledger` mirrored into
-  searchParams, `Design.md` §4.25 filter. No migration.
-- Do not build: edit and delete (05), practice toggle lock (06), a "No account" filter
-  option, date presets; nothing on dashboard, analytics, progress or the CSV export.
-- Acceptance: `.scratch/ledger/issues/04-filter-by-account-and-date.md`; full gate with
-  DB tests executing; browser path from the ticket.
-- Open questions: none. Spec `.scratch/ledger/spec.md`.
+- Goal: the user edits an entry inline under its row with an explicit save, and deletes
+  it with the two-click confirm; another user's entry can be neither changed nor
+  deleted; an unchanged archived account stays on edit, a new or changed one must be
+  real and active.
+- Scope: update and delete in the ledger query module, Zod schema for update, server
+  actions, the entry fields shared by an add and an edit form, two-click delete,
+  `Design.md` §4.25 edit and delete. No migration. From the review (approved by Sascha):
+  the two-click confirm becomes `src/hooks/use-two-click-confirm.ts`, used by the trade
+  form, screenshot slots, archived accounts and the ledger.
+- Do not build: practice toggle lock (06); nothing on dashboard, analytics, progress or
+  the CSV export.
+- Acceptance: `.scratch/ledger/issues/05-edit-and-delete-entries.md`; full gate with DB
+  tests executing; browser path from the ticket.
+- Open questions: none (inline edit decided by Sascha 2026-10-19). Spec
+  `.scratch/ledger/spec.md`.

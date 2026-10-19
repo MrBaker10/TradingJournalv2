@@ -1317,6 +1317,24 @@ erfasst, Mono mit Tabellenziffern, in fester Breite rechtsbündig, damit die Kon
 `--color-danger-fg`, ein Betrag von 0 ohne Vorzeichen in `--color-fg-muted`. Die Art
 steht immer als Text daneben; Farbe ist nie der einzige Träger (§8).
 
+**Bearbeiten.** Inline unter der Zeile (entschieden 2026-10-19): rechts in jeder Zeile
+ein Ghost-Button „Edit" (`--color-fg-muted`, Hover `--color-cyan`). Er klappt unter der
+Zeile dasselbe Formular wie „Add entry" auf, vorbefüllt, Kopf `cap` „Edit entry", auf
+`--color-well`-Fläche abgesetzt. Nur eine Zeile ist zugleich offen; „Edit" an einer
+anderen schließt die erste ohne Speichern, „Edit" an der offenen schließt sie. Unten
+links „Save changes" (Primärbutton 4.2) und „Cancel" (Ghost), rechts „Delete" (Ghost,
+`text-danger-fg`). Speichern explizit, Toast „Entry saved", danach schließt das
+Formular. Ein archiviertes Konto, auf dem der Eintrag schon liegt, bleibt als Option
+„Name · Archived" wählbar, wie beim Trade (4.20); jedes andere archivierte Konto und
+jedes Übungskonto nie. Ist das Konto des Eintrags inzwischen ein Übungskonto, steht es
+als „Name · Practice" gesperrt in der Liste, damit sichtbar ist, warum Speichern damit
+abgelehnt wird.
+
+**Löschen.** Zwei Klicks wie in 4.20: der erste macht aus „Delete" „Click again to
+confirm" mit `border-danger-fg/60` und `--color-danger` bei 15 %, der zweite löscht;
+nach drei Sekunden ohne zweiten Klick fällt er zurück. Kein `window.confirm`, kein
+Modal. Toast „Entry deleted". Liste und Summen folgen sofort.
+
 **Leerzustand.** In der Listenkarte zentriert, `--color-fg-subtle`: „Nothing in the
 ledger yet. Add what prop trading costs you — evaluations, resets, activations,
 subscriptions, data — and every payout you receive." Findet ein aktiver Filter nichts:
@@ -1324,7 +1342,10 @@ subscriptions, data — and every payout you receive." Findet ein aktiver Filter
 
 **Microcopy.** Betrag ungültig: „Amount in USD — digits and up to two decimals."
 Kategorie fehlt: „Pick a category for this expense." Speichern fehlgeschlagen:
-„Couldn't add the entry. Your input is still here — try again."
+„Couldn't add the entry. Your input is still here — try again." bzw. beim Bearbeiten
+„Couldn't save the changes. Your input is still here — try again." Löschen
+fehlgeschlagen: „Couldn't delete the entry — try again." Eintrag inzwischen weg (anderer
+Tab): „This entry no longer exists."
 
 ---
 

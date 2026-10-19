@@ -3,7 +3,7 @@
 import { Check, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   addTradeLink,
   createTrade,
@@ -33,6 +33,7 @@ import { groupByAssetClass } from "@/domain/instruments";
 import { calculatePnl, type TradeDirection } from "@/domain/pnl";
 import type { PriceBandInput } from "@/domain/price-band";
 import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
+import { useTwoClickConfirm } from "@/hooks/use-two-click-confirm";
 import { formatCents, formatCentsPlain, type MoneyCurrency } from "@/lib/money";
 import { resizeAndCompressImage } from "@/lib/uploads/resize-image";
 import {
@@ -53,7 +54,6 @@ interface StagedScreenshot {
 }
 
 const SUCCESS_HOLD_MS = 1400;
-const CONFIRM_TIMEOUT_MS = 3000;
 
 type FieldState = "default" | "valid" | "invalid";
 
@@ -321,8 +321,7 @@ export function TradeForm(props: TradeFormProps) {
   >([]);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const confirmTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deleteConfirm = useTwoClickConfirm();
 
   // In edit mode the server is the source of truth for both lists; in create
   // mode nothing exists on the server yet, so the staged arrays are.
@@ -574,27 +573,17 @@ export function TradeForm(props: TradeFormProps) {
   function handleDeleteClick() {
     if (!edit) return;
 
-    if (!confirmingDelete) {
-      setConfirmingDelete(true);
-      if (confirmTimeout.current) clearTimeout(confirmTimeout.current);
-      confirmTimeout.current = setTimeout(
-        () => setConfirmingDelete(false),
-        CONFIRM_TIMEOUT_MS,
-      );
-      return;
-    }
-
-    if (confirmTimeout.current) clearTimeout(confirmTimeout.current);
-    setConfirmingDelete(false);
-    startTransition(async () => {
-      const result = await deleteTrade({ tradeId: edit.trade.id });
-      if (!result.success) {
-        setErrors({ form: result.error });
-        return;
-      }
-      router.push("/journal");
-      router.refresh();
-    });
+    deleteConfirm.press(() =>
+      startTransition(async () => {
+        const result = await deleteTrade({ tradeId: edit.trade.id });
+        if (!result.success) {
+          setErrors({ form: result.error });
+          return;
+        }
+        router.push("/journal");
+        router.refresh();
+      }),
+    );
   }
 
   function buildPayload() {
@@ -1395,13 +1384,13 @@ export function TradeForm(props: TradeFormProps) {
             disabled={loading || success}
             onClick={handleDeleteClick}
             className={`flex h-10 w-full items-center justify-center gap-1.5 rounded-ctl border text-sm transition-colors duration-200 disabled:opacity-60 ${
-              confirmingDelete
+              deleteConfirm.armed
                 ? "border-danger-fg/60 bg-danger/15 text-danger-fg"
                 : "border-white/12 text-fg-muted hover:border-danger-fg/45 hover:text-danger-fg"
             }`}
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
-            {confirmingDelete ? "Click again to confirm" : "Delete trade"}
+            {deleteConfirm.armed ? "Click again to confirm" : "Delete trade"}
           </button>
         </div>
       )}

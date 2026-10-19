@@ -11,6 +11,11 @@ import { exactCents } from "../lib/money.ts";
 export const LEDGER_SAVE_FAILED =
   "Couldn't add the entry. Your input is still here — try again.";
 
+/** The same for an edit, and for a delete (Design.md §4.25, Microcopy). */
+export const LEDGER_UPDATE_FAILED =
+  "Couldn't save the changes. Your input is still here — try again.";
+export const LEDGER_DELETE_FAILED = "Couldn't delete the entry — try again.";
+
 /**
  * The largest amount accepted. Same bound and reason as
  * `MAX_STARTING_BALANCE`: `exactCents` reads a typed number exactly only up to
@@ -51,25 +56,42 @@ const ledgerEntryFields = z.object({
     .transform((value) => (value === "" ? null : value)),
 });
 
-export const createLedgerEntrySchema = ledgerEntryFields.superRefine(
-  (entry, ctx) => {
-    const check = validateLedgerCategory(entry.kind, entry.category);
-    if (!check.success) {
-      ctx.addIssue({
-        code: "custom",
-        path: [check.field],
-        message: check.error,
-      });
-    }
-  },
-  {
-    // Runs whenever kind and category parse, so an empty amount does not
-    // hide a missing category: the form shows every message at once.
-    when: (payload) =>
-      ledgerEntryFields
-        .pick({ kind: true, category: true })
-        .safeParse(payload.value).success,
-  },
+/**
+ * The category rule on top of `fields`, for create and update alike. It runs
+ * whenever kind and category parse, so an empty amount does not hide a
+ * missing category: the form shows every message at once.
+ */
+function withCategoryRule<T extends typeof ledgerEntryFields>(fields: T) {
+  return fields.superRefine(
+    (entry, ctx) => {
+      const check = validateLedgerCategory(entry.kind, entry.category);
+      if (!check.success) {
+        ctx.addIssue({
+          code: "custom",
+          path: [check.field],
+          message: check.error,
+        });
+      }
+    },
+    {
+      when: (payload) =>
+        ledgerEntryFields
+          .pick({ kind: true, category: true })
+          .safeParse(payload.value).success,
+    },
+  );
+}
+
+export const createLedgerEntrySchema = withCategoryRule(ledgerEntryFields);
+
+/** The entry an edit or a delete is about; ownership is checked on the server. */
+const ledgerEntryId = z.number().int().positive();
+
+/** An edit sends the whole entry again, with the id of the one it replaces. */
+export const updateLedgerEntrySchema = withCategoryRule(
+  ledgerEntryFields.extend({ entryId: ledgerEntryId }),
 );
+
+export const deleteLedgerEntrySchema = z.object({ entryId: ledgerEntryId });
 
 export type CreateLedgerEntryInput = z.input<typeof createLedgerEntrySchema>;

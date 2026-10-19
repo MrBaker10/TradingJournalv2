@@ -1,11 +1,10 @@
 "use client";
 
 import { Loader2, Plus, X } from "lucide-react";
-import { useRef, useState, useTransition } from "react";
+import { useRef, useTransition } from "react";
 import { InlineMessage } from "@/components/ui/inline-message";
 import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
-
-const CONFIRM_TIMEOUT_MS = 3000;
+import { useTwoClickConfirmFor } from "@/hooks/use-two-click-confirm";
 
 export interface ScreenshotItem {
   id: string | number;
@@ -34,10 +33,7 @@ export function ScreenshotSlots({
 }: ScreenshotSlotsProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isPending, startTransition] = useTransition();
-  const [confirmingId, setConfirmingId] = useState<string | number | null>(
-    null,
-  );
-  const confirmTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const removeConfirm = useTwoClickConfirmFor<string | number>();
 
   const canAddMore = screenshots.length < MAX_SCREENSHOTS_PER_TRADE;
 
@@ -51,21 +47,11 @@ export function ScreenshotSlots({
   }
 
   function handleRemoveClick(id: string | number) {
-    if (confirmingId !== id) {
-      setConfirmingId(id);
-      if (confirmTimeout.current) clearTimeout(confirmTimeout.current);
-      confirmTimeout.current = setTimeout(
-        () => setConfirmingId(null),
-        CONFIRM_TIMEOUT_MS,
-      );
-      return;
-    }
-
-    if (confirmTimeout.current) clearTimeout(confirmTimeout.current);
-    setConfirmingId(null);
-    startTransition(async () => {
-      await onRemove(id);
-    });
+    removeConfirm.press(id, () =>
+      startTransition(async () => {
+        await onRemove(id);
+      }),
+    );
   }
 
   return (
@@ -87,12 +73,12 @@ export function ScreenshotSlots({
               disabled={disabled || isPending}
               onClick={() => handleRemoveClick(screenshot.id)}
               aria-label={
-                confirmingId === screenshot.id
+                removeConfirm.armed === screenshot.id
                   ? "Confirm remove screenshot"
                   : "Remove screenshot"
               }
               className={`absolute inset-0 flex items-center justify-center transition-opacity ${
-                confirmingId === screenshot.id
+                removeConfirm.armed === screenshot.id
                   ? "bg-danger/70 opacity-100"
                   : "bg-black/60 opacity-0 group-hover:opacity-100"
               }`}

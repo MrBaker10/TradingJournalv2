@@ -11,12 +11,14 @@ import {
 } from "../accounts.ts";
 import {
   createLedgerEntry,
+  deleteLedgerEntry,
   getLedgerTotals,
   LedgerEntryError,
   type LedgerEntryWrite,
   listLedgerAccounts,
   listLedgerEntries,
   listLedgerFilterAccounts,
+  updateLedgerEntry,
 } from "../ledger.ts";
 
 // Drives the ledger query module against real Postgres, inside a rolled-back
@@ -530,6 +532,148 @@ describe("ledger filter", () => {
         { id: eval50k, name: "50k eval" },
         { id: live, name: "Live" },
       ]);
+    });
+  });
+});
+
+describe("editing and deleting entries", () => {
+  it("lets the owner change every field", async () => {
+    await fixture(async (tx, userId) => {
+      const live = await addAccount(tx, userId, "Live");
+      const { id } = await createLedgerEntry(userId, evaluation, tx);
+
+      await updateLedgerEntry(
+        userId,
+        id,
+        {
+          entryDate: "2026-10-14",
+          kind: "payout",
+          category: null,
+          amountCents: 50_000,
+          note: "First payout",
+          accountId: live,
+        },
+        tx,
+      );
+
+      expect(await listLedgerEntries(userId, {}, tx)).toMatchObject([
+        {
+          id,
+          entryDate: "2026-10-14",
+          kind: "payout",
+          category: null,
+          amountCents: 50_000,
+          note: "First payout",
+          accountId: live,
+          accountName: "Live",
+        },
+      ]);
+    });
+  });
+
+  it("never changes another user's entry", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      const { id } = await createLedgerEntry(otherUserId, evaluation, tx);
+
+      await expect(
+        updateLedgerEntry(userId, id, { ...evaluation, amountCents: 1 }, tx),
+      ).rejects.toThrow("This entry no longer exists.");
+      expect(
+        (await listLedgerEntries(otherUserId, {}, tx))[0].amountCents,
+      ).toBe(15_000);
+    });
+  });
+
+  it("keeps an archived account the entry already has", async () => {
+    await fixture(async (tx, userId) => {
+      const oldEval = await addAccount(tx, userId, "Old eval");
+      const { id } = await createLedgerEntry(
+        userId,
+        { ...evaluation, accountId: oldEval },
+        tx,
+      );
+      await tx
+        .update(accounts)
+        .set({ archivedAt: new Date("2026-10-15T00:00:00Z") })
+        .where(eq(accounts.id, oldEval));
+
+      await updateLedgerEntry(
+        userId,
+        id,
+        { ...evaluation, accountId: oldEval, note: "Fixed typo" },
+        tx,
+      );
+
+      expect((await listLedgerEntries(userId, {}, tx))[0]).toMatchObject({
+        accountId: oldEval,
+        note: "Fixed typo",
+      });
+    });
+  });
+
+  it("never keeps a practice account, even one the entry already has", async () => {
+    await fixture(async (tx, userId) => {
+      const live = await addAccount(tx, userId, "Live");
+      const { id } = await createLedgerEntry(
+        userId,
+        { ...evaluation, accountId: live },
+        tx,
+      );
+      // Ticket 06 locks this switch in the UI; the rule holds without it.
+      await tx
+        .update(accounts)
+        .set({ isPractice: true })
+        .where(eq(accounts.id, live));
+
+      await expect(
+        updateLedgerEntry(userId, id, { ...evaluation, accountId: live }, tx),
+      ).rejects.toThrow(
+        "Pick one of your active real accounts, or no account.",
+      );
+    });
+  });
+
+  it("refuses a change to a practice, a foreign or an archived account", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      const sim = await addAccount(tx, userId, "Sim", { isPractice: true });
+      const theirs = await addAccount(tx, otherUserId, "Theirs");
+      const archived = await addAccount(tx, userId, "Old", { archived: true });
+      const { id } = await createLedgerEntry(userId, evaluation, tx);
+
+      for (const accountId of [sim, theirs, archived]) {
+        await expect(
+          updateLedgerEntry(userId, id, { ...evaluation, accountId }, tx),
+        ).rejects.toThrow(LedgerEntryError);
+      }
+      expect((await listLedgerEntries(userId, {}, tx))[0].accountId).toBe(null);
+    });
+  });
+
+  it("holds the category rules on update", async () => {
+    await fixture(async (tx, userId) => {
+      const { id } = await createLedgerEntry(userId, evaluation, tx);
+
+      await expect(
+        updateLedgerEntry(userId, id, { ...evaluation, category: null }, tx),
+      ).rejects.toThrow(LedgerEntryError);
+      await expect(
+        updateLedgerEntry(userId, id, { ...payout, category: "data" }, tx),
+      ).rejects.toThrow(LedgerEntryError);
+    });
+  });
+
+  it("deletes the owner's entry, and never another user's", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      const mine = await createLedgerEntry(userId, evaluation, tx);
+      const theirs = await createLedgerEntry(otherUserId, payout, tx);
+
+      await deleteLedgerEntry(userId, mine.id, tx);
+      await expect(deleteLedgerEntry(userId, theirs.id, tx)).rejects.toThrow(
+        LedgerEntryError,
+      );
+
+      expect(await listLedgerEntries(userId, {}, tx)).toEqual([]);
+      expect(await listLedgerEntries(otherUserId, {}, tx)).toHaveLength(1);
     });
   });
 });

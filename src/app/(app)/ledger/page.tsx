@@ -1,5 +1,5 @@
 import { isValid, parseISO } from "date-fns";
-import { LedgerEntryForm } from "@/components/ledger/ledger-entry-form";
+import { LedgerAddForm } from "@/components/ledger/ledger-add-form";
 import { LedgerFilterBar } from "@/components/ledger/ledger-filter-bar";
 import { LedgerList } from "@/components/ledger/ledger-list";
 import { LedgerTotalsCard } from "@/components/ledger/ledger-totals-card";
@@ -79,11 +79,15 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
 
       <LedgerFilterBar accounts={filterAccounts} />
       <LedgerTotalsCard totals={totals} currency={currency} />
-      <LedgerEntryForm
+      <LedgerAddForm
         today={todayInTimeZone(user.timezone)}
         accounts={formAccounts}
       />
-      <LedgerList entries={entries} filtered={isLedgerFilterActive(filter)} />
+      <LedgerList
+        entries={entries}
+        filtered={isLedgerFilterActive(filter)}
+        accounts={formAccounts}
+      />
     </div>
   );
 }

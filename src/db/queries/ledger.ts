@@ -30,6 +30,10 @@ import { type DateRange, toNumber } from "./scope.ts";
 /** A ledger rule the entry broke; the message is meant for the user. */
 export class LedgerEntryError extends Error {}
 
+const ACCOUNT_NOT_ASSIGNABLE =
+  "Pick one of your active real accounts, or no account.";
+const ENTRY_NOT_FOUND = "This entry no longer exists.";
+
 type LedgerEntrySelect = typeof ledgerEntries.$inferSelect;
 
 /**
@@ -47,9 +51,16 @@ type AccountSelect = typeof accounts.$inferSelect;
 /** An account the entry form offers. */
 export type LedgerAccount = Pick<AccountSelect, "id" | "name">;
 
-/** An entry as listed: an archived account keeps its name. */
+/**
+ * An entry as listed: an archived account keeps its name. Whether that
+ * account is practice lets an edit tell an archived account it may keep from
+ * one it may not (null without an account).
+ */
 export type LedgerEntryRow = Pick<LedgerEntrySelect, "id"> &
-  LedgerEntryWrite & { accountName: AccountSelect["name"] | null };
+  LedgerEntryWrite & {
+    accountName: AccountSelect["name"] | null;
+    accountIsPractice: AccountSelect["isPractice"] | null;
+  };
 
 /**
  * The accounts a new entry may be tied to: the user's own, real (never
@@ -62,19 +73,6 @@ function assignableAccountFilter(userId: number) {
     eq(accounts.isPractice, false),
     isNull(accounts.archivedAt),
   );
-}
-
-async function isAssignableAccount(
-  userId: number,
-  accountId: number,
-  executor: Pick<typeof db, "select">,
-): Promise<boolean> {
-  const [account] = await executor
-    .select({ id: accounts.id })
-    .from(accounts)
-    .where(and(eq(accounts.id, accountId), assignableAccountFilter(userId)))
-    .limit(1);
-  return account !== undefined;
 }
 
 /** The accounts the entry form offers, in the account selector's order. */
@@ -116,35 +114,126 @@ export async function listLedgerFilterAccounts(
     .orderBy(asc(accounts.sortOrder));
 }
 
+/**
+ * Records one entry. The account check and the insert share a transaction,
+ * and the check holds the account row `for share`: archiving it or switching
+ * it to practice waits until the entry is written, so neither can slip in
+ * between (the same intent as the statement-level checks in accounts.ts).
+ */
 export async function createLedgerEntry(
   userId: number,
   entry: LedgerEntryWrite,
-  executor: Pick<typeof db, "insert" | "select"> = db,
+  executor: Pick<typeof db, "transaction"> = db,
 ): Promise<{ id: number }> {
   const check = validateLedgerEntry(entry);
   if (!check.success) throw new LedgerEntryError(check.error);
-  if (
-    entry.accountId !== null &&
-    !(await isAssignableAccount(userId, entry.accountId, executor))
-  ) {
-    throw new LedgerEntryError(
-      "Pick one of your active real accounts, or no account.",
-    );
-  }
 
-  const [created] = await executor
-    .insert(ledgerEntries)
-    .values({
-      userId,
+  return executor.transaction(async (tx) => {
+    if (entry.accountId !== null) {
+      const [account] = await tx
+        .select({ id: accounts.id })
+        .from(accounts)
+        .where(
+          and(
+            eq(accounts.id, entry.accountId),
+            assignableAccountFilter(userId),
+          ),
+        )
+        .limit(1)
+        .for("share");
+      if (account === undefined) {
+        throw new LedgerEntryError(ACCOUNT_NOT_ASSIGNABLE);
+      }
+    }
+
+    const [created] = await tx
+      .insert(ledgerEntries)
+      .values({
+        userId,
+        entryDate: entry.entryDate,
+        kind: entry.kind,
+        category: entry.category,
+        amount: formatCentsPlain(entry.amountCents),
+        note: entry.note,
+        accountId: entry.accountId,
+      })
+      .returning({ id: ledgerEntries.id });
+    return created;
+  });
+}
+
+/**
+ * Replaces an entry's fields in one statement whose `where` holds every rule.
+ * The subquery holds the account row `for share`, as createLedgerEntry does,
+ * so archiving it or switching it to practice waits for this write. The entry must be the
+ * user's — the list joins `accounts` without a user filter and relies on
+ * this. The account must be the user's and real; it may be archived only if
+ * the entry already has it (an edit must not silently drop it), never as
+ * practice. `ledger_entries.account_id` inside the subquery is the row's value
+ * before the update.
+ */
+export async function updateLedgerEntry(
+  userId: number,
+  entryId: number,
+  entry: LedgerEntryWrite,
+  executor: Pick<typeof db, "select" | "update"> = db,
+): Promise<void> {
+  const check = validateLedgerEntry(entry);
+  if (!check.success) throw new LedgerEntryError(check.error);
+
+  const owned = and(
+    eq(ledgerEntries.id, entryId),
+    eq(ledgerEntries.userId, userId),
+  );
+  const accountAllowed =
+    entry.accountId === null
+      ? sql`true`
+      : sql`exists (
+          select 1 from ${accounts}
+          where ${accounts.id} = ${entry.accountId}
+            and ${accounts.userId} = ${userId}
+            and ${accounts.isPractice} = false
+            and (${accounts.archivedAt} is null
+              or ${ledgerEntries.accountId} = ${entry.accountId})
+          for share
+        )`;
+  const updated = await executor
+    .update(ledgerEntries)
+    .set({
       entryDate: entry.entryDate,
       kind: entry.kind,
       category: entry.category,
       amount: formatCentsPlain(entry.amountCents),
       note: entry.note,
       accountId: entry.accountId,
+      updatedAt: new Date(),
     })
+    .where(and(owned, accountAllowed))
     .returning({ id: ledgerEntries.id });
-  return created;
+  if (updated.length > 0) return;
+
+  // Nothing matched: say which rule, as deleteUnusedAccount does.
+  const [existing] = await executor
+    .select({ id: ledgerEntries.id })
+    .from(ledgerEntries)
+    .where(owned)
+    .limit(1);
+  throw new LedgerEntryError(
+    existing ? ACCOUNT_NOT_ASSIGNABLE : ENTRY_NOT_FOUND,
+  );
+}
+
+/** Removes one of the user's entries; another user's is never reached. */
+export async function deleteLedgerEntry(
+  userId: number,
+  entryId: number,
+  executor: Pick<typeof db, "delete"> = db,
+): Promise<void> {
+  const deleted = await executor
+    .delete(ledgerEntries)
+    .where(and(eq(ledgerEntries.id, entryId), eq(ledgerEntries.userId, userId)))
+    .returning({ id: ledgerEntries.id });
+  if (deleted.length === 0) throw new LedgerEntryError(ENTRY_NOT_FOUND);
 }
 
 /**
@@ -189,6 +278,7 @@ export async function listLedgerEntries(
       note: ledgerEntries.note,
       accountId: ledgerEntries.accountId,
       accountName: accounts.name,
+      accountIsPractice: accounts.isPractice,
     })
     .from(ledgerEntries)
     .leftJoin(accounts, eq(accounts.id, ledgerEntries.accountId))
