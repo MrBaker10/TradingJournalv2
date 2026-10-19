@@ -1,6 +1,6 @@
 # Spec: Ledger
 
-Status: ready-for-agent
+Status: done
 
 Roadmap: `context/project-overview.md` → Phase 3, item 3. Terms: `GLOSSARY.md`.
 Decision: `docs/adr/0002-ledger-separate-from-trading-pnl.md`.
