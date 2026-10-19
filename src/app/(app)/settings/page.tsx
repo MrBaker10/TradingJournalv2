@@ -1,7 +1,7 @@
 import { AccountsManager } from "@/components/settings/accounts-manager";
 import { ExportCard } from "@/components/settings/export-card";
 import { SecuritySection } from "@/components/settings/security-section";
-import { getAttemptDays, listAccountRules } from "@/db/queries/account-rules";
+import { getAttempt, listAccountRules } from "@/db/queries/account-rules";
 import { listAllAccountsForSettings } from "@/db/queries/accounts";
 import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
@@ -24,27 +24,35 @@ export default async function SettingsPage() {
     listProgramOptions(),
   ]);
   const today = todayInTimeZone(user.timezone);
-  // One day-series read per linked active account; an account has at most
-  // one link and a trader only a handful of linked accounts.
+  // One attempt read per linked active account; an account has at most one
+  // link and a trader only a handful of linked accounts.
   const active = await Promise.all(
     accounts
       .filter((account) => account.archivedAt === null)
       .map(async (account) => {
         const link = rules.find((row) => row.accountId === account.id) ?? null;
+        const attempt = link && (await getAttempt(user.id, account.id, today));
         return {
           ...account,
           commissionRates: rates.filter(
             (rate) => rate.accountId === account.id,
           ),
           rules: link,
-          ruleStatus: link
-            ? evaluateRules({
-                rules: link,
-                startingBalanceCents: amountToCents(account.startingBalanceUsd),
-                days: await getAttemptDays(user.id, account.id),
-                today,
-              })
-            : null,
+          attempt:
+            link && attempt
+              ? {
+                  start: attempt.start,
+                  status: evaluateRules({
+                    rules: link,
+                    startingBalanceCents: amountToCents(
+                      account.startingBalanceUsd,
+                    ),
+                    days: attempt.days,
+                    payouts: attempt.payouts,
+                    today,
+                  }),
+                }
+              : null,
         };
       }),
   );

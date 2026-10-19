@@ -20,6 +20,7 @@ function input(overrides: Partial<RuleStatusInput> = {}): RuleStatusInput {
     },
     startingBalanceCents: 5_000_000,
     days: [],
+    payouts: [],
     today: "2026-10-19",
     ...overrides,
   };
@@ -359,6 +360,75 @@ describe("evaluateRules — consistency", () => {
       totalProfitCents: -10_000,
     });
     expect(evaluateRules(input()).consistency).toEqual({ status: "not_set" });
+  });
+});
+
+describe("evaluateRules — payouts", () => {
+  it("lower the balance and the distance to a static floor from their day", () => {
+    const status = evaluateRules(
+      input({
+        days: [
+          { tradingDay: "2026-10-12", netCents: 100_000 },
+          { tradingDay: "2026-10-14", netCents: 20_000 },
+        ],
+        payouts: [{ tradingDay: "2026-10-13", amountCents: 50_000 }],
+      }),
+    );
+    expect(status.drawdown).toEqual({
+      status: "ok",
+      floorCents: 4_800_000,
+      balanceCents: 5_070_000,
+      distanceCents: 270_000,
+    });
+    expect(status.profitTarget.progressCents).toBe(70_000);
+  });
+
+  it("are no trading P&L: no trading day, not today's loss, not in consistency's total", () => {
+    const status = evaluateRules(
+      input({
+        rules: {
+          ...input().rules,
+          dailyLossLimitCents: 100_000,
+          consistencyPercent: 70,
+        },
+        days: [
+          { tradingDay: "2026-10-15", netCents: 40_000 },
+          { tradingDay: "2026-10-16", netCents: 60_000 },
+        ],
+        payouts: [{ tradingDay: "2026-10-19", amountCents: 50_000 }], // today
+      }),
+    );
+    expect(status.dailyLoss).toMatchObject({
+      status: "ok",
+      todayNetCents: 0,
+      distanceCents: 100_000,
+    });
+    expect(status.consistency).toMatchObject({
+      status: "ok",
+      bestDayCents: 60_000,
+      totalProfitCents: 100_000,
+    });
+    expect(status.minTradingDays).toMatchObject({ doneDays: 2 });
+    expect(status.profitTarget.progressCents).toBe(50_000);
+  });
+
+  it("leave an EOD trailing floor where it stood and ignore days after today", () => {
+    const status = evaluateRules(
+      input({
+        rules: { ...input().rules, drawdownType: "eod_trailing" },
+        days: [{ tradingDay: "2026-10-12", netCents: 100_000 }], // floor $49,000
+        payouts: [
+          { tradingDay: "2026-10-13", amountCents: 60_000 },
+          { tradingDay: "2026-10-20", amountCents: 99_000 }, // tomorrow
+        ],
+      }),
+    );
+    expect(status.drawdown).toEqual({
+      status: "ok",
+      floorCents: 4_900_000,
+      balanceCents: 5_040_000,
+      distanceCents: 140_000,
+    });
   });
 });
 

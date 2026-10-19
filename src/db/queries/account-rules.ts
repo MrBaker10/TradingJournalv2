@@ -1,12 +1,14 @@
-import { and, asc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, type SQL, sql } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import type { DrawdownType } from "../../domain/account-rules.ts";
 import { amountToCents } from "../../domain/commission.ts";
-import type { RuleDay } from "../../domain/rule-status.ts";
+import type { RuleDay, RulePayout } from "../../domain/rule-status.ts";
 import type { IsoDate } from "../../domain/streak.ts";
 import { db } from "../index.ts";
 import { accountRules } from "../schema/account-rules.ts";
 import { accounts } from "../schema/accounts.ts";
 import { instruments } from "../schema/instruments.ts";
+import { ledgerEntries } from "../schema/ledger.ts";
 import { propFirmPrograms, propFirms } from "../schema/prop-firms.ts";
 import { trades } from "../schema/trades.ts";
 import { assignedToAccount, moneyContribution, toNumber } from "./scope.ts";
@@ -76,50 +78,135 @@ export async function listAccountRules(
 }
 
 // `toRuleTradingDay` in SQL: Saturday +2 and Sunday +1 onto the Monday.
-const ruleTradingDay = sql<string>`(${trades.tradeDate} + case extract(isodow from ${trades.tradeDate})
+function ruleTradingDay(date: SQL | AnyPgColumn) {
+  return sql<string>`(${date} + case extract(isodow from ${date})
   when 6 then 2 when 7 then 1 else 0 end)::date`;
+}
+
+/** Which `unionAll` branch a row of `getAttempt` came from. */
+type AttemptRowKind = "start" | "day" | "payout";
+
+/** The current attempt of a linked account: what `evaluateRules` reads. */
+export interface Attempt {
+  /** The evaluation start, or the latest reset expense when that is later. */
+  start: IsoDate;
+  days: RuleDay[];
+  payouts: RulePayout[];
+}
 
 /**
- * The current attempt's net P&L per trading day for one linked account, in
- * USD cents, ascending — the day series `evaluateRules` reads. The account's
- * own value: no copy multiplier, net of its own commission, as the selected
- * account sees it everywhere else (`moneyContribution`). Taken trades only,
- * from the evaluation start on. Empty for an account that is not linked or
- * not the user's.
+ * The current attempt of one linked account in one statement: its start, its
+ * net P&L per trading day and its payouts per trading day, in USD cents,
+ * ascending. Null for an account that is not linked or not the user's.
+ *
+ * - The attempt starts on the later of the evaluation start and the latest
+ *   reset expense on that account in the ledger, a $0 one included; that day
+ *   counts. A reset dated after `today` (the user's calendar date) waits for
+ *   its day.
+ * - Days: the account's own value — no copy multiplier, net of its own
+ *   commission, as the selected account sees it everywhere else
+ *   (`moneyContribution`). Taken trades only.
+ * - Payouts: real money leaving the account (docs/adr/0002). They lower the
+ *   balance for the rules and are never trading P&L.
  */
-export async function getAttemptDays(
+export async function getAttempt(
   userId: number,
   accountId: number,
+  today: IsoDate,
   executor: Pick<typeof db, "select"> = db,
-): Promise<RuleDay[]> {
+): Promise<Attempt | null> {
+  // `r` and not `ledger_entries`: the payout branch below reads that table
+  // itself, and the subquery must not bind to its row.
+  const attemptStart = sql<string>`greatest(${accountRules.evaluationStart}, (
+    select max(r.entry_date) from ledger_entries r
+    where r.account_id = ${accountId}
+      and r.user_id = ${userId}
+      and r.kind = 'expense' and r.category = 'reset'
+      and r.entry_date <= ${today}
+  ))`;
+  const linkedAndOwned = and(
+    eq(accounts.id, accountRules.accountId),
+    eq(accounts.userId, userId),
+  );
+
+  const startBranch = executor
+    .select({
+      kind: sql<AttemptRowKind>`'start'`.as("kind"),
+      day: sql<string>`${attemptStart}::date`.as("day"),
+      cents: sql<string>`0::bigint`.as("cents"),
+    })
+    .from(accountRules)
+    .innerJoin(accounts, linkedAndOwned)
+    .where(eq(accountRules.accountId, accountId));
+
+  const tradingDay = ruleTradingDay(trades.tradeDate);
   const contribution = moneyContribution({
     userId,
     selectedAccountId: accountId,
   });
-  const rows = await executor
+  const dayBranch = executor
     .select({
-      tradingDay: ruleTradingDay,
-      netCents: sql<string>`coalesce(sum(${contribution}), 0)::bigint`,
+      kind: sql<AttemptRowKind>`'day'`.as("kind"),
+      day: sql<string>`${tradingDay}`.as("day"),
+      cents: sql<string>`coalesce(sum(${contribution}), 0)::bigint`.as("cents"),
     })
     .from(trades)
     .innerJoin(instruments, eq(instruments.id, trades.instrumentId))
     .innerJoin(accountRules, eq(accountRules.accountId, accountId))
-    .innerJoin(
-      accounts,
-      and(eq(accounts.id, accountRules.accountId), eq(accounts.userId, userId)),
-    )
+    .innerJoin(accounts, linkedAndOwned)
     .where(
       and(
         eq(trades.userId, userId),
         eq(trades.taken, true),
         assignedToAccount(accountId),
-        gte(trades.tradeDate, accountRules.evaluationStart),
+        gte(trades.tradeDate, attemptStart),
       ),
     )
-    .groupBy(ruleTradingDay)
-    .orderBy(ruleTradingDay);
-  return rows.map((row) => ({
-    tradingDay: row.tradingDay,
-    netCents: toNumber(row.netCents),
-  }));
+    .groupBy(tradingDay);
+
+  const payoutDay = ruleTradingDay(ledgerEntries.entryDate);
+  const payoutBranch = executor
+    .select({
+      kind: sql<AttemptRowKind>`'payout'`.as("kind"),
+      day: sql<string>`${payoutDay}`.as("day"),
+      cents: sql<string>`sum(${ledgerEntries.amount} * 100)::bigint`.as(
+        "cents",
+      ),
+    })
+    .from(ledgerEntries)
+    .innerJoin(
+      accountRules,
+      eq(accountRules.accountId, ledgerEntries.accountId),
+    )
+    .innerJoin(accounts, linkedAndOwned)
+    .where(
+      and(
+        eq(ledgerEntries.accountId, accountId),
+        eq(ledgerEntries.userId, userId),
+        eq(ledgerEntries.kind, "payout"),
+        gte(ledgerEntries.entryDate, attemptStart),
+      ),
+    )
+    .groupBy(payoutDay);
+
+  const rows = await startBranch.unionAll(dayBranch).unionAll(payoutBranch);
+  const start = rows.find((row) => row.kind === "start");
+  if (!start) return null;
+  // ISO dates sort as text.
+  const byDay = (a: { day: string }, b: { day: string }) =>
+    a.day.localeCompare(b.day);
+  return {
+    start: start.day,
+    days: rows
+      .filter((row) => row.kind === "day")
+      .sort(byDay)
+      .map((row) => ({ tradingDay: row.day, netCents: toNumber(row.cents) })),
+    payouts: rows
+      .filter((row) => row.kind === "payout")
+      .sort(byDay)
+      .map((row) => ({
+        tradingDay: row.day,
+        amountCents: toNumber(row.cents),
+      })),
+  };
 }

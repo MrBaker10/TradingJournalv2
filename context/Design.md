@@ -640,10 +640,14 @@ removes the link — the typed values stay in the draft until the editor closes.
   “/ Firm · Program” in `--color-fg-muted`. No status, no colour — rule status is its
   own surface (tickets 02 and 06).
 
-**Rule status (prop-firm-link, tickets 02–04).** A linked account's row carries a panel
+**Rule status (prop-firm-link, tickets 02–05).** A linked account's row carries a panel
 below its main line, separated by the row's `border-white/8` rule, with `cap` label
-“Rule status” and beside it, in `--color-fg-subtle`, “Since {evaluation start}”. Below,
-one line per rule, label left in `--color-fg-muted`, figures right in mono, all in USD:
+“Rule status” and beside it, in `--color-fg-subtle`, “Since {attempt start}” — the
+evaluation start, or the latest reset expense on the account in the ledger when that is
+later (ticket 05). Below, one line per rule, label left in `--color-fg-muted`, figures
+right in mono, all in USD. A payout on the account inside the attempt lowers the balance
+from its date, so profit target and drawdown read it; daily loss, consistency and
+trading days count trading P&L only:
 
 - **Profit target:** “{progress} of {target}”, progress signed (`+$1,200.00`). Always
   `--color-fg`, never green, also once reached — it informs, it does not reward.

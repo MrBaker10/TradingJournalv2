@@ -11,12 +11,12 @@ import type { IsoDate } from "./streak.ts";
 //
 // - Amounts arrive and leave as **integer cents**, USD, like every prop firm
 //   limit. Sums and comparisons stay in integers.
-// - `days` is the attempt's day series from `getAttemptDays`: one item per
+// - `days` and `payouts` come from `getAttempt`, ascending: one day per
 //   trading day with a taken trade, the account's own value without the copy
-//   multiplier, net of its commission. The caller owns the attempt boundary.
-// - `days` arrive in ascending order.
+//   multiplier, net of its commission; payouts summed per trading day. The
+//   caller owns the attempt boundary (evaluation start or latest reset).
 // - `today` is the user's calendar date; the module owns no clock. Days after
-//   today's trading day are not part of the attempt yet.
+//   today's trading day are not part of the attempt yet, payouts neither.
 
 /** "Close" starts when the distance to the floor is at most this share of the drawdown amount. */
 export const DRAWDOWN_CLOSE_PERCENT = 20;
@@ -30,6 +30,12 @@ export const CONSISTENCY_CLOSE_POINTS = 5;
 export interface RuleDay {
   tradingDay: IsoDate;
   netCents: number;
+}
+
+/** A payout on the account, summed per trading day, in cents. */
+export interface RulePayout {
+  tradingDay: IsoDate;
+  amountCents: number;
 }
 
 export interface RuleStatusRules {
@@ -48,6 +54,8 @@ export interface RuleStatusInput {
   /** `accounts.starting_balance_usd` in cents. */
   startingBalanceCents: number;
   days: RuleDay[];
+  /** Payouts inside the attempt, ascending; they lower the balance, never P&L. */
+  payouts: RulePayout[];
   today: IsoDate;
 }
 
@@ -121,7 +129,7 @@ export interface RuleStatus {
  * The trading day a date belongs to for the account rules: the streak's rule
  * (`toTradingDay`), Sunday onto the following Monday, except that a Saturday
  * rolls onto Monday as well instead of dropping out — its P&L belongs in the
- * balance (decided 2026-10-19). `getAttemptDays` applies the same rule in SQL.
+ * balance (decided 2026-10-19). `getAttempt` applies the same rule in SQL.
  */
 export function toRuleTradingDay(date: IsoDate): IsoDate {
   const day = new TZDate(`${date}T00:00:00Z`, "UTC");
@@ -135,14 +143,12 @@ export function evaluateRules(input: RuleStatusInput): RuleStatus {
   const { rules, startingBalanceCents } = input;
   const todayTradingDay = toRuleTradingDay(input.today);
   const days = input.days.filter((day) => day.tradingDay <= todayTradingDay);
-  // End-of-day balances in day order; the last one is the balance now.
-  const closesCents: number[] = [];
-  let runningCents = startingBalanceCents;
-  for (const day of days) {
-    runningCents += day.netCents;
-    closesCents.push(runningCents);
-  }
+  const payouts = input.payouts.filter(
+    (payout) => payout.tradingDay <= todayTradingDay,
+  );
+  const closesCents = endOfDayBalances(startingBalanceCents, days, payouts);
   const balanceCents = closesCents.at(-1) ?? startingBalanceCents;
+  const tradingProfitCents = days.reduce((sum, day) => sum + day.netCents, 0);
   return {
     profitTarget: {
       status: "ok",
@@ -158,7 +164,7 @@ export function evaluateRules(input: RuleStatusInput): RuleStatus {
     consistency: evaluateConsistency(
       rules.consistencyPercent,
       days,
-      balanceCents - startingBalanceCents,
+      tradingProfitCents,
     ),
     // Every day in the series carries a taken trade, so its length is the count.
     minTradingDays:
@@ -170,6 +176,37 @@ export function evaluateRules(input: RuleStatusInput): RuleStatus {
             requiredDays: rules.minTradingDays,
           },
   };
+}
+
+// The balance at the end of every day that moved it, in day order: a trading
+// day adds its net, a payout takes its amount away on its day. A day with
+// only a payout has a close too — it lowers the balance — but it is no
+// trading day.
+function endOfDayBalances(
+  startingBalanceCents: number,
+  days: RuleDay[],
+  payouts: RulePayout[],
+): number[] {
+  const movesCents = new Map<IsoDate, number>();
+  for (const day of days) {
+    movesCents.set(
+      day.tradingDay,
+      (movesCents.get(day.tradingDay) ?? 0) + day.netCents,
+    );
+  }
+  for (const payout of payouts) {
+    movesCents.set(
+      payout.tradingDay,
+      (movesCents.get(payout.tradingDay) ?? 0) - payout.amountCents,
+    );
+  }
+  const closesCents: number[] = [];
+  let runningCents = startingBalanceCents;
+  for (const tradingDay of [...movesCents.keys()].sort()) {
+    runningCents += movesCents.get(tradingDay) ?? 0;
+    closesCents.push(runningCents);
+  }
+  return closesCents;
 }
 
 function evaluateDrawdown(

@@ -85,10 +85,11 @@ function ConsistencyFigure({
 }
 
 export function AccountRuleStatus({
-  evaluationStart,
+  attemptStart,
   status,
 }: {
-  evaluationStart: IsoDate;
+  /** The evaluation start, or the latest reset when that is later. */
+  attemptStart: IsoDate;
   status: RuleStatus;
 }) {
   const { profitTarget, drawdown, dailyLoss, consistency, minTradingDays } =
@@ -101,7 +102,7 @@ export function AccountRuleStatus({
       <div className="mb-2 flex flex-wrap items-baseline gap-x-3">
         <h4 className="cap">Rule status</h4>
         <span className="text-xs text-fg-subtle">
-          Since {formatDateWithYear(evaluationStart)}
+          Since {formatDateWithYear(attemptStart)}
         </span>
       </div>
       <dl className="flex flex-col gap-1.5">

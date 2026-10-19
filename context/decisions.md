@@ -3362,3 +3362,16 @@ Deployment laufen.
 - **Consistency: genau das Limit ist erlaubt**, breached erst darüber; Close ab 5 Punkten
   darunter. Ohne Gewinn (≤ 0) übersprungen. Limits von 1–5 % sind dadurch immer
   mindestens Close (Sascha: akzeptiert, echte Programme 20–50 %).
+
+## 2026-10-20 — Prop firm link, Ticket 05 — feature/prop-firm-link
+
+- **Attempt-Start = später von Evaluation start und letztem Reset-Expense** des Accounts,
+  auch $0; der Reset-Tag zählt mit. Ein Reset mit Datum nach heute (Kalender des Users)
+  zählt erst ab seinem Tag (Sascha).
+- **Payouts senken das Saldo an ihrem Trading Day** (Sa/So → Montag wie Trades): Profit
+  target (Sascha: auch der Fortschritt sinkt) und Drawdown lesen es. Daily loss,
+  Consistency-Gesamtgewinn und Trading-Tage zählen nur Trading-P&L (ADR 0002). Ein
+  EOD-trailing-Floor fällt durch einen Payout nicht; ein Tag nur mit Payout hat einen
+  Tagesschluss und kann den Floor reißen.
+- **`getAttempt` ist ein Statement** (`unionAll`: Start, Tage, Payouts); `null` für ein
+  nicht verlinktes oder fremdes Konto.

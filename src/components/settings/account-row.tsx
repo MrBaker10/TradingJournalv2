@@ -19,6 +19,7 @@ import type { AccountRulesRow } from "@/db/queries/account-rules";
 import { amountToCents } from "@/domain/commission";
 import type { AccountCurrency } from "@/domain/fx";
 import type { RuleStatus } from "@/domain/rule-status";
+import type { IsoDate } from "@/domain/streak";
 import { formatCents } from "@/lib/money";
 import type { CommissionRateData } from "./account-commission-rates";
 import { AccountRuleStatus } from "./account-rule-status";
@@ -37,8 +38,8 @@ export interface AccountRowData {
   commissionRates: CommissionRateData[];
   /** The prop firm program link, or null when not linked. */
   rules: AccountRulesRow | null;
-  /** The current attempt against `rules`, null when not linked. */
-  ruleStatus: RuleStatus | null;
+  /** The current attempt and its rule status, null when not linked. */
+  attempt: { start: IsoDate; status: RuleStatus } | null;
 }
 
 const ACTION_CLASS =
@@ -172,10 +173,10 @@ export function AccountRow({
           </button>
         </div>
       </div>
-      {account.rules && account.ruleStatus && (
+      {account.attempt && (
         <AccountRuleStatus
-          evaluationStart={account.rules.evaluationStart}
-          status={account.ruleStatus}
+          attemptStart={account.attempt.start}
+          status={account.attempt.status}
         />
       )}
       {confirming && !disabled && (

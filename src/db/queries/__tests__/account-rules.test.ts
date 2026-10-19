@@ -5,10 +5,11 @@ import { db } from "../../index.ts";
 import { accountRules } from "../../schema/account-rules.ts";
 import { accounts } from "../../schema/accounts.ts";
 import { instruments } from "../../schema/instruments.ts";
+import { ledgerEntries } from "../../schema/ledger.ts";
 import { propFirmPrograms, propFirms } from "../../schema/prop-firms.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
-import { getAttemptDays } from "../account-rules.ts";
+import { getAttempt } from "../account-rules.ts";
 
 // The attempt's day series for the rule status (prop-firm-link, ticket 02).
 // Every case runs in a rolled-back transaction on users of its own.
@@ -23,6 +24,9 @@ beforeAll(async () => {
     dbReachable = false;
   }
 });
+
+// The user's calendar date for every case: after all fixture dates.
+const TODAY = "2026-10-19";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -146,7 +150,28 @@ async function trade(
   }
 }
 
-describe("getAttemptDays", () => {
+/** A ledger entry: a reset expense or a payout, `amount` in USD. */
+async function ledger(
+  f: Fixture,
+  userId: number,
+  values: {
+    date: IsoDate;
+    kind: "reset" | "payout" | "evaluation";
+    amount: string;
+    accountId: number | null;
+  },
+) {
+  await f.tx.insert(ledgerEntries).values({
+    userId,
+    accountId: values.accountId,
+    entryDate: values.date,
+    kind: values.kind === "payout" ? "payout" : "expense",
+    category: values.kind === "payout" ? null : values.kind,
+    amount: values.amount,
+  });
+}
+
+describe("getAttempt — day series", () => {
   it("excludes trades before the evaluation start", async (ctx) => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 
@@ -157,7 +182,7 @@ describe("getAttemptDays", () => {
       await trade(f, userId, { date: "2026-10-12", points: 50, on: [eval1] });
       await trade(f, userId, { date: "2026-10-13", points: 10, on: [eval1] });
       await trade(f, userId, { date: "2026-10-14", points: -5, on: [eval1] });
-      return getAttemptDays(userId, eval1, tx);
+      return (await getAttempt(userId, eval1, TODAY, tx))?.days;
     });
 
     expect(days).toEqual([
@@ -177,7 +202,7 @@ describe("getAttemptDays", () => {
       await trade(f, userId, { date: "2026-10-17", points: 2, on: [eval1] }); // Sat
       await trade(f, userId, { date: "2026-10-18", points: 3, on: [eval1] }); // Sun
       await trade(f, userId, { date: "2026-10-19", points: 4, on: [eval1] }); // Mon
-      return getAttemptDays(userId, eval1, tx);
+      return (await getAttempt(userId, eval1, TODAY, tx))?.days;
     });
 
     expect(days).toEqual([
@@ -201,8 +226,8 @@ describe("getAttemptDays", () => {
         commission: "4.50",
       });
       return {
-        a: await getAttemptDays(userId, a, tx),
-        b: await getAttemptDays(userId, b, tx),
+        a: (await getAttempt(userId, a, TODAY, tx))?.days,
+        b: (await getAttempt(userId, b, TODAY, tx))?.days,
       };
     });
 
@@ -219,7 +244,7 @@ describe("getAttemptDays", () => {
       const eval1 = await linkedAccount(f, userId, "Eval", "2026-10-01");
       await trade(f, userId, { date: "2026-10-14", points: 10, on: [eval1] });
       await trade(f, userId, { date: "2026-10-15", points: 0, on: [] });
-      return getAttemptDays(userId, eval1, tx);
+      return (await getAttempt(userId, eval1, TODAY, tx))?.days;
     });
 
     expect(days).toEqual([{ tradingDay: "2026-10-14", netCents: 2_000 }]);
@@ -246,14 +271,207 @@ describe("getAttemptDays", () => {
         on: [ownerEval],
       });
       return {
-        asOther: await getAttemptDays(other, ownerEval, tx),
-        asOwner: await getAttemptDays(owner, ownerEval, tx),
+        asOther: await getAttempt(other, ownerEval, TODAY, tx),
+        asOwner: (await getAttempt(owner, ownerEval, TODAY, tx))?.days,
       };
     });
 
-    expect(result.asOther).toEqual([]);
+    expect(result.asOther).toBeNull();
     expect(result.asOwner).toEqual([
       { tradingDay: "2026-10-14", netCents: 2_000 },
     ]);
+  });
+});
+
+describe("getAttempt — resets and payouts", () => {
+  it("starts the attempt at the latest reset; trades before it no longer count", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const attempt = await inRollback(async (tx) => {
+      const f = await fixture(tx);
+      const userId = await newUser(f, "attempt-reset");
+      const eval1 = await linkedAccount(f, userId, "Eval", "2026-10-01");
+      await trade(f, userId, { date: "2026-10-06", points: 10, on: [eval1] });
+      await ledger(f, userId, {
+        date: "2026-10-07",
+        kind: "reset",
+        amount: "80.00",
+        accountId: eval1,
+      });
+      await trade(f, userId, { date: "2026-10-08", points: 20, on: [eval1] });
+      await ledger(f, userId, {
+        date: "2026-10-12",
+        kind: "reset",
+        amount: "80.00",
+        accountId: eval1,
+      });
+      await trade(f, userId, { date: "2026-10-12", points: 3, on: [eval1] });
+      await trade(f, userId, { date: "2026-10-13", points: 4, on: [eval1] });
+      return getAttempt(userId, eval1, TODAY, tx);
+    });
+
+    expect(attempt).toEqual({
+      start: "2026-10-12",
+      days: [
+        { tradingDay: "2026-10-12", netCents: 600 },
+        { tradingDay: "2026-10-13", netCents: 800 },
+      ],
+      payouts: [],
+    });
+  });
+
+  it("moves the boundary with a $0 reset and keeps the evaluation start when it is later", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const f = await fixture(tx);
+      const userId = await newUser(f, "attempt-free-reset");
+      const free = await linkedAccount(f, userId, "Free reset", "2026-10-01");
+      const late = await linkedAccount(f, userId, "Late start", "2026-10-14");
+      await ledger(f, userId, {
+        date: "2026-10-09",
+        kind: "reset",
+        amount: "0.00",
+        accountId: free,
+      });
+      await ledger(f, userId, {
+        date: "2026-10-09",
+        kind: "reset",
+        amount: "80.00",
+        accountId: late,
+      });
+      return {
+        free: (await getAttempt(userId, free, TODAY, tx))?.start,
+        late: (await getAttempt(userId, late, TODAY, tx))?.start,
+      };
+    });
+
+    expect(result).toEqual({ free: "2026-10-09", late: "2026-10-14" });
+  });
+
+  it("returns the attempt's payouts on the account by trading day", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const attempt = await inRollback(async (tx) => {
+      const f = await fixture(tx);
+      const userId = await newUser(f, "attempt-payouts");
+      const funded = await linkedAccount(f, userId, "Funded", "2026-10-01");
+      await ledger(f, userId, {
+        date: "2026-09-30",
+        kind: "payout",
+        amount: "999.00",
+        accountId: funded,
+      });
+      await ledger(f, userId, {
+        date: "2026-10-09",
+        kind: "payout",
+        amount: "500.00",
+        accountId: funded,
+      });
+      await ledger(f, userId, {
+        date: "2026-10-10",
+        kind: "payout",
+        amount: "250.00",
+        accountId: funded,
+      }); // Sat
+      await ledger(f, userId, {
+        date: "2026-10-12",
+        kind: "payout",
+        amount: "100.50",
+        accountId: funded,
+      });
+      await ledger(f, userId, {
+        date: "2026-10-12",
+        kind: "evaluation",
+        amount: "150.00",
+        accountId: funded,
+      });
+      return getAttempt(userId, funded, TODAY, tx);
+    });
+
+    expect(attempt?.payouts).toEqual([
+      { tradingDay: "2026-10-09", amountCents: 50_000 },
+      { tradingDay: "2026-10-12", amountCents: 35_050 },
+    ]);
+    expect(attempt?.days).toEqual([]);
+  });
+
+  it("ignores ledger entries of other accounts and other users", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const attempt = await inRollback(async (tx) => {
+      const f = await fixture(tx);
+      const owner = await newUser(f, "attempt-ledger-owner");
+      const other = await newUser(f, "attempt-ledger-other");
+      const eval1 = await linkedAccount(f, owner, "Eval", "2026-10-01");
+      const sibling = await linkedAccount(f, owner, "Sibling", "2026-10-01");
+      await trade(f, owner, { date: "2026-10-06", points: 10, on: [eval1] });
+      await ledger(f, owner, {
+        date: "2026-10-08",
+        kind: "reset",
+        amount: "80.00",
+        accountId: sibling,
+      });
+      await ledger(f, owner, {
+        date: "2026-10-08",
+        kind: "reset",
+        amount: "80.00",
+        accountId: null,
+      });
+      await ledger(f, owner, {
+        date: "2026-10-09",
+        kind: "payout",
+        amount: "500.00",
+        accountId: sibling,
+      });
+      // Another user's rows pointing at the owner's account id.
+      await ledger(f, other, {
+        date: "2026-10-08",
+        kind: "reset",
+        amount: "80.00",
+        accountId: eval1,
+      });
+      await ledger(f, other, {
+        date: "2026-10-09",
+        kind: "payout",
+        amount: "500.00",
+        accountId: eval1,
+      });
+      return getAttempt(owner, eval1, TODAY, tx);
+    });
+
+    expect(attempt).toEqual({
+      start: "2026-10-01",
+      days: [{ tradingDay: "2026-10-06", netCents: 2_000 }],
+      payouts: [],
+    });
+  });
+
+  it("lets a reset dated after today wait for its day", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const f = await fixture(tx);
+      const userId = await newUser(f, "attempt-future-reset");
+      const eval1 = await linkedAccount(f, userId, "Eval", "2026-10-01");
+      await ledger(f, userId, {
+        date: "2026-10-12",
+        kind: "reset",
+        amount: "80.00",
+        accountId: eval1,
+      });
+      await ledger(f, userId, {
+        date: "2026-10-26",
+        kind: "reset",
+        amount: "80.00",
+        accountId: eval1,
+      });
+      return {
+        before: (await getAttempt(userId, eval1, "2026-10-19", tx))?.start,
+        onTheDay: (await getAttempt(userId, eval1, "2026-10-26", tx))?.start,
+      };
+    });
+
+    expect(result).toEqual({ before: "2026-10-12", onTheDay: "2026-10-26" });
   });
 });
