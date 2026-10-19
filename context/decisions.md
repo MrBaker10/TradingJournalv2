@@ -3327,3 +3327,19 @@ Deployment laufen.
   `eod_trailing` (Domain, Zod und Check-Constraint).
 - **Programm RESTRICT.** Der Seeder legt an und aktualisiert, er löscht nicht; ein
   verlinktes Programm kann nur von Hand und dann nicht still verschwinden.
+
+## 2026-10-19 — Prop firm link, Ticket 02 — feature/prop-firm-link
+
+- **Samstag rollt in der Rule status auf Montag** (Sascha), wie Sonntag. `toTradingDay`
+  lässt einen Samstag fallen, was für die Streak richtig ist, hier aber P&L aus dem
+  Kontostand streichen würde. Eigene Regel `toRuleTradingDay` (Domain) und dieselbe
+  Rechnung in SQL in `getAttemptDays`; die Streak bleibt unverändert.
+- **Static breach über den niedrigsten Tagesschluss.** Erreicht ein Tagesschluss des
+  Attempts den Floor (`≤`), bleibt der Status „breached“, auch wenn der Saldo später
+  wieder darüber liegt. „Close“ bei Abstand ≤ 20 % des Drawdown-Betrags, genau 20 %
+  eingeschlossen (`DRAWDOWN_CLOSE_PERCENT`).
+- **Tage nach dem heutigen Trading Day zählen nicht**: Der Attempt läuft bis heute. Ein
+  Sonntag-Trade von heute zählt, weil heute dann schon auf Montag rollt.
+- **Settings liest die Day-Series pro verlinktem aktivem Account** (`Promise.all`), statt
+  einer Mehr-Account-Query: Das Ticket verlangt die Query für einen Account, und die
+  Zahl verlinkter Accounts ist klein.

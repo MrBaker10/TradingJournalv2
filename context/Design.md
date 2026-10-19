@@ -640,6 +640,26 @@ removes the link — the typed values stay in the draft until the editor closes.
   “/ Firm · Program” in `--color-fg-muted`. No status, no colour — rule status is its
   own surface (tickets 02 and 06).
 
+**Rule status (prop-firm-link, ticket 02).** A linked account's row carries a panel
+below its main line, separated by the row's `border-white/8` rule, with `cap` label
+“Rule status” and beside it, in `--color-fg-subtle`, “Since {evaluation start}”. Below,
+one line per rule, label left in `--color-fg-muted`, figures right in mono, all in USD:
+
+- **Profit target:** “{progress} of {target}”, progress signed (`+$1,200.00`). Always
+  `--color-fg`, never green, also once reached — it informs, it does not reward.
+- **Max drawdown (static):** “{distance} to floor {floor}”, followed by the state word.
+  Ok: figures in `--color-fg`, no word. Close: “Close” and the distance in
+  `--color-warning`, when the distance to the floor is at most **20 %** of the drawdown
+  amount (`DRAWDOWN_CLOSE_PERCENT`, exactly 20 % is close). Breached: “Breached” and the
+  distance in `--color-danger-fg`, once any end-of-day balance of the attempt reached
+  the floor — also after it recovered.
+- **Minimum trading days:** “{done} of {required} days”, `--color-fg`, no close state.
+- Daily loss limit and Consistency, and an EOD or intraday trailing drawdown: “Pending”
+  while a value is set (tickets 03 and 04), otherwise “Not set”.
+- Every rule left empty reads “Not set” in `--color-fg-subtle`.
+- No glow, no icon, no badge, no animation; the state word carries the meaning, colour
+  only repeats it.
+
 **Archived accounts.** Each archived row offers Restore. Delete permanently appears only
 for an account with no trades and no ledger entries; otherwise its place holds a quiet
 note in `--color-fg-subtle`: “Has trades or ledger entries — stays archived”. The

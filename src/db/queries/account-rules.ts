@@ -1,11 +1,15 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, gte, sql } from "drizzle-orm";
 import type { DrawdownType } from "../../domain/account-rules.ts";
 import { amountToCents } from "../../domain/commission.ts";
+import type { RuleDay } from "../../domain/rule-status.ts";
 import type { IsoDate } from "../../domain/streak.ts";
 import { db } from "../index.ts";
 import { accountRules } from "../schema/account-rules.ts";
 import { accounts } from "../schema/accounts.ts";
+import { instruments } from "../schema/instruments.ts";
 import { propFirmPrograms, propFirms } from "../schema/prop-firms.ts";
+import { trades } from "../schema/trades.ts";
+import { assignedToAccount, moneyContribution, toNumber } from "./scope.ts";
 
 // Reads of the prop firm program link. It is written with the account it
 // belongs to, in `saveAccountDraft` (account-editor.ts).
@@ -69,4 +73,53 @@ export async function listAccountRules(
       dailyLossLimitCents: cents(dailyLossLimit),
     }),
   );
+}
+
+// `toRuleTradingDay` in SQL: Saturday +2 and Sunday +1 onto the Monday.
+const ruleTradingDay = sql<string>`(${trades.tradeDate} + case extract(isodow from ${trades.tradeDate})
+  when 6 then 2 when 7 then 1 else 0 end)::date`;
+
+/**
+ * The current attempt's net P&L per trading day for one linked account, in
+ * USD cents, ascending — the day series `evaluateRules` reads. The account's
+ * own value: no copy multiplier, net of its own commission, as the selected
+ * account sees it everywhere else (`moneyContribution`). Taken trades only,
+ * from the evaluation start on. Empty for an account that is not linked or
+ * not the user's.
+ */
+export async function getAttemptDays(
+  userId: number,
+  accountId: number,
+  executor: Pick<typeof db, "select"> = db,
+): Promise<RuleDay[]> {
+  const contribution = moneyContribution({
+    userId,
+    selectedAccountId: accountId,
+  });
+  const rows = await executor
+    .select({
+      tradingDay: ruleTradingDay,
+      netCents: sql<string>`coalesce(sum(${contribution}), 0)::bigint`,
+    })
+    .from(trades)
+    .innerJoin(instruments, eq(instruments.id, trades.instrumentId))
+    .innerJoin(accountRules, eq(accountRules.accountId, accountId))
+    .innerJoin(
+      accounts,
+      and(eq(accounts.id, accountRules.accountId), eq(accounts.userId, userId)),
+    )
+    .where(
+      and(
+        eq(trades.userId, userId),
+        eq(trades.taken, true),
+        assignedToAccount(accountId),
+        gte(trades.tradeDate, accountRules.evaluationStart),
+      ),
+    )
+    .groupBy(ruleTradingDay)
+    .orderBy(ruleTradingDay);
+  return rows.map((row) => ({
+    tradingDay: row.tradingDay,
+    netCents: toNumber(row.netCents),
+  }));
 }

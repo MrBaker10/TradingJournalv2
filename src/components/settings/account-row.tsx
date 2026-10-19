@@ -18,8 +18,10 @@ import {
 import type { AccountRulesRow } from "@/db/queries/account-rules";
 import { amountToCents } from "@/domain/commission";
 import type { AccountCurrency } from "@/domain/fx";
+import type { RuleStatus } from "@/domain/rule-status";
 import { formatCents } from "@/lib/money";
 import type { CommissionRateData } from "./account-commission-rates";
+import { AccountRuleStatus } from "./account-rule-status";
 
 export interface AccountRowData {
   id: number;
@@ -35,6 +37,8 @@ export interface AccountRowData {
   commissionRates: CommissionRateData[];
   /** The prop firm program link, or null when not linked. */
   rules: AccountRulesRow | null;
+  /** The current attempt against `rules`, null when not linked. */
+  ruleStatus: RuleStatus | null;
 }
 
 const ACTION_CLASS =
@@ -168,6 +172,9 @@ export function AccountRow({
           </button>
         </div>
       </div>
+      {account.rules && account.ruleStatus && (
+        <AccountRuleStatus rules={account.rules} status={account.ruleStatus} />
+      )}
       {confirming && !disabled && (
         <div className="mt-3 flex flex-wrap items-center justify-end gap-3 border-t border-white/8 pt-3 text-sm">
           <span className="mr-auto text-fg-muted">

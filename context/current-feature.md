@@ -7,23 +7,21 @@ History and reset this file to “Nothing in progress”.
 
 ## Status
 
-**In progress:** Prop firm link, ticket 01 (`feature/prop-firm-link`).
+**In progress:** Prop firm link, ticket 02 (`feature/prop-firm-link`).
 
-## Feature: Prop firm link — 01 Link a real account to a prop firm program
+## Feature: Prop firm link — 02 Rule status in settings
 
-- Goal: in the account editor in settings, a real account can be linked to a prop firm
-  program with the account rules the user bought (evaluation start, profit target, max
-  drawdown with type and optional lock level, optional daily loss limit, consistency
-  percentage and minimum trading days), the program's rule text beside each field.
-  Saved together with the account; editable and removable.
-- Scope: new table `account_rules` (generated migration), pure domain module
-  `src/domain/account-rules.ts` (rule values and their validation), Zod schema, the
-  account draft in `src/db/queries/account-editor.ts` writes or removes the link in the
-  same transaction, settings page and account editor, `Design.md` paragraph.
-- Do not build: rule evaluation, the attempt day-series query, rule status anywhere
-  (tickets 02–04), resets and payouts (05), the dashboard card (06); parsing program
-  text into numbers (ADR 0001); notifications, phase field, automatic archiving.
-- Acceptance: `.scratch/prop-firm-link/issues/01-link-account-to-program.md`; full gate
-  from `ai-interaction.md` with DB tests executing; browser path link → edit → remove,
-  practice accounts cannot be linked.
+- Goal: for a linked account, settings show the current attempt's rule status: progress
+  to the profit target (neutral), distance to a static drawdown floor (ok, close, breached)
+  and trading days done versus the minimum. Unset rules read "Not set"; rules of later
+  tickets read "Pending".
+- Scope: one-statement attempt day-series query in `src/db/queries/account-rules.ts`,
+  new pure domain module `src/domain/rule-status.ts`, rule status panel in the account
+  row in settings, `Design.md` paragraph.
+- Do not build: EOD trailing and intraday trailing (03), daily loss and consistency (04),
+  resets and payouts (05), the dashboard card (06); notifications, score effects.
+- Acceptance: `.scratch/prop-firm-link/issues/02-rule-status-in-settings.md`; full gate
+  with DB tests executing; browser: settings for a linked account shows the three rules.
+- Decided 2026-10-19: a Saturday-dated trade rolls onto Monday like a Sunday one in the
+  rule day series, so no P&L drops out of the balance.
 - Open questions: none. Spec `.scratch/prop-firm-link/spec.md`.

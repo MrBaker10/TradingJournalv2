@@ -1,11 +1,13 @@
 import { AccountsManager } from "@/components/settings/accounts-manager";
 import { ExportCard } from "@/components/settings/export-card";
 import { SecuritySection } from "@/components/settings/security-section";
-import { listAccountRules } from "@/db/queries/account-rules";
+import { getAttemptDays, listAccountRules } from "@/db/queries/account-rules";
 import { listAllAccountsForSettings } from "@/db/queries/accounts";
 import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
 import { listProgramOptions } from "@/db/queries/prop-firms";
+import { amountToCents } from "@/domain/commission";
+import { evaluateRules } from "@/domain/rule-status";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { todayInTimeZone } from "@/lib/time";
 
@@ -21,13 +23,31 @@ export default async function SettingsPage() {
     listAccountRules(user.id),
     listProgramOptions(),
   ]);
-  const active = accounts
-    .filter((account) => account.archivedAt === null)
-    .map((account) => ({
-      ...account,
-      commissionRates: rates.filter((rate) => rate.accountId === account.id),
-      rules: rules.find((link) => link.accountId === account.id) ?? null,
-    }));
+  const today = todayInTimeZone(user.timezone);
+  // One day-series read per linked active account; an account has at most
+  // one link and a trader only a handful of linked accounts.
+  const active = await Promise.all(
+    accounts
+      .filter((account) => account.archivedAt === null)
+      .map(async (account) => {
+        const link = rules.find((row) => row.accountId === account.id) ?? null;
+        return {
+          ...account,
+          commissionRates: rates.filter(
+            (rate) => rate.accountId === account.id,
+          ),
+          rules: link,
+          ruleStatus: link
+            ? evaluateRules({
+                rules: link,
+                startingBalanceCents: amountToCents(account.startingBalanceUsd),
+                days: await getAttemptDays(user.id, account.id),
+                today,
+              })
+            : null,
+        };
+      }),
+  );
   const archived = accounts
     .filter((account) => account.archivedAt !== null)
     .map((account) => ({
@@ -47,7 +67,7 @@ export default async function SettingsPage() {
           symbol: instrument.symbol,
         }))}
         programs={programs}
-        today={todayInTimeZone(user.timezone)}
+        today={today}
         timeZone={user.timezone}
       />
       <div className="max-w-4xl">
