@@ -32,6 +32,9 @@ const ledgerEntryFields = z.object({
   kind: z.enum(LEDGER_KINDS),
   category: z.enum(EXPENSE_CATEGORIES).nullable(),
   entryDate: z.iso.date("Pick a date"),
+  // Null: no account, e.g. a data feed. Ownership, practice and archive are
+  // checked on the server (src/db/queries/ledger.ts).
+  accountId: z.number().int().positive().nullable(),
   amount: z
     .number({ error: LEDGER_MESSAGES.amountFormat })
     .min(0, LEDGER_MESSAGES.amountNegative)

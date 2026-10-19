@@ -36,6 +36,7 @@ export async function addLedgerEntry(
       category: entry.category,
       amountCents,
       note: entry.note,
+      accountId: entry.accountId,
     });
 
     revalidatePath("/ledger");

@@ -12,6 +12,8 @@ export interface ArchivedAccountData {
   id: number;
   name: string;
   archivedAt: Date;
+  /** Trades or ledger entries point at it: it can only stay archived. */
+  inUse: boolean;
 }
 
 interface ArchivedAccountRowProps {
@@ -75,19 +77,25 @@ function ArchivedAccountRow({ account, timeZone }: ArchivedAccountRowProps) {
           <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
           Restore
         </button>
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={handleDeleteClick}
-          className={`flex h-10 shrink-0 items-center gap-1.5 rounded-xs px-2 text-xs transition-colors ${
-            confirmingDelete
-              ? "bg-[rgba(227,26,26,.16)] text-danger-fg"
-              : "text-fg-subtle hover:text-danger-fg"
-          }`}
-        >
-          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-          {confirmingDelete ? "Confirm delete" : "Delete permanently"}
-        </button>
+        {account.inUse ? (
+          <span className="shrink-0 text-right text-fg-subtle text-xs">
+            Has trades or ledger entries — stays archived
+          </span>
+        ) : (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={handleDeleteClick}
+            className={`flex h-10 shrink-0 items-center gap-1.5 rounded-xs px-2 text-xs transition-colors ${
+              confirmingDelete
+                ? "bg-[rgba(227,26,26,.16)] text-danger-fg"
+                : "text-fg-subtle hover:text-danger-fg"
+            }`}
+          >
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+            {confirmingDelete ? "Confirm delete" : "Delete permanently"}
+          </button>
+        )}
       </div>
       <InlineMessage message={error} />
     </div>

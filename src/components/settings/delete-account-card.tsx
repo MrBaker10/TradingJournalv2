@@ -49,8 +49,8 @@ export function DeleteAccountCard() {
         <span className="font-medium text-fg text-sm">Delete account</span>
         <span className="text-fg-subtle text-xs">
           Removes your account, every trade and missed setup, your accounts,
-          notes, badges and screenshots. This cannot be undone — export your
-          journal first if you want to keep it.
+          ledger, notes, badges and screenshots. This cannot be undone — export
+          your journal first if you want to keep it.
         </span>
       </div>
 

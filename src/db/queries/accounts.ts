@@ -1,7 +1,6 @@
 import {
   and,
   asc,
-  count,
   eq,
   getTableColumns,
   inArray,
@@ -14,6 +13,7 @@ import type { AccountCurrency } from "../../domain/fx.ts";
 import { formatCentsPlain } from "../../lib/money.ts";
 import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
+import { ledgerEntries } from "../schema/ledger.ts";
 import { tradeAccounts } from "../schema/trades.ts";
 
 /** Any trade assigned to this account — the lock on changing its currency. */
@@ -26,6 +26,15 @@ export function hasAssignedTrades() {
   )`;
 }
 
+/** Any ledger entry tied to this account (docs/adr/0002). */
+function hasLedgerEntries() {
+  // Spelled out like `hasAssignedTrades`, for the same reason.
+  return sql`exists (
+    select 1 from ${ledgerEntries}
+    where "ledger_entries"."account_id" = "accounts"."id"
+  )`;
+}
+
 export async function listAllAccountsForSettings(
   userId: number,
   executor: Pick<typeof db, "select"> = db,
@@ -34,6 +43,7 @@ export async function listAllAccountsForSettings(
     .select({
       ...getTableColumns(accounts),
       hasTrades: hasAssignedTrades().mapWith(Boolean),
+      hasLedgerEntries: hasLedgerEntries().mapWith(Boolean),
     })
     .from(accounts)
     .where(eq(accounts.userId, userId))
@@ -70,13 +80,37 @@ export async function getNextSortOrder(
   return (maxSortOrder ?? -1) + 1;
 }
 
-export async function countAssignedTrades(accountId: number): Promise<number> {
-  const [row] = await db
-    .select({ count: count(tradeAccounts.id) })
-    .from(tradeAccounts)
-    .where(eq(tradeAccounts.accountId, accountId));
+export type AccountDeletion = "deleted" | "not-found" | "in-use";
 
-  return row.count;
+/**
+ * Deletes an owned account for good, but only while no trade and no ledger
+ * entry points at it — otherwise it stays archived. The rule sits in the
+ * statement, like the currency lock below; the foreign keys back it up.
+ */
+export async function deleteUnusedAccount(
+  userId: number,
+  accountId: number,
+  executor: Pick<typeof db, "delete" | "select"> = db,
+): Promise<AccountDeletion> {
+  const owned = and(eq(accounts.id, accountId), eq(accounts.userId, userId));
+  const deleted = await executor
+    .delete(accounts)
+    .where(
+      and(
+        owned,
+        sql`not ${hasAssignedTrades()}`,
+        sql`not ${hasLedgerEntries()}`,
+      ),
+    )
+    .returning({ id: accounts.id });
+  if (deleted.length > 0) return "deleted";
+
+  const [existing] = await executor
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(owned)
+    .limit(1);
+  return existing ? "in-use" : "not-found";
 }
 
 type AccountWriter = Pick<typeof db, "update">;

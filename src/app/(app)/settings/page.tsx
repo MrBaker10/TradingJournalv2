@@ -24,7 +24,11 @@ export default async function SettingsPage() {
     }));
   const archived = accounts
     .filter((account) => account.archivedAt !== null)
-    .map((account) => ({ ...account, archivedAt: account.archivedAt as Date }));
+    .map((account) => ({
+      ...account,
+      archivedAt: account.archivedAt as Date,
+      inUse: account.hasTrades || account.hasLedgerEntries,
+    }));
 
   return (
     <div className="flex flex-col gap-6">

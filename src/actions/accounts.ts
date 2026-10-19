@@ -8,7 +8,8 @@ import {
   saveAccountDraft,
 } from "@/db/queries/account-editor";
 import {
-  countAssignedTrades,
+  type AccountDeletion,
+  deleteUnusedAccount,
   getOwnedAccount,
   listActiveAccountsForSwitcher,
   type StartingBalanceValues,
@@ -235,20 +236,27 @@ export async function hardDeleteAccount(
   }
 
   const user = await getCurrentUser();
-  const account = await getOwnedAccount(user.id, parsed.data.accountId);
-  if (!account) {
-    return { success: false, error: "Account not found" };
-  }
-
-  const assignedTradeCount = await countAssignedTrades(account.id);
-  if (assignedTradeCount > 0) {
+  let result: AccountDeletion;
+  try {
+    result = await deleteUnusedAccount(user.id, parsed.data.accountId);
+  } catch (error) {
+    console.error("Account delete failed", {
+      name: error instanceof Error ? error.name : "UnknownError",
+    });
     return {
       success: false,
-      error: "This account has assigned trades. Archive it instead.",
+      error: "Couldn't delete the account. Nothing was changed — try again.",
     };
   }
-
-  await db.delete(accounts).where(eq(accounts.id, account.id));
+  if (result === "not-found") {
+    return { success: false, error: "Account not found" };
+  }
+  if (result === "in-use") {
+    return {
+      success: false,
+      error: "This account has trades or ledger entries, so it stays archived.",
+    };
+  }
 
   revalidatePath("/", "layout");
   return { success: true, data: null };

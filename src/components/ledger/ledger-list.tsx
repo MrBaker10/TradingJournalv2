@@ -25,6 +25,17 @@ function LedgerAmount({ entry }: { entry: LedgerEntryRow }) {
   );
 }
 
+/** An archived account keeps its name: the entry still belongs to it. */
+function LedgerAccountName({ name }: { name: string | null }) {
+  return name === null ? (
+    <span className="text-fg-subtle">No account</span>
+  ) : (
+    <span className="text-fg-muted" title={name}>
+      {name}
+    </span>
+  );
+}
+
 // Design.md §4.25, with the row layout from §4.16.
 export function LedgerList({ entries }: LedgerListProps) {
   return (
@@ -44,7 +55,7 @@ export function LedgerList({ entries }: LedgerListProps) {
               key={entry.id}
               className="flex items-baseline justify-between gap-3 py-2.5"
             >
-              <div className="flex min-w-0 items-baseline gap-3">
+              <div className="flex min-w-0 flex-1 items-baseline gap-3">
                 <span className="w-24 shrink-0 font-mono text-[13px] text-fg-muted tabular-nums">
                   {formatDateWithYear(entry.entryDate)}
                 </span>
@@ -52,9 +63,17 @@ export function LedgerList({ entries }: LedgerListProps) {
                   <span className="text-fg text-sm">
                     {ledgerEntryLabel(entry.kind, entry.category)}
                   </span>
+                  {/* Below `sm` the account joins the note's line. */}
+                  <span
+                    className="truncate text-fg-subtle text-xs sm:hidden"
+                    title={entry.note ?? undefined}
+                  >
+                    <LedgerAccountName name={entry.accountName} />
+                    {entry.note ? ` · ${entry.note}` : null}
+                  </span>
                   {entry.note ? (
                     <span
-                      className="truncate text-fg-subtle text-xs"
+                      className="hidden truncate text-fg-subtle text-xs sm:block"
                       title={entry.note}
                     >
                       {entry.note}
@@ -62,7 +81,11 @@ export function LedgerList({ entries }: LedgerListProps) {
                   ) : null}
                 </div>
               </div>
-              <span className="shrink-0 font-mono text-[13px] tabular-nums">
+              <span className="hidden w-40 shrink-0 truncate text-sm sm:block">
+                <LedgerAccountName name={entry.accountName} />
+              </span>
+              {/* Fixed width, so the account column lines up across rows. */}
+              <span className="w-28 shrink-0 text-right font-mono text-[13px] tabular-nums">
                 <LedgerAmount entry={entry} />
               </span>
             </li>

@@ -7,6 +7,7 @@ const valid = {
   entryDate: "2026-10-19",
   amount: 0,
   note: "",
+  accountId: null,
 } as const;
 
 function fieldErrors(input: unknown): Record<string, string> {

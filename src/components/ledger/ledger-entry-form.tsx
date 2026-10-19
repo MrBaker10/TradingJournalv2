@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { addLedgerEntry } from "@/actions/ledger";
 import { FIELD_CLASS } from "@/components/ui/field-class";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
+import type { LedgerAccount } from "@/db/queries/ledger";
 import {
   EXPENSE_CATEGORIES,
   type ExpenseCategory,
@@ -24,22 +25,28 @@ import { EXPENSE_CATEGORY_LABELS, LEDGER_KIND_LABELS } from "./ledger-labels";
 interface LedgerEntryFormProps {
   /** Today in the user's timezone, the date a new entry starts with. */
   today: IsoDate;
+  /** The user's real, active accounts; practice ones are never offered. */
+  accounts: LedgerAccount[];
 }
 
 interface Draft {
   kind: LedgerKind;
   category: ExpenseCategory | "";
+  /** An account id as the select holds it; "" is no account. */
+  accountId: string;
   entryDate: string;
   amount: string;
   note: string;
 }
 
 // Design.md §4.25. Saving is explicit; afterwards amount and note clear while
-// kind, category and date stay, so a run of monthly entries is quick to add.
-export function LedgerEntryForm({ today }: LedgerEntryFormProps) {
+// kind, category, account and date stay, so a run of monthly entries is quick
+// to add.
+export function LedgerEntryForm({ today, accounts }: LedgerEntryFormProps) {
   const [draft, setDraft] = useState<Draft>({
     kind: "expense",
     category: "",
+    accountId: "",
     entryDate: today,
     amount: "",
     note: "",
@@ -61,6 +68,7 @@ export function LedgerEntryForm({ today }: LedgerEntryFormProps) {
         draft.kind === "expense" && draft.category !== ""
           ? draft.category
           : null,
+      accountId: draft.accountId === "" ? null : Number(draft.accountId),
       entryDate: draft.entryDate,
       amount: draft.amount.trim() === "" ? Number.NaN : Number(draft.amount),
       note: draft.note,
@@ -138,43 +146,80 @@ export function LedgerEntryForm({ today }: LedgerEntryFormProps) {
           </div>
         </fieldset>
 
-        {/* Design.md §4.25: Category on its own row, so a payout leaves no
-            gap; Date and Amount side by side from `sm`. */}
-        {draft.kind === "expense" ? (
-          <div className="sm:w-[calc(50%-0.5rem)]">
+        {/* Design.md §4.25: Category and Account side by side from `sm`
+            (a payout has Account alone), then Date and Amount. */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {draft.kind === "expense" ? (
+            <div>
+              <label
+                htmlFor="ledger-category"
+                className="mb-2 block text-fg text-sm"
+              >
+                Category
+              </label>
+              <select
+                id="ledger-category"
+                value={draft.category}
+                onChange={(event) =>
+                  change({
+                    category: event.target.value as ExpenseCategory | "",
+                  })
+                }
+                className={FIELD_CLASS}
+                aria-invalid={!!errors.category}
+                aria-describedby="ledger-category-error"
+              >
+                <option value="">Pick a category</option>
+                {EXPENSE_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {EXPENSE_CATEGORY_LABELS[category]}
+                  </option>
+                ))}
+              </select>
+              <p
+                id="ledger-category-error"
+                className="mt-1 min-h-[18px] text-danger-fg text-xs"
+              >
+                {errors.category}
+              </p>
+            </div>
+          ) : null}
+          <div>
             <label
-              htmlFor="ledger-category"
+              htmlFor="ledger-account"
               className="mb-2 block text-fg text-sm"
             >
-              Category
+              Account
             </label>
             <select
-              id="ledger-category"
-              value={draft.category}
-              onChange={(event) =>
-                change({
-                  category: event.target.value as ExpenseCategory | "",
-                })
-              }
+              id="ledger-account"
+              value={draft.accountId}
+              onChange={(event) => change({ accountId: event.target.value })}
               className={FIELD_CLASS}
-              aria-invalid={!!errors.category}
-              aria-describedby="ledger-category-error"
+              aria-invalid={!!errors.accountId}
+              aria-describedby="ledger-account-error ledger-account-help"
             >
-              <option value="">Pick a category</option>
-              {EXPENSE_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {EXPENSE_CATEGORY_LABELS[category]}
+              <option value="">No account</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
                 </option>
               ))}
             </select>
             <p
-              id="ledger-category-error"
+              id="ledger-account-error"
               className="mt-1 min-h-[18px] text-danger-fg text-xs"
             >
-              {errors.category}
+              {errors.accountId}
+            </p>
+            <p
+              id="ledger-account-help"
+              className="text-fg-subtle text-xs leading-relaxed"
+            >
+              Leave empty for costs no account owns, like a data feed.
             </p>
           </div>
-        ) : null}
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="ledger-date" className="mb-2 block text-fg text-sm">

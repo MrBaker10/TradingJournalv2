@@ -6,7 +6,10 @@ import { instruments } from "../../schema/instruments.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
 import { type AccountDraftWrite, saveAccountDraft } from "../account-editor.ts";
-import { listAllAccountsForSettings } from "../accounts.ts";
+import {
+  deleteUnusedAccount,
+  listAllAccountsForSettings,
+} from "../accounts.ts";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 async function fixture(
@@ -355,5 +358,27 @@ it("reports the currency lock for the account that actually owns the trade", asy
     expect(rows.find((row) => row.id === assigned.id)?.hasTrades).toBe(true);
     expect(rows.find((row) => row.id === empty.id)?.hasTrades).toBe(false);
     expect(await listAllAccountsForSettings(userId + 1, tx)).toEqual([]);
+  });
+});
+
+it("refuses to delete an account for good while a trade is assigned", async () => {
+  await fixture(async (tx, userId, instrumentId) => {
+    const { id } = await saveAccountDraft(userId, draft, usd, tx);
+    const [trade] = await tx
+      .insert(trades)
+      .values({
+        userId,
+        instrumentId,
+        tradeDate: "2026-09-01",
+        taken: true,
+        contracts: "1",
+        entryTime: "09:31:00",
+        direction: "long",
+        entryPrice: "100.0000",
+      })
+      .returning();
+    await tx.insert(tradeAccounts).values({ tradeId: trade.id, accountId: id });
+
+    expect(await deleteUnusedAccount(userId, id, tx)).toBe("in-use");
   });
 });

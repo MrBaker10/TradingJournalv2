@@ -83,7 +83,7 @@ Consequences that follow from this and are not optional:
   trades, replacing the old default account count.
 - **Archiving is the only way out while trades exist.** Archiving keeps every trade and
   all history, and the account disappears from pickers. Hard deletion is offered only
-  for an account with zero assigned trades. Since a trade must always have at least one
+  for an account with zero assigned trades and zero ledger entries (ledger spec). Since a trade must always have at least one
   account, there is no path that leaves an orphan and no destructive surprise.
 
 ### B) Confluences & Mistakes
@@ -589,8 +589,8 @@ by picking a different answer while coding.
   switchable to one; money counts per assigned account, counts do not.
 - **Practice accounts** — the `is_practice` toggle excludes an account from every
   combined figure, and its numbers are visible only when it is selected alone.
-- **Account deletion** — archive only while trades exist; hard delete only at zero
-  assigned trades.
+- **Account deletion** — archive only while trades or ledger entries exist; hard delete
+  only at zero assigned trades and zero ledger entries.
 - **Econ calendar** — weekly Forex Factory JSON feed, unofficial, always read from
   `econ_events`, fetch and parse behind an adapter.
 - **Econ calendar weeks and sync** (2026-09-28, econ-calendar) — the page opens on

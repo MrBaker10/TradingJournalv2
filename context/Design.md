@@ -598,6 +598,11 @@ disable it and explain: “Locked — this account has trades”. Currency chang
 the entered starting-balance amount in the newly selected currency. An unchanged
 amount and currency preserve the existing USD conversion and rate date.
 
+**Archived accounts.** Each archived row offers Restore. Delete permanently appears only
+for an account with no trades and no ledger entries; otherwise its place holds a quiet
+note in `--color-fg-subtle`: “Has trades or ledger entries — stays archived”. The
+server refuses the delete either way (ledger, ticket 02).
+
 **Anzeigewährung (display-currency, 2026-09-25).** Geldbeträge stehen in der Währung der
 Konten, die eine Ansicht zeigt — `€1,234.56` neben `$1,234.56`, beide in derselben
 en-US-Schreibweise mit Tausenderkomma und Dezimalpunkt; nur das Zeichen wechselt. Es
@@ -1273,24 +1278,33 @@ dem Feld, Meldungszeile immer vorhanden:
   native Radios in `fieldset`/`legend`, das Radio selbst `sr-only`, der Fokusring
   auf dem Chip.
 - **Category** als Select (Evaluation, Reset, Activation, Subscription, Data, Other),
-  nur bei Expense sichtbar, in eigener Zeile; bei Payout fällt das Feld weg, statt
-  gesperrt zu stehen.
+  nur bei Expense sichtbar; bei Payout fällt das Feld weg, statt gesperrt zu stehen.
+- **Account** als Select, erste Option „No account" (Default), danach die echten,
+  nicht archivierten Konten in der Reihenfolge des Kontoschalters. Übungskonten
+  erscheinen nie — der Ledger ist echtes Geld (ADR 0002). Hilfszeile „Leave empty for
+  costs no account owns, like a data feed."
 - **Date** als Datumsfeld, Default heute in `users.timezone`.
 - **Amount (USD)** Mono, `inputMode="decimal"`, Hilfszeile „0 is fine — a free reset
   still counts." Höchstens $100 Mio. je Eintrag („That amount is too large").
 - **Note** einzeilig, optional, höchstens 500 Zeichen.
 
-Unter `sm` eine Spalte, ab `sm` Date und Amount nebeneinander. Speichern explizit mit
-dem Primärbutton aus 4.2 („Add entry"), Bestätigung als Toast („Entry added"). Danach
-leeren sich Amount und Note, Kind, Category und Date bleiben — wer drei Monate
-Abo nachträgt, wählt nicht dreimal dieselbe Kategorie.
+Unter `sm` eine Spalte. Ab `sm` zwei Spalten: Category und Account in der ersten Zeile
+(bei Payout steht Account allein links), Date und Amount in der zweiten. Speichern
+explizit mit dem Primärbutton aus 4.2 („Add entry"), Bestätigung als Toast („Entry
+added"). Danach leeren sich Amount und Note, Kind, Category, Account und Date bleiben —
+wer drei Monate Abo nachträgt, wählt nicht dreimal dieselbe Kategorie.
 
 **Die Liste.** `card-surface edge`, Kopf `cap` „Entries", Zeilenmuster aus 4.16
 (`divide-white/6`). Neueste zuerst, bei gleichem Datum der zuletzt angelegte oben.
 Links das Datum („12 Oct 2026", Mono 13px, `--color-fg-muted`), dann die Art („Expense ·
 Reset" bzw. „Payout") in `--color-fg`, darunter die Notiz in `--color-fg-subtle`,
-abgeschnitten, voller Text im `title`. Rechts der Betrag in USD, so wie erfasst, Mono mit
-Tabellenziffern: Payout `+$500.00` in `--color-success-fg`, Expense `-$150.00` in
+abgeschnitten, voller Text im `title`. Ab `sm` eine Spalte **Account** vor dem Betrag,
+`--color-fg-muted`, abgeschnitten; ohne Konto „No account" in `--color-fg-subtle`. Ein
+später archiviertes Konto behält seinen Namen, ohne Markierung — der Eintrag gehört
+zu diesem Konto, egal ob es noch aktiv ist. Unter `sm` steht das Konto in der Zeile
+unter der Art, vor der Notiz, getrennt durch „ · ". Rechts der Betrag in USD, so wie
+erfasst, Mono mit Tabellenziffern, in fester Breite rechtsbündig, damit die Konto-Spalte
+über alle Zeilen fluchtet: Payout `+$500.00` in `--color-success-fg`, Expense `-$150.00` in
 `--color-danger-fg`, ein Betrag von 0 ohne Vorzeichen in `--color-fg-muted`. Die Art
 steht immer als Text daneben; Farbe ist nie der einzige Träger (§8).
 

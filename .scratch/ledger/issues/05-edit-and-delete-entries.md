@@ -15,6 +15,7 @@ Spec: `.scratch/ledger/spec.md`. Terms: `GLOSSARY.md`.
 - [ ] Query module `ledger`: update and delete, filtered by the current user.
 - [ ] Server actions with `getCurrentUser()`, Zod schema for update, explicit save.
 - [ ] Account check on update: unchanged archived assignment allowed; new or changed assignment owned, real and not archived.
+- [ ] Update filters the entry by user and never ties it to another user's account: the list joins `accounts` without a user filter and relies on this.
 - [ ] Delete only after a confirmation step.
 - [ ] DB tests (executed): update/delete for the owner; another user's entry cannot be updated or deleted; changing to a practice, foreign or archived account rejected; category rules hold on update.
 - [ ] Gates from `context/ai-interaction.md`.

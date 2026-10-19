@@ -1,12 +1,18 @@
-import { TransactionRollbackError } from "drizzle-orm";
+import { eq, TransactionRollbackError } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "../../index.ts";
+import { accounts } from "../../schema/accounts.ts";
 import { ledgerEntries } from "../../schema/ledger.ts";
 import { users } from "../../schema/users.ts";
+import {
+  deleteUnusedAccount,
+  listAllAccountsForSettings,
+} from "../accounts.ts";
 import {
   createLedgerEntry,
   LedgerEntryError,
   type LedgerEntryWrite,
+  listLedgerAccounts,
   listLedgerEntries,
 } from "../ledger.ts";
 
@@ -51,6 +57,7 @@ const evaluation: LedgerEntryWrite = {
   category: "evaluation",
   amountCents: 15_000,
   note: "50k evaluation",
+  accountId: null,
 };
 
 const payout: LedgerEntryWrite = {
@@ -59,7 +66,31 @@ const payout: LedgerEntryWrite = {
   category: null,
   amountCents: 123_456,
   note: null,
+  accountId: null,
 };
+
+async function addAccount(
+  tx: Tx,
+  userId: number,
+  name: string,
+  options: {
+    isPractice?: boolean;
+    archived?: boolean;
+    sortOrder?: number;
+  } = {},
+): Promise<number> {
+  const [account] = await tx
+    .insert(accounts)
+    .values({
+      userId,
+      name,
+      sortOrder: options.sortOrder ?? 0,
+      isPractice: options.isPractice ?? false,
+      archivedAt: options.archived ? new Date("2026-10-01T00:00:00Z") : null,
+    })
+    .returning({ id: accounts.id });
+  return account.id;
+}
 
 describe("ledger entries", () => {
   it("lists the owner's entries newest first, as entered", async () => {
@@ -163,6 +194,113 @@ describe("ledger entries", () => {
           }),
         ),
       ).rejects.toThrow();
+    });
+  });
+});
+
+describe("ledger entries on an account", () => {
+  it("lists an entry with its account's name, and one without as none", async () => {
+    await fixture(async (tx, userId) => {
+      const accountId = await addAccount(tx, userId, "Lucid 50k");
+      await createLedgerEntry(userId, { ...evaluation, accountId }, tx);
+      await createLedgerEntry(userId, payout, tx);
+
+      expect(await listLedgerEntries(userId, tx)).toMatchObject([
+        { kind: "payout", accountId: null, accountName: null },
+        { kind: "expense", accountId, accountName: "Lucid 50k" },
+      ]);
+    });
+  });
+
+  it("refuses a practice, a foreign and an archived account", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      const practice = await addAccount(tx, userId, "Sim", {
+        isPractice: true,
+      });
+      const foreign = await addAccount(tx, otherUserId, "Not mine");
+      const archived = await addAccount(tx, userId, "Old eval", {
+        archived: true,
+      });
+
+      for (const accountId of [practice, foreign, archived]) {
+        await expect(
+          createLedgerEntry(userId, { ...evaluation, accountId }, tx),
+        ).rejects.toThrow(LedgerEntryError);
+      }
+      expect(await listLedgerEntries(userId, tx)).toEqual([]);
+    });
+  });
+
+  it("offers only the user's real, active accounts, in selector order", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      const second = await addAccount(tx, userId, "Topstep", { sortOrder: 2 });
+      const first = await addAccount(tx, userId, "Lucid", { sortOrder: 1 });
+      await addAccount(tx, userId, "Sim", { isPractice: true, sortOrder: 0 });
+      await addAccount(tx, userId, "Old", { archived: true, sortOrder: 3 });
+      await addAccount(tx, otherUserId, "Not mine");
+
+      expect(await listLedgerAccounts(userId, tx)).toEqual([
+        { id: first, name: "Lucid" },
+        { id: second, name: "Topstep" },
+      ]);
+    });
+  });
+
+  it("keeps showing an account's name after it is archived", async () => {
+    await fixture(async (tx, userId) => {
+      const accountId = await addAccount(tx, userId, "Lucid 50k");
+      await createLedgerEntry(userId, { ...evaluation, accountId }, tx);
+      await tx
+        .update(accounts)
+        .set({ archivedAt: new Date("2026-10-15T00:00:00Z") })
+        .where(eq(accounts.id, accountId));
+
+      const [entry] = await listLedgerEntries(userId, tx);
+      expect(entry.accountName).toBe("Lucid 50k");
+    });
+  });
+});
+
+describe("deleting an account for good", () => {
+  it("is refused while a ledger entry points at it", async () => {
+    await fixture(async (tx, userId) => {
+      const accountId = await addAccount(tx, userId, "Lucid 50k", {
+        archived: true,
+      });
+      // Tied while the account was active; the module refuses archived ones.
+      await tx.insert(ledgerEntries).values({
+        userId,
+        accountId,
+        entryDate: "2026-09-01",
+        kind: "expense",
+        category: "evaluation",
+        amount: "150.00",
+      });
+
+      expect(await deleteUnusedAccount(userId, accountId, tx)).toBe("in-use");
+      // Settings knows before anyone clicks: no "Delete permanently" offered.
+      const [settingsRow] = await listAllAccountsForSettings(userId, tx);
+      expect(settingsRow).toMatchObject({
+        hasTrades: false,
+        hasLedgerEntries: true,
+      });
+      expect(await listLedgerEntries(userId, tx)).toHaveLength(1);
+    });
+  });
+
+  it("deletes an archived account with no trades and no entries", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      const accountId = await addAccount(tx, userId, "Unused", {
+        archived: true,
+      });
+
+      expect(await deleteUnusedAccount(otherUserId, accountId, tx)).toBe(
+        "not-found",
+      );
+      expect(await deleteUnusedAccount(userId, accountId, tx)).toBe("deleted");
+      expect(await deleteUnusedAccount(userId, accountId, tx)).toBe(
+        "not-found",
+      );
     });
   });
 });
