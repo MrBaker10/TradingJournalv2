@@ -2,10 +2,10 @@
 
 import { Check, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { toast } from "sonner";
 import { createAccount, updateAccount } from "@/actions/accounts";
 import { FIELD_CLASS } from "@/components/ui/field-class";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
+import { notifyError, notifyProcess } from "@/components/ui/toast";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import type { ProgramOption } from "@/db/queries/prop-firms";
 import { ACCOUNT_RULES_MESSAGES } from "@/domain/account-rules";
@@ -141,15 +141,15 @@ export function AccountForm({
           ? await updateAccount({ ...data, accountId: account.id })
           : await createAccount(data);
         if (!result.success) {
-          toast.error(result.error);
+          notifyError(result.error);
           return;
         }
-        toast.success(account ? "Account saved" : "Account created");
+        notifyProcess(account ? "Account saved" : "Account created");
         onDirtyChange(false);
         onPendingChange(false);
         onSaved();
       } catch {
-        toast.error(
+        notifyError(
           "Couldn't confirm the save. Your changes are still here — check your connection and try again.",
         );
       }

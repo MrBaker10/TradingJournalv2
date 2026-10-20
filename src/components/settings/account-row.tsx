@@ -9,12 +9,12 @@ import {
   Star,
 } from "lucide-react";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
 import {
   archiveAccount,
   moveAccount,
   setDefaultAccount,
 } from "@/actions/accounts";
+import { notifyError } from "@/components/ui/toast";
 import type { AccountRulesRow } from "@/db/queries/account-rules";
 import { amountToCents } from "@/domain/commission";
 import type { AccountCurrency } from "@/domain/fx";
@@ -70,9 +70,9 @@ export function AccountRow({
       try {
         const result = await action();
         if (!result.success)
-          toast.error(result.error ?? "Couldn't update the account");
+          notifyError(result.error ?? "Couldn't update the account");
       } catch {
-        toast.error("Couldn't update the account. Try again.");
+        notifyError("Couldn't update the account. Try again.");
       }
     });
   }

@@ -2,9 +2,9 @@
 
 import { Check } from "lucide-react";
 import { useId } from "react";
-import { toast } from "sonner";
 import { FIELD_CLASS } from "@/components/ui/field-class";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
+import { notifyError, notifyProcess } from "@/components/ui/toast";
 import type { LedgerAccount } from "@/db/queries/ledger";
 import {
   EXPENSE_CATEGORIES,
@@ -31,13 +31,13 @@ export async function runWithToast(
   try {
     const result = await action();
     if (!result.success) {
-      toast.error(result.error);
+      notifyError(result.error);
       return false;
     }
-    toast.success(messages.success);
+    notifyProcess(messages.success);
     return true;
   } catch {
-    toast.error(messages.failed);
+    notifyError(messages.failed);
     return false;
   }
 }

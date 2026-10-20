@@ -537,8 +537,13 @@ plus Neon-Inset. Texte wie im Ist-Stand („Where your edge actually lives",
   keine Entscheidung.
 - **Fehler-Toast** (`notifyError`, seit weekly-review): dieselbe Fläche, statt des
   Häkchens ein `CircleAlert` in `--color-danger-fg` auf matter Kachel (`white/6`),
-  kein Schein. Nur für ein Speichern, das als Ganzes scheitert und kein Feld hat, an
-  dem die Meldung stehen könnte; Feldfehler bleiben am Feld.
+  kein Schein. Nur für eine Aktion, die als Ganzes scheitert und kein Feld hat, an dem
+  die Meldung stehen könnte (Weekly Review, Ledger, Konto-Editor und Kontozeile);
+  Feldfehler bleiben am Feld.
+- **Nur über `notifyProcess` und `notifyError`.** Der Toaster läuft `unstyled`; ein
+  direktes `toast.success`/`toast.error` von Sonner erscheint ohne Fläche und am Rand
+  abgeschnitten. Außer `src/components/ui/toast.tsx` importiert nichts Sonner, ein
+  Wächtertest (`toast-imports.test.ts`) hält das fest.
 
 ---
 
