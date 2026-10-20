@@ -535,6 +535,10 @@ plus Neon-Inset. Texte wie im Ist-Stand („Where your edge actually lives",
 - Einblenden 240 ms, Standzeit 4200 ms, Ausblenden 300 ms.
 - Nie blockierend, nie mittig, nie mit Button. Ein Toast ist eine Bestätigung,
   keine Entscheidung.
+- **Fehler-Toast** (`notifyError`, seit weekly-review): dieselbe Fläche, statt des
+  Häkchens ein `CircleAlert` in `--color-danger-fg` auf matter Kachel (`white/6`),
+  kein Schein. Nur für ein Speichern, das als Ganzes scheitert und kein Feld hat, an
+  dem die Meldung stehen könnte; Feldfehler bleiben am Feld.
 
 ---
 
@@ -1435,6 +1439,71 @@ Kategorie fehlt: „Pick a category for this expense." Speichern fehlgeschlagen:
 „Couldn't save the changes. Your input is still here — try again." Löschen
 fehlgeschlagen: „Couldn't delete the entry — try again." Eintrag inzwischen weg (anderer
 Tab): „This entry no longer exists."
+
+### 4.26 Weekly Review
+
+Entstanden in weekly-review, aus vorhandenen Primitiven gebaut, mit demselben Vorbehalt
+wie 4.16: **tragfähig, aber nicht entworfen.** Diese Fassung deckt die Tickets 01 bis 04
+ab.
+
+**Einstieg.** Auf `/progress` eine Karte in voller Breite zwischen Streak/Score-Raster
+und „Past months", geformt wie die Schnellzugriff-Karten (4.10): `card-surface
+edge-neon`, Kopf `cap cap-neon` „Weekly review", ein Satz in `--color-fg-muted`, rechts
+ein Chevron in `--color-fg-subtle`, Hover hebt die Karte um 2px. Kein neuer
+Navigationspunkt; auf `/progress/weekly-review` bleibt „Progress" aktiv.
+
+**Die Seite.** Rücklink „Progress" wie auf der Trade-Detailseite, Titel „Weekly
+Review", darunter in `--color-fg-muted` der Zeitraum („18 Oct 2026 – 23 Oct 2026") und dass
+die Woche von Sonntag bis Freitag läuft und nichts als die Gewohnheit zählt. Darunter
+ab `lg` zwei Spalten im Verhältnis 3 : 2, links das Formular in einer Karte
+`card-surface edge-neon` (Prozess wie 4.6), rechts die Zusammenfassung; darunter
+untereinander, Formular zuerst.
+
+**Wochenwechsel.** Zwischen Kopf und Formular ein Stepper wie der Monatsschritt der
+Kalender-Heatmap (4.8): zwei Chevrons in `--color-fg-subtle`, dazwischen „This week" bzw.
+„Week of Oct 4" in `text-xs`. Auf der aktuellen Woche steht der Vorwärts-Chevron bei 30 %
+Deckkraft und ist kein Link. Die Woche steht im Search-Param `?week=` (der Sonntag); die
+aktuelle Woche ist die Seite ohne Parameter. Ein ungültiger oder zukünftiger Wert öffnet die
+aktuelle Woche.
+
+**Leiste der letzten Wochen.** Unter dem Stepper die letzten acht Wochen (die aktuelle
+eingeschlossen) als Links mit 8px-Punkt und „Oct 18": `rounded-ctl`, Rand `white/12`,
+die gewählte Woche mit Rand in `cyan/60`. Eine Woche mit Review trägt einen gefüllten
+Punkt in `--color-cyan`, eine offene einen hohlen Punkt mit Rand `white/30` — **nie
+rot**: eine Lücke ist eine Einladung, kein Versagen. Ein Review, dessen drei Felder alle
+geleert wurden, zählt nicht als geschrieben. Entschieden in Ticket 02 statt eines Markers
+am Stepper allein, weil der nur eine Woche zeigt und Lücken so unsichtbar blieben.
+
+**Die Felder.** Drei Textfelder im Rezept aus 4.5/4.6, je vier Zeilen, alle optional:
+„What worked", „What did not work", „Focus next week". Kein Live-Feedback, keine
+Pflichtfelder — eine Woche darf mit einer Zeile beginnen.
+
+**Zusammenfassung.** Karte `card-surface edge-neon`, Kopf `cap cap-neon` „The week in
+numbers". Vier Zellen der Metrik-Tafel (4.7) im 2-Spalten-Raster. Prozesswerte in
+`text-glow`: „Logged days" mit Kontext „Of 5 trading days", „By the book" als Prozent
+mit Kontext „3 of 5 taken" (ohne genommene Trades „—"), „Missed setups". Als letzte
+Zelle „Net P&L" mit Kontext „All real accounts": Geldwert in `--color-success-fg` /
+`--color-danger-fg` (bei 0 `--color-fg`), **kein Glow**, in der Anzeigewährung von
+„All accounts" — gezeigt, nicht gefeiert, und nie die erste Zahl der Karte.
+Darunter `cap` „Top mistakes": bis zu drei Zeilen, Bezeichnung links in `--color-fg`,
+Anzahl rechts in Mono `--color-fg-muted` („3×"), häufigste zuerst; ohne Fehler „No
+mistakes tagged." in `--color-fg-subtle`. Leere Woche statt der Zellen, zentriert in
+`--color-fg-subtle`: „No entries this week. A week off is worth a review too." Die
+Karte rechnet immer aus den Trades und folgt nie dem Kontoschalter.
+
+**Speichern.** Der Button aus 4.6/4.14 mit dem Text „Save review": ruhige Fläche im
+Ruhezustand, „Saving…" während des Speicherns, Erfolgsverlauf mit „Saved" als
+Bestätigung, dazu der Prozess-Toast „Weekly review saved" ohne Hinweis auf einen Score,
+weil der Weekly Review keinen speist. Ein fehlgeschlagenes Speichern meldet der
+Fehler-Toast aus 4.11 (`notifyError`) nach `coding-standards.md` → Error handling, nie ein
+Modal; der Text bleibt in den Feldern. Entschieden 2026-10-20 für den Weekly Review; die
+Plan-Karte (4.6) behält ihre Meldung unter dem Button.
+
+**Microcopy.** Speichern fehlgeschlagen: „Couldn't save. Your text is still here — try
+again." Woche hat noch nicht begonnen: „This week hasn't started yet. Pick the current week or
+an earlier one." Wochenstart kein Sonntag (nur bei manipulierter Anfrage): „This isn't a
+review week. Reload the page and try again." Einstieg ohne Review: „Step back once a week: what worked, what did
+not, what to focus on."; mit Review: „Reviewed this week. Open it to add a thought."
 
 ---
 

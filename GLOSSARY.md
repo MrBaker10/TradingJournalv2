@@ -62,10 +62,10 @@ The day an entry belongs to: its trade date, with a Sunday rolling onto the foll
 _Avoid_: Session day, calendar day
 
 **Logged day**:
-A trading day with at least one entry, taken or missed, logged within 48 hours of the trade date.
+A trading day with at least one entry, taken or missed. Backfilled entries count too, except in the streak.
 
 **Streak**:
-The run of consecutive logged days, skipping Saturdays and tolerating one grace day per month.
+The run of consecutive logged days, skipping Saturdays and tolerating one grace day per month. Only entries logged within 48 hours of their trade date count towards it.
 
 **Grace day**:
 The one skipped weekday per calendar month that does not break a streak.
