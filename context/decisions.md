@@ -3382,3 +3382,26 @@ Deployment laufen.
   durch Sascha) und `preview` (`pnpm db:migrate:preview`, durch den Agenten nach
   Host-Check) vor dem Push von `main`. Danach auf beiden Branches lesend geprüft: 26
   Einträge in `drizzle.__drizzle_migrations`, Tabelle `account_rules` vorhanden.
+
+## 2026-10-20 — Weekly review — feature/weekly-review, merged c82a9b7
+
+- **Review-Woche über das Handelsdatum:** Trades fallen über `trade_date` (Chart-Uhr)
+  in eine Woche Sonntag bis Freitag; `users.timezone` entscheidet nur, welches Datum
+  heute ist. Samstag als „heute" gehört zur gerade beendeten Woche.
+- **Der Server lehnt nur zukünftige Wochen ab** (aus dem Review von Ticket 01): ein
+  Review, über Samstag Mitternacht getippt, landet in seiner Woche statt verworfen zu
+  werden. Ein ungültiger oder zukünftiger `?week=` öffnet die aktuelle Woche.
+- **Markierung geschriebener Wochen:** Leiste der letzten acht Wochen statt eines
+  Markers am Stepper, weil der nur eine Woche zeigt. Ein Review mit drei geleerten
+  Feldern zählt nicht als geschrieben, auch nicht auf der Progress-Karte.
+- **Logged day zählt Nachträge** (Sascha): das 48-h-Fenster gilt nur für den Streak.
+  `GLOSSARY.md` angepasst; die Zusammenfassung folgt damit den „days logged" auf Progress.
+- **Net P&L über `moneyContribution`**, nicht über eine eigene Formel; per DB-Test gleich
+  `getMoneyMetrics` für dieselbe Woche in USD und EUR. Semantisch gefärbt ohne Glow:
+  „neutral" heißt nicht gefeiert, nicht immer weiß (AGENTS.md).
+- **Fehler beim Speichern als Toast** (Sascha, nach `coding-standards.md`): neues
+  `notifyError`, weil der Toaster `unstyled` läuft und `toast.error` dort ungestylt
+  erscheint. Die Plan-Karte bleibt beim Hinweis unter dem Button.
+- Migration `0026` (`weekly_reviews`) auf Neon `preview` und Production, beide durch
+  Sascha, vor dem Push von `main`. Danach auf beiden Branches lesend geprüft: 27 Einträge
+  in `drizzle.__drizzle_migrations`, Tabelle `weekly_reviews` vorhanden.
