@@ -7,21 +7,22 @@ History and reset this file to “Nothing in progress”.
 
 ## Status
 
-**In progress:** weekly-review, ticket 01 (`.scratch/weekly-review/issues/01-write-current-week-review.md`).
+**In progress:** weekly-review, ticket 02 (`.scratch/weekly-review/issues/02-step-through-weeks.md`).
 Branch `feature/weekly-review`.
 
 ## Feature: Weekly review
 
 - Goal: the user writes and saves a weekly review for the current review week, reached
-  from Progress (spec `.scratch/weekly-review/spec.md`).
+  from Progress (ticket 01, done), and steps through review weeks to catch up past ones
+  (ticket 02) (spec `.scratch/weekly-review/spec.md`).
 - Scope: table `weekly_reviews` with generated migration; pure review-week arithmetic in
   `src/domain/review-week.ts`; query module and server action `weekly-reviews`; page
   `/progress/weekly-review` and an entry card on Progress; Design.md §4.26.
-- Do not build: week stepping and past weeks (ticket 02), week summary (03), Net P&L
+- Do not build: week summary (03), Net P&L
   (04), any effect on consistency score, streak or badges, a badge, reminders,
   per-account reviews, templates or extra fields, monthly or quarterly reviews.
-- Acceptance: the checklist in ticket 01; gates from `ai-interaction.md`; DB tests
-  executed; browser click path from Progress through save, reload and edit.
+- Acceptance: the checklists in tickets 01 and 02; gates from `ai-interaction.md`; DB
+  tests executed; browser click paths from the tickets.
 - Open questions:
   - `coding-standards.md` → Error handling says user-facing errors surface as a Sonner
     toast; Design.md §4.6 and §4.26 put a save error under the button. The weekly review

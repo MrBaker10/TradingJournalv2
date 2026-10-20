@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import { db } from "../../index.ts";
 import { users } from "../../schema/users.ts";
 import { weeklyReviews } from "../../schema/weekly-reviews.ts";
-import { getWeeklyReview, upsertWeeklyReview } from "../weekly-reviews.ts";
+import {
+  getWeeklyReview,
+  listReviewedWeekStarts,
+  upsertWeeklyReview,
+} from "../weekly-reviews.ts";
 
 // Drives the weekly-reviews query module against real Postgres, inside a
 // rolled-back transaction like the other query tests.
@@ -118,6 +122,45 @@ describe("weekly reviews", () => {
       );
 
       expect(await getWeeklyReview(userId, WEEK, tx)).toBeNull();
+    });
+  });
+});
+
+describe("listReviewedWeekStarts", () => {
+  const written = {
+    whatWorked: "Kept to the plan",
+    whatDidNotWork: null,
+    focusNextWeek: null,
+  };
+
+  it("lists the user's reviewed weeks inside the range, oldest first", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      await upsertWeeklyReview(userId, "2026-10-18", written, tx);
+      await upsertWeeklyReview(userId, "2026-10-04", written, tx);
+      // Outside the range on both ends.
+      await upsertWeeklyReview(userId, "2026-08-23", written, tx);
+      await upsertWeeklyReview(userId, "2026-10-25", written, tx);
+      // Another user's week inside the range.
+      await upsertWeeklyReview(otherUserId, "2026-10-11", written, tx);
+
+      expect(
+        await listReviewedWeekStarts(userId, "2026-08-30", "2026-10-18", tx),
+      ).toEqual(["2026-10-04", "2026-10-18"]);
+    });
+  });
+
+  it("does not count a review whose fields were all cleared", async () => {
+    await fixture(async (tx, userId) => {
+      await upsertWeeklyReview(
+        userId,
+        "2026-10-11",
+        { whatWorked: null, whatDidNotWork: null, focusNextWeek: null },
+        tx,
+      );
+
+      expect(
+        await listReviewedWeekStarts(userId, "2026-10-11", "2026-10-11", tx),
+      ).toEqual([]);
     });
   });
 });

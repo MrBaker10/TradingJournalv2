@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 import { todayInTimeZone } from "../../lib/time.ts";
 import {
   isReviewWeekStart,
+  RECENT_REVIEW_WEEK_COUNT,
+  recentReviewWeeks,
+  resolveReviewWeek,
   reviewWeekPosition,
   reviewWeekRange,
   reviewWeekStartOf,
+  shiftReviewWeek,
 } from "../review-week.ts";
 
 // October 2026 calendar used throughout:
@@ -107,5 +111,60 @@ describe("reviewWeekPosition", () => {
     expect(newYork).toBe("2026-11-01");
     expect(reviewWeekPosition("2026-11-01", newYork)).toBe("current");
     expect(reviewWeekPosition("2026-10-25", newYork)).toBe("past");
+  });
+});
+
+describe("resolveReviewWeek", () => {
+  const today = "2026-10-20";
+
+  it("opens the current week without a parameter", () => {
+    expect(resolveReviewWeek(undefined, today)).toBe("2026-10-18");
+  });
+
+  it("opens a past week that starts on a Sunday", () => {
+    expect(resolveReviewWeek("2026-09-27", today)).toBe("2026-09-27");
+  });
+
+  it("falls back to the current week for a future week", () => {
+    expect(resolveReviewWeek("2026-10-25", today)).toBe("2026-10-18");
+  });
+
+  it("falls back to the current week for a day that is no Sunday", () => {
+    expect(resolveReviewWeek("2026-10-14", today)).toBe("2026-10-18");
+  });
+
+  it("falls back to the current week for anything that is no date", () => {
+    for (const value of [
+      "",
+      "2026-10",
+      "yesterday",
+      "2026-02-29",
+      "2026-13-01",
+    ]) {
+      expect(resolveReviewWeek(value, today)).toBe("2026-10-18");
+    }
+  });
+});
+
+describe("shiftReviewWeek", () => {
+  it("steps one week back and forth", () => {
+    expect(shiftReviewWeek("2026-10-18", -1)).toBe("2026-10-11");
+    expect(shiftReviewWeek("2026-10-18", 1)).toBe("2026-10-25");
+  });
+
+  it("crosses a DST switch and a year boundary on Sundays", () => {
+    expect(shiftReviewWeek("2026-10-25", 1)).toBe("2026-11-01");
+    expect(shiftReviewWeek("2027-01-03", -1)).toBe("2026-12-27");
+    expect(shiftReviewWeek("2026-10-18", -7)).toBe("2026-08-30");
+  });
+});
+
+describe("recentReviewWeeks", () => {
+  it("lists the current week and the ones before it, oldest first", () => {
+    const weeks = recentReviewWeeks("2026-10-18");
+
+    expect(weeks).toHaveLength(RECENT_REVIEW_WEEK_COUNT);
+    expect(weeks[0]).toBe("2026-08-30");
+    expect(weeks[weeks.length - 1]).toBe("2026-10-18");
   });
 });

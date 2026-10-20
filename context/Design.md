@@ -1439,8 +1439,8 @@ Tab): „This entry no longer exists."
 ### 4.26 Weekly Review
 
 Entstanden in weekly-review, aus vorhandenen Primitiven gebaut, mit demselben Vorbehalt
-wie 4.16: **tragfähig, aber nicht entworfen.** Diese Fassung deckt Ticket 01 ab;
-Wochenwechsel und Zusammenfassung ergänzen die folgenden Tickets.
+wie 4.16: **tragfähig, aber nicht entworfen.** Diese Fassung deckt die Tickets 01 und 02
+ab; die Zusammenfassung ergänzen die folgenden Tickets.
 
 **Einstieg.** Auf `/progress` eine Karte in voller Breite zwischen Streak/Score-Raster
 und „Past months", geformt wie die Schnellzugriff-Karten (4.10): `card-surface
@@ -1453,6 +1453,21 @@ Review", darunter in `--color-fg-muted` der Zeitraum („18 Oct 2026 – 23 Oct 
 die Woche von Sonntag bis Freitag läuft und nichts als die Gewohnheit zählt. Das
 Formular steht in einer Karte `card-surface edge-neon` (Prozess wie 4.6), höchstens
 `max-w-2xl` breit.
+
+**Wochenwechsel.** Zwischen Kopf und Formular ein Stepper wie der Monatsschritt der
+Kalender-Heatmap (4.8): zwei Chevrons in `--color-fg-subtle`, dazwischen „This week" bzw.
+„Week of Oct 4" in `text-xs`. Auf der aktuellen Woche steht der Vorwärts-Chevron bei 30 %
+Deckkraft und ist kein Link. Die Woche steht im Search-Param `?week=` (der Sonntag); die
+aktuelle Woche ist die Seite ohne Parameter. Ein ungültiger oder zukünftiger Wert öffnet die
+aktuelle Woche.
+
+**Leiste der letzten Wochen.** Unter dem Stepper die letzten acht Wochen (die aktuelle
+eingeschlossen) als Links mit 8px-Punkt und „Oct 18": `rounded-ctl`, Rand `white/12`,
+die gewählte Woche mit Rand in `cyan/60`. Eine Woche mit Review trägt einen gefüllten
+Punkt in `--color-cyan`, eine offene einen hohlen Punkt mit Rand `white/30` — **nie
+rot**: eine Lücke ist eine Einladung, kein Versagen. Ein Review, dessen drei Felder alle
+geleert wurden, zählt nicht als geschrieben. Entschieden in Ticket 02 statt eines Markers
+am Stepper allein, weil der nur eine Woche zeigt und Lücken so unsichtbar blieben.
 
 **Die Felder.** Drei Textfelder im Rezept aus 4.5/4.6, je vier Zeilen, alle optional:
 „What worked", „What did not work", „Focus next week". Kein Live-Feedback, keine

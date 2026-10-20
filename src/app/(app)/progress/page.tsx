@@ -7,7 +7,7 @@ import { WeeklyReviewLink } from "@/components/progress/weekly-review-link";
 import { getBadgesSeenAt, listUserBadges } from "@/db/queries/badges";
 import { getMonthScoreDays, getStreakEntryDays } from "@/db/queries/dashboard";
 import { listMonthlyScores } from "@/db/queries/monthly-scores";
-import { getWeeklyReview } from "@/db/queries/weekly-reviews";
+import { listReviewedWeekStarts } from "@/db/queries/weekly-reviews";
 import { BADGE_DEFINITIONS } from "@/domain/badges";
 import {
   calculateConsistencyScore,
@@ -24,6 +24,7 @@ export default async function ProgressPage() {
 
   const today = todayInTimeZone(user.timezone);
   const month = monthKeyOf(today);
+  const currentWeek = reviewWeekStartOf(today);
 
   // Streak, score and badges see real accounts only (project-structure.md),
   // so none of these take the account switcher into account. Selecting a
@@ -34,14 +35,14 @@ export default async function ProgressPage() {
     userBadges,
     badgesSeenAt,
     pastMonths,
-    weeklyReview,
+    reviewedThisWeek,
   ] = await Promise.all([
     getStreakEntryDays(user.id),
     getMonthScoreDays(user.id, month),
     listUserBadges(user.id),
     getBadgesSeenAt(user.id),
     listMonthlyScores(user.id),
-    getWeeklyReview(user.id, reviewWeekStartOf(today)),
+    listReviewedWeekStarts(user.id, currentWeek, currentWeek),
   ]);
 
   const streak = calculateStreak(streakDays, today, user.timezone);
@@ -93,7 +94,7 @@ export default async function ProgressPage() {
         />
       </div>
 
-      <WeeklyReviewLink reviewed={weeklyReview !== null} />
+      <WeeklyReviewLink reviewed={reviewedThisWeek.length > 0} />
 
       <ScoreHistory months={pastMonths} />
 

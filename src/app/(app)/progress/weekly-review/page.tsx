@@ -1,21 +1,47 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { ReviewWeekNav } from "@/components/progress/review-week-nav";
 import { WeeklyReviewForm } from "@/components/progress/weekly-review-form";
-import { getWeeklyReview } from "@/db/queries/weekly-reviews";
-import { reviewWeekRange, reviewWeekStartOf } from "@/domain/review-week";
+import {
+  getWeeklyReview,
+  listReviewedWeekStarts,
+} from "@/db/queries/weekly-reviews";
+import {
+  recentReviewWeeks,
+  resolveReviewWeek,
+  reviewWeekRange,
+  reviewWeekStartOf,
+} from "@/domain/review-week";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { firstValue } from "@/lib/search-params";
 import { formatDateWithYear, todayInTimeZone } from "@/lib/time";
 
-export default async function WeeklyReviewPage() {
-  const user = await getCurrentUser();
+export default async function WeeklyReviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [user, rawParams] = await Promise.all([getCurrentUser(), searchParams]);
 
   // The review belongs to the user, not to an account, so the account
   // selector plays no part here. Which week is current is the user's own
   // calendar (users.timezone); trades fall into it by their trade date.
+  // `?week=` is resolved here against that clock: an invalid or future week
+  // opens the current one.
   const today = todayInTimeZone(user.timezone);
-  const weekStart = reviewWeekStartOf(today);
+  const currentWeek = reviewWeekStartOf(today);
+  const weekStart = resolveReviewWeek(firstValue(rawParams.week), today);
   const range = reviewWeekRange(weekStart);
-  const review = await getWeeklyReview(user.id, weekStart);
+  const recentWeeks = recentReviewWeeks(currentWeek);
+
+  const [review, reviewedWeeks] = await Promise.all([
+    getWeeklyReview(user.id, weekStart),
+    listReviewedWeekStarts(
+      user.id,
+      recentWeeks[0],
+      recentWeeks[recentWeeks.length - 1],
+    ),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -33,6 +59,13 @@ export default async function WeeklyReviewPage() {
           Sunday to Friday. Counts towards nothing but the habit itself.
         </p>
       </div>
+
+      <ReviewWeekNav
+        weekStart={weekStart}
+        currentWeek={currentWeek}
+        recentWeeks={recentWeeks}
+        reviewedWeeks={reviewedWeeks}
+      />
 
       <div className="max-w-2xl">
         {/* Keyed by week so a different week starts from its own text. */}
