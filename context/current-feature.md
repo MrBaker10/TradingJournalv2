@@ -24,10 +24,8 @@ Branch `feature/weekly-review`.
   per-account reviews, templates or extra fields, monthly or quarterly reviews.
 - Acceptance: the checklists in tickets 01 to 04; gates from `ai-interaction.md`; DB
   tests executed; browser click paths from the tickets.
-- Open questions:
-  - `coding-standards.md` → Error handling says user-facing errors surface as a Sonner
-    toast; Design.md §4.6 and §4.26 put a save error under the button. The weekly review
-    follows the plan card (under the button). Which rule wins?
+- Open questions: none. Decided 2026-10-20: a failed weekly-review save is a Sonner
+  error toast (coding-standards.md); the plan card is unchanged.
 
 <!--
 For each new task, record:

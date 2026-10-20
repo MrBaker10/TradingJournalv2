@@ -535,6 +535,10 @@ plus Neon-Inset. Texte wie im Ist-Stand („Where your edge actually lives",
 - Einblenden 240 ms, Standzeit 4200 ms, Ausblenden 300 ms.
 - Nie blockierend, nie mittig, nie mit Button. Ein Toast ist eine Bestätigung,
   keine Entscheidung.
+- **Fehler-Toast** (`notifyError`, seit weekly-review): dieselbe Fläche, statt des
+  Häkchens ein `CircleAlert` in `--color-danger-fg` auf matter Kachel (`white/6`),
+  kein Schein. Nur für ein Speichern, das als Ganzes scheitert und kein Feld hat, an
+  dem die Meldung stehen könnte; Feldfehler bleiben am Feld.
 
 ---
 
@@ -1490,7 +1494,10 @@ Karte rechnet immer aus den Trades und folgt nie dem Kontoschalter.
 **Speichern.** Der Button aus 4.6/4.14 mit dem Text „Save review": ruhige Fläche im
 Ruhezustand, „Saving…" während des Speicherns, Erfolgsverlauf mit „Saved" als
 Bestätigung, dazu der Prozess-Toast „Weekly review saved" ohne Hinweis auf einen Score,
-weil der Weekly Review keinen speist. Fehler stehen unter dem Button, nie als Modal.
+weil der Weekly Review keinen speist. Ein fehlgeschlagenes Speichern meldet der
+Fehler-Toast aus 4.11 (`notifyError`) nach `coding-standards.md` → Error handling, nie ein
+Modal; der Text bleibt in den Feldern. Entschieden 2026-10-20 für den Weekly Review; die
+Plan-Karte (4.6) behält ihre Meldung unter dem Button.
 
 **Microcopy.** Speichern fehlgeschlagen: „Couldn't save. Your text is still here — try
 again." Woche hat noch nicht begonnen: „This week hasn't started yet. Pick the current week or

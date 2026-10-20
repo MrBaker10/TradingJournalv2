@@ -3,11 +3,13 @@
 import { Check } from "lucide-react";
 import { useState } from "react";
 import { saveWeeklyReview } from "@/actions/weekly-reviews";
-import { InlineMessage } from "@/components/ui/inline-message";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
-import { notifyProcess } from "@/components/ui/toast";
+import { notifyError, notifyProcess } from "@/components/ui/toast";
 import type { WeeklyReview } from "@/db/queries/weekly-reviews";
-import { MAX_REVIEW_FIELD_LENGTH } from "@/schemas/weekly-reviews";
+import {
+  MAX_REVIEW_FIELD_LENGTH,
+  WEEKLY_REVIEW_SAVE_FAILED,
+} from "@/schemas/weekly-reviews";
 
 interface WeeklyReviewFormProps {
   weekStart: string;
@@ -45,14 +47,15 @@ const FIELDS = [
 type FieldKey = (typeof FIELDS)[number]["key"];
 
 // Design.md §4.26: process, so the card carries the neon edge like the plan
-// card. Saving is explicit; an error stays at the button, never a modal.
+// card. Saving is explicit; a failed save is an error toast (notifyError), as
+// coding-standards.md asks (decided 2026-10-20), and the text stays in the
+// fields for the next try.
 export function WeeklyReviewForm({ weekStart, review }: WeeklyReviewFormProps) {
   const [values, setValues] = useState<Record<FieldKey, string>>({
     whatWorked: review?.whatWorked ?? "",
     whatDidNotWork: review?.whatDidNotWork ?? "",
     focusNextWeek: review?.focusNextWeek ?? "",
   });
-  const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -60,13 +63,20 @@ export function WeeklyReviewForm({ weekStart, review }: WeeklyReviewFormProps) {
     event.preventDefault();
     if (loading || success) return;
 
-    setFormError(null);
     setLoading(true);
-    const result = await saveWeeklyReview({ weekStart, ...values });
+    // The action reports its own failures; this catches the call itself
+    // failing (offline, server gone), which would otherwise leave the button
+    // on "Saving…" for good — the same guard as the ledger's runWithToast.
+    let result: Awaited<ReturnType<typeof saveWeeklyReview>>;
+    try {
+      result = await saveWeeklyReview({ weekStart, ...values });
+    } catch {
+      result = { success: false, error: WEEKLY_REVIEW_SAVE_FAILED };
+    }
     setLoading(false);
 
     if (!result.success) {
-      setFormError(result.error);
+      notifyError(result.error);
       return;
     }
     setSuccess(true);
@@ -141,7 +151,6 @@ export function WeeklyReviewForm({ weekStart, review }: WeeklyReviewFormProps) {
             Saved
           </span>
         </button>
-        <InlineMessage message={formError} />
       </div>
     </form>
   );

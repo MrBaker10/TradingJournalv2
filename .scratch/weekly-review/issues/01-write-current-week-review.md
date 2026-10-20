@@ -44,4 +44,5 @@ Left as is:
 - `revalidatePath` only for the review page: `/progress` is dynamic and showed the new
   card state in the browser.
 - Toast vs. message under the button: contradiction between coding-standards.md and
-  Design.md recorded under Open questions in `context/current-feature.md`.
+  Design.md recorded under Open questions in `context/current-feature.md`. Decided
+  2026-10-20 (Sascha): error toast, changed in the follow-up commit after ticket 04.
