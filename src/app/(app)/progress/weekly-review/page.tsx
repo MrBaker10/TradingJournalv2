@@ -1,9 +1,11 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { ReviewWeekNav } from "@/components/progress/review-week-nav";
+import { WeekSummaryCard } from "@/components/progress/week-summary-card";
 import { WeeklyReviewForm } from "@/components/progress/weekly-review-form";
 import {
   getWeeklyReview,
+  getWeekSummary,
   listReviewedWeekStarts,
 } from "@/db/queries/weekly-reviews";
 import {
@@ -34,13 +36,14 @@ export default async function WeeklyReviewPage({
   const range = reviewWeekRange(weekStart);
   const recentWeeks = recentReviewWeeks(currentWeek);
 
-  const [review, reviewedWeeks] = await Promise.all([
+  const [review, reviewedWeeks, summary] = await Promise.all([
     getWeeklyReview(user.id, weekStart),
     listReviewedWeekStarts(
       user.id,
       recentWeeks[0],
       recentWeeks[recentWeeks.length - 1],
     ),
+    getWeekSummary(user.id, weekStart),
   ]);
 
   return (
@@ -67,13 +70,15 @@ export default async function WeeklyReviewPage({
         reviewedWeeks={reviewedWeeks}
       />
 
-      <div className="max-w-2xl">
+      {/* items-start so the summary keeps its own height beside the form. */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         {/* Keyed by week so a different week starts from its own text. */}
         <WeeklyReviewForm
           key={weekStart}
           weekStart={weekStart}
           review={review}
         />
+        <WeekSummaryCard summary={summary} />
       </div>
     </div>
   );

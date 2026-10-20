@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { todayInTimeZone } from "../../lib/time.ts";
+import { toTradingDay } from "../streak.ts";
+
+/** The next calendar date, UTC-anchored so the machine's zone cannot shift it. */
+function shiftDay(date: string): string {
+  const next = new Date(`${date}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return next.toISOString().slice(0, 10);
+}
+
 import {
   isReviewWeekStart,
   RECENT_REVIEW_WEEK_COUNT,
@@ -9,6 +18,7 @@ import {
   reviewWeekRange,
   reviewWeekStartOf,
   shiftReviewWeek,
+  TRADING_DAYS_PER_REVIEW_WEEK,
 } from "../review-week.ts";
 
 // October 2026 calendar used throughout:
@@ -56,6 +66,18 @@ describe("isReviewWeekStart", () => {
     expect(isReviewWeekStart("2026-10-18")).toBe(true);
     expect(isReviewWeekStart("2026-10-19")).toBe(false);
     expect(isReviewWeekStart("2026-10-24")).toBe(false);
+  });
+});
+
+describe("TRADING_DAYS_PER_REVIEW_WEEK", () => {
+  it("counts the distinct trading days a review week can fold onto", () => {
+    const { from, to } = reviewWeekRange("2026-10-18");
+    const tradingDays = new Set<string>();
+    for (let date = from; date <= to; date = shiftDay(date)) {
+      const day = toTradingDay(date);
+      if (day !== null) tradingDays.add(day);
+    }
+    expect(tradingDays.size).toBe(TRADING_DAYS_PER_REVIEW_WEEK);
   });
 });
 

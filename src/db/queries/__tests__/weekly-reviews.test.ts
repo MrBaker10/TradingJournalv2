@@ -1,12 +1,22 @@
 import { eq, TransactionRollbackError } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "../../index.ts";
+import { accounts } from "../../schema/accounts.ts";
+import { instruments } from "../../schema/instruments.ts";
+import {
+  mistakeTags,
+  tradeAccounts,
+  tradeMistakes,
+  trades,
+} from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
 import { weeklyReviews } from "../../schema/weekly-reviews.ts";
 import {
   getWeeklyReview,
+  getWeekSummary,
   listReviewedWeekStarts,
   upsertWeeklyReview,
+  type WeekSummary,
 } from "../weekly-reviews.ts";
 
 // Drives the weekly-reviews query module against real Postgres, inside a
@@ -162,5 +172,231 @@ describe("listReviewedWeekStarts", () => {
         await listReviewedWeekStarts(userId, "2026-10-11", "2026-10-11", tx),
       ).toEqual([]);
     });
+  });
+});
+
+// --- Week summary -----------------------------------------------------------
+// Review week 2026-10-18 (Sun) to 2026-10-23 (Fri). Saturdays 10-17 and 10-24
+// sit on either side of it.
+
+const SUMMARY_WEEK = "2026-10-18";
+const SUMMARY_INSTRUMENT_SYMBOL = "TEST-WEEKLY-REVIEW";
+
+interface SummaryTrade {
+  tradeDate: string;
+  /** Account names the trade was copied onto; empty for a missed setup. */
+  on: string[];
+  taken?: boolean;
+  byTheBook?: boolean;
+  mistakes?: string[];
+}
+
+interface SummaryFixture {
+  /** Account name to `is_practice`. */
+  accounts: Record<string, boolean>;
+  trades: SummaryTrade[];
+}
+
+async function summaryFor(week: SummaryFixture): Promise<WeekSummary> {
+  // Assigned inside the transaction callback, which TypeScript cannot follow.
+  let result = null as WeekSummary | null;
+
+  await fixture(async (tx, userId) => {
+    const [instrument] = await tx
+      .insert(instruments)
+      .values({
+        symbol: SUMMARY_INSTRUMENT_SYMBOL,
+        name: "Throwaway test instrument",
+        pointValue: "50",
+        tickSize: "0.25",
+      })
+      .returning({ id: instruments.id });
+
+    const accountIds = new Map<string, number>();
+    let sortOrder = 0;
+    for (const [name, isPractice] of Object.entries(week.accounts)) {
+      const [account] = await tx
+        .insert(accounts)
+        .values({ userId, name, sortOrder: sortOrder++, isPractice })
+        .returning({ id: accounts.id });
+      accountIds.set(name, account.id);
+    }
+
+    const tagIds = new Map<string, number>();
+    for (const fixtureTrade of week.trades) {
+      const taken = fixtureTrade.taken ?? true;
+      const [trade] = await tx
+        .insert(trades)
+        .values({
+          userId,
+          tradeDate: fixtureTrade.tradeDate,
+          instrumentId: instrument.id,
+          taken,
+          contracts: taken ? "1" : null,
+          entryTime: "09:00",
+          exitTime: taken ? "09:30" : null,
+          direction: "long",
+          entryPrice: "100",
+          exitPrice: taken ? "110" : null,
+          byTheBook: fixtureTrade.byTheBook ?? false,
+        })
+        .returning({ id: trades.id });
+
+      for (const name of fixtureTrade.on) {
+        const accountId = accountIds.get(name);
+        if (accountId === undefined) {
+          throw new Error(`Fixture account "${name}" was never created`);
+        }
+        await tx.insert(tradeAccounts).values({ tradeId: trade.id, accountId });
+      }
+
+      for (const label of fixtureTrade.mistakes ?? []) {
+        let tagId = tagIds.get(label);
+        if (tagId === undefined) {
+          const [tag] = await tx
+            .insert(mistakeTags)
+            .values({ label: `TEST-WR ${label}` })
+            .returning({ id: mistakeTags.id });
+          tagId = tag.id;
+          tagIds.set(label, tagId);
+        }
+        await tx
+          .insert(tradeMistakes)
+          .values({ tradeId: trade.id, mistakeTagId: tagId });
+      }
+    }
+
+    result = await getWeekSummary(userId, SUMMARY_WEEK, tx);
+  });
+
+  if (result === null) throw new Error("Fixture never produced a result");
+  return result;
+}
+
+describe("getWeekSummary", () => {
+  it("is empty for a week without entries", async () => {
+    const summary = await summaryFor({ accounts: { Live: false }, trades: [] });
+
+    expect(summary).toEqual({
+      loggedDays: 0,
+      takenTrades: 0,
+      byTheBookTrades: 0,
+      missedSetups: 0,
+      topMistakes: [],
+    });
+  });
+
+  it("counts a Sunday entry for the week it opens and ignores both Saturdays", async () => {
+    const summary = await summaryFor({
+      accounts: { Live: false },
+      trades: [
+        { tradeDate: "2026-10-17", on: ["Live"] }, // Saturday before
+        { tradeDate: "2026-10-18", on: ["Live"] }, // Sunday → Monday
+        { tradeDate: "2026-10-24", on: ["Live"] }, // Saturday after
+      ],
+    });
+
+    expect(summary.loggedDays).toBe(1);
+    expect(summary.takenTrades).toBe(1);
+  });
+
+  it("folds a Sunday and a Monday entry onto one logged day", async () => {
+    const summary = await summaryFor({
+      accounts: { Live: false },
+      trades: [
+        { tradeDate: "2026-10-18", on: ["Live"] },
+        { tradeDate: "2026-10-19", on: ["Live"] },
+        { tradeDate: "2026-10-21", on: ["Live"] },
+        { tradeDate: "2026-10-21", on: ["Live"] },
+      ],
+    });
+
+    expect(summary.loggedDays).toBe(2);
+    expect(summary.takenTrades).toBe(4);
+  });
+
+  it("excludes trades on practice accounts only", async () => {
+    const summary = await summaryFor({
+      accounts: { Live: false, Sim: true },
+      trades: [
+        { tradeDate: "2026-10-19", on: ["Sim"], byTheBook: true },
+        { tradeDate: "2026-10-20", on: ["Sim", "Live"], byTheBook: true },
+      ],
+    });
+
+    expect(summary.loggedDays).toBe(1);
+    expect(summary.takenTrades).toBe(1);
+    expect(summary.byTheBookTrades).toBe(1);
+  });
+
+  it("counts a copy trade once", async () => {
+    const summary = await summaryFor({
+      accounts: { A: false, B: false, C: false },
+      trades: [
+        { tradeDate: "2026-10-20", on: ["A", "B", "C"], byTheBook: true },
+        { tradeDate: "2026-10-20", on: ["A", "B", "C"], byTheBook: false },
+      ],
+    });
+
+    expect(summary.takenTrades).toBe(2);
+    expect(summary.byTheBookTrades).toBe(1);
+  });
+
+  it("counts missed setups as logged and as missed, never as taken", async () => {
+    const summary = await summaryFor({
+      accounts: { Live: false },
+      trades: [
+        { tradeDate: "2026-10-20", on: [], taken: false },
+        { tradeDate: "2026-10-22", on: [], taken: false, byTheBook: true },
+        { tradeDate: "2026-10-22", on: ["Live"] },
+      ],
+    });
+
+    expect(summary.loggedDays).toBe(2);
+    expect(summary.missedSetups).toBe(2);
+    expect(summary.takenTrades).toBe(1);
+    expect(summary.byTheBookTrades).toBe(0);
+  });
+
+  it("lists the three most frequent mistakes, a copy trade once, practice never", async () => {
+    const summary = await summaryFor({
+      accounts: { A: false, B: false, Sim: true },
+      trades: [
+        // Chased: 3 entries, one of them copied onto two real accounts.
+        { tradeDate: "2026-10-19", on: ["A", "B"], mistakes: ["Chased"] },
+        {
+          tradeDate: "2026-10-20",
+          on: ["A"],
+          mistakes: ["Chased", "Early exit"],
+        },
+        { tradeDate: "2026-10-21", on: [], taken: false, mistakes: ["Chased"] },
+        // Early exit: 2. Moved stop: 2, ties sort by label.
+        {
+          tradeDate: "2026-10-22",
+          on: ["A"],
+          mistakes: ["Early exit", "Moved stop"],
+        },
+        { tradeDate: "2026-10-23", on: ["B"], mistakes: ["Moved stop"] },
+        // Oversized: 1, the fourth and so left out.
+        { tradeDate: "2026-10-23", on: ["A"], mistakes: ["Oversized"] },
+        // Practice only: never counted, however often.
+        { tradeDate: "2026-10-19", on: ["Sim"], mistakes: ["Revenge"] },
+        { tradeDate: "2026-10-20", on: ["Sim"], mistakes: ["Revenge"] },
+        { tradeDate: "2026-10-21", on: ["Sim"], mistakes: ["Revenge"] },
+        { tradeDate: "2026-10-22", on: ["Sim"], mistakes: ["Revenge"] },
+        // Outside the week.
+        {
+          tradeDate: "2026-10-16",
+          on: ["A"],
+          mistakes: ["Oversized", "Oversized2"],
+        },
+      ],
+    });
+
+    expect(summary.topMistakes).toEqual([
+      { label: "TEST-WR Chased", count: 3 },
+      { label: "TEST-WR Early exit", count: 2 },
+      { label: "TEST-WR Moved stop", count: 2 },
+    ]);
   });
 });

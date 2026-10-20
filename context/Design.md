@@ -1439,8 +1439,8 @@ Tab): „This entry no longer exists."
 ### 4.26 Weekly Review
 
 Entstanden in weekly-review, aus vorhandenen Primitiven gebaut, mit demselben Vorbehalt
-wie 4.16: **tragfähig, aber nicht entworfen.** Diese Fassung deckt die Tickets 01 und 02
-ab; die Zusammenfassung ergänzen die folgenden Tickets.
+wie 4.16: **tragfähig, aber nicht entworfen.** Diese Fassung deckt die Tickets 01 bis 03
+ab; Net P&L ergänzt Ticket 04.
 
 **Einstieg.** Auf `/progress` eine Karte in voller Breite zwischen Streak/Score-Raster
 und „Past months", geformt wie die Schnellzugriff-Karten (4.10): `card-surface
@@ -1450,9 +1450,10 @@ Navigationspunkt; auf `/progress/weekly-review` bleibt „Progress" aktiv.
 
 **Die Seite.** Rücklink „Progress" wie auf der Trade-Detailseite, Titel „Weekly
 Review", darunter in `--color-fg-muted` der Zeitraum („18 Oct 2026 – 23 Oct 2026") und dass
-die Woche von Sonntag bis Freitag läuft und nichts als die Gewohnheit zählt. Das
-Formular steht in einer Karte `card-surface edge-neon` (Prozess wie 4.6), höchstens
-`max-w-2xl` breit.
+die Woche von Sonntag bis Freitag läuft und nichts als die Gewohnheit zählt. Darunter
+ab `lg` zwei Spalten im Verhältnis 3 : 2, links das Formular in einer Karte
+`card-surface edge-neon` (Prozess wie 4.6), rechts die Zusammenfassung; darunter
+untereinander, Formular zuerst.
 
 **Wochenwechsel.** Zwischen Kopf und Formular ein Stepper wie der Monatsschritt der
 Kalender-Heatmap (4.8): zwei Chevrons in `--color-fg-subtle`, dazwischen „This week" bzw.
@@ -1472,6 +1473,16 @@ am Stepper allein, weil der nur eine Woche zeigt und Lücken so unsichtbar blieb
 **Die Felder.** Drei Textfelder im Rezept aus 4.5/4.6, je vier Zeilen, alle optional:
 „What worked", „What did not work", „Focus next week". Kein Live-Feedback, keine
 Pflichtfelder — eine Woche darf mit einer Zeile beginnen.
+
+**Zusammenfassung.** Karte `card-surface edge-neon`, Kopf `cap cap-neon` „The week in
+numbers". Drei Zellen der Metrik-Tafel (4.7) im 2-Spalten-Raster, alle Prozesswerte
+in `text-glow`: „Logged days" mit Kontext „Of 5 trading days", „By the book" als
+Prozent mit Kontext „3 of 5 taken" (ohne genommene Trades „—"), „Missed setups".
+Darunter `cap` „Top mistakes": bis zu drei Zeilen, Bezeichnung links in `--color-fg`,
+Anzahl rechts in Mono `--color-fg-muted` („3×"), häufigste zuerst; ohne Fehler „No
+mistakes tagged." in `--color-fg-subtle`. Leere Woche statt der Zellen, zentriert in
+`--color-fg-subtle`: „No entries this week. A week off is worth a review too." Die
+Karte rechnet immer aus den Trades und folgt nie dem Kontoschalter.
 
 **Speichern.** Der Button aus 4.6/4.14 mit dem Text „Save review": ruhige Fläche im
 Ruhezustand, „Saving…" während des Speicherns, Erfolgsverlauf mit „Saved" als

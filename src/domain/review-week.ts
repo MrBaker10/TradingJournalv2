@@ -30,6 +30,9 @@ export function isReviewWeekStart(date: IsoDate): boolean {
   return getDay(utcDay(date)) === 0;
 }
 
+/** Monday to Friday — Sunday folds onto Monday, so a week has five. */
+export const TRADING_DAYS_PER_REVIEW_WEEK = 5;
+
 /** Sunday to Friday of the week opened by `weekStart`, inclusive. */
 export function reviewWeekRange(weekStart: IsoDate): {
   from: IsoDate;
