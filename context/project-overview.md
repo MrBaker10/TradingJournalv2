@@ -514,10 +514,10 @@ and branch per item. Terms in `GLOSSARY.md`.
 
 1. **FX fetch coverage (bugfix).** Store the date ranges actually fetched per currency;
    a date is settled only inside a fetched range. Fixes the `datesNeedingFetch` gap
-   under Open Questions.
+   under Open Questions. Fixed and merged 2026-10-18.
 2. **Mobile app shell.** Below `lg`: a top bar with page title, the always-visible
    account selector (practice edge stripe included) and a menu button that opens the
-   existing sidebar as a drawer.
+   existing sidebar as a drawer. Built and merged 2026-10-19.
 3. **Ledger.** Own page `/ledger`, an eighth nav item. A ledger entry belongs to the user
    and optionally to one real account, never a practice account. Two kinds: expense
    (evaluation, reset, activation, subscription, data, other) and payout, entered by
