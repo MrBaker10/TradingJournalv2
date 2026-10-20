@@ -1,6 +1,6 @@
 # Spec: Weekly review
 
-Status: ready-for-agent
+Status: done
 
 Roadmap: `context/project-overview.md` → Phase 3, item 5. Terms: `GLOSSARY.md`.
 
