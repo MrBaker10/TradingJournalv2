@@ -1436,6 +1436,39 @@ Kategorie fehlt: „Pick a category for this expense." Speichern fehlgeschlagen:
 fehlgeschlagen: „Couldn't delete the entry — try again." Eintrag inzwischen weg (anderer
 Tab): „This entry no longer exists."
 
+### 4.26 Weekly Review
+
+Entstanden in weekly-review, aus vorhandenen Primitiven gebaut, mit demselben Vorbehalt
+wie 4.16: **tragfähig, aber nicht entworfen.** Diese Fassung deckt Ticket 01 ab;
+Wochenwechsel und Zusammenfassung ergänzen die folgenden Tickets.
+
+**Einstieg.** Auf `/progress` eine Karte in voller Breite zwischen Streak/Score-Raster
+und „Past months", geformt wie die Schnellzugriff-Karten (4.10): `card-surface
+edge-neon`, Kopf `cap cap-neon` „Weekly review", ein Satz in `--color-fg-muted`, rechts
+ein Chevron in `--color-fg-subtle`, Hover hebt die Karte um 2px. Kein neuer
+Navigationspunkt; auf `/progress/weekly-review` bleibt „Progress" aktiv.
+
+**Die Seite.** Rücklink „Progress" wie auf der Trade-Detailseite, Titel „Weekly
+Review", darunter in `--color-fg-muted` der Zeitraum („18 Oct 2026 – 23 Oct 2026") und dass
+die Woche von Sonntag bis Freitag läuft und nichts als die Gewohnheit zählt. Das
+Formular steht in einer Karte `card-surface edge-neon` (Prozess wie 4.6), höchstens
+`max-w-2xl` breit.
+
+**Die Felder.** Drei Textfelder im Rezept aus 4.5/4.6, je vier Zeilen, alle optional:
+„What worked", „What did not work", „Focus next week". Kein Live-Feedback, keine
+Pflichtfelder — eine Woche darf mit einer Zeile beginnen.
+
+**Speichern.** Der Button aus 4.6/4.14 mit dem Text „Save review": ruhige Fläche im
+Ruhezustand, „Saving…" während des Speicherns, Erfolgsverlauf mit „Saved" als
+Bestätigung, dazu der Prozess-Toast „Weekly review saved" ohne Hinweis auf einen Score,
+weil der Weekly Review keinen speist. Fehler stehen unter dem Button, nie als Modal.
+
+**Microcopy.** Speichern fehlgeschlagen: „Couldn't save. Your text is still here — try
+again." Woche hat noch nicht begonnen: „This week hasn't started yet. Pick the current week or
+an earlier one." Wochenstart kein Sonntag (nur bei manipulierter Anfrage): „This isn't a
+review week. Reload the page and try again." Einstieg ohne Review: „Step back once a week: what worked, what did
+not, what to focus on."; mit Review: „Reviewed this week. Open it to add a thought."
+
 ---
 
 ## 5. Motion

@@ -3,15 +3,18 @@ import { ScoreBreakdown } from "@/components/progress/score-breakdown";
 import { ScoreHistory } from "@/components/progress/score-history";
 import { StreakCard } from "@/components/progress/streak-card";
 import { UnlockedCard } from "@/components/progress/unlocked-card";
+import { WeeklyReviewLink } from "@/components/progress/weekly-review-link";
 import { getBadgesSeenAt, listUserBadges } from "@/db/queries/badges";
 import { getMonthScoreDays, getStreakEntryDays } from "@/db/queries/dashboard";
 import { listMonthlyScores } from "@/db/queries/monthly-scores";
+import { getWeeklyReview } from "@/db/queries/weekly-reviews";
 import { BADGE_DEFINITIONS } from "@/domain/badges";
 import {
   calculateConsistencyScore,
   SCORE_WEIGHTS,
   tradingDaysElapsed,
 } from "@/domain/consistency";
+import { reviewWeekStartOf } from "@/domain/review-week";
 import { calculateStreak } from "@/domain/streak";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { monthKeyOf, todayInTimeZone } from "@/lib/time";
@@ -25,14 +28,21 @@ export default async function ProgressPage() {
   // Streak, score and badges see real accounts only (project-structure.md),
   // so none of these take the account switcher into account. Selecting a
   // practice account changes money figures, never process figures.
-  const [streakDays, scoreDays, userBadges, badgesSeenAt, pastMonths] =
-    await Promise.all([
-      getStreakEntryDays(user.id),
-      getMonthScoreDays(user.id, month),
-      listUserBadges(user.id),
-      getBadgesSeenAt(user.id),
-      listMonthlyScores(user.id),
-    ]);
+  const [
+    streakDays,
+    scoreDays,
+    userBadges,
+    badgesSeenAt,
+    pastMonths,
+    weeklyReview,
+  ] = await Promise.all([
+    getStreakEntryDays(user.id),
+    getMonthScoreDays(user.id, month),
+    listUserBadges(user.id),
+    getBadgesSeenAt(user.id),
+    listMonthlyScores(user.id),
+    getWeeklyReview(user.id, reviewWeekStartOf(today)),
+  ]);
 
   const streak = calculateStreak(streakDays, today, user.timezone);
   const score = calculateConsistencyScore(scoreDays, month, today);
@@ -82,6 +92,8 @@ export default async function ProgressPage() {
           hasEntriesThisMonth={scoreDays.length > 0}
         />
       </div>
+
+      <WeeklyReviewLink reviewed={weeklyReview !== null} />
 
       <ScoreHistory months={pastMonths} />
 

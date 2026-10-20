@@ -16,6 +16,7 @@ import {
   trades,
 } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
+import { weeklyReviews } from "../../schema/weekly-reviews.ts";
 
 // Account deletion is one DELETE on `users` (Better Auth's deleteUser); the
 // ON DELETE CASCADE from migration 0011 has to take everything else with it.
@@ -40,6 +41,7 @@ interface Remaining {
   dailyNotes: number;
   monthlyScores: number;
   ledgerEntries: number;
+  weeklyReviews: number;
   accountRules: number;
   authAccounts: number;
   authSessions: number;
@@ -121,6 +123,9 @@ async function deleteFixtureUser(): Promise<Remaining> {
       await tx
         .insert(dailyNotes)
         .values({ userId: user.id, noteDate: "2026-09-03" });
+      await tx
+        .insert(weeklyReviews)
+        .values({ userId: user.id, weekStart: "2026-08-30" });
       await tx.insert(monthlyScores).values({
         userId: user.id,
         month: "2026-08",
@@ -218,6 +223,12 @@ async function deleteFixtureUser(): Promise<Remaining> {
             .from(ledgerEntries)
             .where(eq(ledgerEntries.userId, user.id)),
         ),
+        weeklyReviews: await countWhere(
+          tx
+            .select()
+            .from(weeklyReviews)
+            .where(eq(weeklyReviews.userId, user.id)),
+        ),
         accountRules: await countWhere(
           tx
             .select()
@@ -259,6 +270,7 @@ describe("deleting a user", () => {
       dailyNotes: 0,
       monthlyScores: 0,
       ledgerEntries: 0,
+      weeklyReviews: 0,
       accountRules: 0,
       authAccounts: 0,
       authSessions: 0,
