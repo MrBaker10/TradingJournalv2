@@ -2,9 +2,15 @@ import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { reviewWeekRange } from "../../domain/review-week.ts";
 import type { IsoDate } from "../../domain/streak.ts";
 import { db } from "../index.ts";
+import { instruments } from "../schema/instruments.ts";
 import { mistakeTags, tradeMistakes, trades } from "../schema/trades.ts";
 import { weeklyReviews } from "../schema/weekly-reviews.ts";
-import { scopeConditions } from "./scope.ts";
+import {
+  moneyContribution,
+  type QueryScope,
+  scopeConditions,
+  toNumber,
+} from "./scope.ts";
 
 export interface WeeklyReview {
   weekStart: IsoDate;
@@ -107,7 +113,19 @@ export interface WeekSummary {
   missedSetups: number;
   /** At most three, most frequent first. */
   topMistakes: WeekMistake[];
+  /**
+   * Integer cents in the scope's display currency, net of commission, each
+   * trade counted once per real account it was copied onto — the dashboard's
+   * Net P&L for this week. Shown, never celebrated.
+   */
+  netPnlCents: number;
 }
+
+/**
+ * Whose week, and the "All accounts" display currency (USD when left out).
+ * No selected account: the summary never follows the switcher.
+ */
+export type WeekScope = Pick<QueryScope, "userId" | "currency">;
 
 const TOP_MISTAKE_COUNT = 3;
 
@@ -119,12 +137,17 @@ const tradingDay = sql`case when extract(isodow from ${trades.tradeDate}) = 7
   then ${trades.tradeDate} + 1 else ${trades.tradeDate} end`;
 
 /**
- * **Count aggregate** of one review week over all real accounts, the read-only
- * summary beside the review. It follows "All accounts", never the switcher:
- * the review belongs to the user, not to an account. A trade counts once
- * however many accounts it was copied onto, and practice accounts drop out
- * through the scope. Always computed from the trades, so editing a trade
- * changes a past week's summary too.
+ * One review week over all real accounts, the read-only summary beside the
+ * review. It follows "All accounts", never the switcher: the review belongs
+ * to the user, not to an account. Practice accounts drop out through the
+ * scope. Always computed from the trades, so editing a trade changes a past
+ * week's summary too. Two kinds of aggregate in one result:
+ *
+ * - **Count aggregate**: logged days, taken, by the book, missed setups and
+ *   mistakes. A trade counts once however many accounts it was copied onto.
+ * - **Money aggregate**: `netPnlCents`, multiplied by the real accounts of
+ *   each trade through `moneyContribution`, net of commission, in the scope's
+ *   display currency.
  *
  * Logged days count every entry, backfills included, like the "days logged"
  * of the consistency score; only the streak applies the 48-hour window.
@@ -133,14 +156,14 @@ const tradingDay = sql`case when extract(isodow from ${trades.tradeDate}) = 7
  * a valid setup is a mistake a trader tags, and a weekly review should see it.
  */
 export async function getWeekSummary(
-  userId: number,
+  weekScope: WeekScope,
   weekStart: IsoDate,
   executor: Pick<typeof db, "select"> = db,
 ): Promise<WeekSummary> {
-  const scope = { userId, selectedAccountId: null };
+  const scope: QueryScope = { ...weekScope, selectedAccountId: null };
   const inWeek = scopeConditions(scope, reviewWeekRange(weekStart));
 
-  const [[counts], mistakes] = await Promise.all([
+  const [[counts], mistakes, [money]] = await Promise.all([
     executor
       .select({
         loggedDays: sql<number>`count(distinct ${tradingDay})::int`,
@@ -162,7 +185,21 @@ export async function getWeekSummary(
       .groupBy(mistakeTags.id, mistakeTags.label)
       .orderBy(desc(sql`count(distinct ${trades.id})`), asc(mistakeTags.label))
       .limit(TOP_MISTAKE_COUNT),
+    // The money multiplier lives in `moneyContribution` and nowhere else, so
+    // this sum and the dashboard's Net P&L cannot drift apart. A missed setup
+    // has no P&L and drops out of the sum on its own.
+    executor
+      .select({
+        netPnlCents: sql<string>`coalesce(sum(${moneyContribution(scope)}), 0)::bigint`,
+      })
+      .from(trades)
+      .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
+      .where(and(...inWeek)),
   ]);
 
-  return { ...counts, topMistakes: mistakes };
+  return {
+    ...counts,
+    topMistakes: mistakes,
+    netPnlCents: toNumber(money.netPnlCents),
+  };
 }

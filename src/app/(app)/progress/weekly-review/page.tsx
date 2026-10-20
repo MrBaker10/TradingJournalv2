@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ReviewWeekNav } from "@/components/progress/review-week-nav";
 import { WeekSummaryCard } from "@/components/progress/week-summary-card";
 import { WeeklyReviewForm } from "@/components/progress/weekly-review-form";
+import { withDisplayCurrency } from "@/db/queries/scope";
 import {
   getWeeklyReview,
   getWeekSummary,
@@ -36,6 +37,13 @@ export default async function WeeklyReviewPage({
   const range = reviewWeekRange(weekStart);
   const recentWeeks = recentReviewWeeks(currentWeek);
 
+  // Net P&L is shown in the "All accounts" display currency: the real
+  // accounts' own if they share one, else USD (display-currency).
+  const { currency } = await withDisplayCurrency({
+    userId: user.id,
+    selectedAccountId: null,
+  });
+
   const [review, reviewedWeeks, summary] = await Promise.all([
     getWeeklyReview(user.id, weekStart),
     listReviewedWeekStarts(
@@ -43,7 +51,7 @@ export default async function WeeklyReviewPage({
       recentWeeks[0],
       recentWeeks[recentWeeks.length - 1],
     ),
-    getWeekSummary(user.id, weekStart),
+    getWeekSummary({ userId: user.id, currency }, weekStart),
   ]);
 
   return (
@@ -78,7 +86,7 @@ export default async function WeeklyReviewPage({
           weekStart={weekStart}
           review={review}
         />
-        <WeekSummaryCard summary={summary} />
+        <WeekSummaryCard summary={summary} currency={currency} />
       </div>
     </div>
   );

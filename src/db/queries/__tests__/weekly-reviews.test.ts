@@ -1,7 +1,10 @@
 import { eq, TransactionRollbackError } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import type { AccountCurrency } from "../../../domain/fx.ts";
+import { reviewWeekRange } from "../../../domain/review-week.ts";
 import { db } from "../../index.ts";
 import { accounts } from "../../schema/accounts.ts";
+import { fxRates } from "../../schema/fx-rates.ts";
 import { instruments } from "../../schema/instruments.ts";
 import {
   mistakeTags,
@@ -11,6 +14,7 @@ import {
 } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
 import { weeklyReviews } from "../../schema/weekly-reviews.ts";
+import { getMoneyMetrics } from "../dashboard.ts";
 import {
   getWeeklyReview,
   getWeekSummary,
@@ -189,17 +193,34 @@ interface SummaryTrade {
   taken?: boolean;
   byTheBook?: boolean;
   mistakes?: string[];
+  /** Entry is 100; without one the trade wins 10 points, $500 per account. */
+  exitPrice?: string;
+  /** Commission per account name, in USD dollars, e.g. `{ A: "3.00" }`. */
+  commission?: Record<string, string>;
 }
 
 interface SummaryFixture {
   /** Account name to `is_practice`. */
   accounts: Record<string, boolean>;
   trades: SummaryTrade[];
+  /** The currency of every fixture account; USD when left out. */
+  currency?: AccountCurrency;
 }
 
 async function summaryFor(week: SummaryFixture): Promise<WeekSummary> {
+  return readWeek(week, (userId, tx) =>
+    getWeekSummary({ userId, currency: week.currency }, SUMMARY_WEEK, tx),
+  );
+}
+
+// Builds the week inside a rolled-back transaction and runs one read against
+// it, the shape of `readFixture` in dashboard.test.ts.
+async function readWeek<T>(
+  week: SummaryFixture,
+  read: (userId: number, tx: Tx) => Promise<T>,
+): Promise<T> {
   // Assigned inside the transaction callback, which TypeScript cannot follow.
-  let result = null as WeekSummary | null;
+  let result = null as T | null;
 
   await fixture(async (tx, userId) => {
     const [instrument] = await tx
@@ -217,7 +238,13 @@ async function summaryFor(week: SummaryFixture): Promise<WeekSummary> {
     for (const [name, isPractice] of Object.entries(week.accounts)) {
       const [account] = await tx
         .insert(accounts)
-        .values({ userId, name, sortOrder: sortOrder++, isPractice })
+        .values({
+          userId,
+          name,
+          sortOrder: sortOrder++,
+          isPractice,
+          currency: week.currency ?? "USD",
+        })
         .returning({ id: accounts.id });
       accountIds.set(name, account.id);
     }
@@ -237,7 +264,7 @@ async function summaryFor(week: SummaryFixture): Promise<WeekSummary> {
           exitTime: taken ? "09:30" : null,
           direction: "long",
           entryPrice: "100",
-          exitPrice: taken ? "110" : null,
+          exitPrice: taken ? (fixtureTrade.exitPrice ?? "110") : null,
           byTheBook: fixtureTrade.byTheBook ?? false,
         })
         .returning({ id: trades.id });
@@ -247,7 +274,13 @@ async function summaryFor(week: SummaryFixture): Promise<WeekSummary> {
         if (accountId === undefined) {
           throw new Error(`Fixture account "${name}" was never created`);
         }
-        await tx.insert(tradeAccounts).values({ tradeId: trade.id, accountId });
+        const commission = fixtureTrade.commission?.[name] ?? null;
+        await tx.insert(tradeAccounts).values({
+          tradeId: trade.id,
+          accountId,
+          commission,
+          commissionSource: commission === null ? null : "file",
+        });
       }
 
       for (const label of fixtureTrade.mistakes ?? []) {
@@ -266,7 +299,7 @@ async function summaryFor(week: SummaryFixture): Promise<WeekSummary> {
       }
     }
 
-    result = await getWeekSummary(userId, SUMMARY_WEEK, tx);
+    result = await read(userId, tx);
   });
 
   if (result === null) throw new Error("Fixture never produced a result");
@@ -283,6 +316,7 @@ describe("getWeekSummary", () => {
       byTheBookTrades: 0,
       missedSetups: 0,
       topMistakes: [],
+      netPnlCents: 0,
     });
   });
 
@@ -399,4 +433,84 @@ describe("getWeekSummary", () => {
       { label: "TEST-WR Moved stop", count: 2 },
     ]);
   });
+
+  it("sums Net P&L once per real account, never practice or missed setups", async () => {
+    const summary = await summaryFor({
+      accounts: { A: false, B: false, Sim: true },
+      trades: [
+        // +$500 on each of two real accounts; the practice copy drops out.
+        { tradeDate: "2026-10-20", on: ["A", "B", "Sim"] },
+        // Practice only: no real account, no Net P&L.
+        { tradeDate: "2026-10-21", on: ["Sim"], exitPrice: "130" },
+        // A missed setup carries no P&L at all.
+        { tradeDate: "2026-10-22", on: [], taken: false },
+      ],
+    });
+
+    expect(summary.netPnlCents).toBe(100_000);
+  });
+
+  for (const currency of ["USD", "EUR"] as const) {
+    it(`matches the dashboard's Net P&L for the same week in ${currency}`, async () => {
+      const week: SummaryFixture = {
+        accounts: { A: false, B: false, Sim: true },
+        currency,
+        trades: [
+          {
+            tradeDate: "2026-10-18",
+            on: ["A", "B"],
+            commission: { A: "4.10", B: "4.10" },
+          },
+          { tradeDate: "2026-10-20", on: ["A", "Sim"], exitPrice: "93.25" },
+          {
+            tradeDate: "2026-10-22",
+            on: ["B"],
+            exitPrice: "101.5",
+            commission: { B: "2.05" },
+          },
+          { tradeDate: "2026-10-23", on: [], taken: false },
+          // Outside the week on both sides.
+          { tradeDate: "2026-10-16", on: ["A"] },
+          { tradeDate: "2026-10-24", on: ["A"] },
+        ],
+      };
+
+      const { summary, dashboard } = await readWeek(
+        week,
+        async (userId, tx) => {
+          // Rates for the week's trade dates, in case the local table lacks
+          // them; an existing rate stays, both reads use the same one.
+          await tx
+            .insert(fxRates)
+            .values(
+              [
+                "2026-10-16",
+                "2026-10-18",
+                "2026-10-20",
+                "2026-10-22",
+                "2026-10-23",
+                "2026-10-24",
+              ].map((rateDate) => ({
+                currency: "EUR",
+                rateDate,
+                rateVsUsd: "1.1600000000",
+              })),
+            )
+            .onConflictDoNothing();
+          const scope = { userId, selectedAccountId: null, currency };
+          return {
+            summary: await getWeekSummary(scope, SUMMARY_WEEK, tx),
+            dashboard: await getMoneyMetrics(
+              scope,
+              reviewWeekRange(SUMMARY_WEEK),
+              tx,
+            ),
+          };
+        },
+      );
+
+      expect(summary.netPnlCents).not.toBe(0);
+      expect(summary.netPnlCents).toBe(dashboard.netPnlCents);
+    });
+  }
 });

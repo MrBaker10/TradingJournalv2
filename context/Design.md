@@ -1439,8 +1439,8 @@ Tab): „This entry no longer exists."
 ### 4.26 Weekly Review
 
 Entstanden in weekly-review, aus vorhandenen Primitiven gebaut, mit demselben Vorbehalt
-wie 4.16: **tragfähig, aber nicht entworfen.** Diese Fassung deckt die Tickets 01 bis 03
-ab; Net P&L ergänzt Ticket 04.
+wie 4.16: **tragfähig, aber nicht entworfen.** Diese Fassung deckt die Tickets 01 bis 04
+ab.
 
 **Einstieg.** Auf `/progress` eine Karte in voller Breite zwischen Streak/Score-Raster
 und „Past months", geformt wie die Schnellzugriff-Karten (4.10): `card-surface
@@ -1475,9 +1475,12 @@ am Stepper allein, weil der nur eine Woche zeigt und Lücken so unsichtbar blieb
 Pflichtfelder — eine Woche darf mit einer Zeile beginnen.
 
 **Zusammenfassung.** Karte `card-surface edge-neon`, Kopf `cap cap-neon` „The week in
-numbers". Drei Zellen der Metrik-Tafel (4.7) im 2-Spalten-Raster, alle Prozesswerte
-in `text-glow`: „Logged days" mit Kontext „Of 5 trading days", „By the book" als
-Prozent mit Kontext „3 of 5 taken" (ohne genommene Trades „—"), „Missed setups".
+numbers". Vier Zellen der Metrik-Tafel (4.7) im 2-Spalten-Raster. Prozesswerte in
+`text-glow`: „Logged days" mit Kontext „Of 5 trading days", „By the book" als Prozent
+mit Kontext „3 of 5 taken" (ohne genommene Trades „—"), „Missed setups". Als letzte
+Zelle „Net P&L" mit Kontext „All real accounts": Geldwert in `--color-success-fg` /
+`--color-danger-fg` (bei 0 `--color-fg`), **kein Glow**, in der Anzeigewährung von
+„All accounts" — gezeigt, nicht gefeiert, und nie die erste Zahl der Karte.
 Darunter `cap` „Top mistakes": bis zu drei Zeilen, Bezeichnung links in `--color-fg`,
 Anzahl rechts in Mono `--color-fg-muted` („3×"), häufigste zuerst; ohne Fehler „No
 mistakes tagged." in `--color-fg-subtle`. Leere Woche statt der Zellen, zentriert in

@@ -1,16 +1,24 @@
 import { MetricCell } from "@/components/dashboard/metric-cell";
 import type { WeekSummary } from "@/db/queries/weekly-reviews";
 import { TRADING_DAYS_PER_REVIEW_WEEK } from "@/domain/review-week";
+import { type DisplayCurrency, formatCents } from "@/lib/money";
 
 function byTheBookShare(summary: WeekSummary): string {
   if (summary.takenTrades === 0) return "—";
   return `${Math.round((summary.byTheBookTrades / summary.takenTrades) * 100)}%`;
 }
 
-// Design.md §4.26: the week's process numbers beside the review, read-only.
-// Every value is process, so the cells glow like the metric panel's (§4.7);
-// nothing here ranks or rewards money.
-export function WeekSummaryCard({ summary }: { summary: WeekSummary }) {
+// Design.md §4.26: the week's numbers beside the review, read-only. The
+// process values glow like the metric panel's (§4.7); Net P&L is the one
+// money cell and gets the semantic colour and nothing else — shown, not the
+// point. The figure arrives finished; nothing here does money arithmetic.
+export function WeekSummaryCard({
+  summary,
+  currency,
+}: {
+  summary: WeekSummary;
+  currency: DisplayCurrency;
+}) {
   return (
     <section className="card-surface edge-neon flex flex-col gap-4 p-5">
       <h2 className="cap cap-neon">The week in numbers</h2>
@@ -38,6 +46,16 @@ export function WeekSummaryCard({ summary }: { summary: WeekSummary }) {
               label="Missed setups"
               value={String(summary.missedSetups)}
               tone="process"
+            />
+            <MetricCell
+              label="Net P&L"
+              value={formatCents(summary.netPnlCents, {
+                signed: true,
+                currency,
+              })}
+              context="All real accounts"
+              tone="money"
+              sign={summary.netPnlCents}
             />
           </div>
 
