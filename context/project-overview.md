@@ -539,7 +539,8 @@ and branch per item. Terms in `GLOSSARY.md`.
    text fields (what worked, what did not, focus next week) beside a read-only summary
    over all real accounts: logged days, by-the-book share, top three mistakes, missed
    setups and Net P&L as a neutral figure. Belongs to the user, not an account. No effect
-   on the consistency score; a badge is decided in its own spec.
+   on the consistency score; a badge is decided in its own spec. Built and merged
+   2026-10-20.
 
 ### **Future**
 
