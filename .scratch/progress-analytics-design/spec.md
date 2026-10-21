@@ -1,6 +1,6 @@
 # Spec: Design round Progress and Analytics
 
-Status: ready-for-agent
+Status: done
 
 Roadmap: `context/project-overview.md` → Future, "Component-level design for Analytics"
 and `context/Design.md` §10 (Progress and Analytics "tragfähig, aber nicht entworfen").
