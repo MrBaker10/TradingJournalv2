@@ -891,6 +891,26 @@ Win, Net P&L, Avg R. Darunter ein 3px-Balken über die volle Zeilenbreite. Ein B
 ohne Wert steht als „Not set" kursiv in `--color-fg-subtle` und sortiert immer ans
 Ende — es ist die Abwesenheit eines Wertes, kein Wert, der die anderen geschlagen hat.
 
+**Nur Dimensionen mit Daten werden Karten.** Eine Dimension ist *nicht erfasst*, wenn sie
+keine Zeilen hat oder nur den Bucket „Not set". Hat sie auch nur einen gesetzten Bucket,
+behält sie ihre Karte. Die Entscheidung trifft das reine Analytics-Modul
+(`splitRecordedDimensions`), nicht die Seite. Die erfassten Karten stehen in **einem**
+zweispaltigen Masonry (CSS-Spalten, `break-inside-avoid`, ab `lg`; darunter eine Spalte)
+in der bisherigen Reihenfolge der Dimensionen — kein Raster mit `items-start`, das
+Löcher lässt. Die Reihenfolge liest sich spaltenweise (erst die linke Spalte von oben
+nach unten, dann die rechte), nicht mehr zeilenweise wie im Raster. Die übrigen stehen in **einer** Zeile unter dem Masonry: „Not recorded in
+this range: By setup type, By entry model." in `--color-fg-subtle`, die Namen so, wie
+die Karten heißen. Sind alle erfasst, entfällt die Zeile.
+
+**Ein Hinweis zum Avg-R-Strich.** Hat in der ganzen Auswertung kein Bucket ein Avg R
+(kein Trade im Zeitraum hat einen Stop-Preis), steht **einmal** über den Karten eine
+Zeile in `--color-fg-subtle`: „Avg R shows — until a trade in this range has a stop
+price." Hat auch nur ein Bucket ein Avg R, steht sie nicht dort — auch wenn dieser Bucket in
+einer nicht erfassten Dimension liegt, denn dann wäre der Satz falsch. Ohne erfasste
+Dimension steht sie ebenso nicht: keine Karte zeigt dann einen Strich, den sie
+erklären könnte. Auch diese Entscheidung trifft das Modul
+(`shouldExplainMissingAvgR`).
+
 **Eine Komponente für alle Tabellen.** Kopfzeile und Zeile kommen aus
 `src/components/analytics/bucket-table.tsx`; die Spalten (Beschriftung und Breite)
 stehen je Tabelle einmal und gelten für Kopf und Zeilen. Sie wird von den

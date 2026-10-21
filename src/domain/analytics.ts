@@ -203,6 +203,45 @@ export function groupByDimension(
   return byDimension;
 }
 
+/** The dimensions that hold data, and the ones that do not, in dimension order. */
+export interface RecordedDimensions {
+  recorded: DimensionId[];
+  notRecorded: DimensionId[];
+}
+
+/**
+ * Which dimensions earn a card. A dimension is not recorded when it has no
+ * rows or only the "Not set" bucket — the page names those in one line instead
+ * of giving each a card of its own. One set bucket is enough to keep the card:
+ * a little data is never hidden.
+ */
+export function splitRecordedDimensions(
+  byDimension: Record<DimensionId, DimensionRow[]>,
+): RecordedDimensions {
+  const recorded: DimensionId[] = [];
+  const notRecorded: DimensionId[] = [];
+  for (const dimension of DIMENSION_IDS) {
+    const holdsData = byDimension[dimension].some((row) => !row.isNotSet);
+    (holdsData ? recorded : notRecorded).push(dimension);
+  }
+  return { recorded, notRecorded };
+}
+
+/**
+ * Whether the page should say once why every Avg R is a dash: at least one
+ * dimension is recorded, so there is a card showing the dashes, and no bucket
+ * in any dimension — recorded or not — has an R, because no trade in the range
+ * had a stop price to measure it against. A bucket in an unrecorded dimension
+ * still counts: a trade with an R there means the sentence would be untrue.
+ */
+export function shouldExplainMissingAvgR(
+  byDimension: Record<DimensionId, DimensionRow[]>,
+): boolean {
+  const { recorded } = splitRecordedDimensions(byDimension);
+  const rows = DIMENSION_IDS.flatMap((dimension) => byDimension[dimension]);
+  return recorded.length > 0 && rows.every((row) => row.avgR === null);
+}
+
 // --- Missed setups -------------------------------------------------------
 // A separate section because it touches no money. A missed setup has no exit,
 // no P&L and no account, so the only honest figures are how many there were
