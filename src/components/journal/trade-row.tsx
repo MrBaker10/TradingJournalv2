@@ -9,15 +9,29 @@ interface TradeRowProps {
   currency: DisplayCurrency;
 }
 
-function resultLabel(trade: JournalTradeRowData): string {
-  if (!trade.taken) return "Missed";
-  return trade.result ?? "—";
+// A title-line tag; `fromSm` ones give way on a phone (Design.md §4.9).
+function Tag({
+  children,
+  fromSm = false,
+}: {
+  children: React.ReactNode;
+  fromSm?: boolean;
+}) {
+  return (
+    <span
+      className={`cap shrink-0 rounded-xs bg-well px-1.5 py-0.5 ${
+        fromSm ? "hidden sm:inline" : ""
+      }`}
+    >
+      {children}
+    </span>
+  );
 }
 
-// Design.md §4.9: instrument tile + title line (instrument, direction,
-// result/missed, grade) + meta line, and amount/R on the right. Missed setups
-// get the same structure, never smaller or paler — the tile gradient is the
-// only visual difference.
+// Design.md §4.9: instrument tile + title line (instrument and direction,
+// then missed, grade and confluence count) + meta line, and amount/R on the
+// right. Missed setups get the same structure, never smaller or paler — the
+// tile gradient is the only visual difference.
 //
 // The row used to expand in place. It is now a link to /journal/[id], because
 // the detail page carries things the row never could: confluences, mistakes,
@@ -58,30 +72,26 @@ export function TradeRow({ trade, currency }: TradeRowProps) {
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-sm font-medium text-fg">
+        {/* §4.9: direction as text, no result tag. The line never wraps;
+            only the symbol truncates. */}
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate text-sm font-medium text-fg">
             {trade.instrumentSymbol}
           </span>
-          <span className="cap rounded-xs bg-well px-1.5 py-0.5">
-            {trade.direction === "long" ? "Long" : "Short"}
+          <span className="shrink-0 text-fg-muted text-sm">
+            · {trade.direction === "long" ? "Long" : "Short"}
           </span>
-          <span className="cap rounded-xs bg-well px-1.5 py-0.5">
-            {resultLabel(trade)}
-          </span>
-          {trade.grade && (
-            <span className="cap rounded-xs bg-well px-1.5 py-0.5">
-              Grade {trade.grade}
-            </span>
-          )}
+          {!trade.taken && <Tag>Missed</Tag>}
+          {trade.grade && <Tag fromSm>Grade {trade.grade}</Tag>}
           {/* A count, not the badges themselves: spelling out five
               confluences would make the row two lines tall on some entries and
               one on others, and §4.9's title line is meant to be scannable.
               The badges are on the detail page. */}
           {trade.confluences.length > 0 && (
-            <span className="cap rounded-xs bg-well px-1.5 py-0.5">
+            <Tag fromSm>
               {trade.confluences.length}{" "}
               {trade.confluences.length === 1 ? "Confluence" : "Confluences"}
-            </span>
+            </Tag>
           )}
         </div>
         <span className="truncate text-xs text-fg-subtle">

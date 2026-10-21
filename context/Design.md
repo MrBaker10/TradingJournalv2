@@ -514,13 +514,23 @@ Monat verteilt ist. Er ist auf der Kachel, nicht auf der Zahl im Dashboard.
   daneben in der Titelzeile (entschieden 2026-09-25, `src/lib/journal/tile-label.ts`).
   Ab sieben Zeichen rückt das Kürzel mit `-0.06em` Tracking zusammen, damit es nicht
   am Rand des Tiles anliegt (entschieden 2026-09-26).
-- Titelzeile: Instrument plus Tags (`short`, `loss`/`win`/`missed`, `Grade B`),
-  darunter Metazeile in `--color-fg-subtle`.
+- Titelzeile: Instrument, dahinter die Richtung als ruhiger Text in
+  `--color-fg-muted` (`MNQ · Short`), dann Tags nur für `Missed`, `Grade B` und
+  die Confluence-Anzahl; darunter Metazeile in `--color-fg-subtle`.
+- **Kein Ergebnis-Tag** (geändert in der Designrunde Journal, 2026-10-21). Das
+  Ergebnis (`win`/`loss`) ist brutto, der Betrag netto der Kommission — ein
+  „Win" stand so neben einem roten Betrag. Betragsfarbe und R tragen das
+  Ergebnis allein. Die Richtung ist Teil des Titels, kein Tag.
 - Hat der Eintrag Confluences, steht dahinter ein weiterer `cap`-Tag mit ihrer
   **Anzahl** („3 Confluences"), nicht ihre Namen. Ausgeschrieben stünden bei
   fünf Confluences zwei Zeilen dort, wo bei anderen eine steht, und die Liste
   wäre nicht mehr überfliegbar. Die Badges selbst stehen auf der Detailseite
   (4.20).
+- **Unter `sm`** zeigt die Titelzeile nur Instrument, Richtung und `Missed`;
+  `Grade` und die Confluence-Anzahl stehen erst ab `sm`. Die Titelzeile bricht
+  nicht um, jede Zeile bleibt zweizeilig, und der Betrag rechts wird nie
+  gekürzt. Wird es eng, kürzt sich nur das Instrument; Richtung und Tags
+  bleiben ganz, ebenso die Metazeile bis auf ihr Ende.
 - Rechts: Betrag mono, darunter R-Multiple. Bei verpassten Setups steht dort
   „—" und als Unterzeile „+1.80R would-be" in `--color-fg-subtle` — der
   hypothetische Wert wird nie in Grün gezeigt. Datenherkunft: `mfe_r` auf einem
@@ -1696,8 +1706,8 @@ month yet") hat genau die richtige Tonalität — die wird beibehalten.
 - Fokusring überall sichtbar: `2px solid var(--color-cyan)`, `outline-offset: 2px`.
   Nie `outline: none` ohne Ersatz.
 - Interaktive Flächen mindestens 40px hoch.
-- Farbe ist nie der einzige Träger einer Information: `win`/`loss`/`missed`
-  stehen als Text im Tag, nicht nur als Farbe.
+- Farbe ist nie der einzige Träger einer Information: das Ergebnis steht als
+  Vorzeichen an Betrag und R, `missed` als Text im Tag, nicht nur als Farbe.
 - Kalenderzellen brauchen ein `aria-label` mit Datum, Betrag und Trade-Anzahl,
   weil die visuelle Kodierung sonst nicht ankommt.
 - Toasts in einem `aria-live="polite"`-Container.
