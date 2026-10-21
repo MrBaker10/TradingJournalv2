@@ -5,6 +5,7 @@ import { accounts } from "../../schema/accounts.ts";
 import { instruments } from "../../schema/instruments.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
+import { type DayTotals, getDayTotals } from "../dashboard.ts";
 import {
   type JournalFilters,
   type JournalTradesResult,
@@ -35,6 +36,12 @@ interface ListTrade {
   /** Which fixture instrument, "A" when left out. */
   instrument?: "A" | "B";
   notes?: string;
+  /** Long from 100 at point value 50: the default 110 nets $500. */
+  exitPrice?: string;
+  /** No exit yet: a taken trade without a realised P&L. */
+  open?: boolean;
+  /** Commission per account name, in USD dollars, e.g. `{ Live: "3.00" }`. */
+  commission?: Record<string, string>;
 }
 
 interface ListFixture {
@@ -48,8 +55,13 @@ interface ListFixture {
   > & { instrument?: "A" | "B" };
 }
 
-async function listFor(fixture: ListFixture): Promise<JournalTradesResult> {
-  let result: JournalTradesResult | null = null;
+interface ListResult extends JournalTradesResult {
+  /** The calendar's day totals for the same user and account selection. */
+  calendar: DayTotals["days"];
+}
+
+async function listFor(fixture: ListFixture): Promise<ListResult> {
+  let result: ListResult | null = null;
 
   try {
     await db.transaction(async (tx) => {
@@ -100,10 +112,11 @@ async function listFor(fixture: ListFixture): Promise<JournalTradesResult> {
             taken,
             contracts: taken ? "1" : null,
             entryTime: listTrade.entryTime ?? "09:00",
-            exitTime: taken ? "15:00" : null,
+            exitTime: taken && !listTrade.open ? "15:00" : null,
             direction: "long",
             entryPrice: "100",
-            exitPrice: taken ? "110" : null,
+            exitPrice:
+              taken && !listTrade.open ? (listTrade.exitPrice ?? "110") : null,
             notes: listTrade.notes ?? null,
           })
           .returning({ id: trades.id });
@@ -113,20 +126,25 @@ async function listFor(fixture: ListFixture): Promise<JournalTradesResult> {
           if (accountId === undefined) {
             throw new Error(`Fixture account "${name}" was never created`);
           }
-          await tx
-            .insert(tradeAccounts)
-            .values({ tradeId: trade.id, accountId });
+          const commission = listTrade.commission?.[name] ?? null;
+          await tx.insert(tradeAccounts).values({
+            tradeId: trade.id,
+            accountId,
+            commission,
+            commissionSource: commission === null ? null : "file",
+          });
         }
       }
 
+      const selectedAccountId =
+        fixture.selected === undefined
+          ? null
+          : (accountIds.get(fixture.selected) ?? null);
       const { instrument, ...filters } = fixture.filters ?? {};
-      result = await listJournalTrades(
+      const listed = await listJournalTrades(
         {
           userId: user.id,
-          selectedAccountId:
-            fixture.selected === undefined
-              ? null
-              : (accountIds.get(fixture.selected) ?? null),
+          selectedAccountId,
           sortBy: "date",
           sortDir: "desc",
           page: 1,
@@ -138,6 +156,12 @@ async function listFor(fixture: ListFixture): Promise<JournalTradesResult> {
         },
         tx,
       );
+      const { days } = await getDayTotals(
+        { userId: user.id, selectedAccountId },
+        undefined,
+        tx,
+      );
+      result = { ...listed, calendar: days };
       tx.rollback();
     });
   } catch (error) {
@@ -161,8 +185,8 @@ describe("listJournalTrades — day values", () => {
     });
 
     expect(days).toEqual([
-      { date: "2026-10-19", entryCount: 1, missedCount: 0 },
-      { date: "2026-10-20", entryCount: 2, missedCount: 1 },
+      { date: "2026-10-19", entryCount: 1, missedCount: 0, amountCents: 50000 },
+      { date: "2026-10-20", entryCount: 2, missedCount: 1, amountCents: 50000 },
     ]);
   });
 
@@ -182,9 +206,15 @@ describe("listJournalTrades — day values", () => {
       "2026-10-20",
       "2026-10-19",
     ]);
+    // The total is the whole day's too, not the one entry on this page.
     expect(days).toEqual([
-      { date: "2026-10-19", entryCount: 1, missedCount: 0 },
-      { date: "2026-10-20", entryCount: 26, missedCount: 0 },
+      { date: "2026-10-19", entryCount: 1, missedCount: 0, amountCents: 50000 },
+      {
+        date: "2026-10-20",
+        entryCount: 26,
+        missedCount: 0,
+        amountCents: 1300000,
+      },
     ]);
   });
 
@@ -201,7 +231,7 @@ describe("listJournalTrades — day values", () => {
     });
 
     expect(days).toEqual([
-      { date: "2026-10-20", entryCount: 1, missedCount: 0 },
+      { date: "2026-10-20", entryCount: 1, missedCount: 0, amountCents: 50000 },
     ]);
   });
 
@@ -217,7 +247,7 @@ describe("listJournalTrades — day values", () => {
     });
 
     expect(days).toEqual([
-      { date: "2026-10-20", entryCount: 1, missedCount: 0 },
+      { date: "2026-10-20", entryCount: 1, missedCount: 0, amountCents: 50000 },
     ]);
   });
 
@@ -235,8 +265,116 @@ describe("listJournalTrades — day values", () => {
     });
 
     expect(days).toEqual([
-      { date: "2026-10-20", entryCount: 2, missedCount: 1 },
+      { date: "2026-10-20", entryCount: 2, missedCount: 1, amountCents: 50000 },
     ]);
+  });
+});
+
+describe("listJournalTrades — day total", () => {
+  it("multiplies a copy trade by its real accounts, never by a practice one", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const { days } = await listFor({
+      accounts: { Live: false, Eval: false, Sim: true },
+      trades: [{ tradeDate: "2026-10-20", on: ["Live", "Eval", "Sim"] }],
+    });
+
+    expect(days[0]?.amountCents).toBe(100000);
+  });
+
+  it("shows a selected practice account's own day", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const { days } = await listFor({
+      accounts: { Live: false, Sim: true },
+      trades: [
+        { tradeDate: "2026-10-20", on: ["Sim"], exitPrice: "96" },
+        { tradeDate: "2026-10-20", on: ["Live"] },
+      ],
+      selected: "Sim",
+    });
+
+    expect(days).toEqual([
+      {
+        date: "2026-10-20",
+        entryCount: 1,
+        missedCount: 0,
+        amountCents: -20000,
+      },
+    ]);
+  });
+
+  it("has no amount on a day with only missed setups", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const { days } = await listFor({
+      trades: [{ tradeDate: "2026-10-20", taken: false }],
+    });
+
+    expect(days[0]?.amountCents).toBeNull();
+  });
+
+  it("is the calendar's day total for a selected account", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const { days, calendar } = await listFor({
+      accounts: { Live: false, Eval: false },
+      trades: [
+        {
+          tradeDate: "2026-10-20",
+          on: ["Live", "Eval"],
+          commission: { Live: "4.00", Eval: "6.00" },
+        },
+        { tradeDate: "2026-10-20", on: ["Eval"], exitPrice: "90" },
+      ],
+      selected: "Live",
+    });
+
+    expect(days.map((day) => day.amountCents)).toEqual(
+      calendar.map((day) => day.amountCents),
+    );
+    // Live's own execution, unmultiplied, minus Live's commission only.
+    expect(days[0]?.amountCents).toBe(49600);
+  });
+
+  it("is zero, as in the calendar, on a day whose trades have no exit yet", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const { days, calendar } = await listFor({
+      trades: [
+        { tradeDate: "2026-10-20", open: true },
+        { tradeDate: "2026-10-20", taken: false },
+      ],
+    });
+
+    expect(days[0]?.amountCents).toBe(0);
+    expect(calendar[0]?.amountCents).toBe(0);
+  });
+
+  it("is the calendar's day total when no instrument is filtered", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const { days, calendar } = await listFor({
+      accounts: { Live: false, Eval: false, Sim: true },
+      trades: [
+        {
+          tradeDate: "2026-10-20",
+          on: ["Live", "Eval", "Sim"],
+          commission: { Live: "4.00", Eval: "4.00", Sim: "4.00" },
+        },
+        { tradeDate: "2026-10-20", on: ["Live"], exitPrice: "93" },
+        { tradeDate: "2026-10-20", on: ["Sim"], exitPrice: "120" },
+        { tradeDate: "2026-10-20", instrument: "B", on: ["Eval"] },
+        { tradeDate: "2026-10-19", on: ["Live"], exitPrice: "98" },
+      ],
+    });
+
+    expect(days.map((day) => [day.date, day.amountCents])).toEqual(
+      calendar.map((day) => [day.date, day.amountCents]),
+    );
+    // Worked by hand: 2 × 500 − 2 × 4 (the practice account's commission
+    // stays out) − 350 + 500 on the 20th, −100 on the 19th.
+    expect(days.map((day) => day.amountCents)).toEqual([-10000, 114200]);
   });
 });
 

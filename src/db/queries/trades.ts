@@ -174,6 +174,8 @@ export interface JournalDayValues {
   date: string;
   entryCount: number;
   missedCount: number;
+  /** Net P&L in display cents; null when no entry of the day has one. */
+  amountCents: number | null;
 }
 
 export interface JournalTradesResult {
@@ -892,6 +894,16 @@ export async function listJournalTrades(
 // The day headings' values for the trade dates on this page, over the whole
 // day — same ownership, filters and visibility as the list, so a heading
 // counts exactly the entries the list would show across all pages.
+//
+// The counts are count aggregates and never multiply; the amount is a money
+// aggregate, multiplied once inside the expression it sums.
+//
+// The amount sums the rows' own net figure, so a heading is the sum of the
+// rows beneath it. Under the list's visibility that is the calendar's
+// `moneyContribution` (scope.ts) — the practice-only fallback in the row's
+// multiplier never applies, because those trades are not listed — and a DB
+// test pins the two equal. Imported from scope.ts it would close an import
+// cycle, since scope.ts builds on this module.
 async function listJournalDayValues(
   filters: JournalFilters,
   dates: string[],
@@ -899,13 +911,24 @@ async function listJournalDayValues(
 ): Promise<JournalDayValues[]> {
   if (dates.length === 0) return [];
 
-  return executor
+  const rows = await executor
     .select({
       date: trades.tradeDate,
       entryCount: sql<number>`count(*)::int`,
       missedCount: sql<number>`(count(*) filter (where ${trades.taken} = false))::int`,
+      // NULL only on a day of missed setups: the heading shows no amount
+      // rather than a zero. A day with taken trades but no realised P&L yet
+      // is 0, as the calendar paints it.
+      amountCents: sql<string | null>`case
+        when count(*) filter (where ${trades.taken}) > 0
+          then coalesce(sum(${tradeNetDisplayCents(
+            filters.selectedAccountId,
+            filters.currency,
+          )}), 0)
+        end`,
     })
     .from(trades)
+    .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
     .where(
       and(
         eq(trades.userId, filters.userId),
@@ -916,6 +939,11 @@ async function listJournalDayValues(
     )
     .groupBy(trades.tradeDate)
     .orderBy(asc(trades.tradeDate));
+
+  return rows.map((row) => ({
+    ...row,
+    amountCents: row.amountCents === null ? null : Number(row.amountCents),
+  }));
 }
 
 // Design.md §4.8/§4.9: the dashboard's "Recent trades" is the same row as the

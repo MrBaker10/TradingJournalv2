@@ -24,8 +24,13 @@ describe("journalLayout", () => {
       row(3, "2026-10-19"),
     ];
     const days = [
-      { date: "2026-10-19", entryCount: 1, missedCount: 0 },
-      { date: "2026-10-20", entryCount: 2, missedCount: 1 },
+      { date: "2026-10-19", entryCount: 1, missedCount: 0, amountCents: 50000 },
+      {
+        date: "2026-10-20",
+        entryCount: 2,
+        missedCount: 1,
+        amountCents: -12000,
+      },
     ];
 
     expect(journalLayout(rows, days, "date")).toEqual({
@@ -35,12 +40,14 @@ describe("journalLayout", () => {
           date: "2026-10-20",
           entryCount: 2,
           missedCount: 1,
+          amountCents: -12000,
           rows: [row(1, "2026-10-20"), row(2, "2026-10-20")],
         },
         {
           date: "2026-10-19",
           entryCount: 1,
           missedCount: 0,
+          amountCents: 50000,
           rows: [row(3, "2026-10-19")],
         },
       ],
@@ -50,8 +57,8 @@ describe("journalLayout", () => {
   it("keeps an ascending sort ascending", () => {
     const rows = [row(3, "2026-10-19"), row(1, "2026-10-20")];
     const days = [
-      { date: "2026-10-20", entryCount: 1, missedCount: 0 },
-      { date: "2026-10-19", entryCount: 1, missedCount: 0 },
+      { date: "2026-10-20", entryCount: 1, missedCount: 0, amountCents: 30000 },
+      { date: "2026-10-19", entryCount: 1, missedCount: 0, amountCents: 50000 },
     ];
 
     const layout = journalLayout(rows, days, "date");
@@ -64,14 +71,29 @@ describe("journalLayout", () => {
   it("heads a day cut by the page boundary with the whole day's counts", () => {
     // Only one of the day's four entries made it onto this page.
     const rows = [row(9, "2026-10-13")];
-    const days = [{ date: "2026-10-13", entryCount: 4, missedCount: 2 }];
+    const days = [
+      { date: "2026-10-13", entryCount: 4, missedCount: 2, amountCents: 87500 },
+    ];
 
     const layout = journalLayout(rows, days, "date");
 
     expect(layout.kind === "days" ? layout.days[0] : null).toMatchObject({
       entryCount: 4,
       missedCount: 2,
+      amountCents: 87500,
     });
+  });
+
+  it("carries no amount for a day of missed setups only", () => {
+    const days = [
+      { date: "2026-10-14", entryCount: 1, missedCount: 1, amountCents: null },
+    ];
+
+    const layout = journalLayout([row(4, "2026-10-14")], days, "date");
+
+    expect(
+      layout.kind === "days" ? layout.days[0]?.amountCents : "flat",
+    ).toBeNull();
   });
 
   it("refuses a page date without day values instead of heading it with zero", () => {

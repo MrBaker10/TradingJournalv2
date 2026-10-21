@@ -1616,8 +1616,16 @@ größer null, der Missed Setups (`4 entries · 1 missed`). Unter `sm` steht nur
 die Zahl (`4 · 1 missed`), der Kopf bleibt einzeilig. Die Zahlen gelten für den
 **ganzen Tag** innerhalb der aktiven Filter, nicht für die Zeilen dieser Seite:
 läuft ein Tag über die Seitengrenze, wiederholt die nächste Seite seinen Kopf
-mit denselben Zahlen. Rechts ist der Platz für die Tagessumme (Ticket 03 der
-Runde).
+mit denselben Zahlen.
+
+**Tagessumme.** Rechts im Kopf das Netto-P&L des Tages: mono, `text-sm`,
+semantisch grün oder rot wie der Betrag der Zeile (4.9), **kein Glow** (§1),
+rechtsbündig mit den Beträgen der Zeilen darunter. Sie gilt wie die Zahlen für
+den ganzen Tag innerhalb der Filter und ist die Summe der Zeilenbeträge — ohne
+Instrumentfilter also dieselbe Zahl wie der Kalendertag (4.8), mit
+Instrumentfilter nur die des Instruments. Ein Tag nur aus Missed Setups hat
+**keine** Summe, auch keine Null; ein Tag mit genommenen Trades ohne Exit
+zeigt `$0.00` wie der Kalender. Null ist grün wie in der Zeile (4.9).
 
 ## 5. Motion
 
