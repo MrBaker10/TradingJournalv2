@@ -977,12 +977,12 @@ Auf einem kleinen Konto liest sich daraus sonst schnell eine Quote, die es nicht
 Eine Zeile unter der Abschnittsüberschrift sagt das (7).
 
 **Zeitraumfilter.** `card-surface edge` über der ganzen Seite, Von/Bis plus vier
-Presets in der Chip-Optik der Journal-Filter. Die Datumsfelder sind **uncontrolled**:
+Presets als Chips aus einer mit dem Journal geteilten Komponente (4.27). Die Datumsfelder sind **uncontrolled**:
 ein `type="date"` feuert sein Change-Event mit leerem Wert, solange das Datum halb
 getippt ist, und ein Rückschreiben dieses Wertes setzt den Datumseditor des Browsers
 mitten in der Eingabe zurück. Ein `key` auf dem Feld erzwingt den Remount, wenn ein
-Preset den Zeitraum löscht — das braucht der Journal-Filter nicht, weil dort niemand
-außer dem Feld selbst die Daten ändert.
+Preset den Zeitraum löscht; der Journal-Filter macht es seit der Designrunde Journal
+genauso, weil dort Presets und `Clear` die Daten ebenfalls löschen.
 
 **Kein Diagramm.** Auf dieser Seite läuft kein Recharts. Der waagerechte Balken ist
 das einzige Primitiv, und keine Zeile führt irgendwohin — der Weg zu den Trades einer
@@ -1626,6 +1626,35 @@ Instrumentfilter also dieselbe Zahl wie der Kalendertag (4.8), mit
 Instrumentfilter nur die des Instruments. Ein Tag nur aus Missed Setups hat
 **keine** Summe, auch keine Null; ein Tag mit genommenen Trades ohne Exit
 zeigt `$0.00` wie der Kalender. Null ist grün wie in der Zeile (4.9).
+
+**Kopfzeile.** `page-title` auf allen Breiten wie auf jeder Seite, rechts
+daneben `Import` (ruhige Prozessfläche, 4.14) und `New trade` (primär). Beide
+Knöpfe brechen nicht um; auf dem Handy darf der Titel zweizeilig werden.
+
+**Filterleiste.** Eine schlanke `card-surface edge`-Leiste (`px-3 py-2.5`)
+statt der früheren Formularkarte, auf breitem Schirm in einer Zeile: die vier
+Zeitraum-Presets als Chips — dieselben wie in Analytics (4.16), aus einer
+gemeinsamen Komponente —, dann `From`, `To` und `Instrument` mit ihrem Label
+als `cap` links neben dem Feld (das Select nach Assetklasse gruppiert), rechts
+der Sortier-Umschalter `Date`/`R` und, nur bei aktivem Filter, `Clear`. Wird
+es schmaler, bricht die Leiste um, sie schneidet nichts ab. Preset und
+getipptes Datum gelten nie zugleich, wie in Analytics: ein Preset löscht die
+Daten (die Felder remounten über `key`), ein Datum löscht das Preset; der
+Server löst das Preset gegen das „heute" des Users auf. Aktiv ist ein Filter,
+wenn ein Preset außer „All time", ein Datum oder ein Instrument gesetzt ist;
+die Sortierung zählt nicht und bleibt bei `Clear` erhalten.
+
+**Unter `sm`** ist die Leiste zugeklappt: ein Knopf `Filters` mit der Zahl der
+aktiven Filter (`Filters · 2`) öffnet sie an Ort und Stelle; offen stapeln
+sich ihre Gruppen untereinander. Chips, Sortierknöpfe und `Clear` sind 40px
+hoch (§8).
+
+**Zählzeile.** Unter der Leiste eine ruhige Zeile ohne Fläche:
+`42 entries · 38 taken · 4 missed` für alle Seiten der aktuellen Filter, in
+`--color-fg-muted` (Zahlen sind Werte, §8), **ohne** Geldsumme — die Summe eines
+Zeitraums steht auf Dashboard und Analytics. Ohne Missed Setups entfällt der
+letzte Teil nicht, er zeigt `0 missed`. Direkt darunter das unveränderte
+Practice-Banner (4.12), das zur Zählung gehört.
 
 ## 5. Motion
 

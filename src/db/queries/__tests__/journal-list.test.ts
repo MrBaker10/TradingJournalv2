@@ -404,3 +404,48 @@ describe("listJournalTrades — order within a day", () => {
     expect(rows.map((row) => row.notes)).toEqual(["early", "mid", "late"]);
   });
 });
+
+describe("listJournalTrades — counts for the filters", () => {
+  it("splits the filtered entries into taken and missed across all pages", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const takenDays = Array.from({ length: 27 }, () => ({
+      tradeDate: "2026-10-20",
+    }));
+    const { totalCount, takenCount, missedCount } = await listFor({
+      trades: [
+        ...takenDays,
+        { tradeDate: "2026-10-19", taken: false },
+        { tradeDate: "2026-10-18", taken: false },
+        { tradeDate: "2026-10-18", instrument: "B" },
+      ],
+      filters: { page: 2, instrument: "A" },
+    });
+
+    expect({ totalCount, takenCount, missedCount }).toEqual({
+      totalCount: 29,
+      takenCount: 27,
+      missedCount: 2,
+    });
+  });
+
+  it("counts a missed setup while one account is selected", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const { totalCount, takenCount, missedCount } = await listFor({
+      accounts: { Live: false, Other: false },
+      trades: [
+        { tradeDate: "2026-10-20", on: ["Live"] },
+        { tradeDate: "2026-10-20", on: ["Other"] },
+        { tradeDate: "2026-10-19", taken: false },
+      ],
+      selected: "Live",
+    });
+
+    expect({ totalCount, takenCount, missedCount }).toEqual({
+      totalCount: 2,
+      takenCount: 1,
+      missedCount: 1,
+    });
+  });
+});

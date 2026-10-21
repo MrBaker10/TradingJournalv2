@@ -1,45 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { RangePresetChips } from "@/components/ui/range-preset-chips";
 import {
   type AnalyticsSearchParams,
   buildAnalyticsHref,
-  type RangePreset,
 } from "@/lib/analytics/href";
-
-const PRESETS: { value: RangePreset; label: string }[] = [
-  { value: "30d", label: "30 days" },
-  { value: "90d", label: "90 days" },
-  { value: "month", label: "This month" },
-  { value: "all", label: "All time" },
-];
-
-function PresetButton({
-  label,
-  value,
-  active,
-  onSelect,
-}: {
-  label: string;
-  value: RangePreset;
-  active: boolean;
-  onSelect: (value: RangePreset) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(value)}
-      aria-pressed={active}
-      className={`rounded-xs border px-2.5 py-1.5 text-sm transition-colors duration-150 ${
-        active
-          ? "border-cyan/50 bg-cyan-dim text-cyan"
-          : "border-white/12 bg-well text-fg-muted hover:border-cyan/35"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
+import { narrowingPreset, type RangePreset } from "@/lib/time";
 
 // The date range every section of the page is computed inside, mirrored into
 // searchParams so a reload and a shared-by-hand URL show the same figures.
@@ -66,7 +33,7 @@ export function RangeFilter() {
   const hasCustomRange = Boolean(current.from || current.to);
   const activePreset: RangePreset = hasCustomRange
     ? "all"
-    : ((current.range as RangePreset | undefined) ?? "all");
+    : (narrowingPreset(current.range) ?? "all");
 
   function selectPreset(value: RangePreset) {
     router.push(
@@ -117,17 +84,10 @@ export function RangeFilter() {
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {PRESETS.map((preset) => (
-          <PresetButton
-            key={preset.value}
-            label={preset.label}
-            value={preset.value}
-            active={!hasCustomRange && activePreset === preset.value}
-            onSelect={selectPreset}
-          />
-        ))}
-      </div>
+      <RangePresetChips
+        active={hasCustomRange ? null : activePreset}
+        onSelect={selectPreset}
+      />
     </div>
   );
 }

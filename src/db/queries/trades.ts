@@ -180,7 +180,10 @@ export interface JournalDayValues {
 
 export interface JournalTradesResult {
   rows: JournalTradeRow[];
+  /** Every entry the filters match, across all pages. */
   totalCount: number;
+  takenCount: number;
+  missedCount: number;
   /** The trade dates of `rows`, oldest first. */
   days: JournalDayValues[];
   hiddenPracticeCounts: JournalHiddenPracticeCount[];
@@ -698,12 +701,14 @@ interface TradeRowsQuery {
 // Both the journal list and the dashboard's "Recent trades" go through it,
 // so the two can't drift apart.
 //
-// The window count comes along for either caller: Postgres computes it from
+// The window counts come along for every caller: Postgres computes them from
 // the rows it has to filter anyway, and one select shape is worth more here
-// than saving that aggregate on the dashboard.
-async function queryTradeRows(
-  input: TradeRowsQuery,
-): Promise<{ rows: JournalTradeRow[]; totalCount: number }> {
+// than saving those aggregates on the dashboard.
+async function queryTradeRows(input: TradeRowsQuery): Promise<{
+  rows: JournalTradeRow[];
+  totalCount: number;
+  missedCount: number;
+}> {
   const baseQuery = (input.executor ?? db)
     .select({
       id: trades.id,
@@ -752,6 +757,7 @@ async function queryTradeRows(
       screenshots: screenshotsJson,
       links: linksJson,
       totalCount: sql<number>`(count(*) over())::int`,
+      missedCount: sql<number>`(count(*) filter (where ${trades.taken} = false) over())::int`,
     })
     .from(trades)
     .innerJoin(instruments, eq(trades.instrumentId, instruments.id));
@@ -772,6 +778,7 @@ async function queryTradeRows(
     .offset(input.offset ?? 0);
 
   const totalCount = rawRows[0]?.totalCount ?? 0;
+  const missedCount = rawRows[0]?.missedCount ?? 0;
 
   const rows: JournalTradeRow[] = rawRows.map((row) => {
     const pointValue = Number(row.pointValue);
@@ -858,14 +865,14 @@ async function queryTradeRows(
     };
   });
 
-  return { rows, totalCount };
+  return { rows, totalCount, missedCount };
 }
 
 export async function listJournalTrades(
   filters: JournalFilters,
   executor: ReadExecutor = db,
 ): Promise<JournalTradesResult> {
-  const { rows, totalCount } = await queryTradeRows({
+  const { rows, totalCount, missedCount } = await queryTradeRows({
     userId: filters.userId,
     selectedAccountId: filters.selectedAccountId,
     currency: filters.currency,
@@ -888,7 +895,16 @@ export async function listJournalTrades(
       : [],
   ]);
 
-  return { rows, totalCount, days, hiddenPracticeCounts };
+  return {
+    rows,
+    totalCount,
+    // Counts, not money: a copy trade is one entry however many accounts it
+    // ran on.
+    takenCount: totalCount - missedCount,
+    missedCount,
+    days,
+    hiddenPracticeCounts,
+  };
 }
 
 // The day headings' values for the trade dates on this page, over the whole

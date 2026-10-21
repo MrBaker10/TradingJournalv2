@@ -114,7 +114,7 @@ single sentence.
   page 1. Below `sm` folded behind "Filters (n)". The preset logic is shared with
   Analytics rather than copied, if Analytics keeps it in a reusable place; otherwise the
   ticket extracts it.
-- **Count line** in the subtle text colour, counts only, no money. The hidden-practice
+- **Count line** in the muted text colour (counts are values, Design.md §8), counts only, no money. The hidden-practice
   banner follows it unchanged.
 - **Page header.** The `page-title` stays on all widths, as on every other page; Import
   (calm surface) and New trade (primary) to its right.

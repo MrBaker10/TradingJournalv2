@@ -106,6 +106,19 @@ export function monthRangeOf(month: MonthKey): { from: IsoDate; to: IsoDate } {
   };
 }
 
+/** The presets of a range filter. "all" is the default and writes no param. */
+export type RangePreset = "30d" | "90d" | "month" | "all";
+
+/**
+ * A preset that actually narrows the range, read from a search parameter.
+ * "all", a missing value and anything hand-edited into the URL are none.
+ */
+export function narrowingPreset(
+  value: string | undefined,
+): Exclude<RangePreset, "all"> | null {
+  return value === "30d" || value === "90d" || value === "month" ? value : null;
+}
+
 /**
  * The date range behind a range-filter preset, resolved against the user's own
  * "today" — which is why it lives here and not in the client component: a
