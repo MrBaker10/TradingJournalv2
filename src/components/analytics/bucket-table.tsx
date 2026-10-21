@@ -14,11 +14,19 @@ export interface BucketColumn {
 interface BucketHeaderProps {
   bucketLabel: string;
   columns: BucketColumn[];
+  /** Only the label line below `sm`; from `sm` the table has no header. */
+  narrowOnly?: boolean;
 }
 
-export function BucketHeader({ bucketLabel, columns }: BucketHeaderProps) {
+export function BucketHeader({
+  bucketLabel,
+  columns,
+  narrowOnly = false,
+}: BucketHeaderProps) {
   return (
-    <div className="border-white/8 border-b pb-1.5">
+    <div
+      className={`border-white/8 border-b pb-1.5 ${narrowOnly ? "sm:hidden" : ""}`}
+    >
       <div className="hidden items-baseline justify-between gap-3 sm:flex">
         <span className="cap">{bucketLabel}</span>
         <span className="flex shrink-0 gap-3">

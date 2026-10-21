@@ -3,6 +3,7 @@ import {
   BucketHeader,
   BucketRow,
 } from "@/components/analytics/bucket-table";
+import { EmptySection } from "@/components/analytics/empty-section";
 import { ValueBar } from "@/components/ui/value-bar";
 import {
   MISSED_DIMENSION_IDS,
@@ -75,6 +76,15 @@ export function MissedSetupsSection({ byDimension }: MissedSetupsSectionProps) {
     (dimension) => byDimension[dimension].length > 0,
   );
 
+  if (!hasMissed) {
+    return (
+      <EmptySection title="Missed setups">
+        No missed setups in this range. A setup you saw and passed on counts the
+        same as a trade.
+      </EmptySection>
+    );
+  }
+
   return (
     <section className="flex flex-col gap-3">
       <div className="ml-2 flex flex-col gap-1">
@@ -85,22 +95,15 @@ export function MissedSetupsSection({ byDimension }: MissedSetupsSectionProps) {
         </p>
       </div>
 
-      {hasMissed ? (
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
-          {MISSED_DIMENSION_IDS.map((dimension) => (
-            <DimensionCard
-              key={dimension}
-              title={MISSED_DIMENSION_TITLES[dimension]}
-              rows={byDimension[dimension]}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="py-6 text-center text-fg-subtle text-sm">
-          No missed setups in this range. A setup you saw and passed on counts
-          the same as a trade.
-        </p>
-      )}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+        {MISSED_DIMENSION_IDS.map((dimension) => (
+          <DimensionCard
+            key={dimension}
+            title={MISSED_DIMENSION_TITLES[dimension]}
+            rows={byDimension[dimension]}
+          />
+        ))}
+      </div>
     </section>
   );
 }

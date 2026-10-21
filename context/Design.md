@@ -868,17 +868,16 @@ der Komponente abgeschaltet werden (5).
 **Stand.** Eine Kurve über die ganze Historie, dem Kontoschalter folgend. Der
 Zeitraum ist fest; ein Umschalter (1M/3M/YTD) ist bewusst nicht gebaut, solange
 niemand ihn vermisst. Kurven pro Konto nebeneinander stehen weiterhin in der Roadmap
-unter Future und brauchen eine eigene Runde — zusammen mit den Balkendiagrammen von
-Analytics (10).
+unter Future und brauchen eine eigene Runde. Die Balkendiagramm-Frage von Analytics
+ist entschieden: kein Diagramm (4.16).
 
 ---
 
 ### 4.16 Analytics-Dimensionstabelle
 
-Entstanden in S12a, aus den vorhandenen Primitiven gebaut — wie die Progress-Seite in
-S9 und mit demselben Vorbehalt: **tragfähig, aber nicht entworfen.** Abschnitt 10
-nennt die Balkendiagramme von Analytics ausdrücklich als eigene Runde. Was hier steht,
-beschreibt die Umsetzung und hält die Festlegungen fest, die sie nötig gemacht hat.
+Entstanden in S12a aus den vorhandenen Primitiven und in der Designrunde Progress und
+Analytics (2026-10-21) gegen das Dashboard gehalten und entworfen. Was hier steht,
+beschreibt die Umsetzung und hält die Festlegungen fest, die sie nötig gemacht haben.
 
 **Die Karte.** Eine `card-surface edge`-Karte je Dimension, Kopf `cap cap-neon`
 („By setup type"), darunter bei Bedarf eine Hinweiszeile in `--color-fg-subtle`.
@@ -952,7 +951,10 @@ hängt hinter „Show all (n)" im 260ms-Aufklapper aus 5. **Abgeschnitten wird n
 `cap cap-neon`-Überschrift und vier Karten in `cap`. Sie tragen **keine einzige
 Geldzahl** — nur Anzahl und Anteil. Ihr Balken ist Prozess und darf deshalb Neon
 tragen: ein Missed Setup speist Streak und Badges und fasst kein Geld an. Dass er
-genau so aussieht wie ein Score-Balken, ist die Aussage, nicht ein Versehen.
+genau so aussieht wie ein Score-Balken, ist die Aussage, nicht ein Versehen. Ohne
+Missed Setups im Zeitraum steht der Abschnitt wie jeder leere Abschnitt als **eine
+Zeile in einer `card-surface edge`-Fläche** (4.17, „Leerzustände"), nicht als loser Text
+ohne Fläche — der einzige Abschnitt, der vorher keine hatte.
 
 **Der Anteil hat einen erklärungsbedürftigen Nenner**, und die Erklärung steht auf
 dem Schirm statt in diesem Dokument: ein Missed Setup trägt kein Konto, ist also in
@@ -974,8 +976,8 @@ Dimension ist der Journal-Filter, nicht ein Drilldown von hier.
 
 **Stand.** Elf Dimensionen, ein Zeitraum, dem Kontoschalter folgend. Haltedauer,
 Risikokalibrierung und Exit-Effizienz sind seit S12b da und stehen in 4.17 — sie
-haben die Bucket-Tabelle behalten, nur mit anderen Spalten. Die eigene Runde aus 10
-steht weiter aus.
+haben die Bucket-Tabelle behalten, nur mit anderen Spalten. Die Designrunde Progress
+und Analytics (2026-10-21) hat die Seite gegen das Dashboard gehalten.
 
 **Nicht auf der Komponente** stehen die Vorschautabelle des Imports (4.18, außerhalb
 der Analytics-Runde) und **Past months** auf Progress (4.24). Letzteres zeigt unter
@@ -1021,6 +1023,9 @@ eingefärbt: länger halten ist für sich genommen weder gut noch schlecht.
 und Verlierern getrennt. Kopfzeile trägt den Mittelwert plus „avg over n": ein
 Mittelwert über zwei Trades ist eine andere Aussage als einer über zweihundert, und
 die Karte sagt, welche. Darunter fünf Bucket-Zeilen mit Anzahl, Anteil und Balken.
+Die Karte hat keine Kopfzeile (der Titel nennt, was gezählt wird); nur unter `sm`, wo
+die Zeile zweizeilig wird, steht eine Beschriftungszeile „Trades · Share“ über den
+Zeilen, damit „4 · 33%" lesbar ist. Ab `sm` bleibt es ohne Kopfzeile.
 **Leere Buckets bleiben stehen** — die Form der Verteilung ist der Befund, und eine
 fehlende Zeile würde die Lücke verbergen, die sie zeigen soll.
 
@@ -1028,19 +1033,26 @@ fehlende Zeile würde die Lücke verbergen, die sie zeigen soll.
 in Prozent (leuchtend) und das entgangene R (weiß). Nur Gewinner, und nur Trades mit
 einem eingetragenen Post-exit MFE.
 
-**Leerzustände** stehen je Karte und sagen, *warum* nichts da ist — „No post-exit MFE
-recorded in this range. It is a manual field and only appears when a trade has a stop
-price." Das ist wichtiger als sonst, weil alle drei Abschnitte auf optionalen
-Handeingaben beruhen: eine leere Karte heißt hier meistens „nicht erfasst", nicht
-„nicht passiert".
+**Leerzustände** sagen, *warum* nichts da ist — „No post-exit MFE recorded in this
+range. It is a manual field and only appears when a trade has a stop price." Das ist
+wichtiger als sonst, weil alle drei Abschnitte auf optionalen Handeingaben beruhen: ein
+leerer Abschnitt heißt hier meistens „nicht erfasst", nicht „nicht passiert".
+
+**Hat ein Abschnitt gar nichts, schrumpft er auf eine Zeile:** eine `card-surface
+edge`-Fläche, Padding 16/20, links der Titel in `cap cap-neon`, rechts der erklärende
+Satz in `--color-fg-subtle` (schmal darunter). Das gilt für Hold time (kein Trade mit
+Exit), Risk calibration (weder MAE noch MFE erfasst), Exit efficiency (kein Post-exit
+MFE) und Missed setups (4.16). Die Beschreibung unter der Überschrift entfällt dann —
+wie bei „Past months" (4.24). Hat auch nur eine Karte Daten, bleibt der Abschnitt
+wie bisher, samt der leeren Karten daneben: dort ist die Lücke der Befund.
 
 Eine zweite Ursache kommt dazu: **ein Trade ohne Stop-Preis liefert keine Excursion**,
 weil MFE und MAE in R angegeben sind und R ohne Stop nicht definiert ist. Die MAE- und
 MFE-Karten können also leer bleiben, obwohl Werte eingetippt wurden. Das ist dieselbe
 Linie, die avg R in 4.16 schon zieht.
 
-**Stand.** Gebaut, nicht entworfen — derselbe Vorbehalt wie 4.16. Mit diesem Abschnitt
-ist §F vollständig.
+**Stand.** Entworfen in der Designrunde Progress und Analytics (2026-10-21). Mit diesem
+Abschnitt ist §F vollständig.
 
 ---
 
@@ -1109,7 +1121,7 @@ haben will, ändert sie im Export.
 
 **Stand.** §4.5 kannte den Import bisher nur als Beispiel für einen disabled-Zustand
 („Locked — imported from CSV"); dieser Abschnitt ist der erste, der den Screen
-beschreibt. Gebaut, nicht entworfen — derselbe Vorbehalt wie 4.16 und 4.17.
+beschreibt. Gebaut, nicht entworfen.
 
 Die Vorschautabelle war die **fünfte** Kopie des Zeilen-Layouts. Die Analytics-Tabellen
 sind inzwischen zusammengeführt (`bucket-table.tsx`, 4.16); die Vorschau liegt
@@ -1169,7 +1181,7 @@ Export, im Muster der Export-Karte (Titel `text-sm font-medium`, Erklärung in
 **Sidebar.** Der Sign-out-Button aus 4.1 bekommt seine Funktion. Kein Bestätigungsdialog:
 Abmelden verliert nichts.
 
-**Stand.** Gebaut, nicht entworfen — derselbe Vorbehalt wie 4.16 bis 4.18.
+**Stand.** Gebaut, nicht entworfen.
 
 ---
 
@@ -1261,7 +1273,7 @@ führt danach auf die Detailseite zurück.
   zweiten Klick fällt er zurück. Kein `window.confirm`, kein Modal — dieselbe
   Mechanik wie „Delete account" in 4.19 und das Entfernen eines Screenshots.
 
-**Stand.** Gebaut, nicht entworfen — derselbe Vorbehalt wie 4.16 bis 4.19.
+**Stand.** Gebaut, nicht entworfen.
 
 
 ### 4.21 Preisband
@@ -1343,8 +1355,8 @@ das ist Datenpflege, kein Layout.
 
 ### 4.23 Econ-Kalender
 
-Entstanden in P2.4, aus vorhandenen Primitiven gebaut, mit demselben Vorbehalt wie
-4.16: **tragfähig, aber nicht entworfen.**
+Entstanden in P2.4, aus vorhandenen Primitiven gebaut: **tragfähig, aber nicht
+entworfen.**
 
 **Filterkarte.** `card-surface edge` über der Liste, drei Gruppen in der Chip-Optik
 der Prop-Firm- und Analytics-Filter: „Show“ (Today · This week · Next week · Both,
@@ -1385,8 +1397,8 @@ leer heißt „No event matches these filters.“
 
 ### 4.24 Score-Verlauf („Past months")
 
-Entstanden in P2.6 (month-close), aus vorhandenen Primitiven gebaut, mit demselben
-Vorbehalt wie 4.16: **tragfähig, aber nicht entworfen.**
+Entstanden in P2.6 (month-close), aus vorhandenen Primitiven gebaut und in der
+Designrunde Progress und Analytics (2026-10-21) gegen die übrigen Screens gehalten.
 
 **Die Karte.** Auf `/progress` volle Breite zwischen Streak/Score-Raster und
 Badge-Raster. `card-surface edge-neon`, weil der Score Prozess ist wie in 4.3. Kopf
@@ -1409,8 +1421,8 @@ das Einfrieren zwei Tage nach Monatsende steht nur in der Karte mit Daten.
 
 ### 4.25 Ledger
 
-Entstanden mit dem Ledger (Phase 3), aus vorhandenen Primitiven gebaut, mit demselben
-Vorbehalt wie 4.16: **tragfähig, aber nicht entworfen.** Der Ledger ist echtes Geld,
+Entstanden mit dem Ledger (Phase 3), aus vorhandenen Primitiven gebaut: **tragfähig,
+aber nicht entworfen.** Der Ledger ist echtes Geld,
 kein Prozess: **nirgends Neon, kein `text-glow`, keine Feier** — weder beim ersten
 Eintrag noch bei einer Auszahlung. Er steht neben dem Trading-P&L, nie darin (ADR 0002).
 
@@ -1504,8 +1516,8 @@ Tab): „This entry no longer exists."
 
 ### 4.26 Weekly Review
 
-Entstanden in weekly-review, aus vorhandenen Primitiven gebaut, mit demselben Vorbehalt
-wie 4.16: **tragfähig, aber nicht entworfen.** Diese Fassung deckt die Tickets 01 bis 04
+Entstanden in weekly-review, aus vorhandenen Primitiven gebaut: **tragfähig, aber nicht
+entworfen.** Diese Fassung deckt die Tickets 01 bis 04
 ab.
 
 **Einstieg.** Auf `/progress` eine Karte in voller Breite zwischen Streak/Score-Raster
@@ -1730,26 +1742,18 @@ Die fünf Punkte dieses Abschnitts sind abgearbeitet:
 5. **Landing-Page** — bleibt ein separates Dokument. Die bestehende minimale
    Startseite und Auth-Routen sind in `coding-standards.md` → „Visibility“ geregelt.
 
-Offen bleiben drei, weil sie Gestaltung und nicht Entscheidung sind:
+Offen bleiben zwei, weil sie Gestaltung und nicht Entscheidung sind:
 
-- **Analytics und Prop Firm Rules** sind hier nicht auf Komponentenebene
-  entworfen. Analytics ist seit S12a in 4.16 beschrieben — aber beschrieben, nicht
-  entworfen: die Dimensionstabelle ist aus vorhandenen Primitiven gebaut und nie
-  gegen die anderen Screens gehalten. Die Regel-Detailtabelle der Prop Firm Rules
-  fehlt weiterhin ganz. Beide brauchen dieselbe eigene Runde wie die Progress-Seite
-  unten.
+- **Prop Firm Rules** sind hier nicht auf Komponentenebene entworfen: die
+  Regel-Detailtabelle fehlt weiterhin ganz. Sie braucht eine eigene Runde.
 - **Der Econ-Kalender** (4.23) ist aus den Tabellen- und Chip-Primitiven gebaut und
   nie gegen die anderen Screens gehalten. Offen besonders: ob das Impact-Rot neben
   einer roten Verlustzahl auf demselben Schirm unterscheidbar genug bleibt.
-- **Die Progress-Seite** ist hier nur über 4.3 (Gamification-Kacheln) und 4.4
-  (Grace-Day-Leiste) abgedeckt. Für die Aufschlüsselung des Consistency Score in
-  seine vier Teilwerte und für das Raster der zwölf Badges gibt es keine Vorgabe.
-  S9 hat beides aus den vorhandenen Primitiven gebaut — der Score als vier
-  Balken in einer `card-surface edge-neon`-Karte mit `--gradient-info` als
-  Füllung und `--color-bar-track` als Spur, die Badges als Kacheln mit
-  `edge-neon` und Verlaufsfläche im erreichten und matter Fläche im offenen
-  Zustand. Das ist tragfähig, aber nicht entworfen: es hat nie jemand gegen die
-  anderen Screens gehalten. Eine eigene Runde, zusammen mit Analytics.
+
+**In der Designrunde Progress und Analytics (2026-10-21) entworfen und damit nicht
+mehr offen:** die Progress-Seite (4.3, 4.4, 4.14, 4.24) und Analytics (4.16, 4.17).
+Die Balkendiagramm-Frage ist entschieden: Analytics behält den 3px-Wertebalken als
+einziges Primitiv und bekommt **kein Diagramm** — jede Zahl bleibt neben ihrem Balken.
 
 ---
 

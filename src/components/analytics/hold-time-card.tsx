@@ -3,6 +3,7 @@ import {
   BucketHeader,
   BucketRow,
 } from "@/components/analytics/bucket-table";
+import { EmptySection } from "@/components/analytics/empty-section";
 import type { ExecutionSummaryRow } from "@/db/queries/analytics";
 import { formatHoldTime, OUTCOME_LABELS, OUTCOMES } from "@/domain/execution";
 
@@ -27,6 +28,14 @@ export function HoldTimeCard({ summary }: HoldTimeCardProps) {
     row: summary.find((entry) => entry.outcome === outcome),
   })).filter((entry) => (entry.row?.holdTrades ?? 0) > 0);
 
+  if (rows.length === 0) {
+    return (
+      <EmptySection title="Hold time">
+        No trade with an exit in this range yet.
+      </EmptySection>
+    );
+  }
+
   return (
     <section className="flex flex-col gap-3">
       <div className="ml-2 flex flex-col gap-1">
@@ -39,35 +48,27 @@ export function HoldTimeCard({ summary }: HoldTimeCardProps) {
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
         <div className="card-surface edge flex flex-col gap-3 p-5">
-          {rows.length === 0 ? (
-            <p className="py-4 text-center text-fg-subtle text-sm">
-              No trade with an exit in this range yet.
-            </p>
-          ) : (
-            <>
-              <BucketHeader bucketLabel="Outcome" columns={COLUMNS} />
+          <BucketHeader bucketLabel="Outcome" columns={COLUMNS} />
 
-              <ul className="flex flex-col divide-y divide-white/6">
-                {rows.map(({ outcome, row }) => (
-                  <BucketRow
-                    key={outcome}
-                    label={OUTCOME_LABELS[outcome]}
-                    columns={COLUMNS}
-                    cells={[
-                      {
-                        text: formatHoldTime(row?.holdMinutes ?? null),
-                        tone: "text-fg",
-                      },
-                      {
-                        text: String(row?.holdTrades ?? 0),
-                        tone: "text-fg-muted",
-                      },
-                    ]}
-                  />
-                ))}
-              </ul>
-            </>
-          )}
+          <ul className="flex flex-col divide-y divide-white/6">
+            {rows.map(({ outcome, row }) => (
+              <BucketRow
+                key={outcome}
+                label={OUTCOME_LABELS[outcome]}
+                columns={COLUMNS}
+                cells={[
+                  {
+                    text: formatHoldTime(row?.holdMinutes ?? null),
+                    tone: "text-fg",
+                  },
+                  {
+                    text: String(row?.holdTrades ?? 0),
+                    tone: "text-fg-muted",
+                  },
+                ]}
+              />
+            ))}
+          </ul>
         </div>
       </div>
     </section>

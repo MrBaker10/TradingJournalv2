@@ -546,7 +546,7 @@ and branch per item. Terms in `GLOSSARY.md`.
 
 - Light mode — a separate design round, not a token override
 - Landing page — the only public surface, own document
-- Component-level design for Analytics and Prop Firm Rules
+- Component-level design for Prop Firm Rules
 - Richer prop firm compare
 - Per-account equity curves side by side
 - **Personal rulebook** — the trader's own rules (max daily loss, sessions) with daily
