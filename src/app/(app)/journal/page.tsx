@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { HiddenPracticeBanner } from "@/components/journal/hidden-practice-banner";
+import { JournalDay } from "@/components/journal/journal-day";
 import { JournalFilters } from "@/components/journal/journal-filters";
 import { PaginationControls } from "@/components/journal/pagination-controls";
 import { TradeRow } from "@/components/journal/trade-row";
@@ -11,6 +12,7 @@ import {
   listJournalTrades,
 } from "@/db/queries/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { journalLayout } from "@/lib/journal/day-groups";
 import type { JournalSearchParams } from "@/lib/journal/href";
 import { firstValue } from "@/lib/search-params";
 
@@ -52,7 +54,7 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
     selectedAccountId: user.selectedAccountId,
   });
 
-  const [{ rows, totalCount, hiddenPracticeCounts }, instruments] =
+  const [{ rows, totalCount, days, hiddenPracticeCounts }, instruments] =
     await Promise.all([
       listJournalTrades({
         userId: user.id,
@@ -67,6 +69,7 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
       }),
       listInstruments(),
     ]);
+  const layout = journalLayout(rows, days, sortBy);
 
   return (
     <div className="flex flex-col gap-4">
@@ -104,9 +107,15 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
         <p className="py-10 text-center text-fg-subtle text-sm">
           No trades match these filters yet.
         </p>
+      ) : layout.kind === "days" ? (
+        <div className="flex flex-col gap-[10px]">
+          {layout.days.map((day) => (
+            <JournalDay key={day.date} day={day} currency={currency} />
+          ))}
+        </div>
       ) : (
         <div className="flex flex-col gap-[10px]">
-          {rows.map((trade) => (
+          {layout.rows.map((trade) => (
             <TradeRow key={trade.id} trade={trade} currency={currency} />
           ))}
         </div>

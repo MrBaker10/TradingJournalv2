@@ -7,6 +7,11 @@ interface TradeRowProps {
   trade: JournalTradeRowData;
   /** The display currency of `displayPnlCents` (display-currency). */
   currency: DisplayCurrency;
+  /**
+   * What the meta line starts with: the entry time under a day heading, which
+   * already names the date, otherwise the date (Design.md §4.9).
+   */
+  metaLead?: "date" | "time";
 }
 
 // A title-line tag; `fromSm` ones give way on a phone (Design.md §4.9).
@@ -37,7 +42,11 @@ function Tag({
 // the detail page carries things the row never could: confluences, mistakes,
 // notes at full length, chart previews, and the way into editing. §4.9 was
 // rewritten with this slice; the hover treatment is the part that stayed.
-export function TradeRow({ trade, currency }: TradeRowProps) {
+export function TradeRow({
+  trade,
+  currency,
+  metaLead = "date",
+}: TradeRowProps) {
   const amount =
     trade.displayPnlCents !== null
       ? formatCents(trade.displayPnlCents, { signed: true, currency })
@@ -95,7 +104,12 @@ export function TradeRow({ trade, currency }: TradeRowProps) {
           )}
         </div>
         <span className="truncate text-xs text-fg-subtle">
-          {[trade.tradeDate, trade.session, trade.setupType]
+          {[
+            // Chart clock as stored, "09:42:00" cut to "09:42"; no zone applies.
+            metaLead === "time" ? trade.entryTime.slice(0, 5) : trade.tradeDate,
+            trade.session,
+            trade.setupType,
+          ]
             .filter(Boolean)
             .join(" · ")}
         </span>

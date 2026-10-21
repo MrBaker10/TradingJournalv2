@@ -139,7 +139,8 @@ export function formatEventTime(instant: Date, timeZone: string): string {
 }
 
 /**
- * A date as "Mon 28 Sep", the heading over one day of the econ calendar.
+ * A date as "Mon 28 Sep", the heading over one day of the econ calendar and
+ * of the journal list (Design.md §4.27).
  * UTC-anchored like the other formatters here: the zone was already applied
  * when the event was grouped under this date.
  */

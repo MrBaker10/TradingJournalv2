@@ -531,6 +531,10 @@ Monat verteilt ist. Er ist auf der Kachel, nicht auf der Zahl im Dashboard.
   nicht um, jede Zeile bleibt zweizeilig, und der Betrag rechts wird nie
   gekürzt. Wird es eng, kürzt sich nur das Instrument; Richtung und Tags
   bleiben ganz, ebenso die Metazeile bis auf ihr Ende.
+- **Metazeile in zwei Varianten:** unter einem Tageskopf der Journal-Liste
+  (4.27) beginnt sie mit der Einstiegszeit auf der Chart-Uhr (`09:42 · NY AM ·
+  Breaker`), weil der Kopf das Datum schon trägt; in der flachen Liste
+  (Sortierung nach R) und in „Recent trades" mit dem Datum.
 - Rechts: Betrag mono, darunter R-Multiple. Bei verpassten Setups steht dort
   „—" und als Unterzeile „+1.80R would-be" in `--color-fg-subtle` — der
   hypothetische Wert wird nie in Grün gezeigt. Datenherkunft: `mfe_r` auf einem
@@ -1590,6 +1594,30 @@ review week. Reload the page and try again." Einstieg ohne Review: „Step back 
 not, what to focus on."; mit Review: „Reviewed this week. Open it to add a thought."
 
 ---
+
+### 4.27 Journal-Liste
+
+Entworfen in der Designrunde Journal (2026-10-21). `/journal` liest sich nach
+Tagen, nicht als flache Folge von Zeilen.
+
+**Gliederung nach Trade date.** Bei Sortierung nach Datum stehen die Einträge
+in Tagesgruppen, gruppiert nach dem Handelsdatum — dieselbe Gruppierung wie
+der Kalender (4.8), ohne Sonntags-Roll: ein Sonntags-Trade steht unter „Sun".
+Innerhalb eines Tages laufen die Einträge nach Einstiegszeit in derselben
+Richtung wie die Tage, und die Metazeile der Zeile beginnt mit der Uhrzeit
+(4.9). Bei Sortierung nach R gibt es **keine** Gruppen: Tagesköpfe würden die
+besten und schlechtesten Trades auseinanderreißen; die Metazeile trägt dort das
+Datum.
+
+**Tageskopf.** Eine Zeile ohne eigene Fläche über der Gruppe, 10px Abstand zur
+ersten Zeile wie zwischen den Zeilen: links das Kurzdatum (`Mon 20 Oct`) in
+`--color-fg`, dahinter in `--color-fg-muted` (Zahlen sind Werte, §8) die Zahl der Einträge und, wenn
+größer null, der Missed Setups (`4 entries · 1 missed`). Unter `sm` steht nur
+die Zahl (`4 · 1 missed`), der Kopf bleibt einzeilig. Die Zahlen gelten für den
+**ganzen Tag** innerhalb der aktiven Filter, nicht für die Zeilen dieser Seite:
+läuft ein Tag über die Seitengrenze, wiederholt die nächste Seite seinen Kopf
+mit denselben Zahlen. Rechts ist der Platz für die Tagessumme (Ticket 03 der
+Runde).
 
 ## 5. Motion
 
