@@ -89,8 +89,12 @@ The daily note written before trading, optionally followed by an end-of-day revi
 A funding company whose evaluation and funded rules the app documents.
 
 **Prop firm program**:
-One rule set offered by a prop firm, such as a specific evaluation size.
-_Avoid_: Plan, challenge
+One rule set a prop firm sells, for one product line at one account size; each size of a product line is its own program.
+_Avoid_: Plan, challenge, variant
+
+**Product line**:
+The name under which a prop firm sells a family of programs that differ by account size.
+_Avoid_: Program type, plan, tier
 
 **Linked account**:
 A real account tied to one prop firm program, carrying the rule values the user entered for it.
