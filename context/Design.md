@@ -362,6 +362,16 @@ in **beiden** Varianten laut.
   Element im Dashboard"; das stimmte schon davor nicht, weil der Kalender sich
   beim Laden aufbaut und seit Designrunde 1 auch einen Hover hat.
 
+**Kleine Form: Statuskarte (Progress).** Auf `/progress` stehen Streak und Badges
+neben der Score-Karte, die dort die Hauptsache ist. Dafür gibt es eine kleinere Form
+der Kachel: `card-surface edge-neon`, Padding 16/20, eine Zeile. Links das
+`cap`-Label, rechts auf einer Grundlinie der Wert 20px mono mit `text-glow` und
+daneben die Zusatzzeile in `--color-fg-subtle` („Longest 21d", „of 12"). **Keine
+Icon-Kachel, kein Hover, kein Bump** — die Karte ist Status, kein Einstieg. Eine
+Consistency-Statuskarte gibt es auf Progress nicht: die Aufschlüsselung trägt den
+Score, er steht dort genau einmal. Die drei Dashboard-Kacheln oben bleiben
+unverändert.
+
 ### 4.4 Hinweisleiste (Grace Day)
 
 Volle Breite, `--radius-card`, Amber-Inset:
@@ -371,6 +381,13 @@ Volle Breite, `--radius-card`, Amber-Inset:
 
 Diese Leiste ist eine Erklärung, keine Warnung. Kein Rot, kein Ausrufezeichen,
 kein Dismiss-Button — sie verschwindet, wenn der Grace Day nicht mehr aktuell ist.
+
+**Platz.** Auf `/progress` über die volle Breite oberhalb von Score und
+Statuskarten, nicht in der Streak-Karte: sie erklärt die Zahlen darunter und wird
+vor ihnen gelesen. Die Streak-Regeln stehen als geschlossene Aufklappzeile unter
+dem Score-Raster; der Chevron der Leiste öffnet sie und scrollt zu ihnen. Offen
+stehen die Regeln in einer ruhigen `card-surface edge`-Karte — sie sind Erklärung,
+kein Prozesswert, und bekommen deshalb keine Neon-Kante.
 
 ### 4.5 Formularfelder
 

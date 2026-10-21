@@ -1,13 +1,15 @@
 "use client";
 
 import { ChevronDown, Info } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
-import type { StreakResult } from "@/domain/streak";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { type ReactNode, useRef, useState } from "react";
 import { formatDayLabel } from "@/lib/time";
 
-interface StreakCardProps {
-  streak: StreakResult;
+interface StreakExplanationProps {
+  /** This month's grace day, or null when none was used. */
+  graceDayDate: string | null;
+  /** The score and status cards the bar sits above and the rules sit below. */
+  children: ReactNode;
 }
 
 // Wording taken from project-overview.md "The Rules" and
@@ -40,22 +42,41 @@ const STREAK_RULES: { title: string; body: string }[] = [
   },
 ];
 
-export function StreakCard({ streak }: StreakCardProps) {
+// Design.md §4.4: the grace-day bar runs full width above the score and status
+// cards, the streak rules fold away below them. Both live in one component
+// because the bar's chevron opens the rules, and the cards in between are
+// passed through as children so they stay server-rendered.
+export function StreakExplanation({
+  graceDayDate,
+  children,
+}: StreakExplanationProps) {
   const [rulesOpen, setRulesOpen] = useState(false);
+  const rulesRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
+
+  function showRules() {
+    setRulesOpen(true);
+    // On a phone the rules sit a screen below the bar; without the scroll the
+    // chevron would seem to do nothing.
+    rulesRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "start",
+    });
+  }
 
   return (
-    <section className="flex flex-col gap-3">
-      {/* Design.md §4.4: an explanation, not a warning. Amber and calm, no
-          red, no exclamation mark, no dismiss — it goes away on its own when
-          the grace day is no longer this month's. */}
-      {streak.graceDayUsed && streak.graceDayDate !== null && (
+    <>
+      {/* An explanation, not a warning. Amber and calm, no red, no
+          exclamation mark, no dismiss — it goes away on its own when the
+          grace day is no longer this month's. */}
+      {graceDayDate !== null && (
         <div className="flex items-center gap-3 rounded-card p-4 shadow-[var(--shadow-notice-amber)]">
           <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-xs bg-warning-dim">
             <Info className="h-4 w-4 text-warning" aria-hidden="true" />
           </div>
           <p className="flex-1 text-sm">
             <span className="font-semibold text-fg">
-              Grace day used on {formatDayLabel(streak.graceDayDate)}.
+              Grace day used on {formatDayLabel(graceDayDate)}.
             </span>{" "}
             <span className="text-fg-muted">
               Your streak survived that day. The next missed weekday this month
@@ -64,7 +85,7 @@ export function StreakCard({ streak }: StreakCardProps) {
           </p>
           <button
             type="button"
-            onClick={() => setRulesOpen(true)}
+            onClick={showRules}
             aria-expanded={rulesOpen}
             aria-controls="streak-rules"
             className="flex h-10 w-10 shrink-0 items-center justify-center text-fg-subtle transition-colors hover:text-fg"
@@ -75,19 +96,10 @@ export function StreakCard({ streak }: StreakCardProps) {
         </div>
       )}
 
-      <div className="card-surface edge-neon flex flex-col gap-4 p-5">
-        <div className="flex items-end justify-between gap-3">
-          <div className="flex flex-col gap-0.5">
-            <span className="cap cap-neon">Logging streak</span>
-            <span className="text-glow font-mono text-[26px] font-bold leading-none tabular-nums">
-              {streak.current}d
-            </span>
-          </div>
-          <span className="font-mono text-fg-subtle text-xs tabular-nums">
-            Longest {streak.longest}d
-          </span>
-        </div>
+      {children}
 
+      {/* scroll-mt clears the sticky mobile header (h-14 at top-4). */}
+      <div ref={rulesRef} className="flex scroll-mt-24 flex-col">
         <button
           type="button"
           onClick={() => setRulesOpen((open) => !open)}
@@ -115,7 +127,7 @@ export function StreakCard({ streak }: StreakCardProps) {
               transition={{ duration: 0.3, ease: [0.2, 0.7, 0.3, 1] }}
               className="overflow-hidden"
             >
-              <ul className="flex flex-col gap-3 border-white/8 border-t pt-4">
+              <ul className="card-surface edge mt-2 flex flex-col gap-3 p-5">
                 {STREAK_RULES.map((rule) => (
                   <li key={rule.title} className="flex flex-col gap-0.5">
                     <span className="font-medium text-fg text-sm">
@@ -129,6 +141,6 @@ export function StreakCard({ streak }: StreakCardProps) {
           )}
         </AnimatePresence>
       </div>
-    </section>
+    </>
   );
 }
