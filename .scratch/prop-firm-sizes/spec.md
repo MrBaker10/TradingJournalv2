@@ -175,11 +175,11 @@ order, so the 25k to 150k programs of a firm read in size order.
 
 ## Further Notes
 
-- Agreed slicing: one format/parser ticket (format, position, account size, tag rule,
-  move of existing data), one UI ticket (Design.md, firm cards, size filter, compare,
-  program select), then three data tickets of five firms each, each reviewed by the user
-  before seeding.
-- Data tickets run after the format ticket; the UI ticket can be built against the moved
-  fifteen programs plus test fixtures and does not wait for the data.
+- Slicing (`issues/`): 01 format/parser (format, position, account size, tag rule,
+  move of existing data, ordering incl. program select), 02 Design.md, 03 firm cards
+  with size control and compare, 04 size filter, then 05–07 data for five firms each,
+  each reviewed by the user before seeding.
+- Data tickets depend only on 01; the UI tickets can be built against the moved
+  fifteen programs plus test fixtures. Agreed order: 01 → 02 → 03 → 04 → 05–07.
 - Grilled 2026-10-21; glossary updated the same day (Prop firm program sharpened,
   Product line added).
