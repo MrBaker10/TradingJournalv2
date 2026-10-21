@@ -80,10 +80,13 @@ function escapeLike(term: string): string {
   return term.replace(/[\\%_]/g, (character) => `\\${character}`);
 }
 
-export async function listPropFirms(filters: {
-  search?: string;
-  tags?: string[];
-}): Promise<PropFirmRow[]> {
+export async function listPropFirms(
+  filters: {
+    search?: string;
+    tags?: string[];
+  },
+  executor: Pick<typeof db, "select"> = db,
+): Promise<PropFirmRow[]> {
   const conditions = [];
 
   if (filters.search) {
@@ -98,12 +101,12 @@ export async function listPropFirms(filters: {
     conditions.push(arrayContains(propFirmPrograms.summaryTags, filters.tags));
   }
 
-  return db
+  return executor
     .select(SELECTION)
     .from(propFirms)
     .innerJoin(propFirmPrograms, eq(propFirmPrograms.firmId, propFirms.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(asc(propFirms.name), asc(propFirmPrograms.name));
+    .orderBy(asc(propFirms.name), asc(propFirmPrograms.position));
 }
 
 // The compare selection lives in the URL and has to survive a reload even when
@@ -152,10 +155,12 @@ export interface ProgramOption {
 }
 
 // Every program for the link form in the account editor, grouped by firm in
-// the select. Reference text only: nothing here becomes a rule value
-// (docs/adr/0001).
-export async function listProgramOptions(): Promise<ProgramOption[]> {
-  const rows = await db
+// the select, sizes in file order. Reference text only: nothing here becomes a
+// rule value (docs/adr/0001).
+export async function listProgramOptions(
+  executor: Pick<typeof db, "select"> = db,
+): Promise<ProgramOption[]> {
+  const rows = await executor
     .select({
       id: propFirmPrograms.id,
       firmName: propFirms.name,
@@ -169,7 +174,7 @@ export async function listProgramOptions(): Promise<ProgramOption[]> {
     })
     .from(propFirmPrograms)
     .innerJoin(propFirms, eq(propFirms.id, propFirmPrograms.firmId))
-    .orderBy(asc(propFirms.name), asc(propFirmPrograms.name));
+    .orderBy(asc(propFirms.name), asc(propFirmPrograms.position));
   return rows.map(({ id, firmName, name, ...reference }) => ({
     id,
     firmName,

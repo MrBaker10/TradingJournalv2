@@ -2,9 +2,10 @@ import { isValid, parseISO } from "date-fns";
 
 // `context/PropFirmsData.md` is the source of record for prop firm rules
 // (project-overview.md, H). This module turns it into rows and does nothing
-// else: it never normalises a value, never derives a number from the text and
-// never fills a gap. Every rule field stays the verbatim string from the file,
-// including the ones where a firm's own pages contradict each other.
+// else: it never normalises a value, never fills a gap, and derives exactly one
+// number, the account size (context/decisions.md). Every rule field stays the
+// verbatim string from the file, including the ones where a firm's own pages
+// contradict each other.
 //
 // A line it cannot place is an error, not a skipped field. That is deliberate:
 // the file is edited by hand, and a silent drop would show up as a missing rule
@@ -31,9 +32,9 @@ const PROGRAM_LABELS = {
   Notes: "notes",
 } as const;
 
-// These two describe the firm, not the program, so the parser lifts them out of
-// the block. Neither is filled in the file yet — see the Open questions block in
-// context/current-feature.md.
+// These two describe the firm, not the program, so they stand between the firm
+// heading and its first program heading. Either may be missing, which means
+// unknown.
 const FIRM_LABELS = {
   "Firm website": "website",
   "Last verified": "lastVerifiedAt",
@@ -52,6 +53,10 @@ export type ProgramFields = Record<ProgramFieldKey, string | null>;
 
 export interface ParsedProgram {
   name: string;
+  /** 1-based place within its firm, in file order — the order lists show. */
+  position: number;
+  /** Whole USD read from `Account size`, as a numeric string; null if unknown. */
+  accountSizeUsd: string | null;
   summaryTags: string[];
   fields: ProgramFields;
 }
@@ -68,8 +73,8 @@ interface Entry {
   line: number;
   /**
    * 1-based index of the blank-line-separated run this entry belongs to, counted
-   * from the start of its firm block. Blank lines carry structure in this file —
-   * see the paragraph check in `parseBlock`.
+   * from the start of its block. Blank lines carry structure in this file —
+   * see the paragraph check in `readSummaryTags`.
    */
   paragraph: number;
 }
@@ -78,6 +83,12 @@ interface Block {
   name: string;
   line: number;
   entries: Entry[];
+}
+
+// A `## ` firm heading owns the firm fields up to its first `### ` program
+// heading, then one block per program.
+interface FirmBlock extends Block {
+  programs: Block[];
 }
 
 function programKey(text: string): ProgramFieldKey | undefined {
@@ -105,6 +116,9 @@ function emptyFields(): ProgramFields {
   }
   return fields;
 }
+
+// "50k", "100K", "150 k": a number followed by k.
+const SIZE_TOKEN = /\b\d+\s?k\b/i;
 
 function fail(line: number, message: string): never {
   throw new Error(`PropFirmsData.md line ${line}: ${message}`);
@@ -145,8 +159,21 @@ function readLastVerified(entry: Entry, firm: string): string {
   return entry.text;
 }
 
-function splitIntoBlocks(markdown: string): Block[] {
-  const blocks: Block[] = [];
+// The one field read as a number, so the page can filter by size
+// (context/decisions.md). Only the plain form parses; anything with a
+// qualifier stops the seed rather than being read loosely.
+function readAccountSize(entry: Entry, location: string): string {
+  if (!/^\$[1-9]\d{0,2}(,\d{3})*$/.test(entry.text)) {
+    return fail(
+      entry.line,
+      `"Account size" of ${location} must be a dollar amount like "$50,000", found "${entry.text}"`,
+    );
+  }
+  return entry.text.replace(/[$,]/g, "");
+}
+
+function splitIntoBlocks(markdown: string): FirmBlock[] {
+  const firms: FirmBlock[] = [];
   const lines = markdown.split(/\r?\n/);
   let paragraph = 0;
   let afterBlank = true;
@@ -159,123 +186,223 @@ function splitIntoBlocks(markdown: string): Block[] {
       continue;
     }
 
-    const heading = /^##\s+(.+)$/.exec(text);
-    if (heading) {
-      blocks.push({ name: heading[1].trim(), line, entries: [] });
+    const programHeading = /^###\s+(.+)$/.exec(text);
+    if (programHeading) {
+      const firm = firms.at(-1);
+      if (!firm) {
+        fail(
+          line,
+          `program heading before the first "## " firm heading: "${text}"`,
+        );
+      }
+      firm.programs.push({ name: programHeading[1].trim(), line, entries: [] });
       paragraph = 0;
       afterBlank = true;
       continue;
     }
 
-    const current = blocks.at(-1);
-    if (!current) {
+    const firmHeading = /^##\s+(.+)$/.exec(text);
+    if (firmHeading) {
+      firms.push({
+        name: firmHeading[1].trim(),
+        line,
+        entries: [],
+        programs: [],
+      });
+      paragraph = 0;
+      afterBlank = true;
+      continue;
+    }
+
+    const firm = firms.at(-1);
+    if (!firm) {
       fail(line, `content before the first "## " heading: "${text}"`);
     }
     if (afterBlank) {
       paragraph += 1;
       afterBlank = false;
     }
-    current.entries.push({ text, line, paragraph });
+    (firm.programs.at(-1) ?? firm).entries.push({ text, line, paragraph });
   }
 
-  return blocks;
+  return firms;
 }
 
-function parseBlock(block: Block): ParsedFirm {
-  const { name, entries } = block;
-  const first = entries[0];
-  if (!first) {
-    fail(block.line, `firm "${name}" has no program block`);
-  }
-  if (isLabel(first.text)) {
-    fail(
-      first.line,
-      `expected a program name for "${name}", found the field label "${first.text}"`,
-    );
-  }
+interface LabelPair<K> {
+  key: K;
+  value: Entry | undefined;
+}
 
-  let index = 1;
-
-  // The summary lines above the rule table are the firm's own short form of the
-  // program ("EOD", "90% split", "No DLL"). They are the only structured facet
-  // this slice has, and they are taken verbatim — nothing is derived from the
-  // eighteen rule fields.
-  const summaryTags: string[] = [];
-  while (index < entries.length && !isLabel(entries[index].text)) {
-    summaryTags.push(entries[index].text);
-    index += 1;
-  }
-
-  // Blank lines are structure here, and this is where that matters. Every firm
-  // block reads: program name / summary tags / "target" / the rule table, each
-  // its own paragraph, and the table always opens on a paragraph's first line.
-  // So a label that shares its paragraph with the line above it means that line
-  // lost its own label and was just swallowed as a summary tag. Without this
-  // check that loss is silent, which is the one hole in the promise that an
-  // unplaceable line is an error.
-  const firstLabel = entries[index];
-  if (firstLabel && firstLabel.paragraph === entries[index - 1].paragraph) {
-    fail(
-      firstLabel.line,
-      `"${firstLabel.text}" opens the rule table of "${name}" but shares its paragraph with "${entries[index - 1].text}" — the line above it has lost its label`,
-    );
-  }
-
-  // The export that produced this file broke "$3,000 target" across two lines.
-  // Put it back together rather than carrying a bare "target" tag.
-  if (summaryTags.length > 1 && summaryTags.at(-1) === "target") {
-    summaryTags.pop();
-    summaryTags[summaryTags.length - 1] =
-      `${summaryTags[summaryTags.length - 1]} target`;
-  }
-
-  const fields = emptyFields();
-  let website: string | null = null;
-  let lastVerifiedAt: string | null = null;
+// Reads a run of label/value pairs, each label one that `keyFor` knows. A
+// label of the other kind is a real label in the wrong block and fails with
+// `misplaced`; anything else fails as unplaceable.
+function readLabelPairs<K>(
+  entries: Entry[],
+  location: string,
+  keyFor: (text: string) => K | undefined,
+  misplaced: string,
+): LabelPair<K>[] {
+  const pairs: LabelPair<K>[] = [];
   const seen = new Set<string>();
+  let index = 0;
 
   while (index < entries.length) {
     const label = entries[index];
-    const forProgram = programKey(label.text);
-    const forFirm = firmKey(label.text);
+    const key = keyFor(label.text);
 
-    if (!forProgram && !forFirm) {
+    if (key === undefined) {
       fail(
         label.line,
-        `"${label.text}" in firm "${name}" is neither a known field label nor a value under one`,
+        isLabel(label.text)
+          ? `"${label.text}" in ${location} ${misplaced}`
+          : `"${label.text}" in ${location} is neither a known field label nor a value under one`,
       );
     }
     if (seen.has(label.text)) {
-      fail(label.line, `duplicate label "${label.text}" in firm "${name}"`);
+      fail(label.line, `duplicate label "${label.text}" in ${location}`);
     }
     seen.add(label.text);
 
     // A label immediately followed by another label (or by the end of the
-    // block) has no value. That is how "Firm website" sits in the file today,
-    // and it means unknown — not empty string.
+    // block) has no value. That means unknown — not empty string.
     const next = entries[index + 1];
     const value = next && !isLabel(next.text) ? next : undefined;
     index += value ? 2 : 1;
 
-    if (forProgram) {
-      fields[forProgram] = value ? value.text : null;
-    } else if (forFirm === "website") {
+    pairs.push({ key, value });
+  }
+
+  return pairs;
+}
+
+// The lines between a firm heading and its first program: firm fields only.
+function parseFirmFields(
+  block: FirmBlock,
+): Pick<ParsedFirm, "website" | "lastVerifiedAt"> {
+  const { name } = block;
+  let website: string | null = null;
+  let lastVerifiedAt: string | null = null;
+
+  for (const { key, value } of readLabelPairs(
+    block.entries,
+    `firm "${name}"`,
+    firmKey,
+    `stands above its first "### " program heading`,
+  )) {
+    if (key === "website") {
       website = value ? readWebsite(value, name) : null;
     } else {
       lastVerifiedAt = value ? readLastVerified(value, name) : null;
     }
   }
 
-  return {
-    name,
-    website,
-    lastVerifiedAt,
-    programs: [{ name: first.text, summaryTags, fields }],
-  };
+  return { website, lastVerifiedAt };
+}
+
+function parseFirm(block: FirmBlock): ParsedFirm {
+  const { name } = block;
+  if (block.programs.length === 0) {
+    fail(block.line, `firm "${name}" has no "### " program heading`);
+  }
+
+  const seen = new Set<string>();
+  const programs = block.programs.map((program, index) => {
+    if (seen.has(program.name)) {
+      fail(
+        program.line,
+        `duplicate program "${program.name}" in firm "${name}"`,
+      );
+    }
+    seen.add(program.name);
+    return parseProgram(program, name, index + 1);
+  });
+
+  return { name, ...parseFirmFields(block), programs };
+}
+
+// The summary lines above the rule table are the firm's own short form of the
+// program ("EOD", "90% split", "No DLL"). They are the only structured facet
+// the page has, and they are taken verbatim — nothing is derived from the
+// eighteen rule fields. Returns the tags and where the rule table starts.
+function readSummaryTags(
+  entries: Entry[],
+  location: string,
+): { summaryTags: string[]; tableStart: number } {
+  let index = 0;
+  while (index < entries.length && !isLabel(entries[index].text)) {
+    index += 1;
+  }
+  const summaryTags = entries.slice(0, index).map((entry) => entry.text);
+
+  // Blank lines are structure here, and this is where that matters. Every
+  // program block reads: summary tags / the rule table, each its own paragraph,
+  // and the table always opens on a paragraph's first line. So a label that
+  // shares its paragraph with the line above it means that line lost its own
+  // label and was just swallowed as a summary tag. Without this check that loss
+  // is silent, which is the one hole in the promise that an unplaceable line is
+  // an error.
+  const firstLabel = entries[index];
+  if (
+    firstLabel &&
+    index > 0 &&
+    firstLabel.paragraph === entries[index - 1].paragraph
+  ) {
+    fail(
+      firstLabel.line,
+      `"${firstLabel.text}" opens the rule table of ${location} but shares its paragraph with "${entries[index - 1].text}" — the line above it has lost its label`,
+    );
+  }
+
+  // Tags become filter chips shared by every size of every firm, so a tag that
+  // names an amount or a size ("$3,000 target", "50k EOD") would only ever
+  // match one size. Those facts live in the rule fields instead.
+  for (const [offset, tag] of summaryTags.entries()) {
+    if (tag.includes("$") || SIZE_TOKEN.test(tag)) {
+      fail(
+        entries[offset].line,
+        `summary tag "${tag}" of ${location} names an amount or a size; tags must hold for every size`,
+      );
+    }
+  }
+
+  return { summaryTags, tableStart: index };
+}
+
+function parseProgram(
+  block: Block,
+  firm: string,
+  position: number,
+): ParsedProgram {
+  const { name, entries } = block;
+  const location = `program "${name}" of firm "${firm}"`;
+  const { summaryTags, tableStart } = readSummaryTags(entries, location);
+
+  // A heading whose table went missing would otherwise seed a program with
+  // every field unknown, and nobody would notice.
+  if (tableStart === entries.length) {
+    fail(block.line, `${location} has no rule table`);
+  }
+
+  const fields = emptyFields();
+  let accountSizeUsd: string | null = null;
+
+  for (const { key, value } of readLabelPairs(
+    entries.slice(tableStart),
+    location,
+    programKey,
+    `belongs above the firm's first "### " program heading`,
+  )) {
+    fields[key] = value ? value.text : null;
+    if (key === "accountSize" && value) {
+      accountSizeUsd = readAccountSize(value, location);
+    }
+  }
+
+  return { name, position, accountSizeUsd, summaryTags, fields };
 }
 
 export function parsePropFirms(markdown: string): ParsedFirm[] {
-  const firms = splitIntoBlocks(markdown).map(parseBlock);
+  const firms = splitIntoBlocks(markdown).map(parseFirm);
 
   const seen = new Set<string>();
   for (const firm of firms) {

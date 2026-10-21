@@ -1,15 +1,11 @@
 ## Futures Elite
 
-Elite Challenge 50k
+### Elite Challenge 50k
 
 EOD
 90% split
 No DLL
 No funded consistency
-$3,000
-
-target
-
 
 Account size
 $50,000
@@ -50,16 +46,12 @@ NEW to the stack. $0 activation, $89 reset, max 10 active funded accounts, 30-da
 
 ## Tradeify
 
-Select 50k (Daily Payout)
+### Select 50k (Daily Payout)
 
 EOD
 90% split
 No DLL
 No funded consistency
-$3,000
-
-target
-
 
 Account size
 $50,000
@@ -100,16 +92,14 @@ Micro-scalping rule: >50% trades & profits from holds >10s. No monthly fee. 90% 
 
 ## Take Profit Trader
 
-50k Test → PRO → PRO+
+Firm website
+
+### 50k Test → PRO → PRO+
 
 EOD
 80% split
 No DLL
 No funded consistency
-$3,000
-
-target
-
 
 Account size
 $50,000
@@ -147,20 +137,15 @@ End-of-day rule
 Test & PRO+: EOD trailing. PRO: intraday trailing. Floor updates at 5pm ET
 Notes
 Daily loss limit REMOVED Jan 2025. PRO = 80% split. PRO+ = 90% split. Uncapped payouts. 6 minis / 60 micros on 50k.
-Firm website
 
 ## My Funded Futures
 
-Rapid 50k
+### Rapid 50k
 
 EOD
 90% split
 No DLL
 No funded consistency
-$3,000
-
-target
-
 
 Account size
 $50,000
@@ -201,15 +186,11 @@ Min payout $500. Buffer of $2,100 required. Sim-funded starts at $0. Up to $5k r
 
 ## FundedNext
 
-Futures Rapid 50k
+### Futures Rapid 50k
 
 EOD
 80% split
 No DLL
-$2,500
-
-target
-
 
 Account size
 $50,000
@@ -250,15 +231,11 @@ Min withdrawal $250. $1,500 cap per cycle until 5th payout. Payout within 24h wi
 
 ## Top One Futures
 
-Elite Daily 50k
+### Elite Daily 50k
 
 EOD
 90% split
 No funded consistency
-$3,000
-
-target
-
 
 Account size
 $50,000
@@ -299,15 +276,11 @@ $2,500 buffer required. Min payout $500. 50% of next payout goes toward buffer r
 
 ## BluSky
 
-Propel 50k
+### Propel 50k
 
 EOD
 90% split
 No DLL
-$3,000
-
-target
-
 
 Account size
 $50,000
@@ -348,15 +321,11 @@ $10k profit milestone triggers brokerage review. 34% consistency rule. Positions
 
 ## Funded Futures Family
 
-Prime 50k
+### Prime 50k
 
 EOD
 100% split
 No DLL
-$3,000
-
-target
-
 
 Account size
 $50,000
@@ -397,16 +366,12 @@ Notes
 
 ## Lucid Trading
 
-LucidFlex 50k
+### LucidFlex 50k
 
 EOD
 90% split
 No DLL
 No funded consistency
-$3,000
-
-target
-
 
 Account size
 $50,000
@@ -447,14 +412,10 @@ $2,000 max payout per cycle on 50k. Average payout time ~15 min. 4.8/5 Trustpilo
 
 ## Apex Trader Funding
 
-50k EOD
+### 50k EOD
 
 EOD
 100% split
-$3,000
-
-target
-
 
 Account size
 $50,000
@@ -495,15 +456,11 @@ NEW 2026: One-time fee, no monthly billing, 30-day eval window, 20-account limit
 
 ## Goat Funded Futures
 
-50k EOD
+### 50k EOD
 
 EOD
 90% split
 No DLL
-$2,000
-
-target
-
 
 Account size
 $50,000
@@ -544,14 +501,10 @@ $0 activation fee. $2k max payout on 50k. No time limit to pass eval. Funded EOD
 
 ## Legends Trading
 
-Elite Master 50k
+### Elite Master 50k
 
 EOD
 90% split
-$2,700
-
-target
-
 
 Account size
 $50,000
@@ -592,14 +545,10 @@ $2k max payout per cycle. $1,200 daily loss limit on funded. 40% consistency rul
 
 ## E8 Markets
 
-Signature Futures 50k
+### Signature Futures 50k
 
 Static
 80% split
-$3,000
-
-target
-
 
 Account size
 $50,000
@@ -640,16 +589,12 @@ Tiered payout caps: payouts 1-2=$1,250; 3-4=$2,250; 5+=$3,250. $2k non-withdrawa
 
 ## TradeDay
 
-50k EOD
+### 50k EOD
 
 EOD
 80% split
 No DLL
 No funded consistency
-$3,000
-
-target
-
 
 Account size
 $50,000
@@ -690,15 +635,11 @@ Progressive split: 80%→90%→95%. Min payout $250. No daily loss limit. 5 min 
 
 ## The Trading Pit
 
-Futures Prime 50k
+### Futures Prime 50k
 
 EOD
 80% split
 No DLL
-$3,000
-
-target
-
 
 Account size
 $50,000
@@ -736,4 +677,3 @@ End-of-day rule
 EOD trailing drawdown: starts at $48k floor, trails upward, locks at $50k starting balance
 Notes
 EOD trailing drawdown only confirmed rule. $2k drawdown distance from $50k starting. Locks at starting balance. Official site has limited English-language rule documentation.
-

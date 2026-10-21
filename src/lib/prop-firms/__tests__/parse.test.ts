@@ -3,10 +3,16 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parsePropFirms } from "../parse.ts";
 
-// A minimal block in exactly the shape the real file uses: heading, program
-// name, the summary lines, the broken-off "target" line, then label/value pairs.
-function block(name: string, body: string): string {
-  return `## ${name}\n\nRapid 50k\n\nEOD\n90% split\nNo DLL\n$3,000\n\ntarget\n\n\n${body}\n`;
+// A program in exactly the shape the real file uses: its heading, the summary
+// lines, then the label/value pairs of the rule table.
+function program(name: string, body: string): string {
+  return `### ${name}\n\nEOD\n90% split\nNo DLL\n\n${body}\n\n`;
+}
+
+// A firm block with one program, optionally preceded by firm fields.
+function block(name: string, body: string, firmFields = ""): string {
+  const head = firmFields === "" ? "" : `${firmFields}\n\n`;
+  return `## ${name}\n\n${head}${program("Rapid 50k", body)}`;
 }
 
 const FULL_BODY = [
@@ -67,16 +73,71 @@ describe("parsePropFirms", () => {
     ).toHaveLength(0);
   });
 
-  it("joins the broken-off 'target' line onto the preceding summary tag", () => {
+  it("reads several programs of one firm in file order, numbered from 1", () => {
+    const markdown = `## Tradeify\n\n${program("Select 25k", FULL_BODY)}${program("Select 50k", FULL_BODY)}${program("Select 100k", FULL_BODY)}`;
+
+    const [firm] = parsePropFirms(markdown);
+
+    expect(firm.programs.map(({ name, position }) => [name, position])).toEqual(
+      [
+        ["Select 25k", 1],
+        ["Select 50k", 2],
+        ["Select 100k", 3],
+      ],
+    );
+  });
+
+  it("reads the summary tags verbatim", () => {
     const [firm] = parsePropFirms(block("My Funded Futures", FULL_BODY));
 
     expect(firm.programs[0].summaryTags).toEqual([
       "EOD",
       "90% split",
       "No DLL",
-      "$3,000 target",
     ]);
   });
+
+  it.each(["$3,000 target", "50k EOD", "100K"])(
+    "rejects the size-bound summary tag %j",
+    (tag) => {
+      const markdown = `## Tradeify\n\n### Select 50k\n\nEOD\n${tag}\n\n${FULL_BODY}\n`;
+
+      expect(() => parsePropFirms(markdown)).toThrow(
+        /summary tag .* of program "Select 50k" of firm "Tradeify" names an amount or a size/,
+      );
+    },
+  );
+
+  it.each([
+    ["$50,000", "50000"],
+    ["$150,000", "150000"],
+  ])("reads the account size %s as %s USD", (text, usd) => {
+    const body = FULL_BODY.replace("$50,000", text);
+
+    const [firm] = parsePropFirms(block("Tradeify", body));
+
+    expect(firm.programs[0].accountSizeUsd).toBe(usd);
+    expect(firm.programs[0].fields.accountSize).toBe(text);
+  });
+
+  it("leaves an unknown account size null", () => {
+    const body = FULL_BODY.replace("Account size\n$50,000\n", "Account size\n");
+
+    const [firm] = parsePropFirms(block("Tradeify", body));
+
+    expect(firm.programs[0].accountSizeUsd).toBeNull();
+  });
+
+  it.each(["50k", "$50,000 (EOD)", "$50.000", "$050,000"])(
+    "rejects the account size %j",
+    (text) => {
+      const body = FULL_BODY.replace("$50,000", text);
+
+      expect(() => parsePropFirms(block("Tradeify", body))).toThrow(
+        /PropFirmsData\.md line \d+: "Account size" of program "Rapid 50k" of firm "Tradeify" must be a dollar amount like "\$50,000"/,
+      );
+    },
+  );
 
   it("keeps a rule field verbatim, contradiction and all", () => {
     const contradiction =
@@ -92,9 +153,9 @@ describe("parsePropFirms", () => {
   });
 
   it("treats a label with no value as unknown, not as an empty string", () => {
-    // Take Profit Trader ends its block with a bare "Firm website" label.
+    // Take Profit Trader carries a bare "Firm website" label.
     const [firm] = parsePropFirms(
-      block("Take Profit Trader", `${FULL_BODY}\nFirm website`),
+      block("Take Profit Trader", FULL_BODY, "Firm website"),
     );
 
     expect(firm.website).toBeNull();
@@ -102,8 +163,13 @@ describe("parsePropFirms", () => {
   });
 
   it("lifts website and last-verified date onto the firm", () => {
-    const body = `${FULL_BODY}\nFirm website\nhttps://example.com\nLast verified\n2026-09-14`;
-    const [firm] = parsePropFirms(block("Tradeify", body));
+    const [firm] = parsePropFirms(
+      block(
+        "Tradeify",
+        FULL_BODY,
+        "Firm website\nhttps://example.com\nLast verified\n2026-09-14",
+      ),
+    );
 
     expect(firm.website).toBe("https://example.com");
     expect(firm.lastVerifiedAt).toBe("2026-09-14");
@@ -111,27 +177,23 @@ describe("parsePropFirms", () => {
   });
 
   it("rejects a non-https website", () => {
-    const body = `${FULL_BODY}\nFirm website\nhttp://example.com`;
-
-    expect(() => parsePropFirms(block("Tradeify", body))).toThrow(
-      /must be https/,
-    );
+    expect(() =>
+      parsePropFirms(
+        block("Tradeify", FULL_BODY, "Firm website\nhttp://example.com"),
+      ),
+    ).toThrow(/must be https/);
   });
 
   it("rejects a malformed last-verified date", () => {
-    const body = `${FULL_BODY}\nLast verified\n14.09.2026`;
-
-    expect(() => parsePropFirms(block("Tradeify", body))).toThrow(
-      /must be a YYYY-MM-DD date/,
-    );
+    expect(() =>
+      parsePropFirms(block("Tradeify", FULL_BODY, "Last verified\n14.09.2026")),
+    ).toThrow(/must be a YYYY-MM-DD date/);
   });
 
   it("rejects a last-verified date that does not exist", () => {
-    const body = `${FULL_BODY}\nLast verified\n2026-02-30`;
-
-    expect(() => parsePropFirms(block("Tradeify", body))).toThrow(
-      /must be a YYYY-MM-DD date/,
-    );
+    expect(() =>
+      parsePropFirms(block("Tradeify", FULL_BODY, "Last verified\n2026-02-30")),
+    ).toThrow(/must be a YYYY-MM-DD date/);
   });
 
   it("throws on a line it cannot place instead of dropping it", () => {
@@ -142,9 +204,11 @@ describe("parsePropFirms", () => {
     );
   });
 
-  it("reports the line number and the firm when it throws", () => {
+  it("reports the line number, the program and the firm when it throws", () => {
     expect(() => parsePropFirms(block("Tradeify", "Account size\n$50,000\n?"))) //
-      .toThrow(/PropFirmsData\.md line \d+: "\?" in firm "Tradeify"/);
+      .toThrow(
+        /PropFirmsData\.md line \d+: "\?" in program "Rapid 50k" of firm "Tradeify"/,
+      );
   });
 
   it("throws when the first label lost the line above it", () => {
@@ -153,14 +217,14 @@ describe("parsePropFirms", () => {
     const body = FULL_BODY.replace("Account size\n", "");
 
     expect(() => parsePropFirms(block("Tradeify", body))).toThrow(
-      /"Profit target" opens the rule table of "Tradeify" but shares its paragraph with "\$50,000" — the line above it has lost its label/,
+      /"Profit target" opens the rule table of program "Rapid 50k" of firm "Tradeify" but shares its paragraph with "\$50,000" — the line above it has lost its label/,
     );
   });
 
   it("insists on the blank line between the summary block and the rule table", () => {
     // Deliberate brittleness: blank lines carry the structure of this file, so
     // losing one is a parse error rather than something to guess around.
-    const glued = `## Tradeify\n\nRapid 50k\n\nEOD\n90% split\n\ntarget\n${FULL_BODY}\n`;
+    const glued = `## Tradeify\n\n### Rapid 50k\n\nEOD\n90% split\n${FULL_BODY}\n`;
 
     expect(() => parsePropFirms(glued)).toThrow(/has lost its label/);
   });
@@ -178,6 +242,57 @@ describe("parsePropFirms", () => {
       block("Tradeify", FULL_BODY) + block("Tradeify", FULL_BODY);
 
     expect(() => parsePropFirms(markdown)).toThrow(/duplicate firm heading/);
+  });
+
+  it("rejects a firm without a program", () => {
+    expect(() => parsePropFirms("## Tradeify\n\nFirm website\n")).toThrow(
+      /firm "Tradeify" has no "### " program heading/,
+    );
+  });
+
+  it("rejects a program heading with no rule table under it", () => {
+    const markdown = `## Tradeify\n\n### Select 25k\n\n${program("Select 50k", FULL_BODY)}`;
+
+    expect(() => parsePropFirms(markdown)).toThrow(
+      /program "Select 25k" of firm "Tradeify" has no rule table/,
+    );
+  });
+
+  it("rejects a program heading before the first firm heading", () => {
+    expect(() => parsePropFirms(program("Select 50k", FULL_BODY))).toThrow(
+      /program heading before the first "## " firm heading/,
+    );
+  });
+
+  it("rejects a duplicate program name within a firm", () => {
+    const markdown = `## Tradeify\n\n${program("Select 50k", FULL_BODY)}${program("Select 50k", FULL_BODY)}`;
+
+    expect(() => parsePropFirms(markdown)).toThrow(
+      /duplicate program "Select 50k" in firm "Tradeify"/,
+    );
+  });
+
+  it("allows the same program name in two different firms", () => {
+    const markdown =
+      block("Apex Trader Funding", FULL_BODY) + block("TradeDay", FULL_BODY);
+
+    expect(parsePropFirms(markdown)).toHaveLength(2);
+  });
+
+  it("rejects a firm field inside a program", () => {
+    const body = `${FULL_BODY}\nFirm website\nhttps://example.com`;
+
+    expect(() => parsePropFirms(block("Tradeify", body))).toThrow(
+      /"Firm website" in program "Rapid 50k" of firm "Tradeify" belongs above the firm's first "### " program heading/,
+    );
+  });
+
+  it("rejects a rule field above the firm's first program", () => {
+    expect(() =>
+      parsePropFirms(block("Tradeify", FULL_BODY, "Account size\n$50,000")),
+    ).toThrow(
+      /"Account size" in firm "Tradeify" stands above its first "### " program heading/,
+    );
   });
 
   it("rejects content before the first heading", () => {
@@ -224,17 +339,25 @@ describe("parsePropFirms against context/PropFirmsData.md", () => {
     expect(byName.get("E8 Markets")?.programs[0].summaryTags).toEqual([
       "Static",
       "80% split",
-      "$3,000 target",
     ]);
     expect(byName.get("Tradeify")?.programs[0].summaryTags).toEqual([
       "EOD",
       "90% split",
       "No DLL",
       "No funded consistency",
-      "$3,000 target",
     ]);
+  });
 
-    const tags = new Set(firms.flatMap((firm) => firm.programs[0].summaryTags));
-    expect(tags.has("target")).toBe(false);
+  // A curation rule, stricter than the parser: every program a firm sells has
+  // a size, so a missing one in the file means the research missed it.
+  it("reads an account size for every program", () => {
+    for (const firm of parsePropFirms(markdown)) {
+      for (const program of firm.programs) {
+        expect(
+          program.accountSizeUsd,
+          `${firm.name} · ${program.name}`,
+        ).not.toBeNull();
+      }
+    }
   });
 });

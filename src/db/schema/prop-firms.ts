@@ -1,4 +1,11 @@
-import { date, integer, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  date,
+  integer,
+  numeric,
+  pgTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 // Reference data, not user data: there is no user_id here and no per-user
 // filter, the same way `instruments` works. The rows come from
@@ -28,6 +35,14 @@ export const propFirmPrograms = pgTable(
       .notNull()
       .references(() => propFirms.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    // 1-based place within the firm, in file order; lists sort by it. The
+    // default only covers the rows that existed when the column arrived, each
+    // the single program of its firm until the next seed.
+    position: integer("position").notNull().default(1),
+    // The one rule-table field kept as a number too, read strictly from
+    // `accountSize` so the page can filter by size (context/decisions.md).
+    // Null when the file does not state it. USD, never converted.
+    accountSizeUsd: numeric("account_size_usd", { precision: 14, scale: 2 }),
     // The firm's own short form of the program ("EOD", "90% split", "No DLL"),
     // taken verbatim from the summary lines above the rule table. This is what
     // the filter chips are built from — nothing is derived from the eighteen

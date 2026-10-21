@@ -17,7 +17,7 @@ On the Prop Firm Rules page they can only read and compare the 50k rules, althou
 targets, drawdowns, daily loss limits, contract caps and payout caps all change with
 the size. The page itself would not cope with the full range either: a flat list of
 one card per program, and a chip bar built from every summary tag, which already holds
-size-bound tags such as "50k EOD" and "$3,000 target".
+size-bound tags such as "$3,000 target".
 
 ## Solution
 
@@ -87,12 +87,13 @@ order, so the 25k to 150k programs of a firm read in size order.
   a firm, or a firm field inside a program block is a parse error. All other existing
   strictness rules stay.
 - **Existing data moves, not changes.** The fifteen current programs move into the new
-  format with their names unchanged. Size-bound summary tags ("50k EOD", "$3,000
-  target", "$2,700") are rewritten to size-neutral form or dropped. That is the only
+  format with their names unchanged. Size-bound summary tags (the fifteen "$X target"
+  tags) are dropped; "50k EOD" is a program name, not a tag, and stays. That is the only
   content change in the format ticket.
 - **Position.** New integer column on programs holding the 1-based position within its
-  firm, taken from file order. Lists order by firm name, then position; this replaces
-  the order by program name in the page, compare lookup and program select queries.
+  firm, taken from file order. The page and program select queries order by firm
+  name, then position, instead of by program name; the compare lookup keeps the order
+  of the selection.
 - **Account size as a number.** New nullable numeric column holding the account size in
   USD, read strictly from the `Account size` field: only the form `$NN,NNN` (dollar
   sign, digits, thousands commas) parses; anything else fails the seed with the line
