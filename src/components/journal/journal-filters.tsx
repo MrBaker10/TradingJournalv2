@@ -7,10 +7,11 @@ import { groupByAssetClass } from "@/domain/instruments";
 import {
   activeJournalFilterCount,
   buildJournalHref,
-  JOURNAL_FILTER_KEYS,
+  CLEARED_JOURNAL_FILTERS,
   type JournalSearchParams,
 } from "@/lib/journal/href";
 import { narrowingPreset, type RangePreset } from "@/lib/time";
+import { QUIET_ACTION_CLASS } from "./quiet-action-class";
 
 interface InstrumentOption {
   id: number;
@@ -113,9 +114,7 @@ export function JournalFilters({ instruments }: JournalFiltersProps) {
   }
 
   function clear() {
-    update(
-      Object.fromEntries(JOURNAL_FILTER_KEYS.map((key) => [key, undefined])),
-    );
+    update(CLEARED_JOURNAL_FILTERS);
   }
 
   return (
@@ -125,7 +124,7 @@ export function JournalFilters({ instruments }: JournalFiltersProps) {
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls="journal-filter-bar"
-        className="flex h-10 items-center self-start rounded-ctl border border-white/12 bg-well px-4 text-fg text-sm sm:hidden"
+        className={`${QUIET_ACTION_CLASS} self-start sm:hidden`}
       >
         Filters{activeCount > 0 ? ` · ${activeCount}` : ""}
       </button>

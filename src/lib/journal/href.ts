@@ -15,8 +15,17 @@ export function activeJournalFilterCount(params: JournalSearchParams): number {
     .length;
 }
 
-/** The filters `Clear` removes; the sort stays. */
-export const JOURNAL_FILTER_KEYS = ["range", "from", "to", "instrument"];
+/**
+ * The overrides behind `Clear` and "Clear filters": every filter and the page
+ * go, the sort stays (Design.md §4.27).
+ */
+export const CLEARED_JOURNAL_FILTERS: JournalSearchParams = {
+  range: undefined,
+  from: undefined,
+  to: undefined,
+  instrument: undefined,
+  page: undefined,
+};
 
 export function buildJournalHref(
   current: JournalSearchParams,

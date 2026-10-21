@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { HiddenPracticeBanner } from "@/components/journal/hidden-practice-banner";
 import { JournalDay } from "@/components/journal/journal-day";
+import { JournalEmpty } from "@/components/journal/journal-empty";
 import { JournalFilters } from "@/components/journal/journal-filters";
 import { PaginationControls } from "@/components/journal/pagination-controls";
 import { TradeRow } from "@/components/journal/trade-row";
@@ -13,7 +15,7 @@ import {
 } from "@/db/queries/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { journalLayout } from "@/lib/journal/day-groups";
-import type { JournalSearchParams } from "@/lib/journal/href";
+import { buildJournalHref, type JournalSearchParams } from "@/lib/journal/href";
 import { firstValue } from "@/lib/search-params";
 import { rangeForPreset, todayInTimeZone } from "@/lib/time";
 
@@ -82,6 +84,11 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
     }),
     listInstruments(),
   ]);
+  // A page past the last one has no rows although entries exist; the empty
+  // state would claim "No entries yet". Back to the first page instead.
+  if (rows.length === 0 && page > 1) {
+    redirect(buildJournalHref(current, { page: undefined }));
+  }
   const layout = journalLayout(rows, days, sortBy);
 
   return (
@@ -124,9 +131,7 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
       <HiddenPracticeBanner hiddenCounts={hiddenPracticeCounts} />
 
       {rows.length === 0 ? (
-        <p className="py-10 text-center text-fg-subtle text-sm">
-          No trades match these filters yet.
-        </p>
+        <JournalEmpty searchParams={current} />
       ) : layout.kind === "days" ? (
         <div className="flex flex-col gap-[10px]">
           {layout.days.map((day) => (

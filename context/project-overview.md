@@ -77,8 +77,8 @@ Consequences that follow from this and are not optional:
 
 - **Account selector** in the app shell, remembered per user. "All accounts" means all
   real accounts; a practice account is only ever visible when selected on its own.
-  Plus an account filter in the journal list and "By account" as an eleventh analytics
-  dimension.
+  The selector is also the journal list's account filter — the list has no second
+  one. Plus "By account" as an eleventh analytics dimension.
 - **Import** asks which account(s) a file's rows belong to before the preview is
   confirmed.
 - **Settings** holds account management and the default account selection for new

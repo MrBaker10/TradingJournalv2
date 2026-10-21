@@ -1656,6 +1656,25 @@ Zeitraums steht auf Dashboard und Analytics. Ohne Missed Setups entfällt der
 letzte Teil nicht, er zeigt `0 missed`. Direkt darunter das unveränderte
 Practice-Banner (4.12), das zur Zählung gehört.
 
+**Leerzustände.** Zwei, beide als eine ruhige `card-surface edge`-Fläche ohne
+Illustration und ohne Akzentfarbe, Text in `--color-fg-muted`, Knöpfe in der
+Optik des `Filters`-Knopfs (`bg-well`, 1px-Rand, 40px):
+
+- **Kein Filter aktiv, keine Einträge:** „No entries yet." mit `New trade` und
+  `Import` als Weg zum ersten Eintrag.
+- **Filter aktiv, kein Treffer:** „No entries match these filters." mit
+  `Clear filters`, das dieselben Filter wie `Clear` löscht und die Sortierung
+  stehen lässt.
+
+Welcher gilt, entscheidet dieselbe „Filter aktiv"-Regel wie `Clear`. Das
+Practice-Banner steht weiter darüber: sind im kombinierten Blick nur
+Übungskonto-Einträge vorhanden, sagt der Leerzustand „No entries yet." und das
+Banner zeigt, wo sie sind — nichts verschwindet lautlos.
+
+Eine Seitenzahl hinter der letzten Seite (`?page=99`) zeigt keinen Leerzustand,
+sondern führt mit denselben Filtern und derselben Sortierung auf Seite 1 zurück —
+sonst stünde „No entries yet." unter einer Zählzeile mit Einträgen.
+
 ## 5. Motion
 
 | Moment | Dauer | Kurve |
