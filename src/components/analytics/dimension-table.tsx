@@ -2,6 +2,11 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
+import {
+  type BucketColumn,
+  BucketHeader,
+  BucketRow,
+} from "@/components/analytics/bucket-table";
 import { ValueBar } from "@/components/ui/value-bar";
 import { DIMENSION_ROW_LIMIT, type DimensionRow } from "@/domain/analytics";
 import { type DisplayCurrency, formatCents } from "@/lib/money";
@@ -28,6 +33,13 @@ function moneyClass(cents: number): string {
   return cents > 0 ? "text-success-fg" : "text-danger-fg";
 }
 
+const COLUMNS: BucketColumn[] = [
+  { label: "Trades", width: "sm:w-8" },
+  { label: "Win", width: "sm:w-10" },
+  { label: "Net P&L", width: "sm:w-24" },
+  { label: "Avg R", width: "sm:w-12" },
+];
+
 function Row({
   row,
   currency,
@@ -36,35 +48,35 @@ function Row({
   currency: DisplayCurrency;
 }) {
   return (
-    <li className="flex flex-col gap-1.5 py-2">
-      <div className="flex items-baseline justify-between gap-3">
-        <span
-          className={`truncate text-sm ${
-            row.isNotSet ? "text-fg-subtle italic" : "text-fg"
-          }`}
-        >
-          {row.label}
-        </span>
-        <span className="flex shrink-0 items-baseline gap-3 font-mono text-[13px] tabular-nums">
-          <span className="w-8 text-right text-fg-muted">{row.trades}</span>
-          <span className="w-10 text-right text-fg-muted">
-            {row.winRate === null ? EMPTY : `${Math.round(row.winRate * 100)}%`}
-          </span>
-          <span className={`w-24 text-right ${moneyClass(row.netPnlCents)}`}>
-            {formatCents(row.netPnlCents, { signed: true, currency })}
-          </span>
-          <span className="w-12 text-right text-fg-muted">
-            {row.avgR === null ? EMPTY : `${row.avgR.toFixed(2)}R`}
-          </span>
-        </span>
-      </div>
-      {/* Design.md §1: a money bar states a magnitude, it does not applaud
-          one — semantic colour, no gradient, no glow. */}
-      <ValueBar
-        ratio={row.barRatio}
-        tone={row.netPnlCents < 0 ? "loss" : "gain"}
-      />
-    </li>
+    <BucketRow
+      label={row.label}
+      isNotSet={row.isNotSet}
+      columns={COLUMNS}
+      cells={[
+        { text: String(row.trades), tone: "text-fg-muted" },
+        {
+          text:
+            row.winRate === null ? EMPTY : `${Math.round(row.winRate * 100)}%`,
+          tone: "text-fg-muted",
+        },
+        {
+          text: formatCents(row.netPnlCents, { signed: true, currency }),
+          tone: moneyClass(row.netPnlCents),
+        },
+        {
+          text: row.avgR === null ? EMPTY : `${row.avgR.toFixed(2)}R`,
+          tone: "text-fg-muted",
+        },
+      ]}
+      // Design.md §1: a money bar states a magnitude, it does not applaud
+      // one — semantic colour, no gradient, no glow.
+      bar={
+        <ValueBar
+          ratio={row.barRatio}
+          tone={row.netPnlCents < 0 ? "loss" : "gain"}
+        />
+      }
+    />
   );
 }
 
@@ -98,15 +110,7 @@ export function DimensionTable({
         </p>
       ) : (
         <>
-          <div className="flex items-baseline justify-between gap-3 border-white/8 border-b pb-1.5">
-            <span className="cap">Bucket</span>
-            <span className="flex shrink-0 gap-3">
-              <span className="cap w-8 text-right">Trades</span>
-              <span className="cap w-10 text-right">Win</span>
-              <span className="cap w-24 text-right">Net P&amp;L</span>
-              <span className="cap w-12 text-right">Avg R</span>
-            </span>
-          </div>
+          <BucketHeader bucketLabel="Bucket" columns={COLUMNS} />
 
           <ul className="flex flex-col divide-y divide-white/6">
             {visible.map((row) => (

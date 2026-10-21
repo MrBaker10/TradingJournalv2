@@ -891,6 +891,22 @@ Win, Net P&L, Avg R. Darunter ein 3px-Balken über die volle Zeilenbreite. Ein B
 ohne Wert steht als „Not set" kursiv in `--color-fg-subtle` und sortiert immer ans
 Ende — es ist die Abwesenheit eines Wertes, kein Wert, der die anderen geschlagen hat.
 
+**Eine Komponente für alle Tabellen.** Kopfzeile und Zeile kommen aus
+`src/components/analytics/bucket-table.tsx`; die Spalten (Beschriftung und Breite)
+stehen je Tabelle einmal und gelten für Kopf und Zeilen. Sie wird von den
+Dimensionskarten, Hold time und Risk calibration (4.17) und den Missed Setups benutzt;
+Exit efficiency hat keine Zeilen. Risk calibration hat wie bisher keine Kopfzeile, ihre
+schmalen Zeilen bleiben deshalb ohne Beschriftungszeile — der Kartentitel nennt, was
+gezählt wird.
+Die Zahlenfarbe bestimmt der Aufrufer je Zelle — die Zeile färbt nichts selbst.
+
+**Schmal (unter `sm`) hat die Zeile zwei Zeilen.** Zuerst der Bucket in voller Länge,
+umbrechend statt abgeschnitten, darunter die Zahlen in Mono, getrennt durch ein
+`·` in `--color-fg-subtle`. Die Spaltenköpfe werden zu **einer** Beschriftungszeile
+über den Zeilen („Trades · Win · Net P&L · Avg R") in derselben Reihenfolge. Der
+Balken bleibt unter den Zahlen. Ab `sm` ist alles wie vorher: ein Bucket links,
+Zahlen in festen Spalten rechts, `truncate`.
+
 **Der Balken ist die Stelle, an der 1 zur Regel wird.** Er kommt aus einer einzigen
 Komponente (`src/components/ui/value-bar.tsx`), und die entscheidet die Farbe, nicht
 der Aufrufer:
@@ -941,11 +957,10 @@ Risikokalibrierung und Exit-Effizienz sind seit S12b da und stehen in 4.17 — s
 haben die Bucket-Tabelle behalten, nur mit anderen Spalten. Die eigene Runde aus 10
 steht weiter aus.
 
-**Das Zeilen-Layout liegt inzwischen vierfach im Code** (4.16 zweimal, 4.17 zweimal):
-Kopfzeile mit `border-white/8`, Zeilen mit `divide-white/6`, Label links `truncate`,
-Zahlen rechts in Mono bei 13px. Die Festlegungen stimmen überein, aber sie stehen
-nicht an einem Ort. Zusammengezogen wird beim CSV-Import, der die fünfte Tabelle
-mitbringt — dann gibt es fünf echte Fälle statt vier plus einer Vermutung.
+**Nicht auf der Komponente** stehen die Vorschautabelle des Imports (4.18, außerhalb
+der Analytics-Runde) und **Past months** auf Progress (4.24). Letzteres zeigt unter
+`sm` nur Monat und Score und lässt die vier Teilwerte weg, statt sie in eine zweite
+Zeile zu setzen. Das wäre ein Sonderfall in der Komponente für genau einen Aufrufer.
 
 ---
 
@@ -1076,11 +1091,9 @@ haben will, ändert sie im Export.
 („Locked — imported from CSV"); dieser Abschnitt ist der erste, der den Screen
 beschreibt. Gebaut, nicht entworfen — derselbe Vorbehalt wie 4.16 und 4.17.
 
-Die Vorschautabelle ist die **fünfte** Kopie des Zeilen-Layouts. 4.16 hatte die
-Zusammenführung für diesen Slice angekündigt; sie ist auf Ansage in einen eigenen
-`refactor:`-Slice verschoben worden, weil sie vier gemergte, untestete Karten anfasst
-und in diesem Commit ohne Netz liefe. 4.16 bleibt unverändert stehen, diese Zeile
-korrigiert die Zuordnung.
+Die Vorschautabelle war die **fünfte** Kopie des Zeilen-Layouts. Die Analytics-Tabellen
+sind inzwischen zusammengeführt (`bucket-table.tsx`, 4.16); die Vorschau liegt
+außerhalb dieser Runde und bleibt eine eigene Kopie.
 
 ### 4.19 Anmeldung, Registrierung und Sicherheit
 
@@ -1360,7 +1373,8 @@ Badge-Raster. `card-surface edge-neon`, weil der Score Prozess ist wie in 4.3. K
 `cap cap-neon` „Past months", darunter eine Zeile in `--color-fg-subtle`, dass ein Monat
 zwei Tage nach seinem Ende eingefroren wird.
 
-**Die Zeile.** Das Zeilen-Layout aus 4.16 (die sechste Kopie): Monat links als
+**Die Zeile.** Das Zeilen-Layout aus 4.16, aber als eigene Kopie, nicht aus der
+geteilten Komponente (Grund dort): Monat links als
 „September 2026", rechts in Mono 13px mit Tabellenziffern der Score als ganze Zahl in
 `text-glow`, dann die vier Teilwerte mit einer Nachkommastelle in `--color-fg-muted` und
 dem Maximum in `--color-fg-subtle` („27.4 / 40"). Die Beschriftungen sind die der

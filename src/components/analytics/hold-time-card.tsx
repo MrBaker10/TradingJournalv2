@@ -1,9 +1,19 @@
+import {
+  type BucketColumn,
+  BucketHeader,
+  BucketRow,
+} from "@/components/analytics/bucket-table";
 import type { ExecutionSummaryRow } from "@/db/queries/analytics";
 import { formatHoldTime, OUTCOME_LABELS, OUTCOMES } from "@/domain/execution";
 
 interface HoldTimeCardProps {
   summary: ExecutionSummaryRow[];
 }
+
+const COLUMNS: BucketColumn[] = [
+  { label: "Avg held", width: "sm:w-20" },
+  { label: "Trades", width: "sm:w-12" },
+];
 
 // How long the user sits in a trade, split by outcome — the question being
 // whether winners are cut as fast as losers are held.
@@ -35,32 +45,25 @@ export function HoldTimeCard({ summary }: HoldTimeCardProps) {
             </p>
           ) : (
             <>
-              <div className="flex items-baseline justify-between gap-3 border-white/8 border-b pb-1.5">
-                <span className="cap">Outcome</span>
-                <span className="flex shrink-0 gap-3">
-                  <span className="cap w-20 text-right">Avg held</span>
-                  <span className="cap w-12 text-right">Trades</span>
-                </span>
-              </div>
+              <BucketHeader bucketLabel="Outcome" columns={COLUMNS} />
 
               <ul className="flex flex-col divide-y divide-white/6">
                 {rows.map(({ outcome, row }) => (
-                  <li
+                  <BucketRow
                     key={outcome}
-                    className="flex items-baseline justify-between gap-3 py-2"
-                  >
-                    <span className="truncate text-fg text-sm">
-                      {OUTCOME_LABELS[outcome]}
-                    </span>
-                    <span className="flex shrink-0 items-baseline gap-3 font-mono text-[13px] tabular-nums">
-                      <span className="w-20 text-right text-fg">
-                        {formatHoldTime(row?.holdMinutes ?? null)}
-                      </span>
-                      <span className="w-12 text-right text-fg-muted">
-                        {row?.holdTrades ?? 0}
-                      </span>
-                    </span>
-                  </li>
+                    label={OUTCOME_LABELS[outcome]}
+                    columns={COLUMNS}
+                    cells={[
+                      {
+                        text: formatHoldTime(row?.holdMinutes ?? null),
+                        tone: "text-fg",
+                      },
+                      {
+                        text: String(row?.holdTrades ?? 0),
+                        tone: "text-fg-muted",
+                      },
+                    ]}
+                  />
                 ))}
               </ul>
             </>

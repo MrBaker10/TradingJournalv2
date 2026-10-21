@@ -1,3 +1,7 @@
+import {
+  type BucketColumn,
+  BucketRow,
+} from "@/components/analytics/bucket-table";
 import { ValueBar } from "@/components/ui/value-bar";
 import type { ExecutionSummaryRow } from "@/db/queries/analytics";
 import {
@@ -18,6 +22,13 @@ const KIND_TITLES: Record<ExcursionKind, string> = {
   mae: "Adverse excursion (MAE)",
   mfe: "Favourable excursion (MFE)",
 };
+
+// No header here (the card title is the label), so these labels only key the
+// cells; the widths keep the figures aligned with the other tables.
+const COLUMNS: BucketColumn[] = [
+  { label: "Trades", width: "sm:w-8" },
+  { label: "Share", width: "sm:w-12" },
+];
 
 const KINDS: ExcursionKind[] = ["mae", "mfe"];
 
@@ -69,18 +80,19 @@ function Card({
       ) : (
         <ul className="flex flex-col divide-y divide-white/6">
           {rows.map((row) => (
-            <li key={row.label} className="flex flex-col gap-1.5 py-2">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="truncate text-fg text-sm">{row.label}</span>
-                <span className="flex shrink-0 items-baseline gap-3 font-mono text-[13px] tabular-nums">
-                  <span className="w-8 text-right text-fg">{row.trades}</span>
-                  <span className="w-12 text-right text-fg-muted">
-                    {Math.round(row.share * 100)}%
-                  </span>
-                </span>
-              </div>
-              <ValueBar ratio={row.barRatio} tone="process" />
-            </li>
+            <BucketRow
+              key={row.label}
+              label={row.label}
+              columns={COLUMNS}
+              cells={[
+                { text: String(row.trades), tone: "text-fg" },
+                {
+                  text: `${Math.round(row.share * 100)}%`,
+                  tone: "text-fg-muted",
+                },
+              ]}
+              bar={<ValueBar ratio={row.barRatio} tone="process" />}
+            />
           ))}
         </ul>
       )}
