@@ -785,8 +785,12 @@ leuchten.
 
 **Stand.** Benutzt vom Dashboard — die drei Gamification-Kacheln (4.3) und der
 „Save plan"-Button (4.6) — von der Trade-Detailseite: Bearbeiten-Button und
-Badges (4.20) — und vom Trade-Formular: ausgewählte Chips (4.22). Ob sie sich über das übrige Projekt legt, entscheidet die nächste
-Runde.
+Badges (4.20) — vom Trade-Formular: ausgewählte Chips (4.22) — und von der
+Progress-Seite: die Icon-Kachel eines erreichten Badges (Cyan-Icon; die Karte
+behält `edge-neon`, ein offenes Badge bleibt matt auf `edge`; der Hinweis „Evaluated
+once the month is over." steht in `--color-fg-subtle`, Amber bleibt Regelgrenzen und
+Übungskonto vorbehalten). Ob sie sich über das übrige Projekt legt, entscheidet die
+nächste Runde.
 
 ---
 
@@ -1364,8 +1368,10 @@ Live-Aufschlüsselung (Showing up, Journaling, Adherence, Review), damit ein Mon
 nach dem Einfrieren gleich heißt. Neueste zuerst, alle Monate, keine Balken, kein
 Diagramm. Unter `sm` bleiben nur Monat und Score.
 
-**Leerzustand.** Ohne eingefrorenen Monat: „Your first month appears here once it is
-over." zentriert in `--color-fg-subtle`.
+**Leerzustand.** Ohne eingefrorenen Monat schrumpft die Karte auf eine Zeile:
+`card-surface edge-neon`, Padding 16/20, links `cap cap-neon` „Past months", rechts
+„Your first month appears here once it is over." in `--color-fg-subtle`. Die Zeile über
+das Einfrieren zwei Tage nach Monatsende steht nur in der Karte mit Daten.
 
 ### 4.25 Ledger
 
