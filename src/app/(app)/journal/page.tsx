@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { HiddenPracticeBanner } from "@/components/journal/hidden-practice-banner";
+import { JournalDay } from "@/components/journal/journal-day";
+import { JournalEmpty } from "@/components/journal/journal-empty";
 import { JournalFilters } from "@/components/journal/journal-filters";
 import { PaginationControls } from "@/components/journal/pagination-controls";
 import { TradeRow } from "@/components/journal/trade-row";
@@ -11,8 +14,10 @@ import {
   listJournalTrades,
 } from "@/db/queries/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import type { JournalSearchParams } from "@/lib/journal/href";
+import { journalLayout } from "@/lib/journal/day-groups";
+import { buildJournalHref, type JournalSearchParams } from "@/lib/journal/href";
 import { firstValue } from "@/lib/search-params";
+import { rangeForPreset, todayInTimeZone } from "@/lib/time";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -27,6 +32,7 @@ function parseDate(value: string | undefined): string | undefined {
 export default async function JournalPage({ searchParams }: JournalPageProps) {
   const rawParams = await searchParams;
   const current: JournalSearchParams = {
+    range: firstValue(rawParams.range),
     from: firstValue(rawParams.from),
     to: firstValue(rawParams.to),
     instrument: firstValue(rawParams.instrument),
@@ -38,13 +44,22 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
   const page = Math.max(1, Number.parseInt(current.page ?? "1", 10) || 1);
   const sortBy: JournalSortBy = current.sort === "r" ? "r" : "date";
   const sortDir = current.dir === "asc" ? "asc" : "desc";
-  const dateFrom = parseDate(current.from);
-  const dateTo = parseDate(current.to);
   const instrumentId = current.instrument
     ? Number.parseInt(current.instrument, 10) || undefined
     : undefined;
 
   const user = await getCurrentUser();
+  // Typed dates win over a preset, as on Analytics; a preset is resolved
+  // against the user's own "today" — a calendar boundary is the user's zone
+  // (coding-standards.md, Time).
+  const typedFrom = parseDate(current.from);
+  const typedTo = parseDate(current.to);
+  const preset =
+    typedFrom || typedTo
+      ? null
+      : rangeForPreset(current.range, todayInTimeZone(user.timezone));
+  const dateFrom = typedFrom ?? preset?.from;
+  const dateTo = typedTo ?? preset?.to;
   // The rows' P&L in the accounts' own currency if they share one, else USD
   // (display-currency).
   const { currency } = await withDisplayCurrency({
@@ -52,21 +67,29 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
     selectedAccountId: user.selectedAccountId,
   });
 
-  const [{ rows, totalCount, hiddenPracticeCounts }, instruments] =
-    await Promise.all([
-      listJournalTrades({
-        userId: user.id,
-        selectedAccountId: user.selectedAccountId,
-        currency,
-        dateFrom,
-        dateTo,
-        instrumentId,
-        sortBy,
-        sortDir,
-        page,
-      }),
-      listInstruments(),
-    ]);
+  const [
+    { rows, totalCount, takenCount, missedCount, days, hiddenPracticeCounts },
+    instruments,
+  ] = await Promise.all([
+    listJournalTrades({
+      userId: user.id,
+      selectedAccountId: user.selectedAccountId,
+      currency,
+      dateFrom,
+      dateTo,
+      instrumentId,
+      sortBy,
+      sortDir,
+      page,
+    }),
+    listInstruments(),
+  ]);
+  // A page past the last one has no rows although entries exist; the empty
+  // state would claim "No entries yet". Back to the first page instead.
+  if (rows.length === 0 && page > 1) {
+    redirect(buildJournalHref(current, { page: undefined }));
+  }
+  const layout = journalLayout(rows, days, sortBy);
 
   return (
     <div className="flex flex-col gap-4">
@@ -77,13 +100,13 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
               that stands next to the primary one without competing with it. */}
           <Link
             href="/journal/import"
-            className="flex h-10 items-center rounded-ctl bg-[image:var(--gradient-info-soft)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-info-soft)]"
+            className="flex h-10 items-center whitespace-nowrap rounded-ctl bg-[image:var(--gradient-info-soft)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-info-soft)]"
           >
             Import
           </Link>
           <Link
             href="/journal/new"
-            className="flex h-10 items-center rounded-ctl bg-[image:var(--gradient-info)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-button-primary)]"
+            className="flex h-10 items-center whitespace-nowrap rounded-ctl bg-[image:var(--gradient-info)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-button-primary)]"
           >
             New trade
           </Link>
@@ -98,15 +121,26 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
         }))}
       />
 
+      {/* Design.md §4.27: counts for every page of these filters, no money —
+          a range's total belongs to the dashboard and Analytics. */}
+      <p className="text-fg-muted text-sm">
+        {totalCount} {totalCount === 1 ? "entry" : "entries"} · {takenCount}{" "}
+        taken · {missedCount} missed
+      </p>
+
       <HiddenPracticeBanner hiddenCounts={hiddenPracticeCounts} />
 
       {rows.length === 0 ? (
-        <p className="py-10 text-center text-fg-subtle text-sm">
-          No trades match these filters yet.
-        </p>
+        <JournalEmpty searchParams={current} />
+      ) : layout.kind === "days" ? (
+        <div className="flex flex-col gap-[10px]">
+          {layout.days.map((day) => (
+            <JournalDay key={day.date} day={day} currency={currency} />
+          ))}
+        </div>
       ) : (
         <div className="flex flex-col gap-[10px]">
-          {rows.map((trade) => (
+          {layout.rows.map((trade) => (
             <TradeRow key={trade.id} trade={trade} currency={currency} />
           ))}
         </div>

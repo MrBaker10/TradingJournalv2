@@ -514,13 +514,27 @@ Monat verteilt ist. Er ist auf der Kachel, nicht auf der Zahl im Dashboard.
   daneben in der Titelzeile (entschieden 2026-09-25, `src/lib/journal/tile-label.ts`).
   Ab sieben Zeichen rückt das Kürzel mit `-0.06em` Tracking zusammen, damit es nicht
   am Rand des Tiles anliegt (entschieden 2026-09-26).
-- Titelzeile: Instrument plus Tags (`short`, `loss`/`win`/`missed`, `Grade B`),
-  darunter Metazeile in `--color-fg-subtle`.
+- Titelzeile: Instrument, dahinter die Richtung als ruhiger Text in
+  `--color-fg-muted` (`MNQ · Short`), dann Tags nur für `Missed`, `Grade B` und
+  die Confluence-Anzahl; darunter Metazeile in `--color-fg-subtle`.
+- **Kein Ergebnis-Tag** (geändert in der Designrunde Journal, 2026-10-21). Das
+  Ergebnis (`win`/`loss`) ist brutto, der Betrag netto der Kommission — ein
+  „Win" stand so neben einem roten Betrag. Betragsfarbe und R tragen das
+  Ergebnis allein. Die Richtung ist Teil des Titels, kein Tag.
 - Hat der Eintrag Confluences, steht dahinter ein weiterer `cap`-Tag mit ihrer
   **Anzahl** („3 Confluences"), nicht ihre Namen. Ausgeschrieben stünden bei
   fünf Confluences zwei Zeilen dort, wo bei anderen eine steht, und die Liste
   wäre nicht mehr überfliegbar. Die Badges selbst stehen auf der Detailseite
   (4.20).
+- **Unter `sm`** zeigt die Titelzeile nur Instrument, Richtung und `Missed`;
+  `Grade` und die Confluence-Anzahl stehen erst ab `sm`. Die Titelzeile bricht
+  nicht um, jede Zeile bleibt zweizeilig, und der Betrag rechts wird nie
+  gekürzt. Wird es eng, kürzt sich nur das Instrument; Richtung und Tags
+  bleiben ganz, ebenso die Metazeile bis auf ihr Ende.
+- **Metazeile in zwei Varianten:** unter einem Tageskopf der Journal-Liste
+  (4.27) beginnt sie mit der Einstiegszeit auf der Chart-Uhr (`09:42 · NY AM ·
+  Breaker`), weil der Kopf das Datum schon trägt; in der flachen Liste
+  (Sortierung nach R) und in „Recent trades" mit dem Datum.
 - Rechts: Betrag mono, darunter R-Multiple. Bei verpassten Setups steht dort
   „—" und als Unterzeile „+1.80R would-be" in `--color-fg-subtle` — der
   hypothetische Wert wird nie in Grün gezeigt. Datenherkunft: `mfe_r` auf einem
@@ -963,12 +977,12 @@ Auf einem kleinen Konto liest sich daraus sonst schnell eine Quote, die es nicht
 Eine Zeile unter der Abschnittsüberschrift sagt das (7).
 
 **Zeitraumfilter.** `card-surface edge` über der ganzen Seite, Von/Bis plus vier
-Presets in der Chip-Optik der Journal-Filter. Die Datumsfelder sind **uncontrolled**:
+Presets als Chips aus einer mit dem Journal geteilten Komponente (4.27). Die Datumsfelder sind **uncontrolled**:
 ein `type="date"` feuert sein Change-Event mit leerem Wert, solange das Datum halb
 getippt ist, und ein Rückschreiben dieses Wertes setzt den Datumseditor des Browsers
 mitten in der Eingabe zurück. Ein `key` auf dem Feld erzwingt den Remount, wenn ein
-Preset den Zeitraum löscht — das braucht der Journal-Filter nicht, weil dort niemand
-außer dem Feld selbst die Daten ändert.
+Preset den Zeitraum löscht; der Journal-Filter macht es seit der Designrunde Journal
+genauso, weil dort Presets und `Clear` die Daten ebenfalls löschen.
 
 **Kein Diagramm.** Auf dieser Seite läuft kein Recharts. Der waagerechte Balken ist
 das einzige Primitiv, und keine Zeile führt irgendwohin — der Weg zu den Trades einer
@@ -1581,6 +1595,86 @@ not, what to focus on."; mit Review: „Reviewed this week. Open it to add a tho
 
 ---
 
+### 4.27 Journal-Liste
+
+Entworfen in der Designrunde Journal (2026-10-21). `/journal` liest sich nach
+Tagen, nicht als flache Folge von Zeilen.
+
+**Gliederung nach Trade date.** Bei Sortierung nach Datum stehen die Einträge
+in Tagesgruppen, gruppiert nach dem Handelsdatum — dieselbe Gruppierung wie
+der Kalender (4.8), ohne Sonntags-Roll: ein Sonntags-Trade steht unter „Sun".
+Innerhalb eines Tages laufen die Einträge nach Einstiegszeit in derselben
+Richtung wie die Tage, und die Metazeile der Zeile beginnt mit der Uhrzeit
+(4.9). Bei Sortierung nach R gibt es **keine** Gruppen: Tagesköpfe würden die
+besten und schlechtesten Trades auseinanderreißen; die Metazeile trägt dort das
+Datum.
+
+**Tageskopf.** Eine Zeile ohne eigene Fläche über der Gruppe, 10px Abstand zur
+ersten Zeile wie zwischen den Zeilen: links das Kurzdatum (`Mon 20 Oct`) in
+`--color-fg`, dahinter in `--color-fg-muted` (Zahlen sind Werte, §8) die Zahl der Einträge und, wenn
+größer null, der Missed Setups (`4 entries · 1 missed`). Unter `sm` steht nur
+die Zahl (`4 · 1 missed`), der Kopf bleibt einzeilig. Die Zahlen gelten für den
+**ganzen Tag** innerhalb der aktiven Filter, nicht für die Zeilen dieser Seite:
+läuft ein Tag über die Seitengrenze, wiederholt die nächste Seite seinen Kopf
+mit denselben Zahlen.
+
+**Tagessumme.** Rechts im Kopf das Netto-P&L des Tages: mono, `text-sm`,
+semantisch grün oder rot wie der Betrag der Zeile (4.9), **kein Glow** (§1),
+rechtsbündig mit den Beträgen der Zeilen darunter. Sie gilt wie die Zahlen für
+den ganzen Tag innerhalb der Filter und ist die Summe der Zeilenbeträge — ohne
+Instrumentfilter also dieselbe Zahl wie der Kalendertag (4.8), mit
+Instrumentfilter nur die des Instruments. Ein Tag nur aus Missed Setups hat
+**keine** Summe, auch keine Null; ein Tag mit genommenen Trades ohne Exit
+zeigt `$0.00` wie der Kalender. Null ist grün wie in der Zeile (4.9).
+
+**Kopfzeile.** `page-title` auf allen Breiten wie auf jeder Seite, rechts
+daneben `Import` (ruhige Prozessfläche, 4.14) und `New trade` (primär). Beide
+Knöpfe brechen nicht um; auf dem Handy darf der Titel zweizeilig werden.
+
+**Filterleiste.** Eine schlanke `card-surface edge`-Leiste (`px-3 py-2.5`)
+statt der früheren Formularkarte, auf breitem Schirm in einer Zeile: die vier
+Zeitraum-Presets als Chips — dieselben wie in Analytics (4.16), aus einer
+gemeinsamen Komponente —, dann `From`, `To` und `Instrument` mit ihrem Label
+als `cap` links neben dem Feld (das Select nach Assetklasse gruppiert), rechts
+der Sortier-Umschalter `Date`/`R` und, nur bei aktivem Filter, `Clear`. Wird
+es schmaler, bricht die Leiste um, sie schneidet nichts ab. Preset und
+getipptes Datum gelten nie zugleich, wie in Analytics: ein Preset löscht die
+Daten (die Felder remounten über `key`), ein Datum löscht das Preset; der
+Server löst das Preset gegen das „heute" des Users auf. Aktiv ist ein Filter,
+wenn ein Preset außer „All time", ein Datum oder ein Instrument gesetzt ist;
+die Sortierung zählt nicht und bleibt bei `Clear` erhalten.
+
+**Unter `sm`** ist die Leiste zugeklappt: ein Knopf `Filters` mit der Zahl der
+aktiven Filter (`Filters · 2`) öffnet sie an Ort und Stelle; offen stapeln
+sich ihre Gruppen untereinander. Chips, Sortierknöpfe und `Clear` sind 40px
+hoch (§8).
+
+**Zählzeile.** Unter der Leiste eine ruhige Zeile ohne Fläche:
+`42 entries · 38 taken · 4 missed` für alle Seiten der aktuellen Filter, in
+`--color-fg-muted` (Zahlen sind Werte, §8), **ohne** Geldsumme — die Summe eines
+Zeitraums steht auf Dashboard und Analytics. Ohne Missed Setups entfällt der
+letzte Teil nicht, er zeigt `0 missed`. Direkt darunter das unveränderte
+Practice-Banner (4.12), das zur Zählung gehört.
+
+**Leerzustände.** Zwei, beide als eine ruhige `card-surface edge`-Fläche ohne
+Illustration und ohne Akzentfarbe, Text in `--color-fg-muted`, Knöpfe in der
+Optik des `Filters`-Knopfs (`bg-well`, 1px-Rand, 40px):
+
+- **Kein Filter aktiv, keine Einträge:** „No entries yet." mit `New trade` und
+  `Import` als Weg zum ersten Eintrag.
+- **Filter aktiv, kein Treffer:** „No entries match these filters." mit
+  `Clear filters`, das dieselben Filter wie `Clear` löscht und die Sortierung
+  stehen lässt.
+
+Welcher gilt, entscheidet dieselbe „Filter aktiv"-Regel wie `Clear`. Das
+Practice-Banner steht weiter darüber: sind im kombinierten Blick nur
+Übungskonto-Einträge vorhanden, sagt der Leerzustand „No entries yet." und das
+Banner zeigt, wo sie sind — nichts verschwindet lautlos.
+
+Eine Seitenzahl hinter der letzten Seite (`?page=99`) zeigt keinen Leerzustand,
+sondern führt mit denselben Filtern und derselben Sortierung auf Seite 1 zurück —
+sonst stünde „No entries yet." unter einer Zählzeile mit Einträgen.
+
 ## 5. Motion
 
 | Moment | Dauer | Kurve |
@@ -1696,8 +1790,8 @@ month yet") hat genau die richtige Tonalität — die wird beibehalten.
 - Fokusring überall sichtbar: `2px solid var(--color-cyan)`, `outline-offset: 2px`.
   Nie `outline: none` ohne Ersatz.
 - Interaktive Flächen mindestens 40px hoch.
-- Farbe ist nie der einzige Träger einer Information: `win`/`loss`/`missed`
-  stehen als Text im Tag, nicht nur als Farbe.
+- Farbe ist nie der einzige Träger einer Information: das Ergebnis steht als
+  Vorzeichen an Betrag und R, `missed` als Text im Tag, nicht nur als Farbe.
 - Kalenderzellen brauchen ein `aria-label` mit Datum, Betrag und Trade-Anzahl,
   weil die visuelle Kodierung sonst nicht ankommt.
 - Toasts in einem `aria-live="polite"`-Container.

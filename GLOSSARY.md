@@ -32,6 +32,10 @@ A tagged execution error on a trade, from a fixed list.
 The wall-clock time the trader reads off their chart, in which entry and exit times are recorded.
 _Avoid_: Local time, broker time
 
+**Trade date**:
+The calendar date of a trade on the chart clock; the journal and the calendar group entries by it, with no Sunday roll.
+_Avoid_: Trading day (that one rolls Sunday onto Monday)
+
 **Import batch**:
 The set of trades created by one CSV import, undoable as a unit.
 

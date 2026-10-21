@@ -169,9 +169,23 @@ export interface JournalHiddenPracticeCount {
   count: number;
 }
 
+/** One trade date on the page, counted over the whole day within the filters. */
+export interface JournalDayValues {
+  date: string;
+  entryCount: number;
+  missedCount: number;
+  /** Net P&L in display cents; null when no entry of the day has one. */
+  amountCents: number | null;
+}
+
 export interface JournalTradesResult {
   rows: JournalTradeRow[];
+  /** Every entry the filters match, across all pages. */
   totalCount: number;
+  takenCount: number;
+  missedCount: number;
+  /** The trade dates of `rows`, oldest first. */
+  days: JournalDayValues[];
   hiddenPracticeCounts: JournalHiddenPracticeCount[];
 }
 
@@ -623,12 +637,19 @@ function buildFilterConditions(filters: JournalFilters): SQL[] {
 
 function buildOrderBy(filters: JournalFilters) {
   const direction = filters.sortDir === "asc" ? sql`asc` : sql`desc`;
-  const key =
-    filters.sortBy === "r" ? rMultipleSortKey : sql`${trades.tradeDate}`;
+  if (filters.sortBy === "date") {
+    // Within a trade date the day reads as it happened: by entry time, in the
+    // same direction as the dates (Design.md §4.27).
+    return [
+      sql`${trades.tradeDate} ${direction}`,
+      sql`${trades.entryTime} ${direction}`,
+      sql`${trades.id} ${direction}`,
+    ];
+  }
   // NULLS LAST regardless of direction: trades without a computed value (no
   // stop price, no exit yet) sort to the bottom instead of jumping to the top
   // on a descending sort, which is Postgres's default for DESC.
-  return [sql`${key} ${direction} nulls last`, desc(trades.id)];
+  return [sql`${rMultipleSortKey} ${direction} nulls last`, desc(trades.id)];
 }
 
 /**
@@ -644,6 +665,17 @@ function buildOrderBy(filters: JournalFilters) {
  * page that is supposed to show everything.
  */
 type TradeVisibility = "scoped" | "owner";
+
+function visibilityCondition(
+  visibility: TradeVisibility,
+  selectedAccountId: number | null,
+): SQL | undefined {
+  if (visibility === "owner") return undefined;
+  if (selectedAccountId === null) {
+    return sql`(${trades.taken} = false or (${trades.taken} = true and ${hasRealAccount}))`;
+  }
+  return isVisibleForAccount(selectedAccountId);
+}
 
 interface TradeRowsQuery {
   userId: number;
@@ -669,12 +701,14 @@ interface TradeRowsQuery {
 // Both the journal list and the dashboard's "Recent trades" go through it,
 // so the two can't drift apart.
 //
-// The window count comes along for either caller: Postgres computes it from
+// The window counts come along for every caller: Postgres computes them from
 // the rows it has to filter anyway, and one select shape is worth more here
-// than saving that aggregate on the dashboard.
-async function queryTradeRows(
-  input: TradeRowsQuery,
-): Promise<{ rows: JournalTradeRow[]; totalCount: number }> {
+// than saving those aggregates on the dashboard.
+async function queryTradeRows(input: TradeRowsQuery): Promise<{
+  rows: JournalTradeRow[];
+  totalCount: number;
+  missedCount: number;
+}> {
   const baseQuery = (input.executor ?? db)
     .select({
       id: trades.id,
@@ -723,22 +757,19 @@ async function queryTradeRows(
       screenshots: screenshotsJson,
       links: linksJson,
       totalCount: sql<number>`(count(*) over())::int`,
+      missedCount: sql<number>`(count(*) filter (where ${trades.taken} = false) over())::int`,
     })
     .from(trades)
     .innerJoin(instruments, eq(trades.instrumentId, instruments.id));
 
   const ownership = eq(trades.userId, input.userId);
 
-  function visibilityCondition(): SQL | undefined {
-    if (input.visibility === "owner") return undefined;
-    if (input.selectedAccountId === null) {
-      return sql`(${trades.taken} = false or (${trades.taken} = true and ${hasRealAccount}))`;
-    }
-    return isVisibleForAccount(input.selectedAccountId);
-  }
-
   const query = baseQuery.where(
-    and(ownership, ...input.conditions, visibilityCondition()),
+    and(
+      ownership,
+      ...input.conditions,
+      visibilityCondition(input.visibility, input.selectedAccountId),
+    ),
   );
 
   const rawRows = await query
@@ -747,6 +778,7 @@ async function queryTradeRows(
     .offset(input.offset ?? 0);
 
   const totalCount = rawRows[0]?.totalCount ?? 0;
+  const missedCount = rawRows[0]?.missedCount ?? 0;
 
   const rows: JournalTradeRow[] = rawRows.map((row) => {
     const pointValue = Number(row.pointValue);
@@ -833,14 +865,14 @@ async function queryTradeRows(
     };
   });
 
-  return { rows, totalCount };
+  return { rows, totalCount, missedCount };
 }
 
 export async function listJournalTrades(
   filters: JournalFilters,
   executor: ReadExecutor = db,
 ): Promise<JournalTradesResult> {
-  const { rows, totalCount } = await queryTradeRows({
+  const { rows, totalCount, missedCount } = await queryTradeRows({
     userId: filters.userId,
     selectedAccountId: filters.selectedAccountId,
     currency: filters.currency,
@@ -852,12 +884,82 @@ export async function listJournalTrades(
     offset: (filters.page - 1) * JOURNAL_PAGE_SIZE,
   });
 
-  const hiddenPracticeCounts =
+  const [days, hiddenPracticeCounts] = await Promise.all([
+    listJournalDayValues(
+      filters,
+      [...new Set(rows.map((row) => row.tradeDate))],
+      executor,
+    ),
     filters.selectedAccountId === null
-      ? await listHiddenPracticeCounts(filters.userId, executor)
-      : [];
+      ? listHiddenPracticeCounts(filters.userId, executor)
+      : [],
+  ]);
 
-  return { rows, totalCount, hiddenPracticeCounts };
+  return {
+    rows,
+    totalCount,
+    // Counts, not money: a copy trade is one entry however many accounts it
+    // ran on.
+    takenCount: totalCount - missedCount,
+    missedCount,
+    days,
+    hiddenPracticeCounts,
+  };
+}
+
+// The day headings' values for the trade dates on this page, over the whole
+// day — same ownership, filters and visibility as the list, so a heading
+// counts exactly the entries the list would show across all pages.
+//
+// The counts are count aggregates and never multiply; the amount is a money
+// aggregate, multiplied once inside the expression it sums.
+//
+// The amount sums the rows' own net figure, so a heading is the sum of the
+// rows beneath it. Under the list's visibility that is the calendar's
+// `moneyContribution` (scope.ts) — the practice-only fallback in the row's
+// multiplier never applies, because those trades are not listed — and a DB
+// test pins the two equal. Imported from scope.ts it would close an import
+// cycle, since scope.ts builds on this module.
+async function listJournalDayValues(
+  filters: JournalFilters,
+  dates: string[],
+  executor: ReadExecutor,
+): Promise<JournalDayValues[]> {
+  if (dates.length === 0) return [];
+
+  const rows = await executor
+    .select({
+      date: trades.tradeDate,
+      entryCount: sql<number>`count(*)::int`,
+      missedCount: sql<number>`(count(*) filter (where ${trades.taken} = false))::int`,
+      // NULL only on a day of missed setups: the heading shows no amount
+      // rather than a zero. A day with taken trades but no realised P&L yet
+      // is 0, as the calendar paints it.
+      amountCents: sql<string | null>`case
+        when count(*) filter (where ${trades.taken}) > 0
+          then coalesce(sum(${tradeNetDisplayCents(
+            filters.selectedAccountId,
+            filters.currency,
+          )}), 0)
+        end`,
+    })
+    .from(trades)
+    .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
+    .where(
+      and(
+        eq(trades.userId, filters.userId),
+        inArray(trades.tradeDate, dates),
+        ...buildFilterConditions(filters),
+        visibilityCondition("scoped", filters.selectedAccountId),
+      ),
+    )
+    .groupBy(trades.tradeDate)
+    .orderBy(asc(trades.tradeDate));
+
+  return rows.map((row) => ({
+    ...row,
+    amountCents: row.amountCents === null ? null : Number(row.amountCents),
+  }));
 }
 
 // Design.md §4.8/§4.9: the dashboard's "Recent trades" is the same row as the
