@@ -42,6 +42,18 @@ function formatPart(value: string): string {
 // and the score glows, like the live breakdown (§4.3). The row layout is the
 // one from §4.16. Below `sm` only month and score remain.
 export function ScoreHistory({ months }: ScoreHistoryProps) {
+  // Nothing frozen yet: one compact line instead of a card with an empty body.
+  if (months.length === 0) {
+    return (
+      <section className="card-surface edge-neon flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 py-4">
+        <h2 className="cap cap-neon">Past months</h2>
+        <p className="text-fg-subtle text-sm">
+          Your first month appears here once it is over.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="card-surface edge-neon flex flex-col gap-3 p-5">
       <div className="flex flex-col gap-1">
@@ -52,55 +64,47 @@ export function ScoreHistory({ months }: ScoreHistoryProps) {
         </p>
       </div>
 
-      {months.length === 0 ? (
-        <p className="py-4 text-center text-fg-subtle text-sm">
-          Your first month appears here once it is over.
-        </p>
-      ) : (
-        <>
-          <div className="flex items-baseline justify-between gap-3 border-white/8 border-b pb-1.5">
-            <span className="cap">Month</span>
-            <span className="flex shrink-0 gap-3">
-              <span className="cap w-12 text-right">Score</span>
+      <div className="flex items-baseline justify-between gap-3 border-white/8 border-b pb-1.5">
+        <span className="cap">Month</span>
+        <span className="flex shrink-0 gap-3">
+          <span className="cap w-12 text-right">Score</span>
+          {PARTS.map((part) => (
+            <span
+              key={part.key}
+              className="cap hidden w-24 text-right sm:inline"
+            >
+              {part.label}
+            </span>
+          ))}
+        </span>
+      </div>
+
+      <ul className="flex flex-col divide-y divide-white/6">
+        {months.map((row) => (
+          <li
+            key={row.month}
+            className="flex items-baseline justify-between gap-3 py-2"
+          >
+            <span className="truncate text-fg text-sm">
+              {formatMonthLabel(row.month)}
+            </span>
+            <span className="flex shrink-0 items-baseline gap-3 font-mono text-[13px] tabular-nums">
+              <span className="text-glow w-12 text-right font-bold">
+                {row.score}
+              </span>
               {PARTS.map((part) => (
                 <span
                   key={part.key}
-                  className="cap hidden w-24 text-right sm:inline"
+                  className="hidden w-24 text-right text-fg-muted sm:inline"
                 >
-                  {part.label}
+                  {formatPart(row[part.key])}
+                  <span className="text-fg-subtle"> / {part.possible}</span>
                 </span>
               ))}
             </span>
-          </div>
-
-          <ul className="flex flex-col divide-y divide-white/6">
-            {months.map((row) => (
-              <li
-                key={row.month}
-                className="flex items-baseline justify-between gap-3 py-2"
-              >
-                <span className="truncate text-fg text-sm">
-                  {formatMonthLabel(row.month)}
-                </span>
-                <span className="flex shrink-0 items-baseline gap-3 font-mono text-[13px] tabular-nums">
-                  <span className="text-glow w-12 text-right font-bold">
-                    {row.score}
-                  </span>
-                  {PARTS.map((part) => (
-                    <span
-                      key={part.key}
-                      className="hidden w-24 text-right text-fg-muted sm:inline"
-                    >
-                      {formatPart(row[part.key])}
-                      <span className="text-fg-subtle"> / {part.possible}</span>
-                    </span>
-                  ))}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

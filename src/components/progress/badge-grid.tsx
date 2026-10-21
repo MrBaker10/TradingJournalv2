@@ -29,9 +29,10 @@ const CATEGORY_ICON: Record<BadgeCategory, ReactNode> = {
 
 const MONTH_END_HINT = "Evaluated once the month is over.";
 
-// Design.md §1: badges are process, so an earned one is allowed the gradient
-// tile and the neon edge. An open one is matte — never smaller, never pushed
-// down the list, because it is the next thing to aim at and not a failure.
+// Design.md §1: badges are process, so an earned one is allowed the neon edge.
+// Its icon tile uses the calm surface of §4.14, so it never outshines the
+// title it labels. An open one is matte — never smaller, never pushed down the
+// list, because it is the next thing to aim at and not a failure.
 export function BadgeGrid({ earnedAt, timeZone }: BadgeGridProps) {
   const earnedCount = BADGE_DEFINITIONS.filter((badge) =>
     earnedAt.has(badge.key),
@@ -64,7 +65,7 @@ export function BadgeGrid({ earnedAt, timeZone }: BadgeGridProps) {
                   <div
                     className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-ctl ${
                       earned
-                        ? "bg-[image:var(--gradient-info)] text-fg shadow-[var(--shadow-neon)]"
+                        ? "bg-[image:var(--gradient-info-soft)] text-cyan shadow-[var(--shadow-info-soft)]"
                         : "bg-nav-idle text-fg-subtle"
                     }`}
                   >
@@ -88,7 +89,7 @@ export function BadgeGrid({ earnedAt, timeZone }: BadgeGridProps) {
                       </span>
                     ) : (
                       MONTH_END_BADGE_KEYS.includes(badge.key) && (
-                        <span className="mt-1 text-[11.5px] text-warning">
+                        <span className="mt-1 text-[11.5px] text-fg-subtle">
                           {MONTH_END_HINT}
                         </span>
                       )

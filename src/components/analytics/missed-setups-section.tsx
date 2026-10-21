@@ -1,3 +1,9 @@
+import {
+  type BucketColumn,
+  BucketHeader,
+  BucketRow,
+} from "@/components/analytics/bucket-table";
+import { EmptySection } from "@/components/analytics/empty-section";
 import { ValueBar } from "@/components/ui/value-bar";
 import {
   MISSED_DIMENSION_IDS,
@@ -10,6 +16,11 @@ interface MissedSetupsSectionProps {
   byDimension: Record<MissedDimensionId, MissedRow[]>;
 }
 
+const COLUMNS: BucketColumn[] = [
+  { label: "Missed", width: "sm:w-10" },
+  { label: "Of entries", width: "sm:w-24" },
+];
+
 function DimensionCard({ title, rows }: { title: string; rows: MissedRow[] }) {
   return (
     <section className="card-surface edge flex flex-col gap-3 p-5">
@@ -21,44 +32,30 @@ function DimensionCard({ title, rows }: { title: string; rows: MissedRow[] }) {
         </p>
       ) : (
         <>
-          <div className="flex items-baseline justify-between gap-3 border-white/8 border-b pb-1.5">
-            <span className="cap">Bucket</span>
-            <span className="flex shrink-0 gap-3">
-              <span className="cap w-10 text-right">Missed</span>
-              <span className="cap w-24 text-right">Of entries</span>
-            </span>
-          </div>
+          <BucketHeader bucketLabel="Bucket" columns={COLUMNS} />
 
           <ul className="flex flex-col divide-y divide-white/6">
             {rows.map((row) => (
-              <li
+              <BucketRow
                 key={row.isNotSet ? "\u0000not-set" : row.label}
-                className="flex flex-col gap-1.5 py-2"
-              >
-                <div className="flex items-baseline justify-between gap-3">
-                  <span
-                    className={`truncate text-sm ${
-                      row.isNotSet ? "text-fg-subtle italic" : "text-fg"
-                    }`}
-                  >
-                    {row.label}
-                  </span>
-                  <span className="flex shrink-0 items-baseline gap-3 font-mono text-[13px] tabular-nums">
-                    <span className="w-10 text-right text-fg">
-                      {row.missed}
-                    </span>
-                    <span className="w-24 text-right text-fg-muted">
-                      {row.share === null
+                label={row.label}
+                isNotSet={row.isNotSet}
+                columns={COLUMNS}
+                cells={[
+                  { text: String(row.missed), tone: "text-fg" },
+                  {
+                    text:
+                      row.share === null
                         ? "—"
-                        : `${Math.round(row.share * 100)}% of ${row.entries}`}
-                    </span>
-                  </span>
-                </div>
-                {/* A missed setup touches no money: it feeds streak and
-                    badges, so it is a process value and takes the same neon
-                    fill as the consistency-score bars (Design.md §1). */}
-                <ValueBar ratio={row.barRatio} tone="process" />
-              </li>
+                        : `${Math.round(row.share * 100)}% of ${row.entries}`,
+                    tone: "text-fg-muted",
+                  },
+                ]}
+                // A missed setup touches no money: it feeds streak and
+                // badges, so it is a process value and takes the same neon
+                // fill as the consistency-score bars (Design.md §1).
+                bar={<ValueBar ratio={row.barRatio} tone="process" />}
+              />
             ))}
           </ul>
         </>
@@ -79,6 +76,15 @@ export function MissedSetupsSection({ byDimension }: MissedSetupsSectionProps) {
     (dimension) => byDimension[dimension].length > 0,
   );
 
+  if (!hasMissed) {
+    return (
+      <EmptySection title="Missed setups">
+        No missed setups in this range. A setup you saw and passed on counts the
+        same as a trade.
+      </EmptySection>
+    );
+  }
+
   return (
     <section className="flex flex-col gap-3">
       <div className="ml-2 flex flex-col gap-1">
@@ -89,22 +95,15 @@ export function MissedSetupsSection({ byDimension }: MissedSetupsSectionProps) {
         </p>
       </div>
 
-      {hasMissed ? (
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
-          {MISSED_DIMENSION_IDS.map((dimension) => (
-            <DimensionCard
-              key={dimension}
-              title={MISSED_DIMENSION_TITLES[dimension]}
-              rows={byDimension[dimension]}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="py-6 text-center text-fg-subtle text-sm">
-          No missed setups in this range. A setup you saw and passed on counts
-          the same as a trade.
-        </p>
-      )}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+        {MISSED_DIMENSION_IDS.map((dimension) => (
+          <DimensionCard
+            key={dimension}
+            title={MISSED_DIMENSION_TITLES[dimension]}
+            rows={byDimension[dimension]}
+          />
+        ))}
+      </div>
     </section>
   );
 }

@@ -1,7 +1,8 @@
 import { BadgeGrid } from "@/components/progress/badge-grid";
 import { ScoreBreakdown } from "@/components/progress/score-breakdown";
 import { ScoreHistory } from "@/components/progress/score-history";
-import { StreakCard } from "@/components/progress/streak-card";
+import { StatusCard } from "@/components/progress/status-card";
+import { StreakExplanation } from "@/components/progress/streak-explanation";
 import { UnlockedCard } from "@/components/progress/unlocked-card";
 import { WeeklyReviewLink } from "@/components/progress/weekly-review-link";
 import { getBadgesSeenAt, listUserBadges } from "@/db/queries/badges";
@@ -82,19 +83,36 @@ export default async function ProgressPage() {
 
       <UnlockedCard titles={unlockedTitles} />
 
-      {/* items-start so the streak card keeps its own height instead of being
-          stretched to match the score card next to it. */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
-        <StreakCard streak={streak} />
-        <ScoreBreakdown
-          score={score}
-          loggedDays={loggedDays}
-          elapsedTradingDays={elapsedTradingDays}
-          hasEntriesThisMonth={scoreDays.length > 0}
-        />
-      </div>
-
-      <WeeklyReviewLink reviewed={reviewedThisWeek.length > 0} />
+      <StreakExplanation
+        graceDayDate={streak.graceDayUsed ? streak.graceDayDate : null}
+      >
+        {/* Score first (Design.md §4.3, small form): the breakdown carries
+            the score, so there is no consistency status card. items-start
+            keeps the side column at its own height. */}
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-5">
+          <div className="lg:col-span-3">
+            <ScoreBreakdown
+              score={score}
+              loggedDays={loggedDays}
+              elapsedTradingDays={elapsedTradingDays}
+              hasEntriesThisMonth={scoreDays.length > 0}
+            />
+          </div>
+          <div className="flex flex-col gap-4 lg:col-span-2">
+            <StatusCard
+              label="Logging streak"
+              value={`${streak.current}d`}
+              sub={`Longest ${streak.longest}d`}
+            />
+            <StatusCard
+              label="Badges"
+              value={String(userBadges.length)}
+              sub={`of ${BADGE_DEFINITIONS.length}`}
+            />
+            <WeeklyReviewLink reviewed={reviewedThisWeek.length > 0} />
+          </div>
+        </div>
+      </StreakExplanation>
 
       <ScoreHistory months={pastMonths} />
 

@@ -12,11 +12,12 @@ import {
 } from "@/db/queries/analytics";
 import { withDisplayCurrency } from "@/db/queries/scope";
 import {
-  DIMENSION_IDS,
   DIMENSION_NOTES,
   DIMENSION_TITLES,
   groupByDimension,
   groupMissedByDimension,
+  shouldExplainMissingAvgR,
+  splitRecordedDimensions,
 } from "@/domain/analytics";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { firstValue } from "@/lib/search-params";
@@ -65,6 +66,7 @@ export default async function AnalyticsPage({
 
   const byDimension = groupByDimension(dimensionRows);
   const missedByDimension = groupMissedByDimension(missedRows);
+  const { recorded, notRecorded } = splitRecordedDimensions(byDimension);
 
   return (
     <div className="flex flex-col gap-6">
@@ -72,19 +74,40 @@ export default async function AnalyticsPage({
 
       <RangeFilter />
 
-      {/* items-start: a dimension with two buckets must not be stretched to
-          the height of one with twenty. */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
-        {DIMENSION_IDS.map((dimension) => (
-          <DimensionTable
-            key={dimension}
-            title={DIMENSION_TITLES[dimension]}
-            rows={byDimension[dimension]}
-            note={DIMENSION_NOTES[dimension]}
-            currency={scope.currency}
-          />
-        ))}
-      </div>
+      {shouldExplainMissingAvgR(byDimension) && (
+        <p className="ml-2 text-[11.5px] text-fg-subtle">
+          Avg R shows — until a trade in this range has a stop price.
+        </p>
+      )}
+
+      {/* Design.md §4.16: one two-column masonry of the dimensions that hold
+          data, in dimension order. CSS columns close the gaps a grid leaves
+          between cards of different height; break-inside-avoid keeps each
+          card whole. */}
+      {recorded.length > 0 && (
+        <div className="columns-1 gap-6 lg:columns-2">
+          {recorded.map((dimension) => (
+            <div key={dimension} className="mb-6 break-inside-avoid">
+              <DimensionTable
+                title={DIMENSION_TITLES[dimension]}
+                rows={byDimension[dimension]}
+                note={DIMENSION_NOTES[dimension]}
+                currency={scope.currency}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {notRecorded.length > 0 && (
+        <p className="ml-2 text-[11.5px] text-fg-subtle">
+          Not recorded in this range:{" "}
+          {notRecorded
+            .map((dimension) => DIMENSION_TITLES[dimension])
+            .join(", ")}
+          .
+        </p>
+      )}
 
       {/* The three execution sections sit between the dimensions and the
           missed setups: they are about how a trade was run, not about which

@@ -11,6 +11,8 @@ import {
   MISSED_DIMENSION_IDS,
   type MissedAggregateRow,
   NOT_SET_LABEL,
+  shouldExplainMissingAvgR,
+  splitRecordedDimensions,
 } from "../analytics.ts";
 
 function aggregate(
@@ -300,5 +302,175 @@ describe("groupMissedByDimension", () => {
     expect(grouped.instrument.map((row) => row.label)).toEqual(["MES"]);
     expect(grouped.session).toEqual([]);
     expect(grouped.setupType).toEqual([]);
+  });
+});
+
+describe("splitRecordedDimensions", () => {
+  // One aggregate row per dimension named, every other dimension empty.
+  function grouped(
+    rows: Partial<Record<DimensionId, DimensionAggregateRow[]>>,
+  ) {
+    return groupByDimension(
+      DIMENSION_IDS.flatMap((dimension) =>
+        (rows[dimension] ?? []).map((row) => ({ ...row, dimension })),
+      ),
+    );
+  }
+
+  it("calls a dimension recorded when it has a set bucket", () => {
+    const { recorded, notRecorded } = splitRecordedDimensions(
+      grouped({ session: [aggregate({ bucket: "NY-AM" })] }),
+    );
+    expect(recorded).toEqual(["session"]);
+    expect(notRecorded).toEqual([
+      "account",
+      "setupType",
+      "entryModel",
+      "instrument",
+      "weekday",
+      "hour",
+      "confluence",
+      "felt",
+      "grade",
+      "mistake",
+    ]);
+  });
+
+  it("calls a dimension with no rows not recorded", () => {
+    const { recorded, notRecorded } = splitRecordedDimensions(grouped({}));
+    expect(recorded).toEqual([]);
+    expect(notRecorded).toEqual([
+      "account",
+      "setupType",
+      "entryModel",
+      "session",
+      "instrument",
+      "weekday",
+      "hour",
+      "confluence",
+      "felt",
+      "grade",
+      "mistake",
+    ]);
+  });
+
+  it("calls a dimension with only a Not set bucket not recorded", () => {
+    const { recorded, notRecorded } = splitRecordedDimensions(
+      grouped({ setupType: [aggregate({ bucket: null, trades: 59 })] }),
+    );
+    expect(recorded).toEqual([]);
+    expect(notRecorded).toContain("setupType");
+  });
+
+  it("keeps the card of a dimension with one set bucket beside Not set", () => {
+    const { recorded } = splitRecordedDimensions(
+      grouped({
+        setupType: [
+          aggregate({ bucket: null, trades: 58 }),
+          aggregate({ bucket: "Breakout", trades: 1 }),
+        ],
+      }),
+    );
+    expect(recorded).toEqual(["setupType"]);
+  });
+
+  it("returns both lists in the order of the dimensions", () => {
+    const { recorded, notRecorded } = splitRecordedDimensions(
+      grouped({
+        mistake: [aggregate({ bucket: "Chased" })],
+        account: [aggregate({ bucket: "Lucid 25k Eval" })],
+        weekday: [aggregate({ bucket: "1" })],
+      }),
+    );
+    expect(recorded).toEqual(["account", "weekday", "mistake"]);
+    expect(notRecorded).toEqual([
+      "setupType",
+      "entryModel",
+      "session",
+      "instrument",
+      "hour",
+      "confluence",
+      "felt",
+      "grade",
+    ]);
+  });
+});
+
+describe("shouldExplainMissingAvgR", () => {
+  const grouped = groupByDimension;
+
+  it("explains the dash when trades exist but no bucket has an Avg R", () => {
+    expect(
+      shouldExplainMissingAvgR(
+        grouped([
+          aggregate({ dimension: "session", bucket: "NY-AM", trades: 29 }),
+          aggregate({ dimension: "weekday", bucket: "1", trades: 12 }),
+        ]),
+      ),
+    ).toBe(true);
+  });
+
+  it("stays quiet as soon as one bucket has an Avg R", () => {
+    expect(
+      shouldExplainMissingAvgR(
+        grouped([
+          aggregate({ dimension: "session", bucket: "NY-AM", trades: 29 }),
+          aggregate({
+            dimension: "weekday",
+            bucket: "1",
+            trades: 12,
+            rSum: 3,
+            rCount: 3,
+          }),
+        ]),
+      ),
+    ).toBe(false);
+  });
+
+  it("counts an Avg R in a dimension that is not recorded", () => {
+    expect(
+      shouldExplainMissingAvgR(
+        grouped([
+          aggregate({ dimension: "session", bucket: "NY-AM", trades: 29 }),
+          aggregate({
+            dimension: "setupType",
+            bucket: null,
+            trades: 5,
+            rSum: 2,
+            rCount: 2,
+          }),
+        ]),
+      ),
+    ).toBe(false);
+  });
+
+  it("has nothing to explain when only Not set buckets exist, as no card shows", () => {
+    expect(
+      shouldExplainMissingAvgR(
+        grouped([
+          aggregate({ dimension: "setupType", bucket: null, trades: 59 }),
+        ]),
+      ),
+    ).toBe(false);
+  });
+
+  it("counts an Avg R of exactly zero as an Avg R", () => {
+    expect(
+      shouldExplainMissingAvgR(
+        grouped([
+          aggregate({
+            dimension: "session",
+            bucket: "NY-AM",
+            trades: 4,
+            rSum: 0,
+            rCount: 2,
+          }),
+        ]),
+      ),
+    ).toBe(false);
+  });
+
+  it("has nothing to explain when there are no buckets at all", () => {
+    expect(shouldExplainMissingAvgR(grouped([]))).toBe(false);
   });
 });

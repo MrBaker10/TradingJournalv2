@@ -1,9 +1,20 @@
+import {
+  type BucketColumn,
+  BucketHeader,
+  BucketRow,
+} from "@/components/analytics/bucket-table";
+import { EmptySection } from "@/components/analytics/empty-section";
 import type { ExecutionSummaryRow } from "@/db/queries/analytics";
 import { formatHoldTime, OUTCOME_LABELS, OUTCOMES } from "@/domain/execution";
 
 interface HoldTimeCardProps {
   summary: ExecutionSummaryRow[];
 }
+
+const COLUMNS: BucketColumn[] = [
+  { label: "Avg held", width: "sm:w-20" },
+  { label: "Trades", width: "sm:w-12" },
+];
 
 // How long the user sits in a trade, split by outcome — the question being
 // whether winners are cut as fast as losers are held.
@@ -17,6 +28,14 @@ export function HoldTimeCard({ summary }: HoldTimeCardProps) {
     row: summary.find((entry) => entry.outcome === outcome),
   })).filter((entry) => (entry.row?.holdTrades ?? 0) > 0);
 
+  if (rows.length === 0) {
+    return (
+      <EmptySection title="Hold time">
+        No trade with an exit in this range yet.
+      </EmptySection>
+    );
+  }
+
   return (
     <section className="flex flex-col gap-3">
       <div className="ml-2 flex flex-col gap-1">
@@ -29,42 +48,27 @@ export function HoldTimeCard({ summary }: HoldTimeCardProps) {
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
         <div className="card-surface edge flex flex-col gap-3 p-5">
-          {rows.length === 0 ? (
-            <p className="py-4 text-center text-fg-subtle text-sm">
-              No trade with an exit in this range yet.
-            </p>
-          ) : (
-            <>
-              <div className="flex items-baseline justify-between gap-3 border-white/8 border-b pb-1.5">
-                <span className="cap">Outcome</span>
-                <span className="flex shrink-0 gap-3">
-                  <span className="cap w-20 text-right">Avg held</span>
-                  <span className="cap w-12 text-right">Trades</span>
-                </span>
-              </div>
+          <BucketHeader bucketLabel="Outcome" columns={COLUMNS} />
 
-              <ul className="flex flex-col divide-y divide-white/6">
-                {rows.map(({ outcome, row }) => (
-                  <li
-                    key={outcome}
-                    className="flex items-baseline justify-between gap-3 py-2"
-                  >
-                    <span className="truncate text-fg text-sm">
-                      {OUTCOME_LABELS[outcome]}
-                    </span>
-                    <span className="flex shrink-0 items-baseline gap-3 font-mono text-[13px] tabular-nums">
-                      <span className="w-20 text-right text-fg">
-                        {formatHoldTime(row?.holdMinutes ?? null)}
-                      </span>
-                      <span className="w-12 text-right text-fg-muted">
-                        {row?.holdTrades ?? 0}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+          <ul className="flex flex-col divide-y divide-white/6">
+            {rows.map(({ outcome, row }) => (
+              <BucketRow
+                key={outcome}
+                label={OUTCOME_LABELS[outcome]}
+                columns={COLUMNS}
+                cells={[
+                  {
+                    text: formatHoldTime(row?.holdMinutes ?? null),
+                    tone: "text-fg",
+                  },
+                  {
+                    text: String(row?.holdTrades ?? 0),
+                    tone: "text-fg-muted",
+                  },
+                ]}
+              />
+            ))}
+          </ul>
         </div>
       </div>
     </section>

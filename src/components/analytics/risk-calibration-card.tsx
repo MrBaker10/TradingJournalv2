@@ -1,3 +1,9 @@
+import {
+  type BucketColumn,
+  BucketHeader,
+  BucketRow,
+} from "@/components/analytics/bucket-table";
+import { EmptySection } from "@/components/analytics/empty-section";
 import { ValueBar } from "@/components/ui/value-bar";
 import type { ExecutionSummaryRow } from "@/db/queries/analytics";
 import {
@@ -18,6 +24,13 @@ const KIND_TITLES: Record<ExcursionKind, string> = {
   mae: "Adverse excursion (MAE)",
   mfe: "Favourable excursion (MFE)",
 };
+
+// No header from `sm` up (the card title says what is counted); below it the
+// two-line rows get one label line, so "4 · 33%" can be read.
+const COLUMNS: BucketColumn[] = [
+  { label: "Trades", width: "sm:w-8" },
+  { label: "Share", width: "sm:w-12" },
+];
 
 const KINDS: ExcursionKind[] = ["mae", "mfe"];
 
@@ -67,22 +80,27 @@ function Card({
           No {kind.toUpperCase()} recorded on these trades.
         </p>
       ) : (
-        <ul className="flex flex-col divide-y divide-white/6">
-          {rows.map((row) => (
-            <li key={row.label} className="flex flex-col gap-1.5 py-2">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="truncate text-fg text-sm">{row.label}</span>
-                <span className="flex shrink-0 items-baseline gap-3 font-mono text-[13px] tabular-nums">
-                  <span className="w-8 text-right text-fg">{row.trades}</span>
-                  <span className="w-12 text-right text-fg-muted">
-                    {Math.round(row.share * 100)}%
-                  </span>
-                </span>
-              </div>
-              <ValueBar ratio={row.barRatio} tone="process" />
-            </li>
-          ))}
-        </ul>
+        <>
+          <BucketHeader bucketLabel="Bucket" columns={COLUMNS} narrowOnly />
+
+          <ul className="flex flex-col divide-y divide-white/6">
+            {rows.map((row) => (
+              <BucketRow
+                key={row.label}
+                label={row.label}
+                columns={COLUMNS}
+                cells={[
+                  { text: String(row.trades), tone: "text-fg" },
+                  {
+                    text: `${Math.round(row.share * 100)}%`,
+                    tone: "text-fg-muted",
+                  },
+                ]}
+                bar={<ValueBar ratio={row.barRatio} tone="process" />}
+              />
+            ))}
+          </ul>
+        </>
       )}
     </section>
   );
@@ -100,6 +118,22 @@ export function RiskCalibrationCard({
   summary,
   excursions,
 }: RiskCalibrationCardProps) {
+  // Only when none of the four cards has a bucket does the section shrink to
+  // one line; with any data the empty cards beside it stay, because there the
+  // gap is the finding.
+  const nothingRecorded = KINDS.every((kind) =>
+    OUTCOMES.every(
+      (outcome) => buildExcursionRows(kind, outcome, excursions).length === 0,
+    ),
+  );
+  if (nothingRecorded) {
+    return (
+      <EmptySection title="Risk calibration">
+        No MAE or MFE recorded in this range.
+      </EmptySection>
+    );
+  }
+
   return (
     <section className="flex flex-col gap-3">
       <div className="ml-2 flex flex-col gap-1">
