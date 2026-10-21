@@ -3405,3 +3405,32 @@ Deployment laufen.
 - Migration `0026` (`weekly_reviews`) auf Neon `preview` und Production, beide durch
   Sascha, vor dem Push von `main`. Danach auf beiden Branches lesend geprüft: 27 Einträge
   in `drizzle.__drizzle_migrations`, Tabelle `weekly_reviews` vorhanden.
+
+## 2026-10-21 — Designrunde Journal — feature/journal-design
+
+- **Gliederung nach Trade date, nicht nach Trading day:** dieselbe Gruppierung wie der
+  Kalender, ein Sonntags-Trade steht unter „Sun". `GLOSSARY.md` trennt die Begriffe.
+  Nach R sortiert bleibt die Liste flach.
+- **Tageskopf zählt den ganzen Tag** innerhalb der Filter, nicht die Zeilen der Seite;
+  ein Tag über die Seitengrenze wiederholt seinen Kopf mit denselben Zahlen.
+- **Tagessumme = Summe der Zeilenbeträge** (`tradeNetDisplayCents`), nicht
+  `moneyContribution`: `scope.ts` importiert `trades.ts`, der Rückweg wäre ein
+  Import-Zyklus. Unter der Sichtbarkeit der Liste sind beide Term für Term gleich; zwei
+  DB-Tests gegen `getDayTotals` (Kommissionen, All accounts, gewähltes Konto) halten es.
+  Die Summe folgt allen Filtern, mit Instrumentfilter also bewusst nicht dem Kalender.
+- **Keine Summe nur bei Missed-only-Tagen**; ein Tag mit offenen Trades zeigt `$0.00`
+  wie der Kalender (Sascha: Missed-only ohne Null bleibt).
+- **Kein Ergebnis-Tag in der Zeile:** `result` ist brutto, der Betrag netto — ein „Win"
+  stand neben einem roten Betrag. Design.md §8 nennt jetzt das Vorzeichen als Text-Träger.
+- **Zählwerte in `--color-fg-muted`**, nicht `subtle` (Sascha, gegen den Spec-Wortlaut):
+  §8 schließt `subtle` für Werte aus. Gilt für Tageskopf und Zählzeile.
+- **Kontoschalter = Kontofilter des Journals**; `project-overview.md` verlangt keinen
+  zweiten Filter mehr.
+- **Range-Presets geteilt mit Analytics** (`RangePresetChips`, `narrowingPreset` neben
+  `rangeForPreset`); Chips, Sortierknöpfe und Clear jetzt 40px nach §8 — die
+  Analytics-Chips wachsen mit.
+- **Seite hinter der letzten → Seite 1** mit denselben Filtern, sonst stünde
+  „No entries yet." unter einer Zählzeile mit Einträgen.
+- **Offen geblieben:** „No entries yet." und das Practice-Banner (auch über einem leeren
+  Zustand) nicht im Browser gesehen — lokal gibt es Einträge, aber keine
+  Practice-only-Trades.

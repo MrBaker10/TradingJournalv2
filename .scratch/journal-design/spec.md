@@ -1,6 +1,6 @@
 # Spec: Design round Journal
 
-Status: ready-for-agent
+Status: done
 
 Roadmap: design rounds after `.scratch/progress-analytics-design/`. Terms: `GLOSSARY.md`.
 Decided in a grilling session on 2026-10-21 (Q1–Q19).
