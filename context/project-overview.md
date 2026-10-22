@@ -145,8 +145,10 @@ nothing is published.
 
 ### H) Prop Firm Rules
 
-15 firms with 2026 rule sets, 18 rule fields each, search, filter chips, expandable
-detail, compare, firm website link and a "last verified" date.
+15 firms with 2026 rule sets, one program per account size of each firm's existing
+product lines, 18 rule fields each. One card per firm with a size control, search,
+size and filter chips, expandable detail, compare of up to three programs, firm
+website link and a "last verified" date.
 
 **Source of record: `context/PropFirmsData.md`.** Curated by hand, no API. The app
 never invents a rule; if a field is unknown it says so, and conflicts between a firm's
@@ -546,7 +548,8 @@ and branch per item. Terms in `GLOSSARY.md`.
 
 - Light mode — a separate design round, not a token override
 - Landing page — the only public surface, own document
-- Component-level design for Prop Firm Rules
+- Prop Firm Rules rule detail table (the firm card, size control and compare header
+  are designed in `Design.md` 4.28)
 - Richer prop firm compare
 - Per-account equity curves side by side
 - **Personal rulebook** — the trader's own rules (max daily loss, sessions) with daily

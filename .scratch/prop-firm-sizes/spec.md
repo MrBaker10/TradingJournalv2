@@ -115,7 +115,8 @@ order, so the 25k to 150k programs of a firm read in size order.
   labelled in the "50k" form. Tag chips stay the distinct summary tags, alphabetical.
 - **Firm cards.** A new pure module groups the filtered program rows into firm cards in
   firm order, each with its matching programs in position order, and picks the
-  preselected program: a program of that firm in the compare selection wins, else the
+  preselected program: a program of that firm in the compare selection wins (with several, the one picked
+  first), else the
   single filtered size if exactly one size is filtered, else the smallest matching size,
   else the first program by position. The card's size choice is local UI state, not in
   the URL.

@@ -18,7 +18,7 @@ written in ticket 02.
 
 **Status:** ready-for-agent
 
-- [ ] Pure page-logic module groups filtered program rows into firm cards in firm order, programs in position order, and picks the preselected program (compare → smallest size → first by position).
+- [ ] Pure page-logic module groups filtered program rows into firm cards in firm order, programs in position order, and picks the preselected program (compare, the first picked if several → smallest size → first by position).
 - [ ] Firm card per Design.md: size control, selected program's tags, "Last verified", website, expandable eighteen fields; unknown fields shown as unknown.
 - [ ] A firm with a single program still shows its card correctly per Design.md.
 - [ ] Compare targets the selected program; two sizes of one firm can be compared; cap of three unchanged; column header "Firm · Program".
