@@ -70,7 +70,7 @@ order, so the 25k to 150k programs of a firm read in size order.
 30. As the curator, I want the program order on the page and in the select to follow the file, so that I control it without a separate setting.
 31. As the curator, I want seeding to fail on an account size that is not a plain dollar amount, so that the size filter never silently misses a program.
 32. As the curator, I want seeding to fail on a summary tag that contains an amount or a size, so that the chip bar stays size-neutral.
-33. As the curator, I want existing program names kept, so that re-seeding updates the linked programs in place instead of orphaning them.
+33. As the curator, I want existing program names kept, so that re-seeding updates the linked programs in place instead of orphaning them. (Superseded 2026-10-22 for ticket 07: names follow the firm's website; renamed rows are updated in place before seeding, see `context/decisions.md`.)
 34. As the curator, I want new programs named "<product line> <N>k" in the firm's own style, so that names stay consistent.
 35. As the curator, I want each firm's sources recorded beside the research, so that I can re-verify the rules later.
 36. As the curator, I want to review each batch of firms before it is seeded, so that nothing lands unchecked.

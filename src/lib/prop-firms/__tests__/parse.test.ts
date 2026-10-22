@@ -347,7 +347,7 @@ describe("parsePropFirms against context/PropFirmsData.md", () => {
     }
   });
 
-  it("lists every program of the sized firms by name, keeping their 50k names", () => {
+  it("lists every program of the sized firms by name", () => {
     const byName = new Map(
       parsePropFirms(markdown).map((firm) => [
         firm.name,
@@ -418,6 +418,34 @@ describe("parsePropFirms against context/PropFirmsData.md", () => {
       "100k EOD",
       "150k EOD",
     ]);
+    expect(byName.get("Goat Funded Futures")).toEqual([
+      "EOD 50k",
+      "EOD 100k",
+      "EOD 150k",
+    ]);
+    expect(byName.get("Legends Trading")).toEqual([
+      "25k Elite",
+      "50k Elite",
+      "100k Elite",
+      "150k Elite",
+    ]);
+    expect(byName.get("E8 Markets")).toEqual([
+      "E8 Signature 25k",
+      "E8 Signature 50k",
+      "E8 Signature 100k",
+      "E8 Signature 150k",
+    ]);
+    expect(byName.get("TradeDay")).toEqual([
+      "Quick Pay EOD 25k",
+      "Quick Pay EOD 50k",
+      "Quick Pay EOD 100k",
+      "Quick Pay EOD 150k",
+    ]);
+    expect(byName.get("The Trading Pit")).toEqual([
+      "Futures Prime 50k",
+      "Futures Prime 100k",
+      "Futures Prime 150k",
+    ]);
   });
 
   it("yields the summary tags the filter chips are built from", () => {
@@ -425,7 +453,7 @@ describe("parsePropFirms against context/PropFirmsData.md", () => {
     const byName = new Map(firms.map((firm) => [firm.name, firm]));
 
     expect(byName.get("E8 Markets")?.programs[0].summaryTags).toEqual([
-      "Static",
+      "EOD",
       "80% split",
     ]);
     expect(byName.get("Tradeify")?.programs[0].summaryTags).toEqual([

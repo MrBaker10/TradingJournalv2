@@ -37,6 +37,25 @@ production. `.githooks/pre-push` blocks a push to `main` that adds a migration; 
 with `MIGRATIONS_APPLIED=1` once both branches are migrated. Never run `vercel env pull`
 — it writes into `.env.local`.
 
+**Renamed prop firm programs.** The prop firm seeder keys programs on firm and name and
+never deletes, so a renamed program would come back as a second row. Rename the existing
+row in place before seeding; its id, and every account linked to it, stays. Pending on
+both Neon branches before their next prop firm seed (production run by Sascha, not by
+an agent; rationale in `decisions.md`, 2026-10-22):
+
+```sql
+update prop_firm_programs p
+set name = v.new_name
+from prop_firms f,
+  (values
+    ('Goat Funded Futures', '50k EOD', 'EOD 50k'),
+    ('Legends Trading', 'Elite Master 50k', '50k Elite'),
+    ('E8 Markets', 'Signature Futures 50k', 'E8 Signature 50k'),
+    ('TradeDay', '50k EOD', 'Quick Pay EOD 50k')
+  ) as v(firm, old_name, new_name)
+where f.id = p.firm_id and f.name = v.firm and p.name = v.old_name;
+```
+
 ## Scheduled jobs
 
 - `pnpm job:fx`: retries provisional imported FX amounts after the ECB rate is
