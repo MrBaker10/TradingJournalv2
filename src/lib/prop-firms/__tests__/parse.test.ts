@@ -307,29 +307,85 @@ describe("parsePropFirms against context/PropFirmsData.md", () => {
     "utf8",
   );
 
-  it("parses all fifteen firms with one program each", () => {
+  it("parses all fifteen firms", () => {
     const firms = parsePropFirms(markdown);
 
     expect(firms).toHaveLength(15);
-    expect(firms.every((firm) => firm.programs.length === 1)).toBe(true);
     expect(firms.map((firm) => firm.name)).toContain("The Trading Pit");
   });
 
   it("fills every one of the eighteen rule fields for every program", () => {
     for (const firm of parsePropFirms(markdown)) {
-      const missing = Object.entries(firm.programs[0].fields)
-        .filter(([, value]) => value === null)
-        .map(([key]) => key);
+      for (const program of firm.programs) {
+        const missing = Object.entries(program.fields)
+          .filter(([, value]) => value === null)
+          .map(([key]) => key);
 
-      expect(missing, `${firm.name} is missing fields`).toEqual([]);
+        expect(missing, `${firm.name} · ${program.name}`).toEqual([]);
+      }
     }
   });
 
-  it("has no website and no verification date on file yet", () => {
-    const firms = parsePropFirms(markdown);
+  // Curation rules, stricter than the parser: the program select lists a
+  // firm's programs in file order, so the file must read smallest to largest;
+  // and a firm is only verified once its website is known.
+  it("lists each firm's programs from the smallest account size up", () => {
+    for (const firm of parsePropFirms(markdown)) {
+      const sizes = firm.programs.map((program) =>
+        Number(program.accountSizeUsd),
+      );
 
-    expect(firms.every((firm) => firm.website === null)).toBe(true);
-    expect(firms.every((firm) => firm.lastVerifiedAt === null)).toBe(true);
+      expect(sizes, firm.name).toEqual([...sizes].sort((a, b) => a - b));
+    }
+  });
+
+  it("names a website for every firm with a verification date", () => {
+    for (const firm of parsePropFirms(markdown)) {
+      if (firm.lastVerifiedAt !== null) {
+        expect(firm.website, firm.name).not.toBeNull();
+      }
+    }
+  });
+
+  it("lists every program of the sized firms by name, keeping their 50k names", () => {
+    const byName = new Map(
+      parsePropFirms(markdown).map((firm) => [
+        firm.name,
+        firm.programs.map((program) => program.name),
+      ]),
+    );
+
+    expect(byName.get("Futures Elite")).toEqual([
+      "Elite Challenge 25k",
+      "Elite Challenge 50k",
+      "Elite Challenge 100k",
+      "Elite Challenge 150k",
+    ]);
+    expect(byName.get("Tradeify")).toEqual([
+      "Select 25k (Daily Payout)",
+      "Select 50k (Daily Payout)",
+      "Select 100k (Daily Payout)",
+      "Select 150k (Daily Payout)",
+      "Select 300k (Daily Payout)",
+    ]);
+    expect(byName.get("Take Profit Trader")).toEqual([
+      "25k Test → PRO → PRO+",
+      "50k Test → PRO → PRO+",
+      "75k Test → PRO → PRO+",
+      "100k Test → PRO → PRO+",
+      "150k Test → PRO → PRO+",
+    ]);
+    expect(byName.get("My Funded Futures")).toEqual([
+      "Rapid 25k",
+      "Rapid 50k",
+      "Rapid 100k",
+      "Rapid 150k",
+    ]);
+    expect(byName.get("FundedNext")).toEqual([
+      "Futures Rapid 25k",
+      "Futures Rapid 50k",
+      "Futures Rapid 100k",
+    ]);
   });
 
   it("yields the summary tags the filter chips are built from", () => {
@@ -343,7 +399,6 @@ describe("parsePropFirms against context/PropFirmsData.md", () => {
     expect(byName.get("Tradeify")?.programs[0].summaryTags).toEqual([
       "EOD",
       "90% split",
-      "No DLL",
       "No funded consistency",
     ]);
   });

@@ -131,7 +131,9 @@ order, so the 25k to 150k programs of a firm read in size order.
   existing tokens and primitives. Dark only, no glow on rule values.
 - **Data collection.** Per firm: every currently sold size of its existing product
   line(s), from official sources only (firm website, help center, FAQ, T&Cs, checkout).
-  No review or affiliate sites, no Discord. Sources go into a research note per batch
+  No review or affiliate sites, no Discord. Exception for completeness only:
+  propfirmmatch.com may serve as a checklist of each firm's sizes; every value still
+  comes from, and is cited to, the firm's own pages. Sources go into a research note per batch
   under this feature's `.scratch/` directory, not into `PropFirmsData.md`. Conflicts stay
   as text; unknown stays unknown. "Last verified" is set per firm only when all its
   programs, including the existing 50k one, have been checked.
