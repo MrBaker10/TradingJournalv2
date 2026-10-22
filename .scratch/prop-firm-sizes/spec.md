@@ -1,6 +1,6 @@
 # Spec: Prop firm programs in every account size
 
-Status: ready-for-agent
+Status: done
 
 Roadmap: `context/project-overview.md` → H) Prop Firm Rules; narrows the Future item
 "Component-level design for Prop Firm Rules". Terms: `GLOSSARY.md` (Prop firm program,
