@@ -39,9 +39,11 @@ with `MIGRATIONS_APPLIED=1` once both branches are migrated. Never run `vercel e
 
 **Renamed prop firm programs.** The prop firm seeder keys programs on firm and name and
 never deletes, so a renamed program would come back as a second row. Rename the existing
-row in place before seeding; its id, and every account linked to it, stays. Pending on
-both Neon branches before their next prop firm seed (production run by Sascha, not by
-an agent; rationale in `decisions.md`, 2026-10-22):
+row in place before seeding; its id, and every account linked to it, stays. Before
+running `seed-propfirms.ts` against a Neon branch, check that no rename from this section
+is still pending there; a seed run first leaves the old row beside the new one, and only
+a manual delete removes it. Production is run by Sascha, not by an agent. The renames of
+2026-10-22 (rationale in `decisions.md`) are applied on both Neon branches:
 
 ```sql
 update prop_firm_programs p
