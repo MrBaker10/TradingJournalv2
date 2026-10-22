@@ -5,18 +5,18 @@ import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import type { PropFirmRow } from "@/db/queries/prop-firms";
+import { type FirmCard, sizeLabels } from "@/lib/prop-firms/cards";
 import {
   buildPropFirmsHref,
+  MAX_COMPARE,
   type PropFirmsState,
   toggleCompare,
 } from "@/lib/prop-firms/href";
 import { PROGRAM_FIELD_LABELS } from "@/lib/prop-firms/parse";
 
 interface PropFirmCardProps {
-  row: PropFirmRow;
+  card: FirmCard<PropFirmRow>;
   state: PropFirmsState;
-  selected: boolean;
-  selectionFull: boolean;
 }
 
 // A missing rule is stated, not hidden. This is the deliberate opposite of
@@ -30,16 +30,62 @@ function RuleValue({ value }: { value: string | null }) {
   return <span className="text-fg text-sm">{value}</span>;
 }
 
-export function PropFirmCard({
-  row,
-  state,
-  selected,
-  selectionFull,
-}: PropFirmCardProps) {
+// Design.md §4.28: one segment per program of the firm that passed the
+// filters. Buttons with aria-pressed like every chip in the app, Tab from one
+// to the next; the label is the accessible name, the group names the firm.
+function SizeControl({
+  firmName,
+  programs,
+  selectedId,
+  onSelect,
+}: {
+  firmName: string;
+  programs: PropFirmRow["program"][];
+  selectedId: number;
+  onSelect: (id: number) => void;
+}) {
+  const labels = sizeLabels(programs);
+  return (
+    <fieldset
+      aria-label={`Account size, ${firmName}`}
+      className="flex min-w-0 flex-wrap gap-1.5"
+    >
+      {programs.map((program, index) => {
+        const active = program.id === selectedId;
+        return (
+          <button
+            key={program.id}
+            type="button"
+            onClick={() => onSelect(program.id)}
+            aria-pressed={active}
+            className={`h-10 rounded-xs border px-2.5 text-sm transition-colors duration-200 ease-[var(--ease-soft)] focus-visible:outline-2 focus-visible:outline-cyan focus-visible:outline-offset-2 ${
+              active
+                ? "border-cyan/50 bg-cyan-dim text-cyan"
+                : "border-white/12 bg-well text-fg-muted hover:border-cyan/35"
+            }`}
+          >
+            {labels[index]}
+          </button>
+        );
+      })}
+    </fieldset>
+  );
+}
+
+export function PropFirmCard({ card, state }: PropFirmCardProps) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
+  // The size choice is the card's own, not in the URL. When the filters take
+  // the chosen program away, the card falls back to its preselection.
+  const [chosenId, setChosenId] = useState(card.preselectedId);
   const panelId = useId();
-  const { firm, program } = row;
+  const { firm, programs } = card;
+  const program =
+    programs.find((candidate) => candidate.id === chosenId) ??
+    programs.find((candidate) => candidate.id === card.preselectedId) ??
+    programs[0];
+  const selected = state.compare.includes(program.id);
+  const selectionFull = state.compare.length >= MAX_COMPARE;
 
   function selectForCompare() {
     router.push(
@@ -52,38 +98,50 @@ export function PropFirmCard({
   return (
     <div className="card-surface edge relative">
       <div className="flex items-start gap-3 p-4">
-        <button
-          type="button"
-          onClick={() => setExpanded((value) => !value)}
-          aria-expanded={expanded}
-          aria-controls={panelId}
-          className="flex min-w-0 flex-1 items-start gap-3 text-left"
-        >
-          <ChevronDown
-            className={`mt-0.5 h-4 w-4 shrink-0 text-fg-subtle transition-transform duration-200 ${
-              expanded ? "rotate-180" : ""
-            }`}
-            aria-hidden="true"
-          />
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <div className="flex flex-wrap items-baseline gap-2">
+        {/* Size control and tags sit outside the expand button, because
+            buttons do not nest; pl-7 lines them up with the firm name. */}
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            aria-expanded={expanded}
+            aria-controls={panelId}
+            className="flex min-w-0 items-start gap-3 text-left"
+          >
+            <ChevronDown
+              className={`mt-0.5 h-4 w-4 shrink-0 text-fg-subtle transition-transform duration-200 ${
+                expanded ? "rotate-180" : ""
+              }`}
+              aria-hidden="true"
+            />
+            <span className="flex flex-wrap items-baseline gap-2">
               <span className="font-medium text-fg text-sm">{firm.name}</span>
               <span className="text-fg-muted text-xs">{program.name}</span>
+            </span>
+          </button>
+          {programs.length > 1 && (
+            <div className="pl-7">
+              <SizeControl
+                firmName={firm.name}
+                programs={programs}
+                selectedId={program.id}
+                onSelect={setChosenId}
+              />
             </div>
-            {program.summaryTags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {program.summaryTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="cap rounded-xs bg-well px-1.5 py-0.5"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </button>
+          )}
+          {program.summaryTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pl-7">
+              {program.summaryTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="cap rounded-xs bg-well px-1.5 py-0.5"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
           {/* The label carries the 40px hit area Design.md §8 asks for; the box

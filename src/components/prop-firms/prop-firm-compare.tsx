@@ -75,9 +75,11 @@ export function PropFirmCompare({ rows, state }: PropFirmCompareProps) {
                   key={row.program.id}
                   className="border-white/8 border-b py-2 pr-3 text-left align-bottom font-medium text-fg"
                 >
-                  <span className="block text-sm">{row.firm.name}</span>
-                  <span className="block text-fg-muted text-xs">
-                    {row.program.name}
+                  {/* One line, "Firm · Program", so two sizes of one firm
+                      read apart (Design.md §4.28). */}
+                  <span className="text-sm">{row.firm.name}</span>
+                  <span className="font-normal text-fg-muted text-sm">
+                    {` · ${row.program.name}`}
                   </span>
                 </th>
               ))}

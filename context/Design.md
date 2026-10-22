@@ -1688,7 +1688,7 @@ belohnt nichts.
 **Firmenkarte, zugeklappt.** `card-surface edge`, `p-4`, drei Zeilen:
 
 1. Kopf wie bisher: links der Aufklapp-Knopf (Chevron, Firmenname `text-sm`
-   halbfett in `--color-fg`, daneben der Name des gewählten Programms in
+   `font-medium` in `--color-fg`, daneben der Name des gewählten Programms in
    `--color-fg-muted` `text-xs`), rechts die Spalte mit `Compare`, `Website` und
    „Last verified …“. Der Programmname steht für die Produktlinie: es gibt kein
    eigenes Feld dafür, und die App zerlegt keinen Namen.
@@ -1723,8 +1723,8 @@ wie der Kurator sie schreibt — in der Regel aufsteigend, erzwungen wird das ni
   Größe, sind **alle** Segmente dieser Karte mit dem Programmnamen beschriftet —
   nie „Unknown“, nie zwei gleiche Beschriftungen.
 
-**Größenwahl, Barrierefreiheit.** Die Reihe ist `role="group"` mit
-`aria-label="Account size, <Firma>"`. Jedes Segment ist ein `button` mit
+**Größenwahl, Barrierefreiheit.** Die Reihe ist ein `fieldset` (Rolle group)
+mit `aria-label="Account size, <Firma>"`. Jedes Segment ist ein `button` mit
 `aria-pressed`; sein zugänglicher Name ist seine sichtbare Beschriftung („50k“
 oder der Programmname), die Firma nennt das Gruppenlabel. Bedienung mit Tab von
 Segment zu Segment, Enter oder Leertaste wählt — dasselbe Muster wie alle Chips der
@@ -1751,7 +1751,7 @@ bekannte Größe, entfällt die Gruppe.
 **Vergleich.** Tabellenkörper wie auf der bestehenden Seite, höchstens drei
 Spalten in der Reihenfolge der Auswahl. Ein verglichenes Programm bleibt in der
 Tabelle, auch wenn die Filter es aus der Liste nehmen. Der Spaltenkopf ist eine Zeile „Firma ·
-Programm“: Firma `text-sm` halbfett in `--color-fg`, Trenner und Programmname in
+Programm“: Firma `text-sm` `font-medium` in `--color-fg`, Trenner und Programmname in
 `--color-fg-muted`, Umbruch erlaubt. So stehen zwei Größen einer Firma
 unterscheidbar nebeneinander. Kein Gewinner, keine Sortierung, keine Hervorhebung
 von Unterschieden.

@@ -5,6 +5,7 @@ import {
   exactCents,
   formatCents,
   formatCentsPlain,
+  formatCentsThousands,
 } from "../money.ts";
 
 describe("dollarsToCents", () => {
@@ -98,6 +99,23 @@ describe("formatCentsPlain", () => {
 
   it("rejects a non-integer cents value", () => {
     expect(() => formatCentsPlain(12.5)).toThrow(RangeError);
+  });
+});
+
+describe("formatCentsThousands", () => {
+  it("names whole thousands without decimals", () => {
+    expect(formatCentsThousands(5_000_000)).toBe("50k");
+    expect(formatCentsThousands(15_000_000)).toBe("150k");
+  });
+
+  it("keeps only the decimals a part thousand needs", () => {
+    expect(formatCentsThousands(750_000)).toBe("7.5k");
+    expect(formatCentsThousands(1_225_000)).toBe("12.25k");
+  });
+
+  it("rejects a non-integer or negative cents value", () => {
+    expect(() => formatCentsThousands(12.5)).toThrow(RangeError);
+    expect(() => formatCentsThousands(-100_000)).toThrow(RangeError);
   });
 });
 

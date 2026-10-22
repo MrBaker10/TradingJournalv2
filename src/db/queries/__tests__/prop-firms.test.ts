@@ -81,6 +81,30 @@ describe("prop firm lists", () => {
     expect(names).toEqual(EXPECTED);
   });
 
+  it("returns the account size in whole cents, and null when it is unknown", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const sizes = await inRollback(async (tx) => {
+      const [firm] = await tx
+        .insert(propFirms)
+        .values({ name: FIRM })
+        .returning({ id: propFirms.id });
+      await tx.insert(propFirmPrograms).values([
+        { firmId: firm.id, name: "Select 150k", accountSizeUsd: "150000.00" },
+        {
+          firmId: firm.id,
+          name: "Select Custom",
+          position: 2,
+          accountSizeUsd: null,
+        },
+      ]);
+      const rows = await listPropFirms({ search: SEARCH }, tx);
+      return rows.map((row) => row.program.accountSizeCents);
+    });
+
+    expect(sizes).toEqual([15_000_000, null]);
+  });
+
   it("offers programs by firm, then in file order, in the program select", async (ctx) => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 

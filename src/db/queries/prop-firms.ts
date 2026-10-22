@@ -14,7 +14,13 @@ export interface PropFirmRow {
     website: string | null;
     lastVerifiedAt: string | null;
   };
-  program: { id: number; name: string; summaryTags: string[] } & ProgramFields;
+  program: {
+    id: number;
+    name: string;
+    summaryTags: string[];
+    /** `account_size_usd` in whole cents; null when the file does not state it. */
+    accountSizeCents: number | null;
+  } & ProgramFields;
 }
 
 const SELECTION = {
@@ -28,6 +34,11 @@ const SELECTION = {
     id: propFirmPrograms.id,
     name: propFirmPrograms.name,
     summaryTags: propFirmPrograms.summaryTags,
+    // Cents leave the database as an integer, so the page never parses the
+    // `numeric` string. int4 holds account sizes up to $21M.
+    accountSizeCents: sql<
+      number | null
+    >`(${propFirmPrograms.accountSizeUsd} * 100)::int`,
     accountSize: propFirmPrograms.accountSize,
     profitTarget: propFirmPrograms.profitTarget,
     maxDrawdown: propFirmPrograms.maxDrawdown,

@@ -93,3 +93,20 @@ export function formatCentsPlain(cents: number): string {
   const remainder = absolute % CENTS_PER_DOLLAR;
   return `${sign}${dollars}.${String(remainder).padStart(2, "0")}`;
 }
+
+const CENTS_PER_THOUSAND_DOLLARS = 100_000;
+
+/**
+ * An amount the way traders name an account size: `50k`, `7.5k`. Built from
+ * the integer cents by division and remainder digits, never through a float.
+ */
+export function formatCentsThousands(cents: number): string {
+  if (!Number.isInteger(cents) || cents < 0) {
+    throw new RangeError(`cents must be a non-negative integer, got ${cents}`);
+  }
+  const thousands = Math.trunc(cents / CENTS_PER_THOUSAND_DOLLARS);
+  const remainder = cents % CENTS_PER_THOUSAND_DOLLARS;
+  if (remainder === 0) return `${thousands}k`;
+  const decimals = String(remainder).padStart(5, "0").replace(/0+$/, "");
+  return `${thousands}.${decimals}k`;
+}
