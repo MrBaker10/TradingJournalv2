@@ -2,11 +2,13 @@ import { PropFirmCard } from "@/components/prop-firms/prop-firm-card";
 import { PropFirmCompare } from "@/components/prop-firms/prop-firm-compare";
 import { PropFirmFilters } from "@/components/prop-firms/prop-firm-filters";
 import {
+  listAccountSizes,
   listPropFirmProgramsByIds,
   listPropFirms,
   listSummaryTags,
 } from "@/db/queries/prop-firms";
-import { MAX_COMPARE, parsePropFirmsState } from "@/lib/prop-firms/href";
+import { groupFirmCards } from "@/lib/prop-firms/cards";
+import { parsePropFirmsState } from "@/lib/prop-firms/href";
 
 interface PropFirmsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -17,12 +19,14 @@ export default async function PropFirmsPage({
 }: PropFirmsPageProps) {
   const state = parsePropFirmsState(await searchParams);
 
-  const [rows, tags, compareRows] = await Promise.all([
+  const [rows, tags, sizes, compareRows] = await Promise.all([
     listPropFirms({
       search: state.search === "" ? undefined : state.search,
       tags: state.tags,
+      sizes: state.sizes,
     }),
     listSummaryTags(),
+    listAccountSizes(),
     listPropFirmProgramsByIds(state.compare),
   ]);
 
@@ -32,6 +36,7 @@ export default async function PropFirmsPage({
     const row = compareRows.find((candidate) => candidate.program.id === id);
     return row ? [row] : [];
   });
+  const cards = groupFirmCards(rows, state.compare);
 
   return (
     <div className="flex flex-col gap-4">
@@ -41,25 +46,19 @@ export default async function PropFirmsPage({
         contradict each other, both readings are carried through as written.
       </p>
 
-      <PropFirmFilters state={state} tags={tags} />
+      <PropFirmFilters state={state} tags={tags} sizes={sizes} />
 
       <PropFirmCompare rows={compared} state={state} />
 
-      {rows.length === 0 ? (
+      {cards.length === 0 ? (
         <p className="py-10 text-center text-fg-subtle text-sm">
           No firm matches. Filters narrow together, so two chips describing the
           same thing never match at once.
         </p>
       ) : (
         <div className="flex flex-col gap-[10px]">
-          {rows.map((row) => (
-            <PropFirmCard
-              key={row.program.id}
-              row={row}
-              state={state}
-              selected={state.compare.includes(row.program.id)}
-              selectionFull={state.compare.length >= MAX_COMPARE}
-            />
+          {cards.map((card) => (
+            <PropFirmCard key={card.firm.id} card={card} state={state} />
           ))}
         </div>
       )}

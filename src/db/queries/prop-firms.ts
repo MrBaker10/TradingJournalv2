@@ -1,4 +1,13 @@
-import { and, arrayContains, asc, eq, inArray, sql } from "drizzle-orm";
+import {
+  and,
+  arrayContains,
+  asc,
+  eq,
+  inArray,
+  isNotNull,
+  sql,
+} from "drizzle-orm";
+import { formatCentsThousands } from "../../lib/money.ts";
 import type { ProgramFields } from "../../lib/prop-firms/parse.ts";
 import { db } from "../index.ts";
 import { propFirmPrograms, propFirms } from "../schema/prop-firms.ts";
@@ -14,8 +23,20 @@ export interface PropFirmRow {
     website: string | null;
     lastVerifiedAt: string | null;
   };
-  program: { id: number; name: string; summaryTags: string[] } & ProgramFields;
+  program: {
+    id: number;
+    name: string;
+    summaryTags: string[];
+    /** `account_size_usd` in whole cents; null when the file does not state it. */
+    accountSizeCents: number | null;
+  } & ProgramFields;
 }
+
+// Cents leave the database as an integer, so the page never parses the
+// `numeric` string. int4 holds account sizes up to $21M.
+const ACCOUNT_SIZE_CENTS = sql<
+  number | null
+>`(${propFirmPrograms.accountSizeUsd} * 100)::int`;
 
 const SELECTION = {
   firm: {
@@ -28,6 +49,7 @@ const SELECTION = {
     id: propFirmPrograms.id,
     name: propFirmPrograms.name,
     summaryTags: propFirmPrograms.summaryTags,
+    accountSizeCents: ACCOUNT_SIZE_CENTS,
     accountSize: propFirmPrograms.accountSize,
     profitTarget: propFirmPrograms.profitTarget,
     maxDrawdown: propFirmPrograms.maxDrawdown,
@@ -80,10 +102,15 @@ function escapeLike(term: string): string {
   return term.replace(/[\\%_]/g, (character) => `\\${character}`);
 }
 
-export async function listPropFirms(filters: {
-  search?: string;
-  tags?: string[];
-}): Promise<PropFirmRow[]> {
+export async function listPropFirms(
+  filters: {
+    search?: string;
+    tags?: string[];
+    /** Whole USD; a program matches any of them. */
+    sizes?: number[];
+  },
+  executor: Pick<typeof db, "select"> = db,
+): Promise<PropFirmRow[]> {
   const conditions = [];
 
   if (filters.search) {
@@ -97,13 +124,20 @@ export async function listPropFirms(filters: {
   if (filters.tags && filters.tags.length > 0) {
     conditions.push(arrayContains(propFirmPrograms.summaryTags, filters.tags));
   }
+  // Sizes widen among themselves (50k or 100k) and narrow against everything
+  // else. A null size is in no list, so an unknown size never matches.
+  if (filters.sizes && filters.sizes.length > 0) {
+    conditions.push(
+      inArray(propFirmPrograms.accountSizeUsd, filters.sizes.map(String)),
+    );
+  }
 
-  return db
+  return executor
     .select(SELECTION)
     .from(propFirms)
     .innerJoin(propFirmPrograms, eq(propFirmPrograms.firmId, propFirms.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(asc(propFirms.name), asc(propFirmPrograms.name));
+    .orderBy(asc(propFirms.name), asc(propFirmPrograms.position));
 }
 
 // The compare selection lives in the URL and has to survive a reload even when
@@ -135,6 +169,34 @@ export async function listSummaryTags(): Promise<string[]> {
   return rows.map((row) => row.tag);
 }
 
+export interface AccountSizeChip {
+  /** Whole USD, the value the URL carries. */
+  usd: number;
+  label: string;
+}
+
+// Every known account size, once, ascending — the size chips. Unknown sizes
+// offer no chip, because no chip could match them.
+export async function listAccountSizes(
+  executor: Pick<typeof db, "selectDistinct"> = db,
+): Promise<AccountSizeChip[]> {
+  const rows = await executor
+    .selectDistinct({
+      // Whole dollars by construction: the parser only accepts `$NN,NNN`
+      // (context/decisions.md), so the cast never rounds.
+      usd: sql<number>`${propFirmPrograms.accountSizeUsd}::int`,
+      cents: sql<number>`${ACCOUNT_SIZE_CENTS}`,
+    })
+    .from(propFirmPrograms)
+    .where(isNotNull(propFirmPrograms.accountSizeUsd))
+    .orderBy(ACCOUNT_SIZE_CENTS);
+
+  return rows.map((row) => ({
+    usd: row.usd,
+    label: formatCentsThousands(row.cents),
+  }));
+}
+
 export interface ProgramOption {
   id: number;
   firmName: string;
@@ -152,10 +214,12 @@ export interface ProgramOption {
 }
 
 // Every program for the link form in the account editor, grouped by firm in
-// the select. Reference text only: nothing here becomes a rule value
-// (docs/adr/0001).
-export async function listProgramOptions(): Promise<ProgramOption[]> {
-  const rows = await db
+// the select, sizes in file order. Reference text only: nothing here becomes a
+// rule value (docs/adr/0001).
+export async function listProgramOptions(
+  executor: Pick<typeof db, "select"> = db,
+): Promise<ProgramOption[]> {
+  const rows = await executor
     .select({
       id: propFirmPrograms.id,
       firmName: propFirms.name,
@@ -169,7 +233,7 @@ export async function listProgramOptions(): Promise<ProgramOption[]> {
     })
     .from(propFirmPrograms)
     .innerJoin(propFirms, eq(propFirms.id, propFirmPrograms.firmId))
-    .orderBy(asc(propFirms.name), asc(propFirmPrograms.name));
+    .orderBy(asc(propFirms.name), asc(propFirmPrograms.position));
   return rows.map(({ id, firmName, name, ...reference }) => ({
     id,
     firmName,

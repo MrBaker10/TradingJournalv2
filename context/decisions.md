@@ -3434,3 +3434,33 @@ Deployment laufen.
 - **Offen geblieben:** „No entries yet." und das Practice-Banner (auch über einem leeren
   Zustand) nicht im Browser gesehen — lokal gibt es Einträge, aber keine
   Practice-only-Trades.
+
+## 2026-10-21 — Prop firm sizes, Ticket 01 — feature/prop-firm-sizes
+
+- **Ein Programm pro Größe, `###` pro Programm.** `PropFirmsData.md` trägt unter
+  `## Firma` erst die Firmenfelder (`Firm website`, `Last verified`), dann je Programm
+  eine `### `-Überschrift mit Summary-Tags und Regeltabelle. Die Programmnamen der
+  fünfzehn bestehenden Programme bleiben, damit der Seeder sie auf `(firm, name)` an Ort
+  und Stelle aktualisiert und kein Link verwaist.
+- **`Account size` ist das einzige Feld, das auch als Zahl gelesen wird**
+  (`account_size_usd`, für den Größenfilter). Ausnahme von „nie eine Zahl aus dem Text
+  ableiten“ (project-overview.md, H), weil die Kontogröße eine eindeutige Produktangabe
+  ist und keine Regel, die man interpretieren müsste. Nur die Form `$NN,NNN` parst;
+  alles andere bricht den Seed mit Zeilennummer ab. Der Text bleibt wörtlich daneben.
+- **Summary-Tags sind größenneutral.** Ein Tag mit `$` oder einer Größe (`50k`) bricht
+  den Seed ab; Zielbetrag und Größe stehen in den Regelfeldern. Die fünfzehn
+  „$X target“-Tags sind beim Umzug entfallen, sonst ist der Inhalt unverändert.
+- **`position` mit Default 1.** Die Zeilen von vor der Migration sind je das einzige
+  Programm ihrer Firma, also stimmt 1 bis zum nächsten Seed. Listen sortieren nach Firma,
+  dann Position; der Compare-Lookup bleibt bei der Reihenfolge der Auswahl.
+
+## 2026-10-22 — Prop firm sizes, Ticket 07 — feature/prop-firm-sizes
+
+- **Programmnamen folgen der Website der Firma** (Entscheidung Sascha). Das hebt für
+  Ticket 07 die Regel aus Ticket 01 auf, dass bestehende Namen bleiben: Goat
+  „50k EOD“ → „EOD 50k“, Legends „Elite Master 50k“ → „50k Elite“, E8 „Signature Futures
+  50k“ → „E8 Signature 50k“, TradeDay „50k EOD“ → „Quick Pay EOD 50k“.
+- **Umbenennen an Ort und Stelle, vor dem Seed.** Der Seeder schlüsselt auf
+  `(firm, name)` und löscht nie; ohne Umbenennung entstünde eine zweite Zeile. Ein
+  `UPDATE` des Namens behält die ID und damit jede Kontoverknüpfung
+  (`context/operations.md`, „Renamed prop firm programs“).

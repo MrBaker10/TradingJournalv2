@@ -1675,6 +1675,103 @@ Eine Seitenzahl hinter der letzten Seite (`?page=99`) zeigt keinen Leerzustand,
 sondern führt mit denselben Filtern und derselben Sortierung auf Seite 1 zurück —
 sonst stünde „No entries yet." unter einer Zählzeile mit Einträgen.
 
+### 4.28 Prop Firm Rules: Firmenkarte, Größenwahl, Größenfilter, Vergleich
+
+Entworfen für prop-firm-sizes (2026-10-22). Ein Prop firm program ist eine
+Produktlinie in einer Kontogröße (`GLOSSARY.md`); die Seite zeigt trotzdem **eine
+Karte pro Firma**, damit sie mit vielen Größen überschaubar bleibt. Gebaut nur aus
+vorhandenen Primitiven: `card-surface edge`, die Filter-Chips (4.23, 4.27), der
+Aufklapper und der Vergleich der bestehenden Seite. Regelwerte sind Text in
+`--color-fg`, **ohne Glow** und ohne Akzentfarbe — die Seite dokumentiert, sie
+belohnt nichts.
+
+**Firmenkarte, zugeklappt.** `card-surface edge`, `p-4`, drei Zeilen:
+
+1. Kopf wie bisher: links der Aufklapp-Knopf (Chevron, Firmenname `text-sm`
+   `font-medium` in `--color-fg`, daneben der Name des gewählten Programms in
+   `--color-fg-muted` `text-xs`), rechts die Spalte mit `Compare`, `Website` und
+   „Last verified …“. Der Programmname steht für die Produktlinie: es gibt kein
+   eigenes Feld dafür, und die App zerlegt keinen Namen. `Website` ist ein
+   Textlink in `--color-cyan` mit Icon, Hover unterstreicht, kein Glow; „Last
+   verified“ steht in `--color-fg-muted`, das Datum dahinter in `--color-fg` Mono
+   mit Tabellenziffern. Fehlt eine Angabe, bleiben „Website not recorded“ und
+   „Never verified“ in `--color-fg-subtle`.
+2. Die Größenwahl (unten), eingerückt auf die Textkante des Firmennamens.
+3. Die Summary tags des **gewählten** Programms in der bisherigen `cap`-Optik auf
+   `bg-well`. Sie wechseln mit der Größe.
+
+Größenwahl und Tags liegen außerhalb des Aufklapp-Knopfs — Knöpfe lassen sich nicht
+schachteln. Aufgeklappt wird über den Kopf.
+
+**Firmenkarte, aufgeklappt.** Darunter wie bisher die achtzehn Felder des gewählten
+Programms als `dl`, ab `sm` zweispaltig, Notes über beide Spalten; ein fehlender
+Wert heißt „Not recorded“ in `--color-fg-subtle`. Ein Größenwechsel bei offener
+Karte tauscht die Werte an Ort und Stelle, ohne die Aufklapp-Animation erneut zu
+spielen; die Karte bleibt offen.
+
+**Größenwahl.** Eine Reihe Segmente in der Chip-Optik: nicht gewählt `bg-well`,
+1px `border-white/12`, `--color-fg-muted`, Hover `border-cyan/35`; gewählt
+`border-cyan/50`, `bg-cyan-dim`, `--color-cyan`. 40px hoch (§8), Abstand 6px, bricht
+auf schmalen Schirmen um. Beschriftung in der Form „50k“ (USD durch 1000, „$7,500“
+also „7.5k“), Reihenfolge die der Datei (`position`),
+wie der Kurator sie schreibt — in der Regel aufsteigend, erzwungen wird das nicht. Genau ein Segment ist gewählt.
+
+- Das Segment wechselt nur das gezeigte Programm der Karte: lokaler Zustand, nicht
+  in der URL, kein Server-Roundtrip, Farb- und Randwechsel nach §5 (200 ms, nicht
+  die 150 ms der heutigen Tag-Chips).
+- Es zeigt nur die Programme, die die aktiven Filter passieren (Suche, Tags,
+  Größen). Welches vorgewählt ist, regelt die Spec: ein Programm der Firma im
+  Vergleich (bei mehreren das zuerst gewählte), sonst die eine gefilterte Größe, sonst die kleinste passende, sonst
+  das erste nach `position`.
+- Ist eine Kontogröße unbekannt oder tragen zwei Programme einer Karte dieselbe
+  Größe, sind **alle** Segmente dieser Karte mit dem Programmnamen beschriftet —
+  nie „Unknown“, nie zwei gleiche Beschriftungen.
+
+**Größenwahl, Barrierefreiheit.** Die Reihe ist ein `fieldset` (Rolle group)
+mit `aria-label="Account size, <Firma>"`. Jedes Segment ist ein `button` mit
+`aria-pressed`; sein zugänglicher Name ist seine sichtbare Beschriftung („50k“
+oder der Programmname), die Firma nennt das Gruppenlabel. Bedienung mit Tab von
+Segment zu Segment, Enter oder Leertaste wählt — dasselbe Muster wie alle Chips der
+App, kein Roving-Tabindex. Fokusring bei `focus-visible` genau nach §8
+(`2px solid var(--color-cyan)`, `outline-offset: 2px`); die heutigen Tag-Chips
+haben keinen und bekommen ihn mit der Size-Gruppe. Ohne Bewegung
+(reduced motion) bleibt der gewählte Zustand an Fläche, Rand und `aria-pressed`
+erkennbar.
+
+**Compare an der Karte.** Die Checkbox gilt dem **gewählten** Programm: sie ist
+angehakt, wenn genau diese Größe im Vergleich steht, und ein Wechsel der Größe
+zeigt den Haken der neuen. So lassen sich zwei Größen einer Firma vergleichen:
+Größe wählen, haken, andere Größe wählen, haken. Die Grenze von drei bleibt.
+
+**Größenfilter.** In der Filterkarte eine eigene Gruppe „Size“ zwischen „Search“
+und „Filter“: Label `cap`, darunter die Chips aller bekannten Kontogrößen,
+aufsteigend, in der Form „50k“. Mehrfachauswahl, gewählte Größen gelten mit ODER,
+die drei Gruppen untereinander mit UND. Chips in der Optik und mit `aria-pressed`
+wie die Tag-Chips daneben; beide Reihen sind 40px hoch (§8) — die Tag-Chips
+übernehmen die Höhe, wenn die Size-Gruppe gebaut wird, damit die Karte eine
+Chiphöhe hat. Die gewählten Größen stehen in der URL. Gibt es keine einzige
+bekannte Größe, entfällt die Gruppe.
+
+**Vergleich.** Tabellenkörper wie auf der bestehenden Seite, höchstens drei
+Spalten in der Reihenfolge der Auswahl. Ein verglichenes Programm bleibt in der
+Tabelle, auch wenn die Filter es aus der Liste nehmen. Der Spaltenkopf ist eine Zeile „Firma ·
+Programm“: Firma `text-sm` `font-medium` in `--color-fg`, Trenner und Programmname in
+`--color-fg-muted`, Umbruch erlaubt. So stehen zwei Größen einer Firma
+unterscheidbar nebeneinander. Kein Gewinner, keine Sortierung, keine Hervorhebung
+von Unterschieden.
+
+**Leer- und Randzustände.**
+
+- **Firma mit einer Größe** — oder nach dem Filtern mit nur einer passenden:
+  keine Größenwahl, die Zeile entfällt. Der Programmname im Kopf nennt die Größe.
+- **Kontogröße unbekannt:** Das Programm erscheint ohne Größenfilter normal, in
+  einer Größenwahl mit Programmnamen (oben). Es liefert keinen Size-Chip und passt
+  auf keinen Größenfilter.
+- **Keine Firma passt:** der bestehende Satz „No firm matches. Filters narrow
+  together, so two chips describing the same thing never match at once.“ Er gilt
+  auch, wenn nur der Größenfilter alles ausschließt. Eine Firma ohne passendes
+  Programm verschwindet ganz, keine leere Karte.
+
 ## 5. Motion
 
 | Moment | Dauer | Kurve |
@@ -1838,8 +1935,9 @@ Die fünf Punkte dieses Abschnitts sind abgearbeitet:
 
 Offen bleiben zwei, weil sie Gestaltung und nicht Entscheidung sind:
 
-- **Prop Firm Rules** sind hier nicht auf Komponentenebene entworfen: die
-  Regel-Detailtabelle fehlt weiterhin ganz. Sie braucht eine eigene Runde.
+- **Prop Firm Rules:** Firmenkarte, Größenwahl, Größenfilter und Vergleichskopf
+  sind in 4.28 entworfen. Offen bleibt die Regel-Detailtabelle; sie braucht eine
+  eigene Runde.
 - **Der Econ-Kalender** (4.23) ist aus den Tabellen- und Chip-Primitiven gebaut und
   nie gegen die anderen Screens gehalten. Offen besonders: ob das Impact-Rot neben
   einer roten Verlustzahl auf demselben Schirm unterscheidbar genug bleibt.

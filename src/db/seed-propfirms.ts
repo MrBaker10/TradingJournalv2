@@ -34,17 +34,18 @@ async function seed() {
       .returning({ id: propFirms.id });
 
     for (const program of firm.programs) {
+      const columns = {
+        position: program.position,
+        accountSizeUsd: program.accountSizeUsd,
+        summaryTags: program.summaryTags,
+        ...program.fields,
+      };
       await db
         .insert(propFirmPrograms)
-        .values({
-          firmId: row.id,
-          name: program.name,
-          summaryTags: program.summaryTags,
-          ...program.fields,
-        })
+        .values({ firmId: row.id, name: program.name, ...columns })
         .onConflictDoUpdate({
           target: [propFirmPrograms.firmId, propFirmPrograms.name],
-          set: { summaryTags: program.summaryTags, ...program.fields },
+          set: columns,
         });
       programCount += 1;
     }

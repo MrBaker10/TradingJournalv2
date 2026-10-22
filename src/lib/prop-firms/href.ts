@@ -1,4 +1,4 @@
-// The whole page state lives in the URL — search term, chips and the compare
+// The whole page state lives in the URL — search term, chips, sizes and the compare
 // selection — so a reload and a shared-by-hand link both land on the same view.
 // src/lib/journal/href.ts does the same job for /journal but hardcodes that
 // path, so this is its own helper rather than a generalisation of it.
@@ -10,6 +10,8 @@ export const MAX_COMPARE = 3;
 export interface PropFirmsState {
   search: string;
   tags: string[];
+  /** Account sizes in whole USD, as `account_size_usd` holds them. */
+  sizes: number[];
   compare: number[];
 }
 
@@ -26,9 +28,16 @@ export function parsePropFirmsState(
     .map((value) => Number.parseInt(value, 10))
     .filter((value) => Number.isInteger(value) && value > 0);
 
+  // Whole dollars only: "50k" or "12.5" is not a size the file can hold, and
+  // parseInt would quietly read them as 50 and 12.
+  const sizes = allValues(raw.size)
+    .filter((value) => /^[1-9]\d*$/.test(value))
+    .map((value) => Number.parseInt(value, 10));
+
   return {
     search: firstValue(raw.q)?.trim() ?? "",
     tags: allValues(raw.tag).filter((tag) => tag !== ""),
+    sizes: [...new Set(sizes)],
     // Anything past the cap is dropped rather than honoured, so a hand-edited
     // URL cannot widen the comparison past what the page is built for.
     compare: [...new Set(compare)].slice(0, MAX_COMPARE),
@@ -44,6 +53,7 @@ export function buildPropFirmsHref(
 
   if (merged.search !== "") params.set("q", merged.search);
   for (const tag of merged.tags) params.append("tag", tag);
+  for (const size of merged.sizes) params.append("size", String(size));
   if (merged.compare.length > 0) {
     params.set("compare", merged.compare.join(","));
   }
@@ -56,6 +66,12 @@ export function toggleTag(tags: string[], tag: string): string[] {
   return tags.includes(tag)
     ? tags.filter((value) => value !== tag)
     : [...tags, tag];
+}
+
+export function toggleSize(sizes: number[], size: number): number[] {
+  return sizes.includes(size)
+    ? sizes.filter((value) => value !== size)
+    : [...sizes, size];
 }
 
 // Unchecking always works. Checking a fourth one does nothing — the card that
