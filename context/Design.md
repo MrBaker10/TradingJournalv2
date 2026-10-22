@@ -1691,7 +1691,11 @@ belohnt nichts.
    `font-medium` in `--color-fg`, daneben der Name des gewählten Programms in
    `--color-fg-muted` `text-xs`), rechts die Spalte mit `Compare`, `Website` und
    „Last verified …“. Der Programmname steht für die Produktlinie: es gibt kein
-   eigenes Feld dafür, und die App zerlegt keinen Namen.
+   eigenes Feld dafür, und die App zerlegt keinen Namen. `Website` ist ein
+   Textlink in `--color-cyan` mit Icon, Hover unterstreicht, kein Glow; „Last
+   verified“ steht in `--color-fg-muted`, das Datum dahinter in `--color-fg` Mono
+   mit Tabellenziffern. Fehlt eine Angabe, bleiben „Website not recorded“ und
+   „Never verified“ in `--color-fg-subtle`.
 2. Die Größenwahl (unten), eingerückt auf die Textkante des Firmennamens.
 3. Die Summary tags des **gewählten** Programms in der bisherigen `cap`-Optik auf
    `bg-well`. Sie wechseln mit der Größe.

@@ -167,7 +167,7 @@ export function PropFirmCard({ card, state }: PropFirmCardProps) {
               href={firm.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-fg-muted text-xs hover:text-fg"
+              className="flex items-center gap-1.5 text-cyan text-xs underline-offset-2 hover:underline"
             >
               <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
               Website
@@ -175,11 +175,16 @@ export function PropFirmCard({ card, state }: PropFirmCardProps) {
           ) : (
             <span className="text-fg-subtle text-xs">Website not recorded</span>
           )}
-          <span className="text-fg-subtle text-xs">
-            {firm.lastVerifiedAt
-              ? `Last verified ${firm.lastVerifiedAt}`
-              : "Never verified"}
-          </span>
+          {firm.lastVerifiedAt ? (
+            <span className="text-fg-muted text-xs">
+              Last verified{" "}
+              <span className="font-mono text-fg tabular-nums">
+                {firm.lastVerifiedAt}
+              </span>
+            </span>
+          ) : (
+            <span className="text-fg-subtle text-xs">Never verified</span>
+          )}
         </div>
       </div>
 
