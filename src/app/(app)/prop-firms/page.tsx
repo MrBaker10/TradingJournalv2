@@ -2,6 +2,7 @@ import { PropFirmCard } from "@/components/prop-firms/prop-firm-card";
 import { PropFirmCompare } from "@/components/prop-firms/prop-firm-compare";
 import { PropFirmFilters } from "@/components/prop-firms/prop-firm-filters";
 import {
+  listAccountSizes,
   listPropFirmProgramsByIds,
   listPropFirms,
   listSummaryTags,
@@ -18,12 +19,14 @@ export default async function PropFirmsPage({
 }: PropFirmsPageProps) {
   const state = parsePropFirmsState(await searchParams);
 
-  const [rows, tags, compareRows] = await Promise.all([
+  const [rows, tags, sizes, compareRows] = await Promise.all([
     listPropFirms({
       search: state.search === "" ? undefined : state.search,
       tags: state.tags,
+      sizes: state.sizes,
     }),
     listSummaryTags(),
+    listAccountSizes(),
     listPropFirmProgramsByIds(state.compare),
   ]);
 
@@ -43,7 +46,7 @@ export default async function PropFirmsPage({
         contradict each other, both readings are carried through as written.
       </p>
 
-      <PropFirmFilters state={state} tags={tags} />
+      <PropFirmFilters state={state} tags={tags} sizes={sizes} />
 
       <PropFirmCompare rows={compared} state={state} />
 

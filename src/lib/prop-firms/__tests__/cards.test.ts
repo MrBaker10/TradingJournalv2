@@ -74,6 +74,19 @@ describe("groupFirmCards", () => {
     expect(groupFirmCards(rows, [13, 12])[0].preselectedId).toBe(13);
   });
 
+  it("opens on the filtered size when exactly one size is filtered", () => {
+    // The query leaves only 100k programs: two product lines of one firm,
+    // written Pro before Rapid. No compare, so the earlier position wins.
+    const rows = [
+      row(1, 12, "Pro 100k", 10_000_000),
+      row(1, 11, "Rapid 100k", 10_000_000),
+    ];
+
+    expect(groupFirmCards(rows, [])[0].preselectedId).toBe(12);
+    // Compare still comes first when it holds one of them.
+    expect(groupFirmCards(rows, [11])[0].preselectedId).toBe(11);
+  });
+
   it("ignores a compared program the filters took out of the card", () => {
     // 99 is compared but filtered out, so it cannot be what the card shows.
     const rows = [

@@ -13,6 +13,7 @@ import {
   toggleCompare,
 } from "@/lib/prop-firms/href";
 import { PROGRAM_FIELD_LABELS } from "@/lib/prop-firms/parse";
+import { chipClass } from "./chip-class";
 
 interface PropFirmCardProps {
   card: FirmCard<PropFirmRow>;
@@ -58,11 +59,7 @@ function SizeControl({
             type="button"
             onClick={() => onSelect(program.id)}
             aria-pressed={active}
-            className={`h-10 rounded-xs border px-2.5 text-sm transition-colors duration-200 ease-[var(--ease-soft)] focus-visible:outline-2 focus-visible:outline-cyan focus-visible:outline-offset-2 ${
-              active
-                ? "border-cyan/50 bg-cyan-dim text-cyan"
-                : "border-white/12 bg-well text-fg-muted hover:border-cyan/35"
-            }`}
+            className={chipClass(active)}
           >
             {labels[index]}
           </button>
@@ -75,9 +72,11 @@ function SizeControl({
 export function PropFirmCard({ card, state }: PropFirmCardProps) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
-  // The size choice is the card's own, not in the URL. When the filters take
-  // the chosen program away, the card falls back to its preselection.
-  const [chosenId, setChosenId] = useState(card.preselectedId);
+  // The size choice is the card's own, not in the URL. Null until the user
+  // picks a size, so a filter change moves an untouched card to its new
+  // preselection; when the filters take the chosen program away, it falls
+  // back to the preselection too.
+  const [chosenId, setChosenId] = useState<number | null>(null);
   const panelId = useId();
   const { firm, programs } = card;
   const program =

@@ -18,7 +18,9 @@ export interface FirmCard<Row extends CardRow> {
 }
 
 // The spec's order: a program of this firm in compare (the one picked first),
-// else the smallest matching size, else the first program by position.
+// else the single filtered size, else the smallest matching size, else the
+// first program by position. The second step needs no code: with one size
+// filtered, every program left on the card is that size, so the smallest is it.
 function preselect(programs: CardRow["program"][], compare: number[]): number {
   const compared = compare.find((id) =>
     programs.some((program) => program.id === id),
