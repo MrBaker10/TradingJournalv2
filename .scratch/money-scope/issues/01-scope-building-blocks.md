@@ -20,6 +20,7 @@ Practice account, Copy trade, Missed setup.
 
 - [ ] The scope module owns the real-account check, the per-trade display amount, the three commission expressions and the assignment counts; the trade queries no longer define them.
 - [ ] The scope module imports nothing from the trade queries; the import cycle is gone.
+- [ ] Comments that locate a moved building block in the trade queries (e.g. `tradeDisplayCents` in `src/domain/fx.ts`) point to the scope module.
 - [ ] Only one real-account count exists.
 - [ ] New scope DB test with the fixture from the spec: two real accounts with a copy trade, a practice account with a practice-only trade and a copy trade shared with a real account, a missed setup, per-account commissions, a trade in a foreign profit currency.
 - [ ] The scope test checks figure money and its weight for all accounts, one real account and the practice account.

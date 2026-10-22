@@ -16,7 +16,8 @@ the app's most important invariant, but today it is spread out:
   queries cannot import the scope module back. They keep their own copy of the real
   account count and their own visibility rules.
 - "A missed setup always shows, a taken trade only on a real account" is written by
-  hand in six places, three of them in the progress queries.
+  hand in six places: the scope module, the trade queries' list visibility, three
+  progress queries in the dashboard queries and the progress page's moment check.
 - The money a trade contributes exists as three separately written expressions (the
   figure, the journal row, the analytics split by account). Their differences are
   intentional, but nothing names or tests them side by side.
@@ -84,7 +85,8 @@ in the domain module are removed. The visible behaviour of the app does not chan
   (default: all accounts means a real account or a missed setup; one account means
   assigned to it or a missed setup) or `owner` (one trade by its own id, ownership
   only). The trade queries' own visibility helpers are removed. The progress queries
-  (streak entry days, month score days, badge counters) use the scope conditions with
+  (streak entry days, month score days, badge counters, the progress moment check) use
+  the scope conditions with
   all accounts, which is their current behaviour: progress always ignores the switcher.
 - **The domain accounts module keeps only the switcher grouping.** The multiplier,
   practice exclusion and aggregate-membership functions and their tests are deleted.
@@ -111,7 +113,7 @@ in the domain module are removed. The visible behaviour of the app does not chan
   - a practice-only trade has row money but drops out of every figure
 - **Regression:** the existing query tests stay unchanged and must pass with the
   database reachable: dashboard, journal list, analytics, display currency, account
-  rules, weekly reviews, trade detail and trades parity. Skipped DB tests do not count
+  rules, weekly reviews, progress, trade detail and trades parity. Skipped DB tests do not count
   as verification.
 - Prior art: the formula parity tests in the trades query tests and the display currency
   tests (transaction per test, rollback, skip without a database).
@@ -129,7 +131,23 @@ in the domain module are removed. The visible behaviour of the app does not chan
 
 ## Further Notes
 
-- Review findings that were dropped (P&L parity, accounts overview, trading day module)
-  are recorded in the architecture review of 2026-10-22, not here.
+- The architecture review of 2026-10-22 chose three candidates: this money scope
+  module, `saveTrade` for manual create and edit (`.scratch/save-trade/`), and a
+  consistency score that supplies `loggedDays` and the past trading days itself
+  (`chore/score-logged-days`). It dropped the rest for these reasons:
+  - No module for P&L parity between SQL and TypeScript: parity is already tested
+    against real Postgres, including override, foreign profit currency and R
+    (`src/db/queries/__tests__/trades.test.ts`).
+  - No loader for the accounts overview: `loadRuleStatus` combines attempt and rule
+    evaluation for two screens and earns its place; one query per linked account is
+    fine for a handful of accounts.
+  - No shared trading day module, `IsoDate` stays in `domain/streak.ts`: the two
+    variants are intended (streak: Saturday drops out; account rules: Saturday rolls
+    to Monday) and tested on the TS and SQL side. Moving `IsoDate` would touch twenty
+    files without changing behaviour.
+  - No `loadProgress`: once the score supplies its own days, a loader over two query
+    calls would only pass through.
+  - Rule status figures stay in USD regardless of the display currency. This is not a
+    bug.
 - The new glossary term **Account scope** is committed with this spec on the feature
   branch.
