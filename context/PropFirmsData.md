@@ -942,6 +942,54 @@ Rapid Pro path of the "Rapid Pro & Daily" challenge, which replaced the former R
 
 ## Top One Futures
 
+Firm website
+https://toponefutures.com
+Last verified
+2026-10-22
+
+### Elite Daily 25k
+
+EOD
+90% split
+No funded consistency
+
+Account size
+$25,000
+Profit target
+$1,500
+Max drawdown
+$1,000 (EOD)
+Daily loss limit
+$500 in eval and funded (eval: paused until the next day; funded: soft breach). No Daily Loss Limit add-on at checkout for about 30% more
+Min trading days
+No minimum in eval (40% consistency still applies); 1 when funded
+Consistency rule
+40% eval only; none once funded
+Consistency when funded
+None once funded
+News trading
+Eval: no restriction. Funded: no trades opened, closed or modified from 2 minutes before to 2 minutes after major high-impact news (violating trade's profit may be removed; not a hard breach)
+Overnight
+Not allowed; open positions force-closed at 4:10 PM EST
+Copy trading
+Only between your accounts of the same program and size; mirroring or correlated trades across mismatched accounts, copying others and signal services prohibited; EAs/bots not allowed
+First payout
+From day 1 once funded, if the balance stays above the $1,500 buffer ($26,500) after the payout; minimum $500
+Payout cycle
+Daily (every 24h); after the first payout at least 50% of each payout must be new profit since the last one
+Max payout / cycle
+$750 per request
+Profit split
+90%
+Live program
+Pre-Live/Live typically after 5 successful payouts on Elite Daily (risk manager review); live starts at $0, 80/20 split, no payout caps
+Scaling
+Eval: 1 contract. Funded: 1 mini / 10 micros at every profit level
+End-of-day rule
+Positions force-closed at 4:10 PM EST. EOD trailing drawdown on closing balance; locks at $25,100
+Notes
+No activation fee. Max 5 funded accounts per trader (overview) vs max 5 Elite Daily accounts per household including evaluations (account rules) - firm's pages conflict. Up to 10 evaluations per 30 days; 12 resets per evaluation per 30 days. Evaluation reset $66, funded reset $299. A 14-day gap without a trade breaches the account. The buffer cannot be withdrawn.
+
 ### Elite Daily 50k
 
 EOD
@@ -955,37 +1003,171 @@ $3,000
 Max drawdown
 $2,000 (EOD)
 Daily loss limit
-$1,000
+$1,000 in eval and funded (eval: paused until the next day; funded: soft breach). No Daily Loss Limit add-on at checkout for about 30% more
 Min trading days
-1
+No minimum in eval (40% consistency still applies); 1 when funded
 Consistency rule
 40% eval only; none once funded
 Consistency when funded
 None once funded
 News trading
-Funded: no trades 2min before/after major news
+Eval: no restriction. Funded: no trades opened, closed or modified from 2 minutes before to 2 minutes after major high-impact news (violating trade's profit may be removed; not a hard breach)
 Overnight
-Not allowed
+Not allowed; open positions force-closed at 4:10 PM EST
 Copy trading
-Third-party / proxy trading NOT allowed
+Only between your accounts of the same program and size; mirroring or correlated trades across mismatched accounts, copying others and signal services prohibited; EAs/bots not allowed
 First payout
-Day 1 after funded (daily)
+From day 1 once funded, if the balance stays above the $2,500 buffer ($52,500) after the payout; minimum $500
 Payout cycle
-Daily
+Daily (every 24h); after the first payout at least 50% of each payout must be new profit since the last one
 Max payout / cycle
-$1,000
+$1,000 per request
 Profit split
 90%
 Live program
-Sim Funded → Live (after 5 successful payouts)
+Pre-Live/Live typically after 5 successful payouts on Elite Daily (risk manager review); live starts at $0, 80/20 split, no payout caps
 Scaling
-Contract scaling 1→2→3 contracts on 50k as balance grows
+Eval: 3 contracts. Funded: 1 mini / 10 micros, 2 / 20 from $1,500 profit, 3 / 30 from $2,000
 End-of-day rule
-EOD drawdown; no separate forced-flatten rule stated
+Positions force-closed at 4:10 PM EST. EOD trailing drawdown on closing balance; locks at $50,100
 Notes
-$2,500 buffer required. Min payout $500. 50% of next payout goes toward buffer replenishment. Daily loss limit of $1k applies in BOTH eval and funded.
+No activation fee. Max 5 funded accounts per trader (overview) vs max 5 Elite Daily accounts per household including evaluations (account rules) - firm's pages conflict. Up to 10 evaluations per 30 days; 12 resets per evaluation per 30 days. Evaluation reset $82, funded reset $499. A 14-day gap without a trade breaches the account. The buffer cannot be withdrawn.
+
+### Elite Daily 100k
+
+EOD
+90% split
+No funded consistency
+
+Account size
+$100,000
+Profit target
+$6,000
+Max drawdown
+$3,000 (EOD) in eval; $2,500 (EOD) funded
+Daily loss limit
+$1,250 in eval and funded (eval: paused until the next day; funded: soft breach). No Daily Loss Limit add-on at checkout for about 30% more
+Min trading days
+No minimum in eval (40% consistency still applies); 1 when funded
+Consistency rule
+40% eval only; none once funded
+Consistency when funded
+None once funded
+News trading
+Eval: no restriction. Funded: no trades opened, closed or modified from 2 minutes before to 2 minutes after major high-impact news (violating trade's profit may be removed; not a hard breach)
+Overnight
+Not allowed; open positions force-closed at 4:10 PM EST
+Copy trading
+Only between your accounts of the same program and size; mirroring or correlated trades across mismatched accounts, copying others and signal services prohibited; EAs/bots not allowed
+First payout
+From day 1 once funded, if the balance stays above the $3,500 buffer ($103,500) after the payout; minimum $500
+Payout cycle
+Daily (every 24h); after the first payout at least 50% of each payout must be new profit since the last one
+Max payout / cycle
+$1,500 per request
+Profit split
+90%
+Live program
+Pre-Live/Live typically after 5 successful payouts on Elite Daily (risk manager review); live starts at $0, 80/20 split, no payout caps
+Scaling
+Eval: 5 contracts. Funded: 2 minis / 20 micros, 3 / 30 from $1,500 profit, 4 / 40 from $2,000, 5 / 50 from $3,000
+End-of-day rule
+Positions force-closed at 4:10 PM EST. EOD trailing drawdown on closing balance; locks at $100,100
+Notes
+No activation fee. Max 5 funded accounts per trader (overview) vs max 5 Elite Daily accounts per household including evaluations (account rules) - firm's pages conflict. Up to 10 evaluations per 30 days; 12 resets per evaluation per 30 days. Evaluation reset $154, funded reset $849. A 14-day gap without a trade breaches the account. The buffer cannot be withdrawn.
+
+### Elite Daily 150k
+
+EOD
+90% split
+No funded consistency
+
+Account size
+$150,000
+Profit target
+$9,000
+Max drawdown
+$4,500 (EOD) in eval; $3,500 (EOD) funded
+Daily loss limit
+$1,850 in eval and funded (eval: paused until the next day; funded: soft breach). No Daily Loss Limit add-on at checkout for about 30% more
+Min trading days
+No minimum in eval (40% consistency still applies); 1 when funded
+Consistency rule
+40% eval only; none once funded
+Consistency when funded
+None once funded
+News trading
+Eval: no restriction. Funded: no trades opened, closed or modified from 2 minutes before to 2 minutes after major high-impact news (violating trade's profit may be removed; not a hard breach)
+Overnight
+Not allowed; open positions force-closed at 4:10 PM EST
+Copy trading
+Only between your accounts of the same program and size; mirroring or correlated trades across mismatched accounts, copying others and signal services prohibited; EAs/bots not allowed
+First payout
+From day 1 once funded, if the balance stays above the $4,500 buffer ($154,500) after the payout; minimum $500
+Payout cycle
+Daily (every 24h); after the first payout at least 50% of each payout must be new profit since the last one
+Max payout / cycle
+$2,250 per request
+Profit split
+90%
+Live program
+Pre-Live/Live typically after 5 successful payouts on Elite Daily (risk manager review); live starts at $0, 80/20 split, no payout caps
+Scaling
+Eval: 7 contracts. Funded: 3 minis / 30 micros, 4 / 40 from $1,500 profit, 5 / 50 from $2,000, 6 / 60 from $3,000, 7 / 70 from $4,500
+End-of-day rule
+Positions force-closed at 4:10 PM EST. EOD trailing drawdown on closing balance; locks at $150,100
+Notes
+No activation fee. Max 5 funded accounts per trader (overview) vs max 5 Elite Daily accounts per household including evaluations (account rules) - firm's pages conflict. Up to 10 evaluations per 30 days; 12 resets per evaluation per 30 days. Evaluation reset $215, funded reset $1,250. A 14-day gap without a trade breaches the account. The buffer cannot be withdrawn.
 
 ## BluSky
+
+Firm website
+https://blusky.pro
+Last verified
+2026-10-22
+
+### Propel 25k
+
+EOD
+90% split
+No DLL
+
+Account size
+$25,000
+Profit target
+$1,500 (eval); then $1,500 in the Buffer Zone
+Max drawdown
+$1,200 (EOD) in eval and Buffer Zone
+Daily loss limit
+None (the Risk Team may add one on Sim Funded accounts)
+Min trading days
+No fixed minimum; the 34% rule means at least 3 profitable days to reach the target
+Consistency rule
+34% in eval and Buffer Zone: largest profitable day vs the sum of profitable days; not a breach, checked when passing or requesting a payout
+Consistency when funded
+Not stated for Propel Sim Funded
+News trading
+Allowed at own risk; news trading does not fail the account
+Overnight
+Not allowed; close by 4:45 PM EST, auto-liquidation attempted about 15 minutes before the close (not guaranteed)
+Copy trading
+Trade copier allowed; opposite positions across your own accounts prohibited
+First payout
+Once Sim Funded and $500 above the starting balance; no minimum days; minimum $500
+Payout cycle
+Daily, Mon-Fri (requests before 11 AM ET processed the same day); $500 new profit between requests
+Max payout / cycle
+$1,500 per rolling 7 days
+Profit split
+90%
+Live program
+Brokerage Review at $10,000 total profit per account (payouts count); go live at $0 with this size's drawdown, Sim Funded profit into the Bonus Vault, or take a one-time buyout of 50% of the drawdown
+Scaling
+Eval: 2 minis / 20 micros. Sim Funded: limits shown on the account (generally 1-3 minis / 15-30 micros); increases on request
+End-of-day rule
+Close by 4:45 PM EST; positions open after 5 PM EST are not adjusted. EOD trailing drawdown on the highest EOD balance
+Notes
+Subscription every 30 days during the evaluation only, no launch fee; a renewal on a failed account includes a free reset; evaluation reset $79; Buffer Zone reset $250 for the first three. Sim Funded: stop for the day at $5,000 profit and for the week at $10,000. Max 3 Sim Funded accounts. Sim Funded starting balance $1,500 with $100 minimum balance (Propel article) vs $26,500 minimum balance (Sim Funded payouts article) - firm's pages conflict.
 
 ### Propel 50k
 
@@ -996,46 +1178,266 @@ No DLL
 Account size
 $50,000
 Profit target
-$3,000
+$3,000 (eval); then $3,000 in the Buffer Zone
 Max drawdown
-$2,000 (EOD)
+$2,000 (EOD) in eval and Buffer Zone
 Daily loss limit
-None
+None (the Risk Team may add one on Sim Funded accounts)
 Min trading days
-0
+No fixed minimum; the 34% rule means at least 3 profitable days to reach the target
 Consistency rule
-34% consistency rule (Propel Premium)
+34% in eval and Buffer Zone: largest profitable day vs the sum of profitable days; not a breach, checked when passing or requesting a payout
 Consistency when funded
-34% consistency rule (Propel Premium)
+Not stated for Propel Sim Funded
 News trading
-Allowed at own risk; no account fail for news events
+Allowed at own risk; news trading does not fail the account
 Overnight
-Not allowed
+Not allowed; close by 4:45 PM EST, auto-liquidation attempted about 15 minutes before the close (not guaranteed)
 Copy trading
-Not stated officially
+Trade copier allowed; opposite positions across your own accounts prohibited
 First payout
-Available after Sim Funded stage begins
+Once Sim Funded and $500 above the starting balance; no minimum days; minimum $500
 Payout cycle
-Daily (per reviews)
+Daily, Mon-Fri (requests before 11 AM ET processed the same day); $500 new profit between requests
 Max payout / cycle
-No stated cap
+$2,500 per rolling 7 days
 Profit split
 90%
 Live program
-BluLive → Sim Funded → Live Brokerage Review
+Brokerage Review at $10,000 total profit per account (payouts count); go live at $0 with this size's drawdown, Sim Funded profit into the Bonus Vault, or take a one-time buyout of 50% of the drawdown
 Scaling
-After $10k total profit in Sim Funded → Brokerage Review for live
+Eval: 5 minis / 50 micros. Sim Funded: limits shown on the account (generally 1-3 minis / 15-30 micros); increases on request
 End-of-day rule
-Close trades by 4:45 PM EST; auto-liquidation attempted ~15min before close (not guaranteed)
+Close by 4:45 PM EST; positions open after 5 PM EST are not adjusted. EOD trailing drawdown on the highest EOD balance
 Notes
-$10k profit milestone triggers brokerage review. 34% consistency rule. Positions after 5pm EST will not be adjusted. No setup fee for brokerage account.
+Subscription every 30 days during the evaluation only, no launch fee; a renewal on a failed account includes a free reset; evaluation reset $79; Buffer Zone reset $250 for the first three. Sim Funded: stop for the day at $5,000 profit and for the week at $10,000. Max 3 Sim Funded accounts. Sim Funded starting balance $3,000 with $100 minimum balance (Propel article) vs $53,000 minimum balance (Sim Funded payouts article) - firm's pages conflict.
+
+### Propel 100k
+
+EOD
+90% split
+No DLL
+
+Account size
+$100,000
+Profit target
+$6,000 (eval); then $3,500 in the Buffer Zone
+Max drawdown
+$2,500 (EOD) in eval and Buffer Zone
+Daily loss limit
+None (the Risk Team may add one on Sim Funded accounts)
+Min trading days
+No fixed minimum; the 34% rule means at least 3 profitable days to reach the target
+Consistency rule
+34% in eval and Buffer Zone: largest profitable day vs the sum of profitable days; not a breach, checked when passing or requesting a payout
+Consistency when funded
+Not stated for Propel Sim Funded
+News trading
+Allowed at own risk; news trading does not fail the account
+Overnight
+Not allowed; close by 4:45 PM EST, auto-liquidation attempted about 15 minutes before the close (not guaranteed)
+Copy trading
+Trade copier allowed; opposite positions across your own accounts prohibited
+First payout
+Once Sim Funded and $500 above the starting balance; no minimum days; minimum $500
+Payout cycle
+Daily, Mon-Fri (requests before 11 AM ET processed the same day); $500 new profit between requests
+Max payout / cycle
+$3,000 per rolling 7 days
+Profit split
+90%
+Live program
+Brokerage Review at $10,000 total profit per account (payouts count); go live at $0 with this size's drawdown, Sim Funded profit into the Bonus Vault, or take a one-time buyout of 50% of the drawdown
+Scaling
+Eval: 10 minis / 100 micros. Sim Funded: limits shown on the account (generally 1-3 minis / 15-30 micros); increases on request
+End-of-day rule
+Close by 4:45 PM EST; positions open after 5 PM EST are not adjusted. EOD trailing drawdown on the highest EOD balance
+Notes
+Subscription every 30 days during the evaluation only, no launch fee; a renewal on a failed account includes a free reset; evaluation reset $79; Buffer Zone reset $250 for the first three. Sim Funded: stop for the day at $5,000 profit and for the week at $10,000. Max 3 Sim Funded accounts. Sim Funded starting balance $3,500 with $100 minimum balance (Propel article) vs $103,500 minimum balance (Sim Funded payouts article) - firm's pages conflict.
+
+### Propel 150k
+
+Static
+90% split
+No DLL
+
+Account size
+$150,000
+Profit target
+$3,000 (eval); then $2,000 in the Buffer Zone
+Max drawdown
+$1,000 static in eval and Buffer Zone
+Daily loss limit
+None (the Risk Team may add one on Sim Funded accounts)
+Min trading days
+No fixed minimum; the 34% rule means at least 3 profitable days to reach the target
+Consistency rule
+34% in eval and Buffer Zone: largest profitable day vs the sum of profitable days; not a breach, checked when passing or requesting a payout
+Consistency when funded
+Not stated for Propel Sim Funded
+News trading
+Allowed at own risk; news trading does not fail the account
+Overnight
+Not allowed; close by 4:45 PM EST, auto-liquidation attempted about 15 minutes before the close (not guaranteed)
+Copy trading
+Trade copier allowed; opposite positions across your own accounts prohibited
+First payout
+Once Sim Funded and $500 above the starting balance; no minimum days; minimum $500
+Payout cycle
+Daily, Mon-Fri (requests before 11 AM ET processed the same day); $500 new profit between requests
+Max payout / cycle
+$1,500 per rolling 7 days
+Profit split
+90%
+Live program
+Brokerage Review at $10,000 total profit per account (payouts count); go live at $0 with this size's drawdown, Sim Funded profit into the Bonus Vault, or take a one-time buyout of 50% of the drawdown
+Scaling
+Eval: 1 mini / 10 micros. Sim Funded: limits shown on the account (generally 1-3 minis / 15-30 micros); increases on request
+End-of-day rule
+Close by 4:45 PM EST; positions open after 5 PM EST are not adjusted. Static drawdown
+Notes
+Subscription every 30 days during the evaluation only, no launch fee; a renewal on a failed account includes a free reset; evaluation reset $79; Buffer Zone reset $250 for the first three. Sim Funded: starting balance $2,000, minimum balance $100; stop for the day at $5,000 profit and for the week at $10,000. Max 3 Sim Funded accounts.
+
+### Propel 200k
+
+Static
+90% split
+No DLL
+
+Account size
+$200,000
+Profit target
+$6,000 (eval); then $3,000 in the Buffer Zone
+Max drawdown
+$2,000 static in eval and Buffer Zone
+Daily loss limit
+None (the Risk Team may add one on Sim Funded accounts)
+Min trading days
+No fixed minimum; the 34% rule means at least 3 profitable days to reach the target
+Consistency rule
+34% in eval and Buffer Zone: largest profitable day vs the sum of profitable days; not a breach, checked when passing or requesting a payout
+Consistency when funded
+Not stated for Propel Sim Funded
+News trading
+Allowed at own risk; news trading does not fail the account
+Overnight
+Not allowed; close by 4:45 PM EST, auto-liquidation attempted about 15 minutes before the close (not guaranteed)
+Copy trading
+Trade copier allowed; opposite positions across your own accounts prohibited
+First payout
+Once Sim Funded and $500 above the starting balance; no minimum days; minimum $500
+Payout cycle
+Daily, Mon-Fri (requests before 11 AM ET processed the same day); $500 new profit between requests
+Max payout / cycle
+$2,500 per rolling 7 days
+Profit split
+90%
+Live program
+Brokerage Review at $10,000 total profit per account (payouts count); go live at $0 with this size's drawdown, Sim Funded profit into the Bonus Vault, or take a one-time buyout of 50% of the drawdown
+Scaling
+Eval: 2 minis / 20 micros. Sim Funded: limits shown on the account (generally 1-3 minis / 15-30 micros); increases on request
+End-of-day rule
+Close by 4:45 PM EST; positions open after 5 PM EST are not adjusted. Static drawdown
+Notes
+Subscription every 30 days during the evaluation only, no launch fee; a renewal on a failed account includes a free reset; evaluation reset $79; Buffer Zone reset $250 for the first three. Sim Funded: starting balance $3,000, minimum balance $100; stop for the day at $5,000 profit and for the week at $10,000. Max 3 Sim Funded accounts.
+
+### Propel 300k
+
+Static
+90% split
+No DLL
+
+Account size
+$300,000
+Profit target
+$20,000 (eval); then $3,500 in the Buffer Zone
+Max drawdown
+$5,000 static in eval; $2,500 static in the Buffer Zone
+Daily loss limit
+None (the Risk Team may add one on Sim Funded accounts)
+Min trading days
+No fixed minimum stated (21% consistency applies)
+Consistency rule
+21% in eval and Buffer Zone: largest profitable day vs the sum of profitable days; not a breach, checked when passing or requesting a payout
+Consistency when funded
+Not stated for Propel Sim Funded
+News trading
+Allowed at own risk; news trading does not fail the account
+Overnight
+Not allowed; close by 4:45 PM EST, auto-liquidation attempted about 15 minutes before the close (not guaranteed)
+Copy trading
+Trade copier allowed; opposite positions across your own accounts prohibited
+First payout
+Once Sim Funded and $500 above the starting balance; no minimum days; minimum $500
+Payout cycle
+Daily, Mon-Fri (requests before 11 AM ET processed the same day); $500 new profit between requests
+Max payout / cycle
+$3,000 per rolling 7 days
+Profit split
+90%
+Live program
+Brokerage Review at $10,000 total profit per account (payouts count); go live at $0 with this size's drawdown, Sim Funded profit into the Bonus Vault, or take a one-time buyout of 50% of the drawdown
+Scaling
+Eval: 5 minis / 50 micros. Sim Funded: limits shown on the account (generally 1-3 minis / 15-30 micros); increases on request
+End-of-day rule
+Close by 4:45 PM EST; positions open after 5 PM EST are not adjusted. Static drawdown
+Notes
+Subscription every 30 days during the evaluation only, no launch fee; a renewal on a failed account includes a free reset; evaluation reset $79; Buffer Zone reset $250 for the first three. Sim Funded: starting balance $3,500, minimum balance $100; stop for the day at $5,000 profit and for the week at $10,000. Max 3 Sim Funded accounts.
 
 ## Funded Futures Family
+
+Firm website
+https://fundedfuturesfamily.com
+Last verified
+2026-10-22
+
+### Prime 25k
+
+EOD
+90% split
+No DLL
+
+Account size
+$25,000
+Profit target
+$1,250
+Max drawdown
+$1,000 (EOD)
+Daily loss limit
+None
+Min trading days
+1 (can pass in one trading day)
+Consistency rule
+None in eval; 40% per payout cycle once funded
+Consistency when funded
+40%: largest day max 40% of profit at the payout request; resets after each payout
+News trading
+Allowed; no Prime-specific news restriction
+Overnight
+Not allowed; open positions closed automatically at 4:45 PM EST (no breach)
+Copy trading
+Not stated on the firm's pages; hedging between accounts, bots/algorithmic trading and device sharing prohibited
+First payout
+$200+ profit per trading day, $300 profit since the last payout, 40% consistency, balance above the $26,100 buffer; at least 3 trading days between requests
+Payout cycle
+Every 3 trading days
+Max payout / cycle
+$1,000 on the 1st payout, $1,500 from the 2nd
+Profit split
+90%
+Live program
+Professional Stage (live) after 3 approved payouts or $10,000 in approved payouts, subject to a risk review
+Scaling
+Eval: 2 minis / 20 micros (Standard) or 3 / 30 (Max), chosen at purchase. Funded: 1 / 10, 2 / 20 from $1,000 profit, 3 / 30 from $2,000
+End-of-day rule
+Positions closed at 4:45 PM EST. EOD trailing drawdown; locks at $25,000 once the balance exceeds $26,000
+Notes
+No activation fee; activate the funded account within 7 days of passing. Max 5 Sim Funded accounts and 1 live account per household. At least one trade per week (Mon-Fri) per account or it is closed. Over 50% of trades and of profit must come from positions held longer than 10s.
 
 ### Prime 50k
 
 EOD
-100% split
+90% split
 No DLL
 
 Account size
@@ -1047,41 +1449,174 @@ $2,000 (EOD)
 Daily loss limit
 None
 Min trading days
-7
+1 (can pass in one trading day)
 Consistency rule
-40% consistency (funded reset); 50% Classic
+None in eval; 40% per payout cycle once funded
 Consistency when funded
-40% consistency (funded reset); 50% Classic
+40%: largest day max 40% of profit at the payout request; resets after each payout
 News trading
-Allowed including major economic events
+Allowed; no Prime-specific news restriction
 Overnight
-Not allowed
+Not allowed; open positions closed automatically at 4:45 PM EST (no breach)
 Copy trading
-Unauthorized copy trading PROHIBITED; bots/algos prohibited
+Not stated on the firm's pages; hedging between accounts, bots/algorithmic trading and device sharing prohibited
 First payout
-After 7 qualifying trading days ($200+ profit each)
+$200+ profit per trading day, $500 profit since the last payout, 40% consistency, balance above the $52,100 buffer; at least 3 trading days between requests
 Payout cycle
-Daily review (Mon–Fri, same-day if before 5pm EST)
+Every 3 trading days
 Max payout / cycle
-No stated cap
+$2,000 on the 1st payout, $2,500 from the 2nd
 Profit split
-100%
+90%
 Live program
-Live account with 1-on-1 Risk Manager calls
+Professional Stage (live) after 3 approved payouts or $10,000 in approved payouts, subject to a risk review
 Scaling
-Capital scaling on live; customizable parameters
+Eval: 4 minis / 40 micros (Standard) or 5 / 50 (Max), chosen at purchase. Funded: 3 / 30, 4 / 40 from $1,500 profit, 5 / 50 from $2,000
 End-of-day rule
-Prime: EOD drawdown adjusts once at 5pm EST; locks after buffer reached
+Positions closed at 4:45 PM EST. EOD trailing drawdown; locks at $50,000 once the balance exceeds $52,000
 Notes
-100% split on first $10k total payouts, then 90/10 after. KYC required (24-48h). Hedging & microscalping prohibited. No VPN/VPS/proxy.
+No activation fee; activate the funded account within 7 days of passing. Max 5 Sim Funded accounts and 1 live account per household. At least one trade per week (Mon-Fri) per account or it is closed. Over 50% of trades and of profit must come from positions held longer than 10s.
+
+### Prime 100k
+
+EOD
+90% split
+No DLL
+
+Account size
+$100,000
+Profit target
+$6,000
+Max drawdown
+$3,000 (EOD)
+Daily loss limit
+None
+Min trading days
+1 (can pass in one trading day)
+Consistency rule
+None in eval; 40% per payout cycle once funded
+Consistency when funded
+40%: largest day max 40% of profit at the payout request; resets after each payout
+News trading
+Allowed; no Prime-specific news restriction
+Overnight
+Not allowed; open positions closed automatically at 4:45 PM EST (no breach)
+Copy trading
+Not stated on the firm's pages; hedging between accounts, bots/algorithmic trading and device sharing prohibited
+First payout
+$200+ profit per trading day, $750 profit since the last payout, 40% consistency, balance above the $103,100 buffer; at least 3 trading days between requests
+Payout cycle
+Every 3 trading days
+Max payout / cycle
+$3,000 on the 1st payout, $3,500 from the 2nd
+Profit split
+90%
+Live program
+Professional Stage (live) after 3 approved payouts or $10,000 in approved payouts, subject to a risk review
+Scaling
+Eval: 6 minis / 60 micros (Standard) or 10 / 100 (Max), chosen at purchase. Funded: 4 / 40, 6 / 60 from $1,500 profit, 7 / 70 from $2,000, 10 / 100 from $3,000
+End-of-day rule
+Positions closed at 4:45 PM EST. EOD trailing drawdown; locks at $100,000 once the balance exceeds $103,000
+Notes
+No activation fee; activate the funded account within 7 days of passing. Max 5 Sim Funded accounts and 1 live account per household. At least one trade per week (Mon-Fri) per account or it is closed. Over 50% of trades and of profit must come from positions held longer than 10s.
+
+### Prime 150k
+
+EOD
+90% split
+No DLL
+
+Account size
+$150,000
+Profit target
+$9,000
+Max drawdown
+$4,500 (EOD)
+Daily loss limit
+None
+Min trading days
+1 (can pass in one trading day)
+Consistency rule
+None in eval; 40% per payout cycle once funded
+Consistency when funded
+40%: largest day max 40% of profit at the payout request; resets after each payout
+News trading
+Allowed; no Prime-specific news restriction
+Overnight
+Not allowed; open positions closed automatically at 4:45 PM EST (no breach)
+Copy trading
+Not stated on the firm's pages; hedging between accounts, bots/algorithmic trading and device sharing prohibited
+First payout
+$200+ profit per trading day, $1,000 profit since the last payout, 40% consistency, balance above the $154,600 buffer; at least 3 trading days between requests
+Payout cycle
+Every 3 trading days
+Max payout / cycle
+$3,500 on the 1st payout, $4,000 from the 2nd
+Profit split
+90%
+Live program
+Professional Stage (live) after 3 approved payouts or $10,000 in approved payouts, subject to a risk review
+Scaling
+Eval: 10 minis / 100 micros (Standard) or 15 / 150 (Max), chosen at purchase. Funded: 5 / 50, 7 / 70 from $1,500 profit, 10 / 100 from $2,000, 12 / 120 from $3,000, 15 / 150 from $4,500
+End-of-day rule
+Positions closed at 4:45 PM EST. EOD trailing drawdown; locks at $150,000 once the balance exceeds $154,500
+Notes
+No activation fee; activate the funded account within 7 days of passing. Max 5 Sim Funded accounts and 1 live account per household. At least one trade per week (Mon-Fri) per account or it is closed. Over 50% of trades and of profit must come from positions held longer than 10s.
 
 ## Lucid Trading
+
+Firm website
+https://lucidtrading.com
+Last verified
+2026-10-22
+
+### LucidFlex 25k
+
+EOD
+90% split
+No funded consistency
+
+Account size
+$25,000
+Profit target
+$1,250
+Max drawdown
+$1,000 (EOD)
+Daily loss limit
+Chosen at checkout: $600 soft breach (locked until the next session) in eval and funded, with On Demand Payouts; or none at a higher price
+Min trading days
+3 with 40% consistency, 2 with the 50% add-on
+Consistency rule
+Eval only: 40% (50% with add-on); none once funded
+Consistency when funded
+None once funded
+News trading
+Allowed
+Overnight
+Not allowed; open positions closed automatically at 4:45 PM EST (no fail)
+Copy trading
+Trade copiers and automated systems permitted; hedging prohibited
+First payout
+5 days with at least $100 profit in the cycle plus positive net profit; minimum $500
+Payout cycle
+Any day once 5 qualifying days and positive net profit in the cycle are met; with the DLL on, payouts can be requested during the session
+Max payout / cycle
+$1,000 (50% of profit, up to the cap; one help-center sentence says 50% of the account balance)
+Profit split
+90%
+Live program
+Live review pool after the 5th (final) payout or at the risk team's discretion; live starts at $0 with a $1,000 EOD drawdown; cashout option instead
+Scaling
+Eval: full 2 minis / 20 micros. Funded: 1 / 10, 2 / 20 from $1,000 profit
+End-of-day rule
+Positions closed at 4:45 PM EST. EOD trailing drawdown; locks at $25,100 once the balance exceeds $26,100, or on the first payout
+Notes
+One-time fee, no activation fee. Max 5 payouts per account, then moved live. Max 5 funded accounts per household, 10 accounts in total including evaluations. Accounts without $1 net P&L in 30 days are deleted. Flagged for microscalping if over 50% of profit comes from trades held 5s or less.
 
 ### LucidFlex 50k
 
 EOD
 90% split
-No DLL
 No funded consistency
 
 Account size
@@ -1091,37 +1626,170 @@ $3,000
 Max drawdown
 $2,000 (EOD)
 Daily loss limit
-None
+Chosen at checkout: $1,200 soft breach (locked until the next session) in eval and funded, with On Demand Payouts; or none at a higher price
 Min trading days
-1
+3 with 40% consistency, 2 with the 50% add-on
 Consistency rule
-None once funded (per most current reviews)
+Eval only: 40% (50% with add-on); none once funded
 Consistency when funded
 None once funded
 News trading
 Allowed
 Overnight
-Not allowed
+Not allowed; open positions closed automatically at 4:45 PM EST (no fail)
 Copy trading
-Allowed for own/internal accounts
+Trade copiers and automated systems permitted; hedging prohibited
 First payout
-~5 days after funded
+5 days with at least $150 profit in the cycle plus positive net profit; minimum $500
 Payout cycle
-Every 5 days
+Any day once 5 qualifying days and positive net profit in the cycle are met; with the DLL on, payouts can be requested during the session
 Max payout / cycle
-$2,000
+$2,000 (50% of profit, up to the cap; one help-center sentence says 50% of the account balance)
 Profit split
 90%
 Live program
-LucidFlex → LucidPro → LucidLive
+Live review pool after the 5th (final) payout or at the risk team's discretion; live starts at $0 with a $2,000 EOD drawdown; cashout option instead
 Scaling
-Up to $750k max allocation; live funding after 5 successful payouts
+Eval: full 4 minis / 40 micros. Funded: 2 / 20, 3 / 30 from $1,000 profit, 4 / 40 from $2,000
 End-of-day rule
-All positions flat by 4:45 PM EST; EOD trailing drawdown
+Positions closed at 4:45 PM EST. EOD trailing drawdown; locks at $50,100 once the balance exceeds $52,100, or on the first payout
 Notes
-$2,000 max payout per cycle on 50k. Average payout time ~15 min. 4.8/5 Trustpilot. No intraday trailing spike-outs. No monthly fees.
+One-time fee, no activation fee. Max 5 payouts per account, then moved live. Max 5 funded accounts per household, 10 accounts in total including evaluations. Accounts without $1 net P&L in 30 days are deleted. Flagged for microscalping if over 50% of profit comes from trades held 5s or less.
+
+### LucidFlex 100k
+
+EOD
+90% split
+No funded consistency
+
+Account size
+$100,000
+Profit target
+$6,000
+Max drawdown
+$3,000 (EOD)
+Daily loss limit
+Chosen at checkout: $1,800 soft breach (locked until the next session) in eval and funded, with On Demand Payouts; or none at a higher price
+Min trading days
+3 with 40% consistency, 2 with the 50% add-on
+Consistency rule
+Eval only: 40% (50% with add-on); none once funded
+Consistency when funded
+None once funded
+News trading
+Allowed
+Overnight
+Not allowed; open positions closed automatically at 4:45 PM EST (no fail)
+Copy trading
+Trade copiers and automated systems permitted; hedging prohibited
+First payout
+5 days with at least $200 profit in the cycle plus positive net profit; minimum $500
+Payout cycle
+Any day once 5 qualifying days and positive net profit in the cycle are met; with the DLL on, payouts can be requested during the session
+Max payout / cycle
+$2,500 (50% of profit, up to the cap; one help-center sentence says 50% of the account balance)
+Profit split
+90%
+Live program
+Live review pool after the 5th (final) payout or at the risk team's discretion; live starts at $0 with a $3,000 EOD drawdown; cashout option instead
+Scaling
+Eval: full 6 minis / 60 micros. Funded: 3 / 30, 4 / 40 from $1,000 profit, 5 / 50 from $2,000, 6 / 60 from $3,000
+End-of-day rule
+Positions closed at 4:45 PM EST. EOD trailing drawdown; locks at $100,100 once the balance exceeds $103,100, or on the first payout
+Notes
+One-time fee, no activation fee. Max 5 payouts per account, then moved live. Max 5 funded accounts per household, 10 accounts in total including evaluations. Accounts without $1 net P&L in 30 days are deleted. Flagged for microscalping if over 50% of profit comes from trades held 5s or less.
+
+### LucidFlex 150k
+
+EOD
+90% split
+No funded consistency
+
+Account size
+$150,000
+Profit target
+$9,000
+Max drawdown
+$4,500 (EOD)
+Daily loss limit
+Chosen at checkout: $2,700 soft breach (locked until the next session) in eval and funded, with On Demand Payouts; or none at a higher price
+Min trading days
+3 with 40% consistency, 2 with the 50% add-on
+Consistency rule
+Eval only: 40% (50% with add-on); none once funded
+Consistency when funded
+None once funded
+News trading
+Allowed
+Overnight
+Not allowed; open positions closed automatically at 4:45 PM EST (no fail)
+Copy trading
+Trade copiers and automated systems permitted; hedging prohibited
+First payout
+5 days with at least $250 profit in the cycle plus positive net profit; minimum $500
+Payout cycle
+Any day once 5 qualifying days and positive net profit in the cycle are met; with the DLL on, payouts can be requested during the session
+Max payout / cycle
+$3,000 (50% of profit, up to the cap; one help-center sentence says 50% of the account balance)
+Profit split
+90%
+Live program
+Live review pool after the 5th (final) payout or at the risk team's discretion; live starts at $0 with a $4,500 EOD drawdown; cashout option instead
+Scaling
+Eval: full 10 minis / 100 micros. Funded: 4 / 40, 5 / 50 from $1,000 profit, 6 / 60 from $2,000, 8 / 80 from $3,000, 10 / 100 from $4,500
+End-of-day rule
+Positions closed at 4:45 PM EST. EOD trailing drawdown; locks at $150,100 once the balance exceeds $154,600, or on the first payout
+Notes
+One-time fee, no activation fee. Max 5 payouts per account, then moved live. Max 5 funded accounts per household, 10 accounts in total including evaluations. Accounts without $1 net P&L in 30 days are deleted. Flagged for microscalping if over 50% of profit comes from trades held 5s or less.
 
 ## Apex Trader Funding
+
+Firm website
+https://apextraderfunding.com
+Last verified
+2026-10-22
+
+### 25k EOD
+
+EOD
+100% split
+
+Account size
+$25,000
+Profit target
+$1,500
+Max drawdown
+$1,000 (EOD)
+Daily loss limit
+Eval: $500 (pauses the session, not a fail). PA by tier: $500, $1,250 from $2,000 profit
+Min trading days
+None; can pass in one trading day (30-day access period)
+Consistency rule
+None in eval; 50% on PA payouts
+Consistency when funded
+50%: no single profitable day may be 50% or more of the profit since the last approved payout
+News trading
+Allowed for your normal strategy; chasing news or placing orders on both sides to gamble the outcome is prohibited
+Overnight
+Not allowed (live program FAQ); no explicit Evaluation/PA rule found
+Copy trading
+Tradovate Group Trade copier enabled for users with several accounts; AI, fully automated systems and HFT prohibited (legacy PA compliance article)
+First payout
+5 trading days with at least $100 profit each, 50% consistency, balance of at least $26,600 (safety net $26,100 + $500 minimum payout)
+Payout cycle
+Up to weekly: every 5 qualifying trading days
+Max payout / cycle
+$1,000 for each of payouts 1-6
+Profit split
+100%
+Live program
+Apex Live Prop Trading Program, by invitation; all sim accounts close; live split 90/10; up to 5 live accounts
+Scaling
+Eval: 4 contracts fixed. PA tiers by EOD balance: 1 contract, 2 from $1,000 profit
+End-of-day rule
+EOD threshold recalculated at 4:59:59 PM ET and enforced in real time the next session, including unrealized P&L; touching it closes the account
+Notes
+One-time evaluation fee, 30-day access; activate the PA within 7 days (one-time activation fee, or $0 with a No Activation Fee evaluation, same rules). Max 20 PAs; max 6 payouts per PA, then it closes. A PA needs 2 days with $50+ net profit in every rolling 30 days.
 
 ### 50k EOD
 
@@ -1135,35 +1803,119 @@ $3,000
 Max drawdown
 $2,000 (EOD)
 Daily loss limit
-$1,000
+Eval: $1,000 (pauses the session, not a fail). PA by tier: $1,000, $2,000 from $3,000 profit, $3,000 from $5,999
 Min trading days
-0
+None; can pass in one trading day (30-day access period)
 Consistency rule
-None in eval; 50% consistency on funded payout qualification
+None in eval; 50% on PA payouts
 Consistency when funded
-None in eval; 50% consistency on funded payout qualification
+50%: no single profitable day may be 50% or more of the profit since the last approved payout
 News trading
-Not clearly stated in official pages (2026)
+Allowed for your normal strategy; chasing news or placing orders on both sides to gamble the outcome is prohibited
 Overnight
-Not allowed
+Not allowed (live program FAQ); no explicit Evaluation/PA rule found
 Copy trading
-Not clearly stated in 2026 official pages
+Tradovate Group Trade copier enabled for users with several accounts; AI, fully automated systems and HFT prohibited (legacy PA compliance article)
 First payout
-5 trading days after funded activation
+5 trading days with at least $250 profit each, 50% consistency, balance of at least $52,600 (safety net $52,100 + $500 minimum payout)
 Payout cycle
-Every 5 trading days
+Up to weekly: every 5 qualifying trading days
 Max payout / cycle
-No stated cap
+Payouts 1-6: $1,500 / $1,500 / $2,000 / $2,500 / $2,500 / $3,000
 Profit split
 100%
 Live program
-Apex Live Account (Learn, Earn & Graduate path)
+Apex Live Prop Trading Program, by invitation; all sim accounts close; live split 90/10; up to 5 live accounts
 Scaling
-Contract scale-up as balance grows; exact tier schedule not published
+Eval: 6 contracts fixed. PA tiers by EOD balance: 2 contracts, 3 from $1,500 profit, 4 from $3,000
 End-of-day rule
-EOD trailing drawdown; all trades flat before daily cutoff. $1k DLL on 50k EOD eval
+EOD threshold recalculated at 4:59:59 PM ET and enforced in real time the next session, including unrealized P&L; touching it closes the account
 Notes
-NEW 2026: One-time fee, no monthly billing, 30-day eval window, 20-account limit, 5-day payout cadence. 100% requested rewards in sim funded. Max 6 payout requests per account.
+One-time evaluation fee, 30-day access; activate the PA within 7 days (one-time activation fee, or $0 with a No Activation Fee evaluation, same rules). Max 20 PAs; max 6 payouts per PA, then it closes. A PA needs 2 days with $50+ net profit in every rolling 30 days.
+
+### 100k EOD
+
+EOD
+100% split
+
+Account size
+$100,000
+Profit target
+$6,000
+Max drawdown
+$3,000 (EOD)
+Daily loss limit
+Eval: $1,500 (pauses the session, not a fail). PA by tier: $1,750, $2,500 from $5,000 profit, $3,500 from $10,000
+Min trading days
+None; can pass in one trading day (30-day access period)
+Consistency rule
+None in eval; 50% on PA payouts
+Consistency when funded
+50%: no single profitable day may be 50% or more of the profit since the last approved payout
+News trading
+Allowed for your normal strategy; chasing news or placing orders on both sides to gamble the outcome is prohibited
+Overnight
+Not allowed (live program FAQ); no explicit Evaluation/PA rule found
+Copy trading
+Tradovate Group Trade copier enabled for users with several accounts; AI, fully automated systems and HFT prohibited (legacy PA compliance article)
+First payout
+5 trading days with at least $300 profit each, 50% consistency, balance of at least $103,600 (safety net $103,100 + $500 minimum payout)
+Payout cycle
+Up to weekly: every 5 qualifying trading days
+Max payout / cycle
+Payouts 1-6: $2,000 / $2,500 / $2,500 / $3,000 / $4,000 / $4,000
+Profit split
+100%
+Live program
+Apex Live Prop Trading Program, by invitation; all sim accounts close; live split 90/10; up to 5 live accounts
+Scaling
+Eval: 8 contracts fixed. PA tiers by EOD balance: 3 contracts, 4 from $2,000 profit, 5 from $3,000, 6 from $5,000
+End-of-day rule
+EOD threshold recalculated at 4:59:59 PM ET and enforced in real time the next session, including unrealized P&L; touching it closes the account
+Notes
+One-time evaluation fee, 30-day access; activate the PA within 7 days (one-time activation fee, or $0 with a No Activation Fee evaluation, same rules). Max 20 PAs; max 6 payouts per PA, then it closes. A PA needs 2 days with $50+ net profit in every rolling 30 days.
+
+### 150k EOD
+
+EOD
+100% split
+
+Account size
+$150,000
+Profit target
+$9,000
+Max drawdown
+$4,000 (EOD)
+Daily loss limit
+Eval: $2,000 (pauses the session, not a fail). PA by tier: $2,500, $3,000 from $5,000 profit, $4,000 from $10,000
+Min trading days
+None; can pass in one trading day (30-day access period)
+Consistency rule
+None in eval; 50% on PA payouts
+Consistency when funded
+50%: no single profitable day may be 50% or more of the profit since the last approved payout
+News trading
+Allowed for your normal strategy; chasing news or placing orders on both sides to gamble the outcome is prohibited
+Overnight
+Not allowed (live program FAQ); no explicit Evaluation/PA rule found
+Copy trading
+Tradovate Group Trade copier enabled for users with several accounts; AI, fully automated systems and HFT prohibited (legacy PA compliance article)
+First payout
+5 trading days with at least $350 profit each, 50% consistency, balance of at least $154,600 (safety net $154,100 + $500 minimum payout)
+Payout cycle
+Up to weekly: every 5 qualifying trading days
+Max payout / cycle
+Payouts 1-6: $2,500 / $3,000 / $3,000 / $3,000 / $4,000 / $5,000
+Profit split
+100%
+Live program
+Apex Live Prop Trading Program, by invitation; all sim accounts close; live split 90/10; up to 5 live accounts
+Scaling
+Eval: 12 contracts fixed. PA tiers by EOD balance: 4 contracts, 5 from $2,000 profit, 7 from $3,000, 10 from $5,000
+End-of-day rule
+EOD threshold recalculated at 4:59:59 PM ET and enforced in real time the next session, including unrealized P&L; touching it closes the account
+Notes
+One-time evaluation fee, 30-day access; activate the PA within 7 days (one-time activation fee, or $0 with a No Activation Fee evaluation, same rules). Max 20 PAs; max 6 payouts per PA, then it closes. A PA needs 2 days with $50+ net profit in every rolling 30 days.
 
 ## Goat Funded Futures
 

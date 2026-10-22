@@ -386,6 +386,38 @@ describe("parsePropFirms against context/PropFirmsData.md", () => {
       "Futures Rapid 50k",
       "Futures Rapid 100k",
     ]);
+    expect(byName.get("Top One Futures")).toEqual([
+      "Elite Daily 25k",
+      "Elite Daily 50k",
+      "Elite Daily 100k",
+      "Elite Daily 150k",
+    ]);
+    expect(byName.get("BluSky")).toEqual([
+      "Propel 25k",
+      "Propel 50k",
+      "Propel 100k",
+      "Propel 150k",
+      "Propel 200k",
+      "Propel 300k",
+    ]);
+    expect(byName.get("Funded Futures Family")).toEqual([
+      "Prime 25k",
+      "Prime 50k",
+      "Prime 100k",
+      "Prime 150k",
+    ]);
+    expect(byName.get("Lucid Trading")).toEqual([
+      "LucidFlex 25k",
+      "LucidFlex 50k",
+      "LucidFlex 100k",
+      "LucidFlex 150k",
+    ]);
+    expect(byName.get("Apex Trader Funding")).toEqual([
+      "25k EOD",
+      "50k EOD",
+      "100k EOD",
+      "150k EOD",
+    ]);
   });
 
   it("yields the summary tags the filter chips are built from", () => {
