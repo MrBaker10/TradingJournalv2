@@ -77,6 +77,7 @@ src/
     csv/                      # RFC 4180 writer + reader, and the export row shape
     fx/                       # rate fetch + display conversion
     econ/                     # Phase 2 — feed adapter, swappable in one file
+    trades/                   # save a trade logged or edited by hand
     money.ts  time.ts  env.ts
   hooks/
   types/
