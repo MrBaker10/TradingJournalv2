@@ -219,7 +219,7 @@ type FormState = {
   result: string;
   grade: string;
   felt: string;
-  byTheBook: boolean;
+  byTheBook: boolean | undefined;
   notes: string;
   accountIds: number[];
   /**
@@ -252,7 +252,7 @@ const emptyState: FormState = {
   result: "",
   grade: "",
   felt: "",
-  byTheBook: false,
+  byTheBook: undefined,
   notes: "",
   accountIds: [],
   commissions: {},
@@ -289,7 +289,7 @@ function stateFromTrade(trade: JournalTradeRow): FormState {
     result: trade.result ?? "",
     grade: trade.grade ?? "",
     felt: trade.felt ?? "",
-    byTheBook: trade.byTheBook ?? false,
+    byTheBook: trade.byTheBook ?? undefined,
     notes: trade.notes ?? "",
     accountIds: trade.accounts.map((account) => account.id),
     commissions: {},
@@ -1228,18 +1228,37 @@ export function TradeForm(props: TradeFormProps) {
                 </select>
               </FormField>
             )}
+            {state.taken && (
+              <FormField
+                label="By the book"
+                htmlFor="byTheBook"
+                error={errors.byTheBook}
+              >
+                <select
+                  id="byTheBook"
+                  value={
+                    state.byTheBook === undefined ? "" : String(state.byTheBook)
+                  }
+                  onChange={(event) =>
+                    set(
+                      "byTheBook",
+                      event.target.value === ""
+                        ? undefined
+                        : event.target.value === "true",
+                    )
+                  }
+                  disabled={loading || success}
+                  className={getFieldClass(
+                    fieldState("byTheBook", state.byTheBook !== undefined),
+                  )}
+                >
+                  <option value="">—</option>
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
+              </FormField>
+            )}
           </div>
-          {state.taken && (
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-fg">By the book</span>
-              <ToggleSwitch
-                checked={state.byTheBook}
-                onCheckedChange={(value) => set("byTheBook", value)}
-                disabled={loading || success}
-                ariaLabel="By the book"
-              />
-            </div>
-          )}
           <div className="flex flex-col gap-1.5">
             <span className="cap">Mistakes</span>
             <TagMultiSelect
