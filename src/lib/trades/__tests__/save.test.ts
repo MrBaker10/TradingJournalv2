@@ -1,6 +1,7 @@
 import { and, asc, eq, sql, TransactionRollbackError } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../../db/index.ts";
+import { getOwnedTrade } from "../../../db/queries/trades.ts";
 import {
   accountCommissionRates,
   accounts,
@@ -181,6 +182,28 @@ async function assignmentsOf(tx: Tx, tradeId: number) {
 }
 
 describe("saveTrade — create", () => {
+  for (const { answer, byTheBook, expected } of [
+    { answer: "unanswered", byTheBook: undefined, expected: null },
+    { answer: "yes", byTheBook: true, expected: true },
+    { answer: "no", byTheBook: false, expected: false },
+  ]) {
+    it(`stores a new trade's by-the-book answer: ${answer}`, async (ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const stored = await inRollback(async (tx) => {
+        const fixture = await seedFixture(tx);
+        const tradeId = await createdTradeId(
+          tx,
+          fixture,
+          takenDraft(fixture, { byTheBook }),
+        );
+        return getOwnedTrade(fixture.userId, tradeId, tx);
+      });
+
+      expect(stored?.byTheBook).toBe(expected);
+    });
+  }
+
   it("saves a taken trade on the user's account and returns its figures", async (ctx) => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 
@@ -647,6 +670,43 @@ async function importMarksOf(tx: Tx, tradeId: number) {
 }
 
 describe("saveTrade — edit", () => {
+  for (const { answer, before, after, expected } of [
+    {
+      answer: "keeps unanswered",
+      before: undefined,
+      after: undefined,
+      expected: null,
+    },
+    { answer: "keeps yes", before: true, after: true, expected: true },
+    { answer: "keeps no", before: false, after: false, expected: false },
+    { answer: "sets yes", before: undefined, after: true, expected: true },
+    { answer: "sets no", before: undefined, after: false, expected: false },
+    { answer: "clears yes", before: true, after: undefined, expected: null },
+    { answer: "clears no", before: false, after: undefined, expected: null },
+  ]) {
+    it(`by-the-book answer: ${answer}`, async (ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const stored = await inRollback(async (tx) => {
+        const fixture = await seedFixture(tx);
+        const tradeId = await createdTradeId(
+          tx,
+          fixture,
+          takenDraft(fixture, { byTheBook: before }),
+        );
+        const saved = await saveTrade(
+          fixture.userId,
+          takenDraft(fixture, { byTheBook: after }),
+          editOf(tx, tradeId),
+        );
+        if (!saved.success) throw new Error(saved.error);
+        return getOwnedTrade(fixture.userId, tradeId, tx);
+      });
+
+      expect(stored?.byTheBook).toBe(expected);
+    });
+  }
+
   it("fails another user's trade and a deleted trade as not found", async (ctx) => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 

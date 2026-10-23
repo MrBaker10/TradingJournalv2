@@ -1344,6 +1344,9 @@ Zod-Validierung aus 4.5 bleibt die einzige. Welche Felder Pflicht sind, sagt all
 `createTradeSchema`. Pflicht-Selects zeigen „Select…", optionale „—" — der
 Unterschied ist Absicht.
 
+**By the book** ist ein optionales Select mit `—`, `Yes`, `No`. `—` ist
+unbeantwortet; auch eine frühere Antwort lässt sich damit wieder leeren.
+
 **Chips.** Nicht gewählt: `--color-well`, 1px-Rand, `--color-fg-muted`. Gewählt:
 genau das Badge der Detailseite — Confluences und Accounts auf der blauen ruhigen
 Fläche, Mistakes auf der neutralen (4.14, 4.20). Was man anklickt, sieht aus wie das,

@@ -47,6 +47,10 @@ time, session, direction, setup type, entry model, entry / exit / stop price, MF
 MAE in R, points captured, P&L override, result, grade, felt, by-the-book flag, notes,
 screenshots, links.
 
+**By the book** is an optional assessment of whether a taken trade followed the
+trader's own plan and rules. Unanswered, Yes and No are distinct values. New trades
+start unanswered; editing preserves the answer and lets the trader clear it.
+
 **Post-exit MFE** is a separate manual field, shown only when a stop price is set. It
 cannot be derived, because deriving it would need price data after the exit and market
 data is out of scope.
