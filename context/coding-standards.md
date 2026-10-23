@@ -8,7 +8,7 @@ version upgrades belong in a separate commit that changes nothing else.
 | | |
 |---|---|
 | Node | 24 LTS |
-| Next.js | 16.3.4 (App Router) |
+| Next.js | 16.4.2 (App Router) |
 | React | 19.2.8 |
 | TypeScript | 7.0.2 |
 | PostgreSQL | 18.x — lokal 18.4 (DBngin), Neon 18 in aws-eu-central-1 (seit P2.2) |
