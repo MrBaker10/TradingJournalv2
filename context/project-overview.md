@@ -477,7 +477,7 @@ build, verify in the browser, ask before committing, record in history.
 One branch per feature: `feature/[name]` or `fix/[name]`.
 
 Context files: `project-overview.md` (this file), `project-structure.md`,
-`coding-standards.md`, `ai-interaction.md`, `current-feature.md`, `Design.md`,
+`coding-standards.md`, `ai-interaction.md`, `Design.md`,
 `PropFirmsData.md`.
 
 ---
@@ -581,7 +581,7 @@ and branch per item. Terms in `GLOSSARY.md`.
 - No billing or payment provider
 - No AI features
 - No Redis or queue infrastructure beyond what Phase 1 needs
-- Nothing under "Do not build" in `context/current-feature.md`
+- Nothing under "Do not build" in the active spec `.scratch/<feature>/spec.md`
 
 ---
 
@@ -629,7 +629,7 @@ by picking a different answer while coding.
   by-the-book and current streak added to the metric panel; "room to daily loss"
   struck, since it needs the deferred prop firm link.
 - **"Do not build"** — two lists with two homes: permanent limits under Not Building
-  above, the per-branch fence in `current-feature.md`.
+  above, the per-branch fence in the active spec `.scratch/<feature>/spec.md`.
 - **Fonts** — `next/font/local` with font files vendored in the repo, never
   `next/font/google`. "Self-hosted" means no network request to a third party at all,
   not even once at build time — `next/font/google` still fetches from Google's servers
@@ -826,7 +826,7 @@ by picking a different answer while coding.
   records which date ranges were actually fetched, or re-checks the gap. Decided
   2026-10-18: record fetched ranges, Phase 3 item 1. Fixed and merged 2026-10-18.
 
-New questions belong in the Open questions block of `context/current-feature.md` while
+New questions belong in the Open questions block of the active spec `.scratch/<feature>/spec.md` while
 a feature is in progress, and move up here once they affect the project as a whole.
 
 ---

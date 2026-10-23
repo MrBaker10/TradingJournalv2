@@ -1,5 +1,8 @@
 # Decisions
 
+> **Archiv bis 2026-10-23, nicht mehr fortschreiben.** Neue Begründungen stehen als ADR in
+> `docs/adr/`, Specs und Tickets unter `.scratch/<feature>/`.
+
 Append-only. Ein Block pro abgeschlossenem Slice, neueste **unten**. Nichts hier wird
 umgeschrieben oder gelöscht — auch nicht, wenn eine Entscheidung später revidiert wird.
 Dann kommt ein neuer Block, der auf den alten verweist.

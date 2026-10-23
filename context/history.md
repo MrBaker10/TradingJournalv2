@@ -1,5 +1,8 @@
 # History
 
+> **Archive up to 2026-10-23, no longer updated.** Completed work is recorded in
+> `.scratch/<feature>/` and `git log`.
+
 One line per merged feature. Newest at the top.
 
 | Date | Feature | Notes |

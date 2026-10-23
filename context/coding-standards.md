@@ -68,12 +68,12 @@ version upgrades belong in a separate commit that changes nothing else.
 - **Do not** create `tailwind.config.ts` or `tailwind.config.js`. Those are v3.
 - Theme configuration goes in `src/app/globals.css` via `@theme`.
 - Use CSS custom properties for colours and spacing.
-- **v4 scans every file in the project, Markdown in `context/` included.** An
-  arbitrary-value utility written in prose — in a spec, a note, a comment — is
-  generated as a real rule, and if its value is a placeholder rather than a real one
-  the stylesheet fails to parse and the dev server serves a blank page. The equity
-  curve slice hit this from `current-feature.md`. Name utilities without their
-  brackets in prose.
+- **v4 scans every file in the project, Markdown in `context/` and the specs in
+  `.scratch/` included.** An arbitrary-value utility written in prose — in a spec, a
+  note, a comment — is generated as a real rule, and if its value is a placeholder
+  rather than a real one the stylesheet fails to parse and the dev server serves a
+  blank page. The equity curve slice hit this from `current-feature.md`. Name
+  utilities without their brackets in prose.
 
 ```css
 @import "tailwindcss";
