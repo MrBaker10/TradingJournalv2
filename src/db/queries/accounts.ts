@@ -261,7 +261,7 @@ export interface AssignableAccount {
  *
  * So the rule is: an archived assignment can be kept, never newly made. Both
  * the edit form (which renders these as options, archived ones marked) and
- * updateTrade (which validates the submitted ids against them) read it from
+ * saveTrade (which validates an edit's submitted ids against them) read it from
  * here, so the list the user sees and the list the server accepts cannot
  * drift apart.
  */

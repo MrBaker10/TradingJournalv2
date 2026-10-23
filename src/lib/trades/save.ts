@@ -9,7 +9,10 @@
 // override and has its own commission rule (src/db/queries/import.ts).
 
 import { db } from "../../db/index.ts";
-import { listOwnedAccountIds } from "../../db/queries/accounts.ts";
+import {
+  listAssignableAccounts,
+  listOwnedAccountIds,
+} from "../../db/queries/accounts.ts";
 import { listCommissionRates } from "../../db/queries/commission-rates.ts";
 import {
   ensureFxRates,
@@ -21,7 +24,12 @@ import { getInstrumentById } from "../../db/queries/instruments.ts";
 import {
   countExistingConfluenceTags,
   countExistingMistakeTags,
+  getOwnedTrade,
   insertTradeWithRelations,
+  listAssignmentCommissions,
+  replaceTradeWithRelations,
+  type TradeRelationIds,
+  type TradeWriteColumns,
 } from "../../db/queries/trades.ts";
 import {
   commissionOnSave,
@@ -29,7 +37,11 @@ import {
 } from "../../domain/commission.ts";
 import { isRateCurrency } from "../../domain/fx.ts";
 import { calculateUsdPnl } from "../../domain/pnl.ts";
-import { validateTradeAccountAssignment } from "../../domain/trades.ts";
+import {
+  type ImportMarks,
+  importMarksAfterEdit,
+  validateTradeAccountAssignment,
+} from "../../domain/trades.ts";
 import type { CreateTradeInput } from "../../schemas/trades.ts";
 import { fetchEcbRates } from "../fx/frankfurter.ts";
 import { dollarsToCents, exactCents } from "../money.ts";
@@ -41,6 +53,8 @@ export type SaveExecutor = Pick<
 >;
 
 export interface SaveOptions {
+  /** The trade to edit; without it a new trade is created. */
+  tradeId?: number;
   /** Where missing exchange rates come from; the ECB unless a test says so. */
   fetcher?: RateFetcher;
   executor?: SaveExecutor;
@@ -68,7 +82,7 @@ export type SaveTradeResult =
  * imported trade keeps its provenance. Hand-editing it is what protects it
  * from an undo anyway (src/db/queries/import.ts, TOUCHED).
  */
-export function buildTradeColumns(data: CreateTradeInput, profit: ProfitRate) {
+function buildTradeColumns(data: CreateTradeInput, profit: ProfitRate) {
   let pnlCents: number | null = null;
   let rMultiple: number | null = null;
   let points: string | null = null;
@@ -150,7 +164,7 @@ interface ProfitRate {
  * `ensureDisplayRates`: the figures read the rate in SQL and fall back to the
  * nearest stored one, and job:fx fetches what is still missing.
  */
-export async function profitRateFor(
+async function profitRateFor(
   instrument: { pointValue: string; profitCurrency: string },
   tradeDate: string,
   fetcher: RateFetcher = fetchEcbRates,
@@ -180,7 +194,7 @@ export async function profitRateFor(
  * whatever the ECB says, the display falls back to the nearest stored rate,
  * and job:fx fetches what is still missing overnight.
  */
-export async function ensureDisplayRates(
+async function ensureDisplayRates(
   userId: number,
   accountIds: number[],
   tradeDate: string,
@@ -204,7 +218,7 @@ export async function ensureDisplayRates(
 // Same "an id from the client is untrusted until checked" treatment the
 // account ids get, applied to the two tag join tables. Returns the message to
 // hand back, or null when everything exists.
-export async function findUnknownTagError(
+async function findUnknownTagError(
   data: CreateTradeInput,
   executor: SaveExecutor = db,
 ): Promise<string | null> {
@@ -241,7 +255,7 @@ interface CommissionContext {
  * account, with the account's rate for the trade's instrument (commissions).
  * An amount typed for an account the trade is not on is ignored.
  */
-export async function commissionsOnSave(
+async function commissionsOnSave(
   context: CommissionContext,
   executor: SaveExecutor = db,
 ): Promise<Map<number, StoredCommission | null>> {
@@ -278,15 +292,124 @@ export async function commissionsOnSave(
   );
 }
 
+type ExistingTrade = NonNullable<Awaited<ReturnType<typeof getOwnedTrade>>>;
+
 /**
- * Saves a new trade for this user: the id, P&L and R, or the message the form
- * shows. Nothing is written when a check fails.
+ * The submitted account ids that pass the ownership check. Never trust
+ * client-supplied account ids. A new trade may only go onto the user's active
+ * accounts; an edit also keeps an archived account the trade already sits on
+ * — dropping it would strip an assignment the user never touched off a trade
+ * that predates the archiving — but cannot add a different archived one.
+ */
+async function assignableAccountIds(
+  userId: number,
+  accountIds: number[],
+  existing: ExistingTrade | null,
+  executor: SaveExecutor,
+): Promise<number[]> {
+  if (!existing) {
+    return listOwnedAccountIds(userId, accountIds, executor);
+  }
+  const assignable = await listAssignableAccounts(
+    userId,
+    existing.id,
+    executor,
+  );
+  const assignableIds = new Set(assignable.map((account) => account.id));
+  return accountIds.filter((id) => assignableIds.has(id));
+}
+
+type TradeColumns = ReturnType<typeof buildTradeColumns>["columns"];
+
+interface EditContext {
+  /** The trade being edited and the import marks it keeps; null on create. */
+  edit: { trade: ExistingTrade; marks: ImportMarks } | null;
+  /** Each account's commission before this save; empty on create. */
+  storedCommissions: Map<number, StoredCommission | null>;
+  basisChanged: boolean;
+  pnlFromFile: boolean;
+}
+
+/**
+ * What only an edit brings to the save. Only a changed contract count or
+ * instrument makes a rate-derived commission stale; a rate changed in
+ * Settings since does not (commissions). While the P&L is still the file's
+ * own, it is net already and no rate applies.
+ */
+async function editContextFor(
+  existing: ExistingTrade | null,
+  columns: TradeColumns,
+  executor: SaveExecutor,
+): Promise<EditContext> {
+  if (!existing) {
+    // A trade logged by hand never carries a file's P&L.
+    return {
+      edit: null,
+      storedCommissions: new Map(),
+      basisChanged: false,
+      pnlFromFile: false,
+    };
+  }
+  const marks = importMarksAfterEdit(existing, columns);
+  return {
+    edit: { trade: existing, marks },
+    storedCommissions: await listAssignmentCommissions(existing.id, executor),
+    basisChanged:
+      existing.instrumentId !== columns.instrumentId ||
+      existing.contracts === null ||
+      Number(existing.contracts) !== Number(columns.contracts),
+    pnlFromFile: marks.pnlSource !== null,
+  };
+}
+
+/**
+ * Inserts a new trade with its links, or rewrites the edited one with its
+ * import marks, in one transaction; returns the trade's id.
+ */
+async function writeTrade(
+  userId: number,
+  columns: TradeWriteColumns,
+  relations: TradeRelationIds,
+  links: CreateTradeInput["links"],
+  edit: EditContext["edit"],
+  executor: SaveExecutor,
+): Promise<number> {
+  return executor.transaction(async (tx) => {
+    if (!edit) {
+      return insertTradeWithRelations(tx, userId, columns, relations, links);
+    }
+    await replaceTradeWithRelations(
+      tx,
+      edit.trade.id,
+      { ...columns, ...edit.marks },
+      relations,
+    );
+    return edit.trade.id;
+  });
+}
+
+/**
+ * Saves a trade for this user — a new one, or with `tradeId` an edit of one
+ * of theirs: the id, P&L and R, or the message the form shows. Nothing is
+ * written when a check fails.
+ *
+ * An edit replaces every column, the accounts and the tags; links stay
+ * managed by their own actions while the form is open, so only a new trade
+ * writes the links it was sent.
  */
 export async function saveTrade(
   userId: number,
   data: CreateTradeInput,
-  { fetcher = fetchEcbRates, executor = db }: SaveOptions = {},
+  { tradeId, fetcher = fetchEcbRates, executor = db }: SaveOptions = {},
 ): Promise<SaveTradeResult> {
+  let existing: ExistingTrade | null = null;
+  if (tradeId !== undefined) {
+    existing = (await getOwnedTrade(userId, tradeId, executor)) ?? null;
+    if (!existing) {
+      return { success: false, error: "Trade not found" };
+    }
+  }
+
   const instrument = await getInstrumentById(data.instrumentId, executor);
   if (!instrument) {
     return { success: false, error: "Instrument not found" };
@@ -297,15 +420,15 @@ export async function saveTrade(
     return { success: false, error: tagError };
   }
 
-  // Never trust client-supplied account ids — re-check ownership before
-  // anything else. A missed setup submits no ids, so this stays empty.
-  const ownedAccountIds = data.taken
-    ? await listOwnedAccountIds(userId, data.accountIds, executor)
+  // Ownership before anything else. A missed setup submits no ids, so this
+  // stays empty.
+  const accountIds = data.taken
+    ? await assignableAccountIds(userId, data.accountIds, existing, executor)
     : [];
 
   const assignment = validateTradeAccountAssignment({
     taken: data.taken,
-    accountIds: ownedAccountIds,
+    accountIds,
   });
   if (!assignment.success) {
     return { success: false, error: assignment.error };
@@ -315,46 +438,45 @@ export async function saveTrade(
     data,
     await profitRateFor(instrument, data.tradeDate, fetcher, executor),
   );
+  const context = await editContextFor(existing, columns, executor);
 
   const accountCommissions = data.taken
     ? await commissionsOnSave(
         {
           userId,
-          accountIds: ownedAccountIds,
+          accountIds,
           instrumentId: instrument.id,
           contracts: data.contracts,
           typed: data.commissions,
-          existing: new Map(),
-          basisChanged: false,
-          // A trade logged by hand never carries a file's P&L.
-          pnlFromFile: false,
+          existing: context.storedCommissions,
+          basisChanged: context.basisChanged,
+          pnlFromFile: context.pnlFromFile,
         },
         executor,
       )
     : new Map();
 
-  const createdId = await executor.transaction((tx) =>
-    insertTradeWithRelations(
-      tx,
-      userId,
-      columns,
-      {
-        accountIds: ownedAccountIds,
-        accountCommissions,
-        confluenceTagIds: data.confluenceTagIds,
-        mistakeTagIds: data.mistakeTagIds,
-      },
-      data.links,
-    ),
+  const savedId = await writeTrade(
+    userId,
+    columns,
+    {
+      accountIds,
+      accountCommissions,
+      confluenceTagIds: data.confluenceTagIds,
+      mistakeTagIds: data.mistakeTagIds,
+    },
+    data.links,
+    context.edit,
+    executor,
   );
 
   await ensureDisplayRates(
     userId,
-    ownedAccountIds,
+    accountIds,
     data.tradeDate,
     fetcher,
     executor,
   );
 
-  return { success: true, data: { id: createdId, pnlCents, rMultiple } };
+  return { success: true, data: { id: savedId, pnlCents, rMultiple } };
 }

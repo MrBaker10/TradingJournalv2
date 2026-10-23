@@ -602,3 +602,278 @@ describe("saveTrade — create", () => {
     expect(result.count).toBe(1);
   });
 });
+
+// A trade saved through the create path, as the starting point of an edit.
+async function createdTradeId(
+  tx: Tx,
+  fixture: Fixture,
+  draft: CreateTradeInput = takenDraft(fixture),
+): Promise<number> {
+  const saved = await saveTrade(fixture.userId, draft, {
+    executor: tx,
+    fetcher: failingFetcher(),
+  });
+  if (!saved.success) throw new Error(saved.error);
+  return saved.data.id;
+}
+
+// The options of an edit of this trade, with the ECB out of the test.
+function editOf(tx: Tx, tradeId: number) {
+  return { tradeId, executor: tx, fetcher: failingFetcher() };
+}
+
+// What an import leaves on a trade whose file reported the stop and a net
+// P&L of $38.
+async function markAsImported(tx: Tx, tradeId: number) {
+  await tx
+    .update(trades)
+    .set({
+      stopImported: true,
+      pnlOverride: "38.00",
+      pnlSource: "38.00",
+    })
+    .where(eq(trades.id, tradeId));
+}
+
+async function importMarksOf(tx: Tx, tradeId: number) {
+  const [row] = await tx
+    .select({
+      stopImported: trades.stopImported,
+      pnlSource: trades.pnlSource,
+    })
+    .from(trades)
+    .where(eq(trades.id, tradeId));
+  return row;
+}
+
+describe("saveTrade — edit", () => {
+  it("fails another user's trade and a deleted trade as not found", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const fixture = await seedFixture(tx);
+      // The stranger logs their own trade on their own account.
+      const strangers = await saveTrade(
+        fixture.otherUserId,
+        takenDraft(fixture, { accountIds: [fixture.otherUsersAccountId] }),
+        { executor: tx, fetcher: failingFetcher() },
+      );
+      if (!strangers.success) throw new Error(strangers.error);
+      const deletedId = await createdTradeId(tx, fixture);
+      await tx.delete(trades).where(eq(trades.id, deletedId));
+      return {
+        strangers: await saveTrade(
+          fixture.userId,
+          takenDraft(fixture),
+          editOf(tx, strangers.data.id),
+        ),
+        deleted: await saveTrade(
+          fixture.userId,
+          takenDraft(fixture),
+          editOf(tx, deletedId),
+        ),
+        count: await tradeCount(tx, fixture.userId),
+      };
+    });
+
+    expect(result.strangers).toEqual({
+      success: false,
+      error: "Trade not found",
+    });
+    expect(result.deleted).toEqual({
+      success: false,
+      error: "Trade not found",
+    });
+    expect(result.count).toBe(0);
+  });
+
+  it("keeps an archived account the trade sits on and rejects one it was not on", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const fixture = await seedFixture(tx);
+      const keptId = await addAccount(tx, fixture.userId, { name: "Old eval" });
+      const tradeId = await createdTradeId(
+        tx,
+        fixture,
+        takenDraft(fixture, { accountIds: [fixture.accountId, keptId] }),
+      );
+      await tx
+        .update(accounts)
+        .set({ archivedAt: new Date("2026-04-01T00:00:00Z") })
+        .where(eq(accounts.id, keptId));
+      const otherArchivedId = await addAccount(tx, fixture.userId, {
+        name: "Retired",
+        archivedAt: new Date("2026-02-01T00:00:00Z"),
+      });
+      const saved = await saveTrade(
+        fixture.userId,
+        takenDraft(fixture, {
+          accountIds: [fixture.accountId, keptId, otherArchivedId],
+        }),
+        editOf(tx, tradeId),
+      );
+      return {
+        saved,
+        expected: [fixture.accountId, keptId],
+        assigned: (await assignmentsOf(tx, tradeId)).map(
+          (row) => row.accountId,
+        ),
+      };
+    });
+
+    expect(result.saved.success).toBe(true);
+    expect(result.assigned).toEqual(result.expected);
+  });
+
+  it("replaces the tags and accounts instead of adding to them", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const fixture = await seedFixture(tx);
+      const copyId = await addAccount(tx, fixture.userId, { name: "Copy" });
+      const [confluence] = await tx
+        .select({ id: confluenceTags.id })
+        .from(confluenceTags)
+        .limit(1);
+      const [mistake] = await tx
+        .select({ id: mistakeTags.id })
+        .from(mistakeTags)
+        .limit(1);
+      const tradeId = await createdTradeId(
+        tx,
+        fixture,
+        takenDraft(fixture, {
+          accountIds: [fixture.accountId, copyId],
+          confluenceTagIds: [confluence.id],
+          mistakeTagIds: [mistake.id],
+        }),
+      );
+      const saved = await saveTrade(
+        fixture.userId,
+        takenDraft(fixture, { accountIds: [copyId] }),
+        editOf(tx, tradeId),
+      );
+      return {
+        saved,
+        copyId,
+        assigned: (await assignmentsOf(tx, tradeId)).map(
+          (row) => row.accountId,
+        ),
+        confluence: await tx
+          .select({ id: tradeConfluences.confluenceTagId })
+          .from(tradeConfluences)
+          .where(eq(tradeConfluences.tradeId, tradeId)),
+        mistake: await tx
+          .select({ id: tradeMistakes.mistakeTagId })
+          .from(tradeMistakes)
+          .where(eq(tradeMistakes.tradeId, tradeId)),
+      };
+    });
+
+    expect(result.saved.success).toBe(true);
+    expect(result.assigned).toEqual([result.copyId]);
+    expect(result.confluence).toEqual([]);
+    expect(result.mistake).toEqual([]);
+  });
+
+  it("keeps a stored commission until the contract count changes", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const fixture = await seedFixture(tx);
+      await tx.insert(accountCommissionRates).values({
+        accountId: fixture.accountId,
+        instrumentId: fixture.instrumentId,
+        perSide: "1.50",
+      });
+      const tradeId = await createdTradeId(tx, fixture);
+      // The rate changes in Settings after the trade was saved.
+      await tx
+        .update(accountCommissionRates)
+        .set({ perSide: "2.00" })
+        .where(eq(accountCommissionRates.accountId, fixture.accountId));
+      const options = editOf(tx, tradeId);
+
+      await saveTrade(fixture.userId, takenDraft(fixture), options);
+      const unchanged = await assignmentsOf(tx, tradeId);
+      await saveTrade(
+        fixture.userId,
+        takenDraft(fixture, { contracts: 3 }),
+        options,
+      );
+      return { unchanged, recomputed: await assignmentsOf(tx, tradeId) };
+    });
+
+    // 2 × 2 × $1.50 stays; 3 × 2 × $2.00 once the count changed.
+    expect(result.unchanged.map((row) => row.commission)).toEqual(["6.00"]);
+    expect(result.recomputed.map((row) => row.commission)).toEqual(["12.00"]);
+  });
+
+  it("adds no commission while the P&L is still the import file's own", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const assignments = await inRollback(async (tx) => {
+      const fixture = await seedFixture(tx);
+      const tradeId = await createdTradeId(tx, fixture);
+      await markAsImported(tx, tradeId);
+      await tx.insert(accountCommissionRates).values({
+        accountId: fixture.accountId,
+        instrumentId: fixture.instrumentId,
+        perSide: "1.50",
+      });
+      await saveTrade(
+        fixture.userId,
+        takenDraft(fixture, { pnlOverride: 38 }),
+        editOf(tx, tradeId),
+      );
+      return assignmentsOf(tx, tradeId);
+    });
+
+    expect(assignments.map((row) => row.commission)).toEqual([null]);
+  });
+
+  it("keeps the import marks on untouched values and clears a changed one", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const fixture = await seedFixture(tx);
+      const tradeId = await createdTradeId(tx, fixture);
+      await markAsImported(tx, tradeId);
+      const options = editOf(tx, tradeId);
+
+      await saveTrade(
+        fixture.userId,
+        takenDraft(fixture, { pnlOverride: 38 }),
+        options,
+      );
+      const untouched = await importMarksOf(tx, tradeId);
+      await saveTrade(
+        fixture.userId,
+        takenDraft(fixture, { pnlOverride: 38, stopPrice: 96 }),
+        options,
+      );
+      const stopChanged = await importMarksOf(tx, tradeId);
+      await saveTrade(
+        fixture.userId,
+        takenDraft(fixture, { pnlOverride: 39, stopPrice: 96 }),
+        options,
+      );
+      return {
+        untouched,
+        stopChanged,
+        pnlChanged: await importMarksOf(tx, tradeId),
+      };
+    });
+
+    expect(result.untouched).toEqual({
+      stopImported: true,
+      pnlSource: "38.00",
+    });
+    expect(result.stopChanged).toEqual({
+      stopImported: false,
+      pnlSource: "38.00",
+    });
+    expect(result.pnlChanged).toEqual({ stopImported: false, pnlSource: null });
+  });
+});
