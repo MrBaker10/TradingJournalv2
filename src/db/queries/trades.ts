@@ -1213,8 +1213,9 @@ export async function replaceTradeWithRelations(
  */
 export async function listAssignmentCommissions(
   tradeId: number,
+  executor: ReadExecutor = db,
 ): Promise<Map<number, StoredCommission | null>> {
-  const rows = await db
+  const rows = await executor
     .select({
       accountId: tradeAccounts.accountId,
       commission: tradeAccounts.commission,
@@ -1238,8 +1239,12 @@ export async function listAssignmentCommissions(
 
 // A tradeId from the client is only usable once it's checked against the
 // current user — same treatment as getOwnedAccount in db/queries/accounts.ts.
-export async function getOwnedTrade(userId: number, tradeId: number) {
-  const [trade] = await db
+export async function getOwnedTrade(
+  userId: number,
+  tradeId: number,
+  executor: ReadExecutor = db,
+) {
+  const [trade] = await executor
     .select()
     .from(trades)
     .where(and(eq(trades.id, tradeId), eq(trades.userId, userId)))
@@ -1279,18 +1284,22 @@ export async function getNextLinkSortOrder(tradeId: number): Promise<number> {
 
 export async function countExistingConfluenceTags(
   ids: number[],
+  executor: ReadExecutor = db,
 ): Promise<number> {
   if (ids.length === 0) return 0;
-  const rows = await db
+  const rows = await executor
     .select({ id: confluenceTags.id })
     .from(confluenceTags)
     .where(inArray(confluenceTags.id, ids));
   return rows.length;
 }
 
-export async function countExistingMistakeTags(ids: number[]): Promise<number> {
+export async function countExistingMistakeTags(
+  ids: number[],
+  executor: ReadExecutor = db,
+): Promise<number> {
   if (ids.length === 0) return 0;
-  const rows = await db
+  const rows = await executor
     .select({ id: mistakeTags.id })
     .from(mistakeTags)
     .where(inArray(mistakeTags.id, ids));

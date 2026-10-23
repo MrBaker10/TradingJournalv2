@@ -16,6 +16,9 @@ import { accounts } from "../schema/accounts.ts";
 import { ledgerEntries } from "../schema/ledger.ts";
 import { tradeAccounts } from "../schema/trades.ts";
 
+/** Anything that can run a read: the shared client, or a transaction. */
+export type ReadExecutor = Pick<typeof db, "select">;
+
 /** Any trade assigned to this account — the lock on changing its currency. */
 export function hasAssignedTrades() {
   // Drizzle strips column qualifiers in a SELECT projection. Keep this
@@ -195,12 +198,13 @@ export async function updateStartingBalance(
 export async function listOwnedAccountIds(
   userId: number,
   accountIds: number[],
+  executor: ReadExecutor = db,
 ): Promise<number[]> {
   if (accountIds.length === 0) {
     return [];
   }
 
-  const rows = await db
+  const rows = await executor
     .select({ id: accounts.id })
     .from(accounts)
     .where(
@@ -257,15 +261,16 @@ export interface AssignableAccount {
  *
  * So the rule is: an archived assignment can be kept, never newly made. Both
  * the edit form (which renders these as options, archived ones marked) and
- * updateTrade (which validates the submitted ids against them) read it from
+ * saveTrade (which validates an edit's submitted ids against them) read it from
  * here, so the list the user sees and the list the server accepts cannot
  * drift apart.
  */
 export async function listAssignableAccounts(
   userId: number,
   tradeId: number,
+  executor: ReadExecutor = db,
 ): Promise<AssignableAccount[]> {
-  const rows = await db
+  const rows = await executor
     .select({
       id: accounts.id,
       name: accounts.name,

@@ -27,7 +27,7 @@ export default async function EditTradePage({ params }: EditTradePageProps) {
 
   // Not listActiveAccountsForSwitcher, which the new-trade page uses: an
   // archived account this trade already sits on has to stay in the list, or
-  // saving would drop an assignment the user never touched. updateTrade reads
+  // saving would drop an assignment the user never touched. saveTrade reads
   // the same query, so the options here and the ids the server accepts are
   // the same set.
   const [accounts, instruments, confluenceGroups, mistakeTags] =

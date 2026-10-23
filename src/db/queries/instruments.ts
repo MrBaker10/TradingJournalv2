@@ -6,8 +6,14 @@ export async function listInstruments() {
   return db.select().from(instruments).orderBy(asc(instruments.symbol));
 }
 
-export async function getInstrumentById(id: number) {
-  const [instrument] = await db
+/** Anything that can run a read: the shared client, or a transaction. */
+export type ReadExecutor = Pick<typeof db, "select">;
+
+export async function getInstrumentById(
+  id: number,
+  executor: ReadExecutor = db,
+) {
+  const [instrument] = await executor
     .select()
     .from(instruments)
     .where(eq(instruments.id, id))

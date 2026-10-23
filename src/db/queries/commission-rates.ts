@@ -8,6 +8,9 @@ import { instruments } from "../schema/instruments.ts";
 // read and write goes through `accounts.user_id`: an account id from the
 // client is a permission boundary, not a label (coding-standards.md).
 
+/** Anything that can run a read: the shared client, or a transaction. */
+export type ReadExecutor = Pick<typeof db, "select">;
+
 export interface CommissionRate {
   accountId: number;
   instrumentId: number;
@@ -20,10 +23,11 @@ export interface CommissionRate {
 export async function listCommissionRates(
   userId: number,
   accountIds: number[],
+  executor: ReadExecutor = db,
 ): Promise<CommissionRate[]> {
   if (accountIds.length === 0) return [];
 
-  const rows = await db
+  const rows = await executor
     .select({
       accountId: accountCommissionRates.accountId,
       instrumentId: accountCommissionRates.instrumentId,
