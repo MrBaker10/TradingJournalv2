@@ -7,9 +7,38 @@ History and reset this file to “Nothing in progress”.
 
 ## Status
 
-**Nothing in progress.**
+**In progress: save-trade** — Branch `feature/save-trade`, ticket 01
 
-## Feature: _(none)_
+## Feature: save-trade
+
+**Goal.** One module saves a trade, new or edited; the two server actions shrink to
+adapters. Spec: `.scratch/save-trade/spec.md`, tickets under
+`.scratch/save-trade/issues/`.
+
+**Scope (ticket 01).** The eight queries the save path reads through take an optional
+executor that defaults to the shared client: `listOwnedAccountIds`,
+`listAssignableAccounts` (`src/db/queries/accounts.ts`), `getInstrumentById`
+(`instruments.ts`), `listCommissionRates` (`commission-rates.ts`),
+`countExistingConfluenceTags`, `countExistingMistakeTags`, `getOwnedTrade`,
+`listAssignmentCommissions` (`trades.ts`). Same pattern as the import and FX queries.
+
+### Do not build
+
+- No caller change, no query result change, no new tests (no behaviour changes; the
+  save module's tests come with ticket 02 onward).
+- Everything under the spec's "Out of Scope".
+
+### Acceptance
+
+- [x] The eight queries take an optional executor that defaults to the shared client.
+- [x] No caller changes; no query changes its result.
+- [x] Existing query and action-related tests unchanged and passing, DB tests executed.
+- [x] Lint, typecheck, full tests, build.
+- [x] Browser: not applicable — no behaviour change.
+
+### Open questions
+
+None.
 
 <!--
 For each new task, record:
