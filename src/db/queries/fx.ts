@@ -80,8 +80,9 @@ async function listFetchedRanges(
  * cannot settle yet (src/domain/fx.ts, `datesNeedingFetch`).
  *
  * One fetch at most: the window runs from the lookback before the earliest
- * missing date to the latest one, so a Monday also brings the Friday it may
- * need. Rows are upserted, which keeps a repeated or concurrent call harmless
+ * missing date to the same margin past the latest one, so a Monday also
+ * brings the Friday it may need and a Saturday the Monday that settles it.
+ * Rows are upserted, which keeps a repeated or concurrent call harmless
  * and lets a later fetch correct a rate the source revised.
  *
  * The returned list is what `rateFor` reads; a date it still cannot answer
@@ -115,11 +116,14 @@ export async function ensureFxRates(
   if (missing.length === 0) return stored;
 
   const fetchFrom = shiftDate(missing[0], -MAX_RATE_LOOKBACK_DAYS);
-  const fetched = await fetcher(
-    currency,
-    fetchFrom,
+  // Past the last date too: a rate after a weekend or holiday is what proves
+  // nothing was published there, so the range can reach over it. The source
+  // returns only what is published, so a window into the future is harmless.
+  const fetchTo = shiftDate(
     missing[missing.length - 1],
+    MAX_RATE_LOOKBACK_DAYS,
   );
+  const fetched = await fetcher(currency, fetchFrom, fetchTo);
   if (fetched.length > 0) {
     await executor
       .insert(fxRates)

@@ -151,6 +151,22 @@ describe("datesNeedingFetch", () => {
     ).toEqual(["2026-09-18", "2026-09-21"]);
   });
 
+  it("needs a range's first day when its rate lies before the range", () => {
+    // The second fetch starts on Saturday; Friday was never fetched, so
+    // Thursday's rate is not Saturday's.
+    const twoFetches = [
+      { from: "2026-09-10", to: "2026-09-17" },
+      { from: "2026-09-19", to: "2026-09-22" },
+    ];
+    expect(
+      datesNeedingFetch(
+        ["2026-09-19"],
+        ["2026-09-17", "2026-09-21", "2026-09-22"],
+        twoFetches,
+      ),
+    ).toEqual(["2026-09-19"]);
+  });
+
   it("needs a stored day that no fetch range covers", () => {
     expect(datesNeedingFetch(["2026-09-18"], stored, [])).toEqual([
       "2026-09-18",
