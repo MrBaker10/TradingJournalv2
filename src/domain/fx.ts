@@ -163,13 +163,15 @@ export interface FetchedRange {
 /**
  * The dates whose rate the stored set cannot settle yet.
  *
- * A date is settled when it lies inside a fetched range **and** `rateFor`
- * finds a rate for it. The range is what matters: with Friday stored and
- * Monday asked for, `rateFor` would happily return Friday's rate — but only
- * because Monday's has not been fetched, not because the ECB skipped Monday.
- * Inside a range a missing day is a real non-publishing day. A later stored
- * rate is no such proof: two fetches at different times leave the days
- * between them unfetched (fx-fetch-coverage).
+ * A date is settled when `applicableRate` finds a rate for it **and** one
+ * fetched range covers every day from that rate to the date. The range is
+ * what matters: with Friday stored and Monday asked for, the applicable rate
+ * would be Friday's — but only because Monday's has not been fetched, not
+ * because the ECB skipped Monday. Inside a range a missing day is a real
+ * non-publishing day. A later stored rate is no such proof: two fetches at
+ * different times leave the days between them unfetched (fx-fetch-coverage).
+ * Nor is a range that starts after the rate: the days between the rate and
+ * the range's start were never fetched (fx-range-edges).
  */
 export function datesNeedingFetch(
   dates: string[],
@@ -179,9 +181,10 @@ export function datesNeedingFetch(
   const stored = storedDates.map((date) => ({ date, rateVsUsd: "1" }));
   const needed = new Set<string>();
   for (const date of dates) {
+    const rate = applicableRate(date, stored);
     const covered =
-      fetched.some((range) => range.from <= date && date <= range.to) &&
-      rateFor(date, stored) !== null;
+      rate !== null &&
+      fetched.some((range) => range.from <= rate.date && date <= range.to);
     if (!covered) needed.add(date);
   }
   return [...needed].sort();

@@ -58,6 +58,15 @@ const source: FxRate[] = [
   { date: "2001-03-13", rateVsUsd: "0.9181" },
 ];
 
+// Every weekday of March 2001 has a rate of its own; 2001-03-01 is a Thursday.
+const march: FxRate[] = Array.from({ length: 31 }, (_, index) => {
+  const date = `2001-03-${String(index + 1).padStart(2, "0")}`;
+  return { date, rateVsUsd: `0.9${String(index + 1).padStart(2, "0")}` };
+}).filter(({ date }) => {
+  const day = new Date(`${date}T00:00:00Z`).getUTCDay();
+  return day !== 0 && day !== 6;
+});
+
 function recordingFetcher(rates: FxRate[]) {
   const calls: { currency: RateCurrency; from: string; to: string }[] = [];
   const fetcher = async (currency: RateCurrency, from: string, to: string) => {
@@ -81,13 +90,14 @@ describe("ensureFxRates", () => {
     });
 
     expect(result.calls).toEqual([
-      { currency: "EUR", from: "2001-03-02", to: "2001-03-12" },
+      { currency: "EUR", from: "2001-03-02", to: "2001-03-19" },
     ]);
-    // numeric(18, 10) hands the rate back padded to its scale. The fetch ends
-    // at the last date asked for, so Tuesday is not stored.
+    // numeric(18, 10) hands the rate back padded to its scale. The fetch
+    // reaches past the last date asked for, so Tuesday is stored too.
     expect(result.first).toEqual([
       { date: "2001-03-09", rateVsUsd: "0.9312000000" },
       { date: "2001-03-12", rateVsUsd: "0.9265000000" },
+      { date: "2001-03-13", rateVsUsd: "0.9181000000" },
     ]);
     expect(result.second).toEqual(result.first);
   });
@@ -96,53 +106,71 @@ describe("ensureFxRates", () => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 
     const calls = await inRollback(async (tx) => {
-      const { calls, fetcher } = recordingFetcher(source);
-      await ensureFxRates("EUR", ["2001-03-09"], fetcher, tx);
-      // Only Friday stored so far; Monday may have a rate of its own.
-      await tx
-        .delete(fxRates)
-        .where(
-          and(
-            eq(fxRates.currency, "EUR"),
-            sql`${fxRates.rateDate} > '2001-03-09'`,
-          ),
-        );
-      await ensureFxRates("EUR", ["2001-03-12"], fetcher, tx);
-      return calls;
+      // The first fetch runs before Monday is published: only Friday comes
+      // back. Monday may have a rate of its own by the second.
+      const early = recordingFetcher(source.slice(0, 1));
+      const later = recordingFetcher(source);
+      await ensureFxRates("EUR", ["2001-03-09"], early.fetcher, tx);
+      await ensureFxRates("EUR", ["2001-03-12"], later.fetcher, tx);
+      return later.calls;
     });
 
-    expect(calls).toHaveLength(2);
-    expect(calls[1]).toEqual({
-      currency: "EUR",
-      from: "2001-03-05",
-      to: "2001-03-12",
-    });
+    expect(calls).toEqual([
+      { currency: "EUR", from: "2001-03-05", to: "2001-03-19" },
+    ]);
   });
 
   it("fetches a date that lies between two separate fetches", async (ctx) => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 
-    // Every weekday of March 2001 has a rate of its own.
-    const march = Array.from({ length: 31 }, (_, index) => {
-      const date = `2001-03-${String(index + 1).padStart(2, "0")}`;
-      return { date, rateVsUsd: `0.9${String(index + 1).padStart(2, "0")}` };
-    }).filter(({ date }) => {
-      const day = new Date(`${date}T00:00:00Z`).getUTCDay();
-      return day !== 0 && day !== 6;
-    });
-
     const result = await inRollback(async (tx) => {
       const { calls, fetcher } = recordingFetcher(march);
-      // Two imports at different times store 2001-02-26..03-05 and
-      // 03-13..03-20; nothing between them was ever fetched.
-      await ensureFxRates("EUR", ["2001-03-05"], fetcher, tx);
+      // Two imports at different times store 2001-02-22..03-08 and
+      // 03-13..03-27; nothing between them was ever fetched.
+      await ensureFxRates("EUR", ["2001-03-01"], fetcher, tx);
       await ensureFxRates("EUR", ["2001-03-20"], fetcher, tx);
-      const rates = await ensureFxRates("EUR", ["2001-03-08"], fetcher, tx);
+      const rates = await ensureFxRates("EUR", ["2001-03-12"], fetcher, tx);
       return { calls, rates };
     });
 
-    expect(rateFor("2001-03-08", result.rates)).toBe("0.9080000000");
+    expect(rateFor("2001-03-12", result.rates)).toBe("0.9120000000");
     expect(result.calls).toHaveLength(3);
+  });
+
+  it("fetches a date whose rate would come from before its range", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const { calls, fetcher } = recordingFetcher(march);
+      // The first fetch stores up to Wednesday 03-14. The second, for
+      // Saturday 03-24, starts on Saturday 03-17 — Thursday and Friday before
+      // it were never fetched.
+      await ensureFxRates("EUR", ["2001-03-07"], fetcher, tx);
+      await ensureFxRates("EUR", ["2001-03-24"], fetcher, tx);
+      const rates = await ensureFxRates("EUR", ["2001-03-17"], fetcher, tx);
+      return { calls, rates };
+    });
+
+    // Saturday takes Friday's rate, not Wednesday's.
+    expect(rateFor("2001-03-17", result.rates)).toBe("0.9160000000");
+    expect(result.calls).toHaveLength(3);
+  });
+
+  it("does not fetch a past Saturday again once Friday is stored", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const calls = await inRollback(async (tx) => {
+      const { calls, fetcher } = recordingFetcher(march);
+      await ensureFxRates("EUR", ["2001-03-10"], fetcher, tx);
+      await ensureFxRates("EUR", ["2001-03-10"], fetcher, tx);
+      return calls;
+    });
+
+    // The fetch reaches past Saturday, so Monday's rate proves nothing was
+    // published on the weekend.
+    expect(calls).toEqual([
+      { currency: "EUR", from: "2001-03-03", to: "2001-03-17" },
+    ]);
   });
 
   it("overwrites a stored rate the source has revised", async (ctx) => {
