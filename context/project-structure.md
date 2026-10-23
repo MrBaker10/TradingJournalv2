@@ -82,7 +82,7 @@ src/
   hooks/
   types/
 context/
-  project-structure.md  coding-standards.md  ai-interaction.md  current-feature.md
+  project-structure.md  coding-standards.md  ai-interaction.md
   PropFirmsData.md
 ```
 
@@ -145,8 +145,8 @@ The CSV export and prop firm limits stay in USD.
 ## Phases
 
 Historical delivery sequence, not current task status. Better Auth and the cron jobs
-are implemented. See `current-feature.md` for active work and `history.md` for delivery
-history.
+are implemented. See `.scratch/<feature>/` for active work and the archived `history.md` for delivery
+history up to 2026-10-23.
 
 **Phase 1 — local, no auth.** Postgres 18 locally, seeded single user,
 `getCurrentUser()` returns it. The seed creates one default account, since a trade
@@ -174,9 +174,9 @@ econ calendar sync and the cron jobs.
 - No billing, subscriptions or payment provider.
 - No AI features.
 - No Redis, no Docker, no queue system in v1.
-- Nothing under "Do not build" in `context/current-feature.md`.
+- Nothing under "Do not build" in the active spec `.scratch/<feature>/spec.md`.
 
 ## Open decisions
 
 See `project-overview.md` → “Open Questions”; active task questions belong in
-`current-feature.md`. Do not infer answers from the historical phase plan.
+the active spec under `.scratch/<feature>/`. Do not infer answers from the historical phase plan.

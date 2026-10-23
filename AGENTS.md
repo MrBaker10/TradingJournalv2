@@ -10,7 +10,7 @@ version policy and framework patterns: `context/coding-standards.md`.
 - Ask about open product rules, conflicting requirements or work outside the agreed
   scope. Resolve implementation details from established patterns and tests; do not
   invent product decisions. Preserve unrelated changes in the working tree.
-- Respect `context/current-feature.md` → “Do not build” and
+- Respect “Do not build” in the active spec `.scratch/<feature>/spec.md` and
   `context/project-overview.md` → “Not Building”.
 - Ask before commits, new dependencies, version changes, large refactors,
   architectural changes, file/branch deletion or resolving merge conflicts.
@@ -20,8 +20,8 @@ version policy and framework patterns: `context/coding-standards.md`.
 
 ## Read only what the task needs
 
-Before implementation, read the active `context/current-feature.md` and the workflow
-in `context/ai-interaction.md`. For reviews or questions, read only relevant sources.
+Before implementation, read the active spec and ticket under `.scratch/<feature>/` and
+the workflow in `context/ai-interaction.md`. For reviews or questions, read only relevant sources.
 Search headings/symbols first and read the matching sections with enough surrounding
 context. Do not load entire reference files or histories by default, or reread
 unchanged text already available in the conversation.
@@ -35,8 +35,7 @@ unchanged text already available in the conversation.
 | Money, accounts, time, SQL | Product rules + coding standards for money/time/database + affected domain/query tests |
 | Prop firm rules or seeder | `context/PropFirmsData.md` |
 | Migrations, seeds, deployment, cron operations | `context/operations.md` |
-| Earlier rationale or completed work | Search `context/decisions.md` or `context/history.md`; read matches only |
-| Human use of optional Claude commands | `context/workflow.md`; not required for Codex |
+| Earlier rationale or completed work | `docs/adr/` and `.scratch/<feature>/`; for work before 2026-10-23 search the archived `context/decisions.md` or `context/history.md`; read matches only |
 
 Each source owns its topic: product rules in the overview, technical patterns in
 coding standards, visuals in Design, workflow/gates in ai-interaction. Package.json

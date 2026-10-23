@@ -1,6 +1,11 @@
 #!/bin/sh
 # Blocks the commit unless the project gates pass. Enabled via `git config core.hooksPath .githooks`.
 set -e
+# Documentation-only commits skip the gates, per context/ai-interaction.md.
+if ! git diff --cached --name-only | grep -qv '\.md$'; then
+  echo "pre-commit: only Markdown staged, skipping gates"
+  exit 0
+fi
 pnpm lint
 pnpm typecheck
 pnpm test
