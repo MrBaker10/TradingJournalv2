@@ -1,6 +1,6 @@
 # Spec: Save a trade through one module
 
-Status: ready-for-agent
+Status: done
 
 Origin: architecture review of 2026-10-22, candidate 3. Terms: `GLOSSARY.md` (Trade,
 Taken trade, Missed setup, Account, Copy trade, Import batch).
