@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { strategyContentSchema } from "../strategies.ts";
+import {
+  setStrategyArchivedSchema,
+  strategyContentSchema,
+} from "../strategies.ts";
 
 const nameOnly = {
   name: "Reversal",
@@ -47,5 +50,21 @@ describe("strategyContentSchema", () => {
       exit: "x".repeat(4001),
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("setStrategyArchivedSchema", () => {
+  it("needs a positive strategy id and an explicit target state", () => {
+    expect(
+      setStrategyArchivedSchema.safeParse({ strategyId: 3, archived: true })
+        .success,
+    ).toBe(true);
+    for (const input of [
+      { strategyId: 0, archived: true },
+      { strategyId: 3 },
+      { strategyId: "3", archived: false },
+    ]) {
+      expect(setStrategyArchivedSchema.safeParse(input).success).toBe(false);
+    }
   });
 });

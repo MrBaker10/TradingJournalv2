@@ -37,4 +37,10 @@ export const updateStrategySchema = strategyContentSchema.extend({
   strategyId: z.number().int().positive(),
 });
 
+/** Archiving or reactivating names the strategy and the state it should be in. */
+export const setStrategyArchivedSchema = z.object({
+  strategyId: z.number().int().positive(),
+  archived: z.boolean(),
+});
+
 export type StrategyContentInput = z.input<typeof strategyContentSchema>;

@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "../index.ts";
 import { strategyRevisions, tradingStrategies } from "../schema/strategies.ts";
 
@@ -127,6 +127,69 @@ export async function updateStrategy(
       .returning({ id: strategyRevisions.id });
     return { revisionId: revision.id };
   });
+}
+
+/**
+ * Takes one of the user's strategies out of new assignments. Nothing else
+ * changes: its revisions, the trades holding them and their answers stay
+ * (docs/adr/0003). Archiving an archived strategy keeps the first time.
+ */
+export async function archiveStrategy(
+  userId: number,
+  strategyId: number,
+  executor: Pick<typeof db, "update" | "select"> = db,
+): Promise<void> {
+  const updated = await executor
+    .update(tradingStrategies)
+    .set({ archivedAt: new Date() })
+    .where(
+      and(
+        eq(tradingStrategies.id, strategyId),
+        eq(tradingStrategies.userId, userId),
+        isNull(tradingStrategies.archivedAt),
+      ),
+    )
+    .returning({ id: tradingStrategies.id });
+  if (updated.length === 0) await requireOwned(userId, strategyId, executor);
+}
+
+/** Makes an archived strategy available for new assignments again. */
+export async function reactivateStrategy(
+  userId: number,
+  strategyId: number,
+  executor: Pick<typeof db, "update" | "select"> = db,
+): Promise<void> {
+  const updated = await executor
+    .update(tradingStrategies)
+    .set({ archivedAt: null })
+    .where(
+      and(
+        eq(tradingStrategies.id, strategyId),
+        eq(tradingStrategies.userId, userId),
+        isNotNull(tradingStrategies.archivedAt),
+      ),
+    )
+    .returning({ id: tradingStrategies.id });
+  if (updated.length === 0) await requireOwned(userId, strategyId, executor);
+}
+
+/** The no-op case of a lifecycle change: fine when owned, an error when not. */
+async function requireOwned(
+  userId: number,
+  strategyId: number,
+  executor: Pick<typeof db, "select">,
+): Promise<void> {
+  const [row] = await executor
+    .select({ id: tradingStrategies.id })
+    .from(tradingStrategies)
+    .where(
+      and(
+        eq(tradingStrategies.id, strategyId),
+        eq(tradingStrategies.userId, userId),
+      ),
+    )
+    .limit(1);
+  if (row === undefined) throw new StrategyError(STRATEGY_NOT_FOUND);
 }
 
 /** The user's strategies with their current rules, by name. */

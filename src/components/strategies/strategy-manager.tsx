@@ -1,8 +1,11 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { setStrategyArchived } from "@/actions/strategies";
+import { runWithToast } from "@/components/ledger/ledger-entry-fields";
 import type { Strategy } from "@/db/queries/strategies";
+import { STRATEGY_SAVE_FAILED } from "@/schemas/strategies";
 import { StrategyForm } from "./strategy-form";
 import { StrategyRules } from "./strategy-rules";
 
@@ -18,6 +21,19 @@ const NEW_BUTTON_CLASS =
 export function StrategyManager({ strategies }: StrategyManagerProps) {
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function changeArchived(strategy: Strategy, archived: boolean) {
+    startTransition(async () => {
+      await runWithToast(
+        () => setStrategyArchived({ strategyId: strategy.id, archived }),
+        {
+          success: archived ? "Strategy archived" : "Strategy reactivated",
+          failed: STRATEGY_SAVE_FAILED,
+        },
+      );
+    });
+  }
 
   function startCreating() {
     setEditingId(null);
@@ -59,40 +75,60 @@ export function StrategyManager({ strategies }: StrategyManagerProps) {
         </section>
       )}
 
-      {strategies.map((strategy) => (
-        <section
-          key={strategy.id}
-          className="card-surface edge flex flex-col gap-4 p-5"
-        >
-          {editingId === strategy.id ? (
-            <>
-              <h2 className="cap">Edit strategy</h2>
-              <StrategyForm
-                initial={strategy}
-                strategyId={strategy.id}
-                onClose={() => setEditingId(null)}
-              />
-            </>
-          ) : (
-            <>
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="font-medium text-fg text-lg">{strategy.name}</h2>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCreating(false);
-                    setEditingId(strategy.id);
-                  }}
-                  className="shrink-0 rounded-ctl px-3 py-1.5 text-fg-muted text-sm transition-colors hover:text-fg focus-visible:outline-cyan"
-                >
-                  Edit
-                </button>
-              </div>
-              <StrategyRules strategy={strategy} />
-            </>
-          )}
-        </section>
-      ))}
+      {strategies.map((strategy) => {
+        const archived = strategy.archivedAt !== null;
+        return (
+          <section
+            key={strategy.id}
+            className="card-surface edge flex flex-col gap-4 p-5"
+          >
+            {editingId === strategy.id ? (
+              <>
+                <h2 className="cap">Edit strategy</h2>
+                <StrategyForm
+                  initial={strategy}
+                  strategyId={strategy.id}
+                  onClose={() => setEditingId(null)}
+                />
+              </>
+            ) : (
+              <>
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="font-medium text-fg text-lg">
+                    {strategy.name}
+                    {archived && (
+                      <span className="ml-2 font-normal text-fg-subtle text-xs">
+                        Archived
+                      </span>
+                    )}
+                  </h2>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => changeArchived(strategy, !archived)}
+                      className="rounded-ctl px-3 py-1.5 text-fg-muted text-sm transition-colors hover:text-fg focus-visible:outline-cyan disabled:opacity-40"
+                    >
+                      {archived ? "Reactivate" : "Archive"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreating(false);
+                        setEditingId(strategy.id);
+                      }}
+                      className="rounded-ctl px-3 py-1.5 text-fg-muted text-sm transition-colors hover:text-fg focus-visible:outline-cyan"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+                <StrategyRules strategy={strategy} />
+              </>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }

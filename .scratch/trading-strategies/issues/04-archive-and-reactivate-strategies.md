@@ -7,7 +7,7 @@ availability in trade assignment on both the client and server.
 
 **Blocked by:** 02 — Assign trading strategies and preserve historical rules.
 
-Status: ready-for-agent
+Status: done
 
 ## Acceptance
 
@@ -46,4 +46,26 @@ None. Archived retention and new-assignment exclusion are confirmed.
 
 ## Review
 
-Pending implementation and review.
+### Verification (2026-10-25)
+
+- `pnpm lint`, `pnpm typecheck`, `pnpm test` (77 files, 1314 tests, none skipped, real Postgres), `pnpm build`: passed in the final run.
+- Browser (`/strategies`, `/journal/81354` on the practice account, assigned to "Reversal"): archived it (Archived label, Reactivate offered); the trade detail kept name, rules and an Archived tag; the edit form still offered "Reversal · Archived"; an unrelated save with By the book "Yes" kept assignment, rules and answer; the new-trade Strategy select did not list Reversal; after Reactivate it did. No console errors (tracking started after the first page loads).
+- **Not browser-verified:** assigning the reactivated strategy to a trade (it would create a trade; covered by DB test: a new assignment gets the current revision), and the import-undo preview (DB test).
+- The test trade `/journal/81354` remains in the local dev DB (assigned to "Reversal", By the book Yes).
+
+### Findings
+
+Decided in this ticket:
+
+- One action `setStrategyArchived` with an explicit target state; archive and reactivate are idempotent, archiving twice keeps the first time. A strategy that is not the user's gives the same "no longer exists" error as an unknown one.
+- Archive/reactivate only update `trading_strategies.archived_at`; revisions, assignments, answers and import protection are untouched (tested).
+- Editing an archived strategy stays possible (appends a revision; no trade changes). The spec is silent; say so if it should be blocked.
+- Archived strategies stay in the management list with an "Archived" label.
+- The server rules for archived retention and rejected new assignment came with ticket 02 and are now covered by new save tests (switch/clear an archived assignment, no re-assignment while archived, crafted foreign archived id).
+
+Left open (judgement calls):
+
+- `archiveStrategy` and `reactivateStrategy` are near-identical; kept as two functions for readability.
+- The buttons share one pending flag, so all rows disable while one request runs.
+- `runWithToast` is imported from the ledger module (existing pattern in the strategy form).
+- `STRATEGY_SAVE_FAILED` ("Couldn't save the strategy…") is reused for a failed archive change.

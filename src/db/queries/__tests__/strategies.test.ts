@@ -4,10 +4,12 @@ import { db } from "../../index.ts";
 import { strategyRevisions } from "../../schema/strategies.ts";
 import { users } from "../../schema/users.ts";
 import {
+  archiveStrategy,
   createStrategy,
   getStrategy,
   getStrategyRevision,
   listStrategies,
+  reactivateStrategy,
   type StrategyContent,
   StrategyError,
   updateStrategy,
@@ -198,6 +200,61 @@ describe("updateStrategy", () => {
         revisionId,
         name: "Private",
       });
+    });
+  });
+});
+
+describe("archiveStrategy and reactivateStrategy", () => {
+  it("archives and reactivates without touching revisions or rules", async () => {
+    await fixture(async (tx, userId) => {
+      const { id } = await createStrategy(userId, nameOnly("A"), tx);
+      const { revisionId } = await updateStrategy(userId, id, fullRules, tx);
+
+      await archiveStrategy(userId, id, tx);
+      const archived = await getStrategy(userId, id, tx);
+      expect(archived?.archivedAt).toBeInstanceOf(Date);
+      expect(archived?.revisionId).toBe(revisionId);
+      expect(archived?.name).toBe(fullRules.name);
+      expect(
+        (await listStrategies(userId, tx)).map((strategy) => strategy.id),
+      ).toEqual([id]);
+
+      await reactivateStrategy(userId, id, tx);
+      const reactivated = await getStrategy(userId, id, tx);
+      expect(reactivated?.archivedAt).toBeNull();
+      expect(reactivated?.revisionId).toBe(revisionId);
+
+      const revisions = await tx
+        .select({ id: strategyRevisions.id })
+        .from(strategyRevisions)
+        .where(eq(strategyRevisions.strategyId, id));
+      expect(revisions).toHaveLength(2);
+    });
+  });
+
+  it("keeps the first archive time when archiving twice", async () => {
+    await fixture(async (tx, userId) => {
+      const { id } = await createStrategy(userId, nameOnly("A"), tx);
+      await archiveStrategy(userId, id, tx);
+      const first = (await getStrategy(userId, id, tx))?.archivedAt;
+      await archiveStrategy(userId, id, tx);
+      expect((await getStrategy(userId, id, tx))?.archivedAt).toEqual(first);
+    });
+  });
+
+  it("refuses another user's strategy and changes nothing", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      const { id } = await createStrategy(otherUserId, nameOnly("Theirs"), tx);
+      await expect(archiveStrategy(userId, id, tx)).rejects.toBeInstanceOf(
+        StrategyError,
+      );
+      await archiveStrategy(otherUserId, id, tx);
+      await expect(reactivateStrategy(userId, id, tx)).rejects.toBeInstanceOf(
+        StrategyError,
+      );
+      expect(
+        (await getStrategy(otherUserId, id, tx))?.archivedAt,
+      ).toBeInstanceOf(Date);
     });
   });
 });

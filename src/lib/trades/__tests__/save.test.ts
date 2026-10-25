@@ -2,7 +2,9 @@ import { and, asc, eq, sql, TransactionRollbackError } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../../db/index.ts";
 import {
+  archiveStrategy,
   createStrategy,
+  reactivateStrategy,
   type StrategyContent,
   updateStrategy,
 } from "../../../db/queries/strategies.ts";
@@ -1482,6 +1484,173 @@ describe("saveTrade — strategy", () => {
       expect(result.saved.success).toBe(false);
       expect(result.trade?.strategyRevisionId).toBe(result.original);
       expect(result.trade?.byTheBook).toBe(true);
+    });
+  });
+
+  describe("archived strategies", () => {
+    it("clears or switches an archived assignment but cannot assign it again while archived", async (ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const result = await inRollback(async (tx) => {
+        const fixture = await seedFixture(tx);
+        const archived = await createStrategy(fixture.userId, rules("Old"), tx);
+        const active = await createStrategy(fixture.userId, rules("New"), tx);
+        const tradeId = await createdTradeId(
+          tx,
+          fixture,
+          takenDraft(fixture, { strategyId: archived.id }),
+        );
+        await edited(
+          tx,
+          fixture,
+          tradeId,
+          takenDraft(fixture, { strategyId: archived.id, byTheBook: true }),
+        );
+        await archiveStrategy(fixture.userId, archived.id, tx);
+
+        const switched = await edited(
+          tx,
+          fixture,
+          tradeId,
+          takenDraft(fixture, { strategyId: active.id, byTheBook: true }),
+        );
+        const afterSwitch = await getOwnedTrade(fixture.userId, tradeId, tx);
+        const backToArchived = await edited(
+          tx,
+          fixture,
+          tradeId,
+          takenDraft(fixture, { strategyId: archived.id }),
+        );
+        const cleared = await edited(
+          tx,
+          fixture,
+          tradeId,
+          takenDraft(fixture, { strategyId: null }),
+        );
+        const reassign = await edited(
+          tx,
+          fixture,
+          tradeId,
+          takenDraft(fixture, { strategyId: archived.id }),
+        );
+        return {
+          switched,
+          afterSwitch,
+          backToArchived,
+          cleared,
+          reassign,
+          activeRevisionId: active.revisionId,
+          final: await getOwnedTrade(fixture.userId, tradeId, tx),
+        };
+      });
+
+      expect(result.switched.success).toBe(true);
+      expect(result.afterSwitch?.strategyRevisionId).toBe(
+        result.activeRevisionId,
+      );
+      expect(result.afterSwitch?.byTheBook).toBeNull();
+      expect(result.backToArchived.success).toBe(false);
+      expect(result.cleared.success).toBe(true);
+      expect(result.reassign.success).toBe(false);
+      expect(result.final?.strategyRevisionId).toBeNull();
+    });
+
+    it("keeps revision and answer through archive, an unrelated save and reactivation", async (ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const result = await inRollback(async (tx) => {
+        const fixture = await seedFixture(tx);
+        const strategy = await createStrategy(fixture.userId, rules("A"), tx);
+        const tradeId = await createdTradeId(
+          tx,
+          fixture,
+          takenDraft(fixture, { strategyId: strategy.id }),
+        );
+        await edited(
+          tx,
+          fixture,
+          tradeId,
+          takenDraft(fixture, { strategyId: strategy.id, byTheBook: false }),
+        );
+        const edit = await updateStrategy(
+          fixture.userId,
+          strategy.id,
+          rules("A2"),
+          tx,
+        );
+
+        await archiveStrategy(fixture.userId, strategy.id, tx);
+        const archivedRead = await getJournalTradeById(
+          fixture.userId,
+          tradeId,
+          { executor: tx },
+        );
+        await edited(
+          tx,
+          fixture,
+          tradeId,
+          takenDraft(fixture, {
+            strategyId: strategy.id,
+            byTheBook: false,
+            notes: "unrelated",
+          }),
+        );
+        const afterArchivedSave = await getOwnedTrade(
+          fixture.userId,
+          tradeId,
+          tx,
+        );
+
+        await reactivateStrategy(fixture.userId, strategy.id, tx);
+        const other = await createdTradeId(
+          tx,
+          fixture,
+          takenDraft(fixture, { strategyId: strategy.id }),
+        );
+        return {
+          original: strategy.revisionId,
+          current: edit.revisionId,
+          archivedRead,
+          afterArchivedSave,
+          afterReactivation: await getOwnedTrade(fixture.userId, tradeId, tx),
+          newlyAssigned: await getOwnedTrade(fixture.userId, other, tx),
+        };
+      });
+
+      expect(result.archivedRead?.strategy).toMatchObject({
+        revisionId: result.original,
+        archived: true,
+        ...rules("A"),
+      });
+      for (const trade of [
+        result.afterArchivedSave,
+        result.afterReactivation,
+      ]) {
+        expect(trade?.strategyRevisionId).toBe(result.original);
+        expect(trade?.byTheBook).toBe(false);
+      }
+      expect(result.newlyAssigned?.strategyRevisionId).toBe(result.current);
+    });
+
+    it("rejects a crafted assignment of another user's archived strategy", async (ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const saved = await inRollback(async (tx) => {
+        const fixture = await seedFixture(tx);
+        const foreign = await createStrategy(
+          fixture.otherUserId,
+          rules("Foreign"),
+          tx,
+        );
+        await archiveStrategy(fixture.otherUserId, foreign.id, tx);
+        return saveTrade(
+          fixture.userId,
+          takenDraft(fixture, { strategyId: foreign.id }),
+          { executor: tx, fetcher: failingFetcher() },
+        );
+      });
+
+      expect(saved.success).toBe(false);
     });
   });
 
