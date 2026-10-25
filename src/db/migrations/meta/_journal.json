@@ -211,6 +211,13 @@
       "when": 1792931505325,
       "tag": "0029_chunky_lightspeed",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792935881827,
+      "tag": "0030_tricky_amphibian",
+      "breakpoints": true
     }
   ]
 }
