@@ -1,3 +1,4 @@
+import { DailyChecklistCard } from "@/components/dashboard/daily-checklist-card";
 import { EquityCurve } from "@/components/dashboard/equity-curve";
 import { MetricPanel } from "@/components/dashboard/metric-panel";
 import { MilestoneCard } from "@/components/dashboard/milestone-card";
@@ -7,6 +8,7 @@ import { ProgressTiles } from "@/components/dashboard/progress-tiles";
 import { RuleStatusCard } from "@/components/dashboard/rule-status-card";
 import { TradeRow } from "@/components/journal/trade-row";
 import { listUserBadges } from "@/db/queries/badges";
+import { getDailyChecklist } from "@/db/queries/checklist";
 import { getDailyNote } from "@/db/queries/daily-notes";
 import {
   type DayTotal,
@@ -105,6 +107,7 @@ export default async function DashboardPage({
     rewards,
     startingBalanceCents,
     ruleStatus,
+    checklist,
   ] = await Promise.all([
     getMoneyMetrics(scope),
     getCountMetrics(scope),
@@ -123,6 +126,8 @@ export default async function DashboardPage({
     getStartingBalanceCents(scope),
     // Only for exactly one linked account; never against a combined figure.
     loadSelectedRuleStatus(user.id, user.selectedAccountId, today),
+    // Same day as the plan; no account scope, practice flag or scoring input.
+    getDailyChecklist(user.id, today),
   ]);
 
   const streak = calculateStreak(streakDays, today, user.timezone);
@@ -208,19 +213,21 @@ export default async function DashboardPage({
 
       <EquityCurve series={equity} currency={scope.currency} />
 
+      <PnlCalendar
+        month={calendarMonth}
+        today={today}
+        days={calendarDays}
+        currentMonth={month}
+        firstTradeMonth={firstTradeMonth}
+        currency={scope.currency}
+      />
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <PnlCalendar
-          month={calendarMonth}
-          today={today}
-          days={calendarDays}
-          currentMonth={month}
-          firstTradeMonth={firstTradeMonth}
-          currency={scope.currency}
-        />
         <PlanCard
           premarketPlan={note?.premarketPlan ?? null}
           eodReview={note?.eodReview ?? null}
         />
+        <DailyChecklistCard items={checklist} />
       </div>
 
       <section className="flex flex-col gap-3">

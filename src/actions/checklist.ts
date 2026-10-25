@@ -6,21 +6,28 @@ import {
   createChecklistItem,
   deleteChecklistItem,
   renameChecklistItem,
+  setChecklistCheck,
 } from "@/db/queries/checklist";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { todayInTimeZone } from "@/lib/time";
 import {
   CHECKLIST_PHASE_FULL,
   CHECKLIST_SAVE_FAILED,
+  CHECKLIST_TICK_FAILED,
   checklistItemIdSchema,
   checklistItemSchema,
   renameChecklistItemSchema,
+  setChecklistCheckSchema,
 } from "@/schemas/checklist";
 
 type ActionResult =
   | { success: true; data: null }
   | { success: false; error: string; field?: "text" };
 
-function failure(error: unknown): ActionResult {
+function failure(
+  error: unknown,
+  fallback: string = CHECKLIST_SAVE_FAILED,
+): ActionResult {
   if (error instanceof ChecklistError)
     return {
       success: false,
@@ -32,7 +39,7 @@ function failure(error: unknown): ActionResult {
   console.error("Checklist write failed", {
     name: error instanceof Error ? error.name : "UnknownError",
   });
-  return { success: false, error: CHECKLIST_SAVE_FAILED };
+  return { success: false, error: fallback };
 }
 
 function revalidateChecklist() {
@@ -86,10 +93,39 @@ export async function deleteChecklistStep(
     return { success: false, error: parsed.error.issues[0].message };
   try {
     const user = await getCurrentUser();
-    await deleteChecklistItem(user.id, parsed.data.itemId);
+    await deleteChecklistItem(
+      user.id,
+      parsed.data.itemId,
+      todayInTimeZone(user.timezone),
+    );
     revalidateChecklist();
     return { success: true, data: null };
   } catch (error) {
     return failure(error);
+  }
+}
+
+/**
+ * Ticks or unticks a step on the user's today, resolved here from
+ * `users.timezone` like the pre-market plan. Feeds no streak, score or badge.
+ */
+export async function setChecklistStepChecked(
+  input: unknown,
+): Promise<ActionResult> {
+  const parsed = setChecklistCheckSchema.safeParse(input);
+  if (!parsed.success)
+    return { success: false, error: parsed.error.issues[0].message };
+  try {
+    const user = await getCurrentUser();
+    await setChecklistCheck(
+      user.id,
+      parsed.data.itemId,
+      todayInTimeZone(user.timezone),
+      parsed.data.checked,
+    );
+    revalidateChecklist();
+    return { success: true, data: null };
+  } catch (error) {
+    return failure(error, CHECKLIST_TICK_FAILED);
   }
 }

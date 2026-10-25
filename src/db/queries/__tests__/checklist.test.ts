@@ -5,9 +5,14 @@ import { users } from "../../schema/users.ts";
 import {
   createChecklistItem,
   deleteChecklistItem,
+  getDailyChecklist,
+  listChecklistChecks,
   listChecklistItems,
   renameChecklistItem,
+  setChecklistCheck,
 } from "../checklist.ts";
+
+const TODAY = "2026-10-26";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -101,7 +106,7 @@ it("renames and deletes owned steps, preserves order and allows replacement", as
     expect(
       (await listChecklistItems(userId, tx)).map((item) => item.text),
     ).toEqual(["Renamed", "Second"]);
-    await deleteChecklistItem(userId, first.id, tx);
+    await deleteChecklistItem(userId, first.id, TODAY, tx);
     await createChecklistItem(userId, { phase: "trading", text: "Third" }, tx);
     expect(
       (await listChecklistItems(userId, tx)).map((item) => item.text),
@@ -121,9 +126,9 @@ it("keeps another user's steps invisible and rejects their IDs on writes", async
     await expect(
       renameChecklistItem(userId, item.id, "Changed", tx),
     ).rejects.toThrow("This step no longer exists.");
-    await expect(deleteChecklistItem(userId, item.id, tx)).rejects.toThrow(
-      "This step no longer exists.",
-    );
+    await expect(
+      deleteChecklistItem(userId, item.id, TODAY, tx),
+    ).rejects.toThrow("This step no longer exists.");
     expect(
       (await listChecklistItems(otherUserId, tx)).map((item) => item.text),
     ).toEqual(["Private"]);
@@ -179,5 +184,125 @@ it("deletes a user's template with the user and preserves the other template", a
     expect(
       (await listChecklistItems(otherUserId, tx)).map((item) => item.text),
     ).toEqual(["Theirs"]);
+  });
+});
+
+function checkedTexts(checklist: { text: string; checked: boolean }[]) {
+  return checklist.filter((item) => item.checked).map((item) => item.text);
+}
+
+describe("daily checklist", () => {
+  it("reads today's template unticked and persists tick and untick", async () => {
+    await fixture(async (tx, userId) => {
+      expect(await getDailyChecklist(userId, TODAY, tx)).toEqual([]);
+      const plan = await createChecklistItem(
+        userId,
+        { phase: "premarket", text: "Mark levels" },
+        tx,
+      );
+      await createChecklistItem(
+        userId,
+        { phase: "review", text: "Journal" },
+        tx,
+      );
+      expect(await getDailyChecklist(userId, TODAY, tx)).toEqual([
+        {
+          id: plan.id,
+          phase: "premarket",
+          text: "Mark levels",
+          checked: false,
+        },
+        expect.objectContaining({ text: "Journal", checked: false }),
+      ]);
+
+      await setChecklistCheck(userId, plan.id, TODAY, true, tx);
+      await setChecklistCheck(userId, plan.id, TODAY, true, tx);
+      expect(checkedTexts(await getDailyChecklist(userId, TODAY, tx))).toEqual([
+        "Mark levels",
+      ]);
+
+      await setChecklistCheck(userId, plan.id, TODAY, false, tx);
+      expect(checkedTexts(await getDailyChecklist(userId, TODAY, tx))).toEqual(
+        [],
+      );
+    });
+  });
+
+  it("follows template changes today and keeps earlier days' copied checks", async () => {
+    await fixture(async (tx, userId) => {
+      const yesterday = "2026-10-25";
+      const step = await createChecklistItem(
+        userId,
+        { phase: "trading", text: "Size down after a loss" },
+        tx,
+      );
+      await setChecklistCheck(userId, step.id, yesterday, true, tx);
+      await setChecklistCheck(userId, step.id, TODAY, true, tx);
+
+      const added = await createChecklistItem(
+        userId,
+        { phase: "trading", text: "Added later" },
+        tx,
+      );
+      expect(await getDailyChecklist(userId, TODAY, tx)).toEqual([
+        expect.objectContaining({ id: step.id, checked: true }),
+        expect.objectContaining({ id: added.id, checked: false }),
+      ]);
+
+      await renameChecklistItem(userId, step.id, "Halve size after a loss", tx);
+      expect(checkedTexts(await getDailyChecklist(userId, TODAY, tx))).toEqual([
+        "Halve size after a loss",
+      ]);
+
+      expect(
+        checkedTexts(await getDailyChecklist(userId, "2026-10-27", tx)),
+      ).toEqual([]);
+
+      await deleteChecklistItem(userId, step.id, TODAY, tx);
+      expect(await getDailyChecklist(userId, TODAY, tx)).toEqual([
+        expect.objectContaining({ id: added.id, checked: false }),
+      ]);
+      expect(await listChecklistChecks(userId, TODAY, tx)).toEqual([]);
+      expect(await listChecklistChecks(userId, yesterday, tx)).toEqual([
+        { phase: "trading", text: "Size down after a loss" },
+      ]);
+    });
+  });
+
+  it("rejects another user's items on tick and untick and never reads their checks", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      const theirs = await createChecklistItem(
+        otherUserId,
+        { phase: "premarket", text: "Private" },
+        tx,
+      );
+      await setChecklistCheck(otherUserId, theirs.id, TODAY, true, tx);
+      for (const checked of [true, false])
+        await expect(
+          setChecklistCheck(userId, theirs.id, TODAY, checked, tx),
+        ).rejects.toThrow("This step no longer exists.");
+      expect(await getDailyChecklist(userId, TODAY, tx)).toEqual([]);
+      expect(
+        checkedTexts(await getDailyChecklist(otherUserId, TODAY, tx)),
+      ).toEqual(["Private"]);
+    });
+  });
+
+  it("deletes a user's checks with the user and keeps the other user's", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      for (const owner of [userId, otherUserId]) {
+        const item = await createChecklistItem(
+          owner,
+          { phase: "review", text: "Review" },
+          tx,
+        );
+        await setChecklistCheck(owner, item.id, TODAY, true, tx);
+      }
+      await tx.delete(users).where(eq(users.id, userId));
+      expect(await listChecklistChecks(userId, TODAY, tx)).toEqual([]);
+      expect(await listChecklistChecks(otherUserId, TODAY, tx)).toEqual([
+        { phase: "review", text: "Review" },
+      ]);
+    });
   });
 });

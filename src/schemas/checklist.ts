@@ -26,5 +26,10 @@ export const checklistItemIdSchema = z.object({
 export const renameChecklistItemSchema = checklistItemIdSchema.extend({
   text: checklistItemSchema.shape.text,
 });
+// Ticks always apply to the user's today; the client never supplies a date.
+export const setChecklistCheckSchema = checklistItemIdSchema.extend({
+  checked: z.boolean(),
+});
+export const CHECKLIST_TICK_FAILED = "Couldn't save that tick. Try again.";
 export const CHECKLIST_SAVE_FAILED =
   "Couldn't save the checklist. Your text is still here — try again.";

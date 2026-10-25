@@ -3,6 +3,7 @@ import {
   checklistItemIdSchema,
   checklistItemSchema,
   renameChecklistItemSchema,
+  setChecklistCheckSchema,
 } from "../checklist.ts";
 
 describe("checklist inputs", () => {
@@ -36,5 +37,18 @@ describe("checklist inputs", () => {
     for (const itemId of [0, -1, 1.5, "1", null])
       expect(checklistItemIdSchema.safeParse({ itemId }).success).toBe(false);
     expect(checklistItemIdSchema.safeParse({ itemId: 1 }).success).toBe(true);
+  });
+  it("accepts a tick only as an item ID with a boolean and no date", () => {
+    expect(
+      setChecklistCheckSchema.parse({
+        itemId: 1,
+        checked: true,
+        date: "2026-01-01",
+      }),
+    ).toEqual({ itemId: 1, checked: true });
+    for (const checked of ["true", 1, null])
+      expect(
+        setChecklistCheckSchema.safeParse({ itemId: 1, checked }).success,
+      ).toBe(false);
   });
 });
