@@ -8,7 +8,7 @@ revisions, establishing the approved historical-rules model from the first slice
 
 **Blocked by:** None (can start immediately).
 
-Status: ready-for-agent
+Status: done
 
 ## Acceptance
 
@@ -44,4 +44,27 @@ None. Use the confirmed spec and ADR for terminology, scope and revision semanti
 
 ## Review
 
-Pending implementation and review.
+### Verification (2026-10-25)
+
+- `pnpm lint`, `pnpm typecheck`: clean. `pnpm test`: 77 files, 1271 tests passed, none skipped (real Postgres). `pnpm build`: ok.
+- Migration `0028` applied locally via `pnpm db:migrate`.
+- Browser `/strategies`: nav entry, empty state, blank name rejected ("Name your strategy"), created two strategies, edited one with all five chapters, reloaded: text preserved as plain text (`<b>` shown literally). No console errors.
+
+### Findings
+
+Decided in this ticket:
+
+- Saving unchanged rules appends no revision (a revision means the rules changed; avoids clearing a by-the-book answer needlessly in ticket 03). Deviates from the literal ticket wording; flagged by review.
+- Length caps (name 100, chapter 4000) are an implementation choice, not in the spec. Open: confirm or drop.
+- Chapters are trimmed on save (leading indentation of the first line is lost).
+- `strategy_revisions` has no `user_id`; ownership is enforced via the join to `trading_strategies` in every read. Deliberate per ADR 0003.
+- `getStrategy`, `getStrategyRevision` and `archivedAt` have no caller yet; they serve immutable-history tests and tickets 02 and 04.
+
+Left open (judgement calls, matches the ledger pattern):
+
+- `ActionResult<T>` copied from `src/actions/ledger.ts`; `getCurrentUser()` inside `try/catch` swallows the redirect for an expired session (same as ledger).
+- `strategy-form.tsx` imports `runWithToast`/`SaveButton` from `components/ledger/`; moving them to `components/ui` would be a refactor outside this ticket.
+- Chapter field list repeated in several places; nested ternary and duplicate "New strategy" button in `strategy-manager.tsx`.
+- No test calls the actions or page, so unauthenticated access is not covered by a test; `getCurrentUser()` redirects.
+
+Fixed: the name-length message now uses `MAX_STRATEGY_NAME_LENGTH`.
