@@ -1290,6 +1290,12 @@ führt danach auf die Detailseite zurück.
 **Stand.** Gebaut, nicht entworfen.
 
 
+**Strategie.** Hat der Trade eine Strategie, steht vor „Notes" eine Karte „Strategy" in
+derselben Form wie „Notes" (`Section`): Name in `--color-fg`, darunter die Kapitel als
+Klartext (`cap` über `--color-fg-muted`, leere Kapitel entfallen). Gezeigt wird die
+Revision, die dem Trade zugewiesen wurde, nicht der aktuelle Stand der Strategie
+(ADR 0003). Eine archivierte Strategie trägt „Archived" in `--color-fg-subtle`.
+
 ### 4.21 Preisband
 
 Auf der Detailseite (4.20) in der Execution-Karte an der Stelle der Zeile
@@ -1369,6 +1375,12 @@ und Leiste.
 **Stand.** Gebaut nach einem Design-Review mit dem `frontend-design`-Skill. Offen:
 die Mistake-Labels sind in den Seed-Daten kleingeschrieben, die Confluences nicht;
 das ist Datenpflege, kein Layout.
+
+**Strategie im Formular.** Im Abschnitt „Setup" ein Select „Strategy" mit „No strategy" als
+Vorgabe, unabhängig von Setup type, Entry model und Confluences. Es bietet die aktiven
+Strategien und die dem Trade bereits zugewiesene, auch archiviert (Zusatz „· Archived").
+Wechselt oder leert man sie beim Bearbeiten, setzt das Formular „By the book" zurück und
+sagt es in `text-xs` unter dem Select; der Server löscht die Antwort ebenfalls.
 
 ### 4.23 Econ-Kalender
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { LinkCard } from "@/components/journal/link-card";
 import { PriceBandChart } from "@/components/journal/price-band";
 import { ScreenshotLightbox } from "@/components/journal/screenshot-lightbox";
+import { StrategyRules } from "@/components/strategies/strategy-rules";
 import type { JournalTradeRow } from "@/db/queries/trades";
 import { formatHoldTime } from "@/domain/execution";
 import { buildPriceBand } from "@/domain/price-band";
@@ -400,6 +401,22 @@ export function TradeDetail({
               </Section>
             )}
           </div>
+        )}
+
+        {trade.strategy && (
+          <Section title="Strategy" className="lg:col-start-1">
+            <div className="flex flex-col gap-3">
+              <p className="font-medium text-fg">
+                {trade.strategy.name}
+                {trade.strategy.archived && (
+                  <span className="ml-2 font-normal text-fg-subtle text-xs">
+                    Archived
+                  </span>
+                )}
+              </p>
+              <StrategyRules strategy={trade.strategy} />
+            </div>
+          </Section>
         )}
 
         {trade.notes && (

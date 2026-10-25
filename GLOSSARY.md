@@ -22,6 +22,17 @@ A trade that was actually executed and feeds every P&L, win rate and R figure.
 A trade that was recognised but not executed; it counts for streak and badges and never for P&L, win rate or R.
 _Avoid_: Skipped trade, missed trade
 
+**Trading strategy**:
+A user's reusable trading approach, expressed as rules for when and how to enter, manage and exit a trade.
+_Avoid_: Setup type, entry model, pre-market plan
+
+**Strategy revision**:
+A recorded rule set of a trading strategy, preserved so past trades can be reviewed against the rules assigned to them.
+_Avoid_: Strategy copy, current rules
+
+**By the book**:
+The trader's assessment of whether a taken trade followed its assigned trading strategy, or their own trading rules when no strategy is assigned.
+
 **Confluence**:
 A tagged reason supporting a trade, grouped into a fixed taxonomy.
 

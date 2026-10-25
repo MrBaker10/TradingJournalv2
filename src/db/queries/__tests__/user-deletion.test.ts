@@ -11,6 +11,10 @@ import { ledgerEntries } from "../../schema/ledger.ts";
 import { monthlyScores } from "../../schema/monthly-scores.ts";
 import { propFirmPrograms, propFirms } from "../../schema/prop-firms.ts";
 import {
+  strategyRevisions,
+  tradingStrategies,
+} from "../../schema/strategies.ts";
+import {
   tradeAccounts,
   tradeScreenshots,
   trades,
@@ -42,6 +46,8 @@ interface Remaining {
   monthlyScores: number;
   ledgerEntries: number;
   weeklyReviews: number;
+  strategies: number;
+  strategyRevisions: number;
   accountRules: number;
   authAccounts: number;
   authSessions: number;
@@ -126,6 +132,20 @@ async function deleteFixtureUser(): Promise<Remaining> {
       await tx
         .insert(weeklyReviews)
         .values({ userId: user.id, weekStart: "2026-08-30" });
+      const [strategy] = await tx
+        .insert(tradingStrategies)
+        .values({ userId: user.id })
+        .returning({ id: tradingStrategies.id });
+      const [revision] = await tx
+        .insert(strategyRevisions)
+        .values({ strategyId: strategy.id, name: "Fixture strategy" })
+        .returning({ id: strategyRevisions.id });
+      // Assigned, so the cascade has to take the trade and the revision it
+      // points at in one statement.
+      await tx
+        .update(trades)
+        .set({ strategyRevisionId: revision.id })
+        .where(eq(trades.id, trade.id));
       await tx.insert(monthlyScores).values({
         userId: user.id,
         month: "2026-08",
@@ -229,6 +249,18 @@ async function deleteFixtureUser(): Promise<Remaining> {
             .from(weeklyReviews)
             .where(eq(weeklyReviews.userId, user.id)),
         ),
+        strategies: await countWhere(
+          tx
+            .select()
+            .from(tradingStrategies)
+            .where(eq(tradingStrategies.userId, user.id)),
+        ),
+        strategyRevisions: await countWhere(
+          tx
+            .select()
+            .from(strategyRevisions)
+            .where(eq(strategyRevisions.strategyId, strategy.id)),
+        ),
         accountRules: await countWhere(
           tx
             .select()
@@ -271,6 +303,8 @@ describe("deleting a user", () => {
       monthlyScores: 0,
       ledgerEntries: 0,
       weeklyReviews: 0,
+      strategies: 0,
+      strategyRevisions: 0,
       accountRules: 0,
       authAccounts: 0,
       authSessions: 0,

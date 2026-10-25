@@ -104,3 +104,30 @@ export function importMarksAfterEdit(
     fxRateDate: samePnl ? existing.fxRateDate : null,
   };
 }
+
+/**
+ * Whether a save assigns, switches or clears the trade's strategy. Compared by
+ * strategy, not by revision: keeping the strategy keeps the assigned
+ * revision, however often the strategy was edited since (docs/adr/0003).
+ */
+export function strategyAssignmentChanged(
+  storedStrategyId: number | null,
+  requestedStrategyId: number | null,
+): boolean {
+  return storedStrategyId !== requestedStrategyId;
+}
+
+/**
+ * The by-the-book answer a save stores. A changed assignment resets it to
+ * unanswered: an answer given against other rules (or none) must not carry
+ * over, and an assignment never supplies one itself. A missed setup has no
+ * assessment.
+ */
+export function byTheBookAfterSave(input: {
+  taken: boolean;
+  assignmentChanged: boolean;
+  submitted: boolean | undefined;
+}): boolean | null {
+  if (!input.taken || input.assignmentChanged) return null;
+  return input.submitted ?? null;
+}

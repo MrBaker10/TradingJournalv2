@@ -22,6 +22,10 @@ import {
 } from "../../db/queries/fx.ts";
 import { getInstrumentById } from "../../db/queries/instruments.ts";
 import {
+  getAssignableRevisionId,
+  getRevisionStrategyId,
+} from "../../db/queries/strategies.ts";
+import {
   countExistingConfluenceTags,
   countExistingMistakeTags,
   getOwnedTrade,
@@ -38,8 +42,10 @@ import {
 import { isRateCurrency } from "../../domain/fx.ts";
 import { calculateUsdPnl } from "../../domain/pnl.ts";
 import {
+  byTheBookAfterSave,
   type ImportMarks,
   importMarksAfterEdit,
+  strategyAssignmentChanged,
   validateTradeAccountAssignment,
 } from "../../domain/trades.ts";
 import type { CreateTradeInput } from "../../schemas/trades.ts";
@@ -82,7 +88,11 @@ export type SaveTradeResult =
  * imported trade keeps its provenance. Hand-editing it is what protects it
  * from an undo anyway (src/db/queries/import.ts, TOUCHED).
  */
-function buildTradeColumns(data: CreateTradeInput, profit: ProfitRate) {
+function buildTradeColumns(
+  data: CreateTradeInput,
+  profit: ProfitRate,
+  strategy: StrategyAssignment,
+) {
   let pnlCents: number | null = null;
   let rMultiple: number | null = null;
   let points: string | null = null;
@@ -144,10 +154,81 @@ function buildTradeColumns(data: CreateTradeInput, profit: ProfitRate) {
       result: data.taken ? (data.result ?? null) : null,
       grade: data.grade ?? null,
       felt: data.felt ?? null,
-      byTheBook: data.taken ? (data.byTheBook ?? null) : null,
+      byTheBook: byTheBookAfterSave({
+        taken: data.taken,
+        assignmentChanged: strategy.changed,
+        submitted: data.taken ? data.byTheBook : undefined,
+      }),
+      strategyRevisionId: strategy.revisionId,
       notes: data.notes ?? null,
     },
   };
+}
+
+/** The revision a save stores, and whether the assignment changed. */
+interface StrategyAssignment {
+  revisionId: number | null;
+  changed: boolean;
+}
+
+const STRATEGY_NOT_ASSIGNABLE = "Pick one of your active strategies, or none.";
+
+/**
+ * What the save does with the strategy. An unchanged strategy keeps the
+ * stored revision, whatever its archive state, unless the trader asked to
+ * adopt the current rules. A new or switched one resolves to the strategy's
+ * current rules, and only for the user's own active strategy: the id comes
+ * from the client. Clearing stores no revision.
+ */
+async function resolveStrategyAssignment(
+  userId: number,
+  requestedStrategyId: number | null | undefined,
+  adoptCurrentRules: boolean,
+  existing: ExistingTrade | null,
+  executor: SaveExecutor,
+): Promise<
+  ({ success: true } & StrategyAssignment) | { success: false; error: string }
+> {
+  const storedRevisionId = existing?.strategyRevisionId ?? null;
+  const storedStrategyId =
+    storedRevisionId === null
+      ? null
+      : await getRevisionStrategyId(storedRevisionId, executor);
+  // A request that names no strategy leaves the assignment alone; clearing
+  // is an explicit null.
+  const requested =
+    requestedStrategyId === undefined ? storedStrategyId : requestedStrategyId;
+  const changed = strategyAssignmentChanged(storedStrategyId, requested);
+
+  if (!changed) {
+    if (!adoptCurrentRules || requested === null) {
+      return { success: true, revisionId: storedRevisionId, changed };
+    }
+    // Same strategy, explicitly on its current rules. Only a different
+    // revision is a change: the current one being stored already keeps the
+    // answer.
+    const currentRevisionId = await getAssignableRevisionId(
+      userId,
+      requested,
+      executor,
+    );
+    if (currentRevisionId === null) {
+      return { success: false, error: STRATEGY_NOT_ASSIGNABLE };
+    }
+    return {
+      success: true,
+      revisionId: currentRevisionId,
+      changed: currentRevisionId !== storedRevisionId,
+    };
+  }
+  if (requested === null) {
+    return { success: true, revisionId: null, changed };
+  }
+  const revisionId = await getAssignableRevisionId(userId, requested, executor);
+  if (revisionId === null) {
+    return { success: false, error: STRATEGY_NOT_ASSIGNABLE };
+  }
+  return { success: true, revisionId, changed };
 }
 
 interface ProfitRate {
@@ -434,9 +515,21 @@ export async function saveTrade(
     return { success: false, error: assignment.error };
   }
 
+  const strategy = await resolveStrategyAssignment(
+    userId,
+    data.strategyId,
+    data.adoptCurrentStrategyRules === true,
+    existing,
+    executor,
+  );
+  if (!strategy.success) {
+    return { success: false, error: strategy.error };
+  }
+
   const { columns, pnlCents, rMultiple } = buildTradeColumns(
     data,
     await profitRateFor(instrument, data.tradeDate, fetcher, executor),
+    strategy,
   );
   const context = await editContextFor(existing, columns, executor);
 

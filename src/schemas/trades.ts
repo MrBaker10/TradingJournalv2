@@ -105,6 +105,12 @@ const sharedFields = {
   // Either branch may have links, taken or missed alike — project-overview.md
   // doesn't restrict this to taken trades the way account assignment is.
   links: z.array(tradeLinkSchema).default([]),
+  // At most one strategy, optional; absent means none. Ownership and the
+  // active-strategy rule are checked on the server (src/lib/trades/save.ts).
+  strategyId: z.number().int().positive().nullable().optional(),
+  // Explicitly replaces the trade's stored revision of the same strategy with
+  // its current rules. Never implied by a save (docs/adr/0003).
+  adoptCurrentStrategyRules: z.boolean().optional(),
 };
 
 // Missed setup: nothing was executed, so exit/contracts/P&L/result/account

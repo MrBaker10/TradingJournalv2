@@ -24,6 +24,7 @@ import { createSignedUploadUrl } from "../../lib/uploads/signed-url.ts";
 import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
 import { instruments } from "../schema/instruments.ts";
+import { strategyRevisions, tradingStrategies } from "../schema/strategies.ts";
 import {
   confluenceTags,
   mistakeTags,
@@ -35,6 +36,7 @@ import {
   trades,
 } from "../schema/trades.ts";
 import { rateOnSql } from "./fx.ts";
+import type { StrategyContent } from "./strategies.ts";
 
 export const JOURNAL_PAGE_SIZE = 25;
 
@@ -93,6 +95,17 @@ export interface JournalTradeMistake {
   label: string;
 }
 
+/**
+ * The rules a trade was assigned, as they were then — not the strategy's
+ * current ones (docs/adr/0003). `archived` tells the form the strategy can no
+ * longer be newly assigned, though this trade keeps it.
+ */
+export type JournalTradeStrategy = StrategyContent & {
+  strategyId: number;
+  revisionId: number;
+  archived: boolean;
+};
+
 export interface JournalTradeRow {
   id: number;
   tradeDate: string;
@@ -109,6 +122,8 @@ export interface JournalTradeRow {
   grade: string | null;
   felt: string | null;
   byTheBook: boolean | null;
+  /** Null: no strategy assigned. */
+  strategy: JournalTradeStrategy | null;
   notes: string | null;
   contracts: number | null;
   entryTime: string;
@@ -728,6 +743,15 @@ async function queryTradeRows(input: TradeRowsQuery): Promise<{
       grade: trades.grade,
       felt: trades.felt,
       byTheBook: trades.byTheBook,
+      strategyRevisionId: strategyRevisions.id,
+      strategyId: tradingStrategies.id,
+      strategyArchivedAt: tradingStrategies.archivedAt,
+      strategyName: strategyRevisions.name,
+      strategyPrerequisites: strategyRevisions.prerequisites,
+      strategyEntry: strategyRevisions.entry,
+      strategyStopRisk: strategyRevisions.stopRisk,
+      strategyExit: strategyRevisions.exit,
+      strategyExclusions: strategyRevisions.exclusions,
       notes: trades.notes,
       contracts: trades.contracts,
       entryTime: trades.entryTime,
@@ -760,7 +784,15 @@ async function queryTradeRows(input: TradeRowsQuery): Promise<{
       missedCount: sql<number>`(count(*) filter (where ${trades.taken} = false) over())::int`,
     })
     .from(trades)
-    .innerJoin(instruments, eq(trades.instrumentId, instruments.id));
+    .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
+    .leftJoin(
+      strategyRevisions,
+      eq(trades.strategyRevisionId, strategyRevisions.id),
+    )
+    .leftJoin(
+      tradingStrategies,
+      eq(strategyRevisions.strategyId, tradingStrategies.id),
+    );
 
   const ownership = eq(trades.userId, input.userId);
 
@@ -825,6 +857,22 @@ async function queryTradeRows(input: TradeRowsQuery): Promise<{
       grade: row.grade,
       felt: row.felt,
       byTheBook: row.byTheBook,
+      strategy:
+        row.strategyRevisionId === null ||
+        row.strategyId === null ||
+        row.strategyName === null
+          ? null
+          : {
+              strategyId: row.strategyId,
+              revisionId: row.strategyRevisionId,
+              archived: row.strategyArchivedAt !== null,
+              name: row.strategyName,
+              prerequisites: row.strategyPrerequisites,
+              entry: row.strategyEntry,
+              stopRisk: row.strategyStopRisk,
+              exit: row.strategyExit,
+              exclusions: row.strategyExclusions,
+            },
       notes: row.notes,
       contracts,
       entryTime: row.entryTime,

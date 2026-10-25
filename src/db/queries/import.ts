@@ -477,6 +477,7 @@ const TOUCHED = sql`(
   or t.grade is not null
   or t.felt is not null
   or t.by_the_book is not null
+  or t.strategy_revision_id is not null
   or (t.pnl_override is not null and t.pnl_source is null)
   or exists (
     select 1 from trade_accounts ta

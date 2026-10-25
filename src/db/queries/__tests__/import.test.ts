@@ -11,6 +11,7 @@ import { db } from "../../index.ts";
 import { accounts } from "../../schema/accounts.ts";
 import { importBatches } from "../../schema/import-batches.ts";
 import { instruments } from "../../schema/instruments.ts";
+import { strategyRevisions } from "../../schema/strategies.ts";
 import {
   tradeAccounts,
   tradeLinks,
@@ -29,6 +30,11 @@ import {
   setImportedCommissions,
   updateImportedTrades,
 } from "../import.ts";
+import {
+  archiveStrategy,
+  createStrategy,
+  reactivateStrategy,
+} from "../strategies.ts";
 
 // Test-only symbol; every fixture runs inside a rolled-back transaction, so
 // nothing here reaches the dev database.
@@ -750,6 +756,137 @@ describe("listImportBatches", () => {
 
       const [batch] = await listImportBatches(fixture.userId, fixture.tx);
       expect(batch.removable).toBe(1);
+    });
+  });
+});
+
+describe("strategy assignment as handiwork", () => {
+  async function assignedBatch(fixture: Fixture) {
+    const batchId = await newBatch(fixture);
+    const ids = await insertImportedTrades(
+      fixture.tx,
+      [
+        importedTrade(fixture, batchId),
+        importedTrade(fixture, batchId, { entryPrice: 20100 }),
+      ],
+      fixture.accountId,
+    );
+    const strategy = await createStrategy(
+      fixture.userId,
+      {
+        name: "Import test strategy",
+        prerequisites: null,
+        entry: null,
+        stopRisk: null,
+        exit: null,
+        exclusions: null,
+      },
+      fixture.tx,
+    );
+    await fixture.tx
+      .update(trades)
+      .set({ strategyRevisionId: strategy.revisionId })
+      .where(eq(trades.id, ids[0]));
+    return { batchId, ids, revisionId: strategy.revisionId };
+  }
+
+  it("protects an assigned trade, and preview and removal agree", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      const { batchId, ids } = await assignedBatch(fixture);
+
+      const [batch] = await listImportBatches(fixture.userId, fixture.tx);
+      const removed = await removeUntouchedTrades(
+        fixture.tx,
+        fixture.userId,
+        batchId,
+      );
+
+      expect(batch).toMatchObject({ total: 2, removable: 1 });
+      expect(removed).toBe(batch.removable);
+      const left = await fixture.tx
+        .select({ id: trades.id })
+        .from(trades)
+        .where(eq(trades.importBatchId, batchId));
+      expect(left.map((row) => row.id)).toEqual([ids[0]]);
+    });
+  });
+
+  it("keeps protecting an assigned trade through archive and reactivation", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      const { batchId, revisionId } = await assignedBatch(fixture);
+      const [{ strategyId }] = await fixture.tx
+        .select({ strategyId: strategyRevisions.strategyId })
+        .from(strategyRevisions)
+        .where(eq(strategyRevisions.id, revisionId));
+
+      await archiveStrategy(fixture.userId, strategyId, fixture.tx);
+      const [archived] = await listImportBatches(fixture.userId, fixture.tx);
+      await reactivateStrategy(fixture.userId, strategyId, fixture.tx);
+      const [reactivated] = await listImportBatches(fixture.userId, fixture.tx);
+      const removed = await removeUntouchedTrades(
+        fixture.tx,
+        fixture.userId,
+        batchId,
+      );
+
+      expect(archived.removable).toBe(1);
+      expect(reactivated.removable).toBe(1);
+      expect(removed).toBe(1);
+    });
+  });
+
+  it("restores eligibility when the assignment is cleared", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      const { ids } = await assignedBatch(fixture);
+      await fixture.tx
+        .update(trades)
+        .set({ strategyRevisionId: null })
+        .where(eq(trades.id, ids[0]));
+
+      const [batch] = await listImportBatches(fixture.userId, fixture.tx);
+
+      expect(batch.removable).toBe(2);
+    });
+  });
+
+  it("keeps protecting a cleared trade that has other enrichment", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      const { ids } = await assignedBatch(fixture);
+      await fixture.tx
+        .update(trades)
+        .set({ strategyRevisionId: null, notes: "still worked on" })
+        .where(eq(trades.id, ids[0]));
+
+      const [batch] = await listImportBatches(fixture.userId, fixture.tx);
+
+      expect(batch.removable).toBe(1);
+    });
+  });
+
+  it("infers no strategy for an imported trade", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    await withFixture(async (fixture) => {
+      const batchId = await newBatch(fixture);
+      const [id] = await insertImportedTrades(
+        fixture.tx,
+        [importedTrade(fixture, batchId)],
+        fixture.accountId,
+      );
+      const [row] = await fixture.tx
+        .select({ revisionId: trades.strategyRevisionId })
+        .from(trades)
+        .where(eq(trades.id, id));
+
+      expect(row.revisionId).toBeNull();
     });
   });
 });

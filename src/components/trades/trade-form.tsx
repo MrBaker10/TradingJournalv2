@@ -3,7 +3,7 @@
 import { Check, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import {
   addTradeLink,
   createTrade,
@@ -35,6 +35,7 @@ import type { PriceBandInput } from "@/domain/price-band";
 import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
 import { useTwoClickConfirm } from "@/hooks/use-two-click-confirm";
 import { formatCents, formatCentsPlain, type MoneyCurrency } from "@/lib/money";
+import type { StrategyOption } from "@/lib/trades/strategy-options";
 import { resizeAndCompressImage } from "@/lib/uploads/resize-image";
 import {
   createTradeSchema,
@@ -176,6 +177,7 @@ const COMMISSION_HINTS: Record<CommissionSource, string> = {
 
 interface TradeFormBaseProps {
   instruments: InstrumentOption[];
+  strategies: StrategyOption[];
   accounts: AccountOption[];
   commissionRates: CommissionRateOption[];
   confluenceGroups: TagGroup[];
@@ -208,6 +210,10 @@ type FormState = {
   stopPrice: string;
   contracts: string;
   session: string;
+  /** A strategy id as the select holds it; "" is no strategy. */
+  strategyId: string;
+  /** Replace the trade's stored revision with the strategy's current rules. */
+  adoptCurrentStrategyRules: boolean;
   setupType: string;
   entryModel: string;
   confluenceTagIds: number[];
@@ -241,6 +247,8 @@ const emptyState: FormState = {
   stopPrice: "",
   contracts: "",
   session: "",
+  strategyId: "",
+  adoptCurrentStrategyRules: false,
   setupType: "",
   entryModel: "",
   confluenceTagIds: [],
@@ -278,6 +286,9 @@ function stateFromTrade(trade: JournalTradeRow): FormState {
     stopPrice: numberField(trade.stopPrice),
     contracts: numberField(trade.contracts),
     session: trade.session ?? "",
+    strategyId:
+      trade.strategy === null ? "" : String(trade.strategy.strategyId),
+    adoptCurrentStrategyRules: false,
     setupType: trade.setupType ?? "",
     entryModel: trade.entryModel ?? "",
     confluenceTagIds: trade.confluences.map((confluence) => confluence.id),
@@ -299,6 +310,7 @@ function stateFromTrade(trade: JournalTradeRow): FormState {
 export function TradeForm(props: TradeFormProps) {
   const {
     instruments,
+    strategies,
     accounts,
     commissionRates,
     confluenceGroups,
@@ -470,6 +482,51 @@ export function TradeForm(props: TradeFormProps) {
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: "" }));
   }
 
+  // A different strategy means the by-the-book answer was given against other
+  // rules, so the server clears it: the form clears it too and shows that.
+  const savedStrategyId =
+    edit?.trade.strategy == null ? "" : String(edit.trade.strategy.strategyId);
+  const strategyChanged = edit !== null && state.strategyId !== savedStrategyId;
+
+  // The newer rules the trade can explicitly adopt: the same, active strategy
+  // has a revision other than the one the trade stores.
+  const adoptableStrategy = (() => {
+    const assigned = edit?.trade.strategy;
+    if (!assigned || state.strategyId !== String(assigned.strategyId)) {
+      return null;
+    }
+    const option = strategies.find(
+      (candidate) => candidate.id === assigned.strategyId,
+    );
+    return option &&
+      !option.archived &&
+      option.currentRevisionId !== assigned.revisionId
+      ? option
+      : null;
+  })();
+
+  function changeStrategy(strategyId: string) {
+    setState((prev) => ({
+      ...prev,
+      strategyId,
+      adoptCurrentStrategyRules: false,
+      byTheBook: strategyId === prev.strategyId ? prev.byTheBook : undefined,
+    }));
+    if (errors.strategyId) setErrors((prev) => ({ ...prev, strategyId: "" }));
+  }
+
+  // Adopting resets the by-the-book answer on the server; the form shows that
+  // and restores the answer it held when the choice is taken back.
+  const answerBeforeAdopting = useRef<boolean | undefined>(undefined);
+  function toggleAdoptCurrentStrategyRules(adopt: boolean) {
+    if (adopt) answerBeforeAdopting.current = state.byTheBook;
+    setState((prev) => ({
+      ...prev,
+      adoptCurrentStrategyRules: adopt,
+      byTheBook: adopt ? undefined : answerBeforeAdopting.current,
+    }));
+  }
+
   // The upload endpoint is a route handler, not a Server Action, so it does
   // not trigger Next's own revalidation — router.refresh() re-runs the page's
   // Server Component tree to pick the new screenshot up.
@@ -596,6 +653,8 @@ export function TradeForm(props: TradeFormProps) {
       entryPrice: parseNumber(state.entryPrice),
       stopPrice: parseNumber(state.stopPrice),
       session: state.session === "" ? undefined : state.session,
+      strategyId: state.strategyId === "" ? null : Number(state.strategyId),
+      adoptCurrentStrategyRules: state.adoptCurrentStrategyRules,
       setupType: state.setupType === "" ? undefined : state.setupType,
       entryModel: state.entryModel === "" ? undefined : state.entryModel,
       confluenceTagIds: state.confluenceTagIds,
@@ -1159,6 +1218,55 @@ export function TradeForm(props: TradeFormProps) {
               </select>
             </FormField>
           </div>
+          <FormField
+            label="Strategy"
+            htmlFor="strategyId"
+            error={errors.strategyId}
+          >
+            <select
+              id="strategyId"
+              value={state.strategyId}
+              onChange={(event) => changeStrategy(event.target.value)}
+              disabled={loading || success}
+              className={getFieldClass(
+                fieldState("strategyId", state.strategyId !== ""),
+              )}
+            >
+              <option value="">No strategy</option>
+              {strategies.map((strategy) => (
+                <option key={strategy.id} value={strategy.id}>
+                  {strategy.archived
+                    ? `${strategy.name} · Archived`
+                    : strategy.name}
+                </option>
+              ))}
+            </select>
+            {strategyChanged && (
+              <p className="text-fg-subtle text-xs">
+                A different strategy clears your by-the-book answer.
+              </p>
+            )}
+            {adoptableStrategy && (
+              <label className="flex cursor-pointer items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={state.adoptCurrentStrategyRules}
+                  onChange={(event) =>
+                    toggleAdoptCurrentStrategyRules(event.target.checked)
+                  }
+                  disabled={loading || success}
+                  className="mt-0.5 h-4 w-4 accent-cyan"
+                />
+                <span>
+                  Adopt the current rules of this strategy
+                  <span className="block text-fg-subtle text-xs">
+                    This trade keeps its older rules until you do. Adopting
+                    clears your by-the-book answer.
+                  </span>
+                </span>
+              </label>
+            )}
+          </FormField>
           <div className="flex flex-col gap-1.5">
             <span className="cap">Confluences</span>
             <TagMultiSelect
@@ -1247,7 +1355,9 @@ export function TradeForm(props: TradeFormProps) {
                         : event.target.value === "true",
                     )
                   }
-                  disabled={loading || success}
+                  disabled={
+                    loading || success || state.adoptCurrentStrategyRules
+                  }
                   className={getFieldClass(
                     fieldState("byTheBook", state.byTheBook !== undefined),
                   )}
@@ -1256,6 +1366,9 @@ export function TradeForm(props: TradeFormProps) {
                   <option value="true">Yes</option>
                   <option value="false">No</option>
                 </select>
+                <p className="text-fg-subtle text-xs">
+                  Against the strategy's rules, or your own when none is set.
+                </p>
               </FormField>
             )}
           </div>
