@@ -175,13 +175,15 @@ const STRATEGY_NOT_ASSIGNABLE = "Pick one of your active strategies, or none.";
 
 /**
  * What the save does with the strategy. An unchanged strategy keeps the
- * stored revision, whatever its archive state. A new or switched one resolves
- * to the strategy's current rules, and only for the user's own active
- * strategy: the id comes from the client. Clearing stores no revision.
+ * stored revision, whatever its archive state, unless the trader asked to
+ * adopt the current rules. A new or switched one resolves to the strategy's
+ * current rules, and only for the user's own active strategy: the id comes
+ * from the client. Clearing stores no revision.
  */
 async function resolveStrategyAssignment(
   userId: number,
   requestedStrategyId: number | null | undefined,
+  adoptCurrentRules: boolean,
   existing: ExistingTrade | null,
   executor: SaveExecutor,
 ): Promise<
@@ -199,7 +201,25 @@ async function resolveStrategyAssignment(
   const changed = strategyAssignmentChanged(storedStrategyId, requested);
 
   if (!changed) {
-    return { success: true, revisionId: storedRevisionId, changed };
+    if (!adoptCurrentRules || requested === null) {
+      return { success: true, revisionId: storedRevisionId, changed };
+    }
+    // Same strategy, explicitly on its current rules. Only a different
+    // revision is a change: the current one being stored already keeps the
+    // answer.
+    const currentRevisionId = await getAssignableRevisionId(
+      userId,
+      requested,
+      executor,
+    );
+    if (currentRevisionId === null) {
+      return { success: false, error: STRATEGY_NOT_ASSIGNABLE };
+    }
+    return {
+      success: true,
+      revisionId: currentRevisionId,
+      changed: currentRevisionId !== storedRevisionId,
+    };
   }
   if (requested === null) {
     return { success: true, revisionId: null, changed };
@@ -498,6 +518,7 @@ export async function saveTrade(
   const strategy = await resolveStrategyAssignment(
     userId,
     data.strategyId,
+    data.adoptCurrentStrategyRules === true,
     existing,
     executor,
   );

@@ -6,7 +6,10 @@ import {
   type StrategyContent,
   updateStrategy,
 } from "../../../db/queries/strategies.ts";
-import { getOwnedTrade } from "../../../db/queries/trades.ts";
+import {
+  getJournalTradeById,
+  getOwnedTrade,
+} from "../../../db/queries/trades.ts";
 import {
   accountCommissionRates,
   accounts,
@@ -1265,6 +1268,221 @@ describe("saveTrade — strategy", () => {
     expect(result.retained.success).toBe(true);
     expect(result.trade?.strategyRevisionId).toBe(result.revisionId);
     expect(result.trade?.byTheBook).toBe(true);
+  });
+
+  describe("adopting the current rules", () => {
+    // A taken trade on strategy "A" with By the book answered, after the
+    // strategy was edited once.
+    async function assignedThenEdited(tx: Tx, fixture: Fixture) {
+      const strategy = await createStrategy(fixture.userId, rules("A"), tx);
+      const tradeId = await createdTradeId(
+        tx,
+        fixture,
+        takenDraft(fixture, { strategyId: strategy.id }),
+      );
+      await edited(
+        tx,
+        fixture,
+        tradeId,
+        takenDraft(fixture, { strategyId: strategy.id, byTheBook: true }),
+      );
+      const current = await updateStrategy(
+        fixture.userId,
+        strategy.id,
+        rules("A2"),
+        tx,
+      );
+      return {
+        strategyId: strategy.id,
+        tradeId,
+        original: strategy.revisionId,
+        current: current.revisionId,
+      };
+    }
+
+    it("replaces the historical revision and resets the answer, only when asked", async (ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const result = await inRollback(async (tx) => {
+        const fixture = await seedFixture(tx);
+        const assigned = await assignedThenEdited(tx, fixture);
+        const draft = takenDraft(fixture, {
+          strategyId: assigned.strategyId,
+          byTheBook: true,
+        });
+
+        await edited(tx, fixture, assigned.tradeId, draft);
+        const ordinary = await getOwnedTrade(
+          fixture.userId,
+          assigned.tradeId,
+          tx,
+        );
+
+        const saved = await edited(tx, fixture, assigned.tradeId, {
+          ...draft,
+          adoptCurrentStrategyRules: true,
+        });
+        if (!saved.success) throw new Error(saved.error);
+        return {
+          assigned,
+          ordinary,
+          adopted: await getOwnedTrade(fixture.userId, assigned.tradeId, tx),
+          detail: await getJournalTradeById(fixture.userId, assigned.tradeId, {
+            executor: tx,
+          }),
+        };
+      });
+
+      expect(result.ordinary?.strategyRevisionId).toBe(
+        result.assigned.original,
+      );
+      expect(result.ordinary?.byTheBook).toBe(true);
+      expect(result.adopted?.strategyRevisionId).toBe(result.assigned.current);
+      expect(result.adopted?.byTheBook).toBeNull();
+      expect(result.detail?.strategy).toMatchObject({
+        strategyId: result.assigned.strategyId,
+        revisionId: result.assigned.current,
+        ...rules("A2"),
+      });
+    });
+
+    it("keeps the answer when the revision is already current", async (ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const stored = await inRollback(async (tx) => {
+        const fixture = await seedFixture(tx);
+        const strategy = await createStrategy(fixture.userId, rules("A"), tx);
+        const tradeId = await createdTradeId(
+          tx,
+          fixture,
+          takenDraft(fixture, { strategyId: strategy.id }),
+        );
+        // Saving the same rules appends no revision.
+        await updateStrategy(fixture.userId, strategy.id, rules("A"), tx);
+        await edited(
+          tx,
+          fixture,
+          tradeId,
+          takenDraft(fixture, {
+            strategyId: strategy.id,
+            adoptCurrentStrategyRules: true,
+            byTheBook: false,
+          }),
+        );
+        return {
+          trade: await getOwnedTrade(fixture.userId, tradeId, tx),
+          revisionId: strategy.revisionId,
+        };
+      });
+
+      expect(stored.trade?.strategyRevisionId).toBe(stored.revisionId);
+      expect(stored.trade?.byTheBook).toBe(false);
+    });
+
+    it("adopts on a missed setup and keeps its answer null", async (ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const result = await inRollback(async (tx) => {
+        const fixture = await seedFixture(tx);
+        const strategy = await createStrategy(fixture.userId, rules("A"), tx);
+        const tradeId = await createdTradeId(
+          tx,
+          fixture,
+          missedDraft(fixture, strategy.id),
+        );
+        const current = await updateStrategy(
+          fixture.userId,
+          strategy.id,
+          rules("A2"),
+          tx,
+        );
+        const saved = await edited(tx, fixture, tradeId, {
+          ...missedDraft(fixture, strategy.id),
+          adoptCurrentStrategyRules: true,
+        });
+        if (!saved.success) throw new Error(saved.error);
+        return {
+          trade: await getOwnedTrade(fixture.userId, tradeId, tx),
+          current: current.revisionId,
+        };
+      });
+
+      expect(result.trade?.strategyRevisionId).toBe(result.current);
+      expect(result.trade?.byTheBook).toBeNull();
+    });
+
+    it("never adopts another user's strategy, a switched one or none", async (ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const result = await inRollback(async (tx) => {
+        const fixture = await seedFixture(tx);
+        const assigned = await assignedThenEdited(tx, fixture);
+        const foreign = await createStrategy(
+          fixture.otherUserId,
+          rules("Foreign"),
+          tx,
+        );
+        const foreignAttempt = await edited(
+          tx,
+          fixture,
+          assigned.tradeId,
+          takenDraft(fixture, {
+            strategyId: foreign.id,
+            adoptCurrentStrategyRules: true,
+          }),
+        );
+        const cleared = await edited(
+          tx,
+          fixture,
+          assigned.tradeId,
+          takenDraft(fixture, {
+            strategyId: null,
+            adoptCurrentStrategyRules: true,
+          }),
+        );
+        return {
+          foreignAttempt,
+          cleared,
+          trade: await getOwnedTrade(fixture.userId, assigned.tradeId, tx),
+        };
+      });
+
+      expect(result.foreignAttempt.success).toBe(false);
+      expect(result.cleared.success).toBe(true);
+      expect(result.trade?.strategyRevisionId).toBeNull();
+    });
+
+    it("does not adopt the rules of an archived strategy", async (ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const result = await inRollback(async (tx) => {
+        const fixture = await seedFixture(tx);
+        const assigned = await assignedThenEdited(tx, fixture);
+        await tx
+          .update(tradingStrategies)
+          .set({ archivedAt: new Date() })
+          .where(eq(tradingStrategies.id, assigned.strategyId));
+        const saved = await edited(
+          tx,
+          fixture,
+          assigned.tradeId,
+          takenDraft(fixture, {
+            strategyId: assigned.strategyId,
+            adoptCurrentStrategyRules: true,
+            byTheBook: true,
+          }),
+        );
+        return {
+          saved,
+          trade: await getOwnedTrade(fixture.userId, assigned.tradeId, tx),
+          original: assigned.original,
+        };
+      });
+
+      expect(result.saved.success).toBe(false);
+      expect(result.trade?.strategyRevisionId).toBe(result.original);
+      expect(result.trade?.byTheBook).toBe(true);
+    });
   });
 
   it("keeps a missed setup's answer null while assigning", async (ctx) => {

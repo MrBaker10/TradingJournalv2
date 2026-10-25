@@ -3,7 +3,7 @@
 import { Check, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import {
   addTradeLink,
   createTrade,
@@ -35,6 +35,7 @@ import type { PriceBandInput } from "@/domain/price-band";
 import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
 import { useTwoClickConfirm } from "@/hooks/use-two-click-confirm";
 import { formatCents, formatCentsPlain, type MoneyCurrency } from "@/lib/money";
+import type { StrategyOption } from "@/lib/trades/strategy-options";
 import { resizeAndCompressImage } from "@/lib/uploads/resize-image";
 import {
   createTradeSchema,
@@ -174,13 +175,6 @@ const COMMISSION_HINTS: Record<CommissionSource, string> = {
   manual: "Typed",
 };
 
-/** A strategy the form offers; an archived one only while the trade has it. */
-interface StrategyOption {
-  id: number;
-  name: string;
-  archived: boolean;
-}
-
 interface TradeFormBaseProps {
   instruments: InstrumentOption[];
   strategies: StrategyOption[];
@@ -218,6 +212,8 @@ type FormState = {
   session: string;
   /** A strategy id as the select holds it; "" is no strategy. */
   strategyId: string;
+  /** Replace the trade's stored revision with the strategy's current rules. */
+  adoptCurrentStrategyRules: boolean;
   setupType: string;
   entryModel: string;
   confluenceTagIds: number[];
@@ -252,6 +248,7 @@ const emptyState: FormState = {
   contracts: "",
   session: "",
   strategyId: "",
+  adoptCurrentStrategyRules: false,
   setupType: "",
   entryModel: "",
   confluenceTagIds: [],
@@ -291,6 +288,7 @@ function stateFromTrade(trade: JournalTradeRow): FormState {
     session: trade.session ?? "",
     strategyId:
       trade.strategy === null ? "" : String(trade.strategy.strategyId),
+    adoptCurrentStrategyRules: false,
     setupType: trade.setupType ?? "",
     entryModel: trade.entryModel ?? "",
     confluenceTagIds: trade.confluences.map((confluence) => confluence.id),
@@ -490,13 +488,43 @@ export function TradeForm(props: TradeFormProps) {
     edit?.trade.strategy == null ? "" : String(edit.trade.strategy.strategyId);
   const strategyChanged = edit !== null && state.strategyId !== savedStrategyId;
 
+  // The newer rules the trade can explicitly adopt: the same, active strategy
+  // has a revision other than the one the trade stores.
+  const adoptableStrategy = (() => {
+    const assigned = edit?.trade.strategy;
+    if (!assigned || state.strategyId !== String(assigned.strategyId)) {
+      return null;
+    }
+    const option = strategies.find(
+      (candidate) => candidate.id === assigned.strategyId,
+    );
+    return option &&
+      !option.archived &&
+      option.currentRevisionId !== assigned.revisionId
+      ? option
+      : null;
+  })();
+
   function changeStrategy(strategyId: string) {
     setState((prev) => ({
       ...prev,
       strategyId,
+      adoptCurrentStrategyRules: false,
       byTheBook: strategyId === prev.strategyId ? prev.byTheBook : undefined,
     }));
     if (errors.strategyId) setErrors((prev) => ({ ...prev, strategyId: "" }));
+  }
+
+  // Adopting resets the by-the-book answer on the server; the form shows that
+  // and restores the answer it held when the choice is taken back.
+  const answerBeforeAdopting = useRef<boolean | undefined>(undefined);
+  function toggleAdoptCurrentStrategyRules(adopt: boolean) {
+    if (adopt) answerBeforeAdopting.current = state.byTheBook;
+    setState((prev) => ({
+      ...prev,
+      adoptCurrentStrategyRules: adopt,
+      byTheBook: adopt ? undefined : answerBeforeAdopting.current,
+    }));
   }
 
   // The upload endpoint is a route handler, not a Server Action, so it does
@@ -626,6 +654,7 @@ export function TradeForm(props: TradeFormProps) {
       stopPrice: parseNumber(state.stopPrice),
       session: state.session === "" ? undefined : state.session,
       strategyId: state.strategyId === "" ? null : Number(state.strategyId),
+      adoptCurrentStrategyRules: state.adoptCurrentStrategyRules,
       setupType: state.setupType === "" ? undefined : state.setupType,
       entryModel: state.entryModel === "" ? undefined : state.entryModel,
       confluenceTagIds: state.confluenceTagIds,
@@ -1217,6 +1246,26 @@ export function TradeForm(props: TradeFormProps) {
                 A different strategy clears your by-the-book answer.
               </p>
             )}
+            {adoptableStrategy && (
+              <label className="flex cursor-pointer items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={state.adoptCurrentStrategyRules}
+                  onChange={(event) =>
+                    toggleAdoptCurrentStrategyRules(event.target.checked)
+                  }
+                  disabled={loading || success}
+                  className="mt-0.5 h-4 w-4 accent-cyan"
+                />
+                <span>
+                  Adopt the current rules of this strategy
+                  <span className="block text-fg-subtle text-xs">
+                    This trade keeps its older rules until you do. Adopting
+                    clears your by-the-book answer.
+                  </span>
+                </span>
+              </label>
+            )}
           </FormField>
           <div className="flex flex-col gap-1.5">
             <span className="cap">Confluences</span>
@@ -1306,7 +1355,9 @@ export function TradeForm(props: TradeFormProps) {
                         : event.target.value === "true",
                     )
                   }
-                  disabled={loading || success}
+                  disabled={
+                    loading || success || state.adoptCurrentStrategyRules
+                  }
                   className={getFieldClass(
                     fieldState("byTheBook", state.byTheBook !== undefined),
                   )}

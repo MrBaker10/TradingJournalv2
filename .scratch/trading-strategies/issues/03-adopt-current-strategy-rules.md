@@ -7,7 +7,7 @@ changes.
 
 **Blocked by:** 02 — Assign trading strategies and preserve historical rules.
 
-Status: ready-for-agent
+Status: done
 
 ## Acceptance
 
@@ -43,4 +43,22 @@ None. Use the confirmed explicit-adoption semantics.
 
 ## Review
 
-Pending implementation and review.
+### Verification (2026-10-25)
+
+- `pnpm lint`, `pnpm typecheck`, `pnpm test` (77 files, 1306 tests, none skipped, real Postgres), `pnpm build`: passed. Re-run after the review fixes, see below.
+- Browser (`/journal/81354`, practice account): assigned "Reversal", answered By the book "Yes", edited the strategy (new entry rule). The trade still showed the old rules and "Yes". Edit form offered "Adopt the current rules of this strategy"; ticked, saved: detail shows the new entry rule, By the book unanswered. No console errors (console tracking started after the first page loads).
+- **Not browser-verified:** missed setups and imported trades (DB tests only; the import-undo predicate keys on assignment presence, covered in ticket 02 tests).
+- The test trade `/journal/81354` remains in the local dev DB, now on "Reversal" with its current rules.
+
+### Findings
+
+Decided in this ticket:
+
+- Adoption is `adoptCurrentStrategyRules` on the save input, honoured only for the trade's own, unchanged, active strategy; for a switched or cleared strategy it is irrelevant.
+- Adopting an archived strategy is rejected with the same message as a new assignment of one (the spec does not say; confirm if you want it allowed).
+- Adopting when the stored revision is already current changes nothing and keeps the answer.
+- The form hides the option unless a different revision exists, disables By the book while adopting and restores the previous answer when unticked.
+
+Fixed after review: one shared `StrategyOption` type; one name (`adoptCurrentStrategyRules`) end to end; By the book disabled while adopting and its previous value restored.
+
+Left open (judgement calls): `adoptableStrategy` is computed inline in `trade-form.tsx`; the checkbox lacks the Compare checkbox's focus ring and touch target; `resolveStrategyAssignment` takes a positional boolean; no test for an imported trade adopting (the predicate is unaffected).
