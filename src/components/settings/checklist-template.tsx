@@ -1,20 +1,25 @@
 "use client";
 
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import {
   addChecklistStep,
   deleteChecklistStep,
+  moveChecklistStep,
   renameChecklistStep,
 } from "@/actions/checklist";
 import { FIELD_CLASS } from "@/components/ui/field-class";
+import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { notifyError } from "@/components/ui/toast";
 import type { ChecklistItem } from "@/db/queries/checklist";
 import {
+  CHECKLIST_MOVE_FAILED,
   CHECKLIST_PHASE_FULL,
   CHECKLIST_PHASE_LABELS,
   CHECKLIST_PHASES,
   CHECKLIST_SAVE_FAILED,
   type ChecklistItemInput,
+  type ChecklistMoveDirection,
   checklistItemSchema,
   MAX_CHECKLIST_ITEMS_PER_PHASE,
 } from "@/schemas/checklist";
@@ -74,10 +79,12 @@ function ChecklistPhase({
         </p>
       ) : (
         <ol className="mb-4 space-y-3">
-          {items.map((item) => (
+          {items.map((item, index) => (
             <ChecklistRow
               key={item.id}
               item={item}
+              isFirst={index === 0}
+              isLast={index === items.length - 1}
               onDeleted={() => addInput.current?.focus()}
             />
           ))}
@@ -94,9 +101,13 @@ function ChecklistPhase({
 
 function ChecklistRow({
   item,
+  isFirst,
+  isLast,
   onDeleted,
 }: {
   item: ChecklistItem;
+  isFirst: boolean;
+  isLast: boolean;
   onDeleted: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -174,6 +185,7 @@ function ChecklistRow({
               </>
             ) : (
               <>
+                <MoveControls item={item} isFirst={isFirst} isLast={isLast} />
                 <button
                   ref={renameButton}
                   type="button"
@@ -199,6 +211,86 @@ function ChecklistRow({
       )}
     </li>
   );
+}
+
+const MOVE_DIRECTIONS = [
+  { direction: "up", Icon: ChevronUp },
+  { direction: "down", Icon: ChevronDown },
+] as const;
+
+function MoveControls({
+  item,
+  isFirst,
+  isLast,
+}: {
+  item: ChecklistItem;
+  isFirst: boolean;
+  isLast: boolean;
+}) {
+  const [moving, startMove] = useTransition();
+  const [pressed, setPressed] = useState<ChecklistMoveDirection | null>(null);
+  const buttons = useRef<
+    Record<ChecklistMoveDirection, HTMLButtonElement | null>
+  >({ up: null, down: null });
+  const refocus = useRef(false);
+
+  // Reordering moves DOM nodes, which can drop focus. Once the new order has
+  // rendered, put focus back on the pressed arrow, or on the other one when
+  // the row has reached an edge — unless the user has moved focus elsewhere.
+  useEffect(() => {
+    if (moving || !refocus.current || !pressed) return;
+    refocus.current = false;
+    const active = document.activeElement;
+    if (
+      active &&
+      active !== document.body &&
+      !Object.values(buttons.current).includes(active as HTMLButtonElement)
+    )
+      return;
+    const target = buttons.current[pressed];
+    const other = buttons.current[pressed === "up" ? "down" : "up"];
+    (target?.disabled ? other : target)?.focus();
+  }, [moving, pressed]);
+
+  // A pending move is guarded here rather than by disabling the arrows, so
+  // the pressed button keeps focus while the move is saved.
+  function move(direction: ChecklistMoveDirection) {
+    if (moving) return;
+    setPressed(direction);
+    startMove(async () => {
+      try {
+        const result = await moveChecklistStep({ itemId: item.id, direction });
+        if (!result.success) {
+          notifyError(result.error);
+          return;
+        }
+        refocus.current = true;
+      } catch {
+        notifyError(CHECKLIST_MOVE_FAILED);
+      }
+    });
+  }
+
+  return MOVE_DIRECTIONS.map(({ direction, Icon }) => (
+    <button
+      key={direction}
+      ref={(button) => {
+        buttons.current[direction] = button;
+      }}
+      type="button"
+      disabled={direction === "up" ? isFirst : isLast}
+      aria-busy={moving && pressed === direction}
+      onClick={() => move(direction)}
+      aria-label={`Move ${item.text} ${direction}`}
+      className={BUTTON_CLASS}
+    >
+      {moving && pressed === direction ? (
+        <PendingIndicator label="Moving…" />
+      ) : (
+        <Icon className="h-4 w-4" aria-hidden="true" />
+      )}
+    </button>
+  ));
 }
 
 function StepForm({

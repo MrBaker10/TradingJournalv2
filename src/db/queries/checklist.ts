@@ -1,7 +1,8 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lt, sql } from "drizzle-orm";
 import {
   CHECKLIST_PHASE_FULL,
   type ChecklistItemInput,
+  type ChecklistMoveDirection,
   checklistItemSchema,
   MAX_CHECKLIST_ITEMS_PER_PHASE,
 } from "../../schemas/checklist.ts";
@@ -34,6 +35,22 @@ export async function listChecklistItems(
     .orderBy(asc(items.phase), asc(items.position), asc(items.id));
 }
 
+/**
+ * Serializes writes that assign positions — additions and moves — per user,
+ * even when a phase is empty, so concurrent requests cannot claim the last
+ * slot twice or see unsettled positions.
+ */
+async function lockTemplate(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  userId: number,
+) {
+  await tx
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, userId))
+    .for("update");
+}
+
 export async function createChecklistItem(
   userId: number,
   input: ChecklistItemInput,
@@ -41,13 +58,7 @@ export async function createChecklistItem(
 ): Promise<ChecklistItem> {
   const content = checklistItemSchema.parse(input);
   return executor.transaction(async (tx) => {
-    // Serialize additions even when the phase is empty, so concurrent requests
-    // cannot both claim the last available slot or the same position.
-    await tx
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.id, userId))
-      .for("update");
+    await lockTemplate(tx, userId);
     const [last] = await tx
       .select({
         count: sql<number>`count(*)::int`,
@@ -78,6 +89,49 @@ export async function renameChecklistItem(
     .where(and(eq(items.userId, userId), eq(items.id, itemId)))
     .returning({ id: items.id });
   if (!updated.length) throw new ChecklistError("This step no longer exists.");
+}
+
+/**
+ * Swaps an owned step with its neighbour in the same phase. At the edge of
+ * the phase this is a no-op; steps never move between phases.
+ */
+export async function moveChecklistItem(
+  userId: number,
+  itemId: number,
+  direction: ChecklistMoveDirection,
+  executor: Pick<typeof db, "transaction"> = db,
+): Promise<void> {
+  await executor.transaction(async (tx) => {
+    await lockTemplate(tx, userId);
+    const [item] = await tx
+      .select({ phase: items.phase, position: items.position })
+      .from(items)
+      .where(and(eq(items.userId, userId), eq(items.id, itemId)));
+    if (!item) throw new ChecklistError("This step no longer exists.");
+    const [neighbour] = await tx
+      .select({ id: items.id, position: items.position })
+      .from(items)
+      .where(
+        and(
+          eq(items.userId, userId),
+          eq(items.phase, item.phase),
+          direction === "up"
+            ? lt(items.position, item.position)
+            : gt(items.position, item.position),
+        ),
+      )
+      .orderBy(direction === "up" ? desc(items.position) : asc(items.position))
+      .limit(1);
+    if (!neighbour) return;
+    await tx
+      .update(items)
+      .set({ position: neighbour.position })
+      .where(and(eq(items.userId, userId), eq(items.id, itemId)));
+    await tx
+      .update(items)
+      .set({ position: item.position })
+      .where(and(eq(items.userId, userId), eq(items.id, neighbour.id)));
+  });
 }
 
 /** The check of one owned template item on one calendar date. */

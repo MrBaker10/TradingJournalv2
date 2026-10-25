@@ -8,6 +8,7 @@ import {
   getDailyChecklist,
   listChecklistChecks,
   listChecklistItems,
+  moveChecklistItem,
   renameChecklistItem,
   setChecklistCheck,
 } from "../checklist.ts";
@@ -303,6 +304,86 @@ describe("daily checklist", () => {
       expect(await listChecklistChecks(otherUserId, TODAY, tx)).toEqual([
         { phase: "review", text: "Review" },
       ]);
+    });
+  });
+});
+
+describe("reordering", () => {
+  it("moves a step within its phase, keeps other phases and today's ticks", async () => {
+    await fixture(async (tx, userId) => {
+      const texts = async (phase: string) =>
+        (await getDailyChecklist(userId, TODAY, tx))
+          .filter((item) => item.phase === phase)
+          .map((item) => `${item.text}${item.checked ? " ✓" : ""}`);
+      const [a, , c] = [
+        await createChecklistItem(userId, { phase: "trading", text: "A" }, tx),
+        await createChecklistItem(userId, { phase: "trading", text: "B" }, tx),
+        await createChecklistItem(userId, { phase: "trading", text: "C" }, tx),
+      ];
+      await createChecklistItem(userId, { phase: "review", text: "R1" }, tx);
+      await createChecklistItem(userId, { phase: "review", text: "R2" }, tx);
+      await setChecklistCheck(userId, a.id, TODAY, true, tx);
+
+      await moveChecklistItem(userId, a.id, "down", tx);
+      expect(await texts("trading")).toEqual(["B", "A ✓", "C"]);
+      await moveChecklistItem(userId, c.id, "up", tx);
+      expect(await texts("trading")).toEqual(["B", "C", "A ✓"]);
+      expect(await texts("review")).toEqual(["R1", "R2"]);
+      expect(
+        (await listChecklistItems(userId, tx))
+          .filter((item) => item.phase === "trading")
+          .map((item) => item.text),
+      ).toEqual(["B", "C", "A"]);
+    });
+  });
+
+  it("keeps the order at the phase edges and across gaps left by deletions", async () => {
+    await fixture(async (tx, userId) => {
+      const first = await createChecklistItem(
+        userId,
+        { phase: "premarket", text: "First" },
+        tx,
+      );
+      const gap = await createChecklistItem(
+        userId,
+        { phase: "premarket", text: "Deleted" },
+        tx,
+      );
+      const last = await createChecklistItem(
+        userId,
+        { phase: "premarket", text: "Last" },
+        tx,
+      );
+      await deleteChecklistItem(userId, gap.id, TODAY, tx);
+      const order = async () =>
+        (await listChecklistItems(userId, tx)).map((item) => item.text);
+
+      await moveChecklistItem(userId, first.id, "up", tx);
+      await moveChecklistItem(userId, last.id, "down", tx);
+      expect(await order()).toEqual(["First", "Last"]);
+      await moveChecklistItem(userId, last.id, "up", tx);
+      expect(await order()).toEqual(["Last", "First"]);
+    });
+  });
+
+  it("rejects moving another user's step and leaves their order intact", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      await createChecklistItem(
+        otherUserId,
+        { phase: "review", text: "One" },
+        tx,
+      );
+      const theirs = await createChecklistItem(
+        otherUserId,
+        { phase: "review", text: "Two" },
+        tx,
+      );
+      await expect(
+        moveChecklistItem(userId, theirs.id, "up", tx),
+      ).rejects.toThrow("This step no longer exists.");
+      expect(
+        (await listChecklistItems(otherUserId, tx)).map((item) => item.text),
+      ).toEqual(["One", "Two"]);
     });
   });
 });

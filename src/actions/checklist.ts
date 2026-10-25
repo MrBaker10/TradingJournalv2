@@ -5,17 +5,20 @@ import {
   ChecklistError,
   createChecklistItem,
   deleteChecklistItem,
+  moveChecklistItem,
   renameChecklistItem,
   setChecklistCheck,
 } from "@/db/queries/checklist";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { todayInTimeZone } from "@/lib/time";
 import {
+  CHECKLIST_MOVE_FAILED,
   CHECKLIST_PHASE_FULL,
   CHECKLIST_SAVE_FAILED,
   CHECKLIST_TICK_FAILED,
   checklistItemIdSchema,
   checklistItemSchema,
+  moveChecklistItemSchema,
   renameChecklistItemSchema,
   setChecklistCheckSchema,
 } from "@/schemas/checklist";
@@ -102,6 +105,20 @@ export async function deleteChecklistStep(
     return { success: true, data: null };
   } catch (error) {
     return failure(error);
+  }
+}
+
+export async function moveChecklistStep(input: unknown): Promise<ActionResult> {
+  const parsed = moveChecklistItemSchema.safeParse(input);
+  if (!parsed.success)
+    return { success: false, error: parsed.error.issues[0].message };
+  try {
+    const user = await getCurrentUser();
+    await moveChecklistItem(user.id, parsed.data.itemId, parsed.data.direction);
+    revalidateChecklist();
+    return { success: true, data: null };
+  } catch (error) {
+    return failure(error, CHECKLIST_MOVE_FAILED);
   }
 }
 

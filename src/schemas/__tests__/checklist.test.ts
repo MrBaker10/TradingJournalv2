@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   checklistItemIdSchema,
   checklistItemSchema,
+  moveChecklistItemSchema,
   renameChecklistItemSchema,
   setChecklistCheckSchema,
 } from "../checklist.ts";
@@ -49,6 +50,15 @@ describe("checklist inputs", () => {
     for (const checked of ["true", 1, null])
       expect(
         setChecklistCheckSchema.safeParse({ itemId: 1, checked }).success,
+      ).toBe(false);
+  });
+  it("accepts only up or down as a move direction", () => {
+    expect(
+      moveChecklistItemSchema.parse({ itemId: 1, direction: "up" }),
+    ).toEqual({ itemId: 1, direction: "up" });
+    for (const direction of ["left", "", 1, null])
+      expect(
+        moveChecklistItemSchema.safeParse({ itemId: 1, direction }).success,
       ).toBe(false);
   });
 });
