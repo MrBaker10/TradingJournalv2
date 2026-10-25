@@ -16,6 +16,7 @@ import { COMMISSION_SOURCES } from "../../domain/commission.ts";
 import { accounts } from "./accounts.ts";
 import { importBatches } from "./import-batches.ts";
 import { instruments } from "./instruments.ts";
+import { strategyRevisions } from "./strategies.ts";
 import { users } from "./users.ts";
 
 export const trades = pgTable(
@@ -67,6 +68,13 @@ export const trades = pgTable(
     grade: text("grade"),
     felt: text("felt"),
     byTheBook: boolean("by_the_book"),
+    // The rule set this trade was assigned, exactly as it was then: later
+    // edits of the strategy add revisions and never move this (docs/adr/0003).
+    // No cascade: a revision only goes with its user, and so do the trades.
+    // Null: no strategy. Counts as manual enrichment for an import undo.
+    strategyRevisionId: integer("strategy_revision_id").references(
+      () => strategyRevisions.id,
+    ),
     notes: text("notes"),
     // null = logged by hand. Set for every row an import writes, so a batch
     // can be undone without touching manual trades (current-feature.md).

@@ -3,8 +3,8 @@
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import type { Strategy } from "@/db/queries/strategies";
-import { STRATEGY_CHAPTERS } from "./strategy-chapters";
 import { StrategyForm } from "./strategy-form";
+import { StrategyRules } from "./strategy-rules";
 
 interface StrategyManagerProps {
   strategies: Strategy[];
@@ -12,32 +12,6 @@ interface StrategyManagerProps {
 
 const NEW_BUTTON_CLASS =
   "flex h-11 items-center justify-center gap-2 rounded-ctl border border-white/12 bg-well px-4 text-fg text-sm transition-colors hover:border-cyan/35 focus-visible:outline-cyan";
-
-/** The rules as plain text; chapters left empty are not shown. */
-function StrategyRules({ strategy }: { strategy: Strategy }) {
-  const written = STRATEGY_CHAPTERS.filter(
-    (chapter) => strategy[chapter.key] !== null,
-  );
-  if (written.length === 0) {
-    return (
-      <p className="text-fg-subtle text-sm">
-        No chapters yet — add them when your rules are ready.
-      </p>
-    );
-  }
-  return (
-    <dl className="flex flex-col gap-3">
-      {written.map((chapter) => (
-        <div key={chapter.key}>
-          <dt className="cap">{chapter.label}</dt>
-          <dd className="mt-1 whitespace-pre-wrap text-fg-muted text-sm">
-            {strategy[chapter.key]}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
 
 // One form is open at a time: opening another closes the first unsaved,
 // like the ledger's rows.

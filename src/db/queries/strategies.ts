@@ -205,3 +205,32 @@ export async function getStrategyRevision(
     .limit(1);
   return row ?? null;
 }
+
+/**
+ * The current rules of a strategy a trade may be newly assigned: the user's
+ * own and not archived. Null otherwise — the caller reports one message for
+ * "not yours", "gone" and "archived" alike.
+ */
+export async function getAssignableRevisionId(
+  userId: number,
+  strategyId: number,
+  executor: Pick<typeof db, "select"> = db,
+): Promise<number | null> {
+  const strategy = await getStrategy(userId, strategyId, executor);
+  return strategy !== null && strategy.archivedAt === null
+    ? strategy.revisionId
+    : null;
+}
+
+/** The strategy a stored revision belongs to; the trade holding it is the caller's. */
+export async function getRevisionStrategyId(
+  revisionId: number,
+  executor: Pick<typeof db, "select"> = db,
+): Promise<number | null> {
+  const [row] = await executor
+    .select({ strategyId: strategyRevisions.strategyId })
+    .from(strategyRevisions)
+    .where(eq(strategyRevisions.id, revisionId))
+    .limit(1);
+  return row?.strategyId ?? null;
+}

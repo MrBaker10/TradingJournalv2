@@ -5,12 +5,14 @@ import { TradeForm } from "@/components/trades/trade-form";
 import { listAssignableAccounts } from "@/db/queries/accounts";
 import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
+import { listStrategies } from "@/db/queries/strategies";
 import {
   getJournalTradeById,
   listConfluenceGroups,
   listMistakeTags,
 } from "@/db/queries/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { strategyOptions } from "@/lib/trades/strategy-options";
 
 interface EditTradePageProps {
   params: Promise<{ id: string }>;
@@ -30,10 +32,11 @@ export default async function EditTradePage({ params }: EditTradePageProps) {
   // saving would drop an assignment the user never touched. saveTrade reads
   // the same query, so the options here and the ids the server accepts are
   // the same set.
-  const [accounts, instruments, confluenceGroups, mistakeTags] =
+  const [accounts, instruments, strategies, confluenceGroups, mistakeTags] =
     await Promise.all([
       listAssignableAccounts(user.id, trade.id),
       listInstruments(),
+      listStrategies(user.id),
       listConfluenceGroups(),
       listMistakeTags(),
     ]);
@@ -61,6 +64,10 @@ export default async function EditTradePage({ params }: EditTradePageProps) {
         mode="edit"
         trade={trade}
         instruments={instruments}
+        strategies={strategyOptions(
+          strategies,
+          trade.strategy?.strategyId ?? null,
+        )}
         accounts={accounts}
         commissionRates={commissionRates}
         confluenceGroups={confluenceGroups}

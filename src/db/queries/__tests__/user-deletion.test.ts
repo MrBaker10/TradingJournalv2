@@ -136,9 +136,16 @@ async function deleteFixtureUser(): Promise<Remaining> {
         .insert(tradingStrategies)
         .values({ userId: user.id })
         .returning({ id: tradingStrategies.id });
-      await tx
+      const [revision] = await tx
         .insert(strategyRevisions)
-        .values({ strategyId: strategy.id, name: "Fixture strategy" });
+        .values({ strategyId: strategy.id, name: "Fixture strategy" })
+        .returning({ id: strategyRevisions.id });
+      // Assigned, so the cascade has to take the trade and the revision it
+      // points at in one statement.
+      await tx
+        .update(trades)
+        .set({ strategyRevisionId: revision.id })
+        .where(eq(trades.id, trade.id));
       await tx.insert(monthlyScores).values({
         userId: user.id,
         month: "2026-08",

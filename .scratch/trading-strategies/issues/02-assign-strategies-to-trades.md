@@ -8,7 +8,7 @@ imported trades from import undo.
 
 **Blocked by:** 01 — Create, read and edit private trading strategies.
 
-Status: ready-for-agent
+Status: done
 
 ## Acceptance
 
@@ -52,4 +52,31 @@ None. Apply the confirmed spec's assignment and import-undo rules.
 
 ## Review
 
-Pending implementation and review.
+### Verification (2026-10-25)
+
+- `pnpm lint`, `pnpm typecheck`, `pnpm test` (77 files, 1301 tests, none skipped, real Postgres), `pnpm build`: all passed in the final run before commit (1301 tests).
+- Migration `0029` applied locally.
+- Browser (new trade on the practice account "Sim (test)", then edit): no strategy preselected; assigned strategy shown on the detail page with name and chapters; renamed the strategy, trade still shows the old name and entry text; unrelated save kept revision and By the book "Yes"; switching strategy cleared By the book; clearing removed the Strategy card; no console errors.
+- **Not browser-verified:** assignment on a missed setup and on an imported trade, and the import-undo preview counts. Doing so would mutate the user's real imported trades. Covered by DB tests only (preview/removal agreement, clear restores eligibility, no inference on import).
+- The test trade `/journal/81354` (practice account, note "TEST strategy ticket 02") remains in the local dev DB for the user to delete.
+
+### Findings
+
+Decided in this ticket:
+
+- A save that omits `strategyId` keeps the assignment; clearing is an explicit `null` (fixed after review).
+- Changing the assignment resets By the book server-side; the form resets it too and says so.
+- Archived strategies are rejected for new assignment on the server although archive controls come in ticket 04.
+- The strategy select works by strategy, not revision: keeping the same strategy keeps the trade's older revision (ADR 0003).
+- The check of the requested strategy runs before the write transaction without a lock; an archive in that window could let one assignment through (single user, accepted).
+- CSV export does not include the strategy (not asked for).
+- No index on `trades.strategy_revision_id`; relevant only for later per-strategy counts.
+
+Left open (judgement calls):
+
+- `queryTradeRows` rebuilds the nested strategy from nine flat aliases; a `toJournalTradeStrategy(row)` helper would read better.
+- `StrategyOption` in `trade-form.tsx` duplicates the return type of `strategyOptions`.
+- The "assignment changed" rule is derived in the form by string comparison and on the server by `strategyAssignmentChanged`.
+- `StrategyRules` was extracted from `strategy-manager.tsx` (ticket 01) for reuse on the detail page.
+
+Added after review: By the book now says it refers to the strategy's rules, or the trader's own when none is set.

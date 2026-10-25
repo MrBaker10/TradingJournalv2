@@ -4,15 +4,18 @@ import { TradeForm } from "@/components/trades/trade-form";
 import { listActiveAccountsForSwitcher } from "@/db/queries/accounts";
 import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
+import { listStrategies } from "@/db/queries/strategies";
 import { listConfluenceGroups, listMistakeTags } from "@/db/queries/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { strategyOptions } from "@/lib/trades/strategy-options";
 
 export default async function NewTradePage() {
   const user = await getCurrentUser();
-  const [accounts, instruments, confluenceGroups, mistakeTags] =
+  const [accounts, instruments, strategies, confluenceGroups, mistakeTags] =
     await Promise.all([
       listActiveAccountsForSwitcher(user.id),
       listInstruments(),
+      listStrategies(user.id),
       listConfluenceGroups(),
       listMistakeTags(),
     ]);
@@ -36,6 +39,7 @@ export default async function NewTradePage() {
       <TradeForm
         mode="create"
         instruments={instruments}
+        strategies={strategyOptions(strategies, null)}
         accounts={accounts}
         commissionRates={commissionRates}
         confluenceGroups={confluenceGroups}

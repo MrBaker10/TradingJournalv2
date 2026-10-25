@@ -14,6 +14,7 @@ import {
   trades,
 } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
+import { createStrategy, updateStrategy } from "../strategies.ts";
 import {
   getJournalTradeById,
   type JournalTradeRow,
@@ -637,5 +638,65 @@ describe("net P&L of one trade (commissions)", () => {
     });
 
     expect(detail?.displayPnlCents).toBe(4000 - 100);
+  });
+});
+
+describe("getJournalTradeById — strategy", () => {
+  const rules = (name: string) => ({
+    name,
+    prerequisites: "Bias",
+    entry: null,
+    stopRisk: null,
+    exit: null,
+    exclusions: null,
+  });
+
+  it("reads no strategy for a trade without one", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const trade = await withFixture(async (tx, fixture) => {
+      const [row] = await tx
+        .insert(trades)
+        .values({ userId: fixture.userId, ...takenTradeColumns(fixture) })
+        .returning({ id: trades.id });
+      return getJournalTradeById(fixture.userId, row.id, { executor: tx });
+    });
+
+    expect(trade?.strategy).toBeNull();
+  });
+
+  it("reads the assigned name and rules, not the strategy's current ones", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const trade = await withFixture(async (tx, fixture) => {
+      const strategy = await createStrategy(
+        fixture.userId,
+        rules("Original"),
+        tx,
+      );
+      const [row] = await tx
+        .insert(trades)
+        .values({
+          userId: fixture.userId,
+          ...takenTradeColumns(fixture),
+          strategyRevisionId: strategy.revisionId,
+        })
+        .returning({ id: trades.id });
+      await updateStrategy(fixture.userId, strategy.id, rules("Renamed"), tx);
+      return {
+        row: await getJournalTradeById(fixture.userId, row.id, {
+          executor: tx,
+        }),
+        strategyId: strategy.id,
+        revisionId: strategy.revisionId,
+      };
+    });
+
+    expect(trade.row?.strategy).toEqual({
+      strategyId: trade.strategyId,
+      revisionId: trade.revisionId,
+      archived: false,
+      ...rules("Original"),
+    });
   });
 });

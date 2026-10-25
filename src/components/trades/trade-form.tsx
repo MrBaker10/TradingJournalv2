@@ -174,8 +174,16 @@ const COMMISSION_HINTS: Record<CommissionSource, string> = {
   manual: "Typed",
 };
 
+/** A strategy the form offers; an archived one only while the trade has it. */
+interface StrategyOption {
+  id: number;
+  name: string;
+  archived: boolean;
+}
+
 interface TradeFormBaseProps {
   instruments: InstrumentOption[];
+  strategies: StrategyOption[];
   accounts: AccountOption[];
   commissionRates: CommissionRateOption[];
   confluenceGroups: TagGroup[];
@@ -208,6 +216,8 @@ type FormState = {
   stopPrice: string;
   contracts: string;
   session: string;
+  /** A strategy id as the select holds it; "" is no strategy. */
+  strategyId: string;
   setupType: string;
   entryModel: string;
   confluenceTagIds: number[];
@@ -241,6 +251,7 @@ const emptyState: FormState = {
   stopPrice: "",
   contracts: "",
   session: "",
+  strategyId: "",
   setupType: "",
   entryModel: "",
   confluenceTagIds: [],
@@ -278,6 +289,8 @@ function stateFromTrade(trade: JournalTradeRow): FormState {
     stopPrice: numberField(trade.stopPrice),
     contracts: numberField(trade.contracts),
     session: trade.session ?? "",
+    strategyId:
+      trade.strategy === null ? "" : String(trade.strategy.strategyId),
     setupType: trade.setupType ?? "",
     entryModel: trade.entryModel ?? "",
     confluenceTagIds: trade.confluences.map((confluence) => confluence.id),
@@ -299,6 +312,7 @@ function stateFromTrade(trade: JournalTradeRow): FormState {
 export function TradeForm(props: TradeFormProps) {
   const {
     instruments,
+    strategies,
     accounts,
     commissionRates,
     confluenceGroups,
@@ -470,6 +484,21 @@ export function TradeForm(props: TradeFormProps) {
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: "" }));
   }
 
+  // A different strategy means the by-the-book answer was given against other
+  // rules, so the server clears it: the form clears it too and shows that.
+  const savedStrategyId =
+    edit?.trade.strategy == null ? "" : String(edit.trade.strategy.strategyId);
+  const strategyChanged = edit !== null && state.strategyId !== savedStrategyId;
+
+  function changeStrategy(strategyId: string) {
+    setState((prev) => ({
+      ...prev,
+      strategyId,
+      byTheBook: strategyId === prev.strategyId ? prev.byTheBook : undefined,
+    }));
+    if (errors.strategyId) setErrors((prev) => ({ ...prev, strategyId: "" }));
+  }
+
   // The upload endpoint is a route handler, not a Server Action, so it does
   // not trigger Next's own revalidation — router.refresh() re-runs the page's
   // Server Component tree to pick the new screenshot up.
@@ -596,6 +625,7 @@ export function TradeForm(props: TradeFormProps) {
       entryPrice: parseNumber(state.entryPrice),
       stopPrice: parseNumber(state.stopPrice),
       session: state.session === "" ? undefined : state.session,
+      strategyId: state.strategyId === "" ? null : Number(state.strategyId),
       setupType: state.setupType === "" ? undefined : state.setupType,
       entryModel: state.entryModel === "" ? undefined : state.entryModel,
       confluenceTagIds: state.confluenceTagIds,
@@ -1159,6 +1189,35 @@ export function TradeForm(props: TradeFormProps) {
               </select>
             </FormField>
           </div>
+          <FormField
+            label="Strategy"
+            htmlFor="strategyId"
+            error={errors.strategyId}
+          >
+            <select
+              id="strategyId"
+              value={state.strategyId}
+              onChange={(event) => changeStrategy(event.target.value)}
+              disabled={loading || success}
+              className={getFieldClass(
+                fieldState("strategyId", state.strategyId !== ""),
+              )}
+            >
+              <option value="">No strategy</option>
+              {strategies.map((strategy) => (
+                <option key={strategy.id} value={strategy.id}>
+                  {strategy.archived
+                    ? `${strategy.name} · Archived`
+                    : strategy.name}
+                </option>
+              ))}
+            </select>
+            {strategyChanged && (
+              <p className="text-fg-subtle text-xs">
+                A different strategy clears your by-the-book answer.
+              </p>
+            )}
+          </FormField>
           <div className="flex flex-col gap-1.5">
             <span className="cap">Confluences</span>
             <TagMultiSelect
@@ -1256,6 +1315,9 @@ export function TradeForm(props: TradeFormProps) {
                   <option value="true">Yes</option>
                   <option value="false">No</option>
                 </select>
+                <p className="text-fg-subtle text-xs">
+                  Against the strategy's rules, or your own when none is set.
+                </p>
               </FormField>
             )}
           </div>

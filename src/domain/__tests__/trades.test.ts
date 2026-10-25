@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  byTheBookAfterSave,
   canAddScreenshot,
   importMarksAfterEdit,
+  strategyAssignmentChanged,
   validateTradeAccountAssignment,
 } from "../trades.ts";
 
@@ -133,4 +135,35 @@ describe("importMarksAfterEdit", () => {
       }).stopImported,
     ).toBe(false);
   });
+});
+
+describe("strategyAssignmentChanged", () => {
+  it.each([
+    [null, null, false],
+    [4, 4, false],
+    [null, 4, true],
+    [4, null, true],
+    [4, 5, true],
+  ])("stored %s, requested %s -> %s", (stored, requested, expected) => {
+    expect(strategyAssignmentChanged(stored, requested)).toBe(expected);
+  });
+});
+
+describe("byTheBookAfterSave", () => {
+  it.each([
+    [true, false, true, true],
+    [true, false, false, false],
+    [true, false, undefined, null],
+    [true, true, true, null],
+    [true, true, false, null],
+    [false, false, true, null],
+    [false, true, undefined, null],
+  ])(
+    "taken %s, changed %s, submitted %s -> %s",
+    (taken, assignmentChanged, submitted, expected) => {
+      expect(byTheBookAfterSave({ taken, assignmentChanged, submitted })).toBe(
+        expected,
+      );
+    },
+  );
 });
