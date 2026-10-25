@@ -37,7 +37,7 @@ or rewards money."* Diese Aussage ist die Designregel, nicht nur ein Satz im UI.
 
 | Element | Behandlung |
 |---|---|
-| Streak, Consistency, Badges, By the book, Reviews, Screenshots, Links | Verlaufsfüllung, Neon-Rand, Glow-Text |
+| Streak, Consistency, Badges, By the book, Reviews, Screenshots, Links, Daily checklist | Verlaufsfüllung, Neon-Rand, Glow-Text |
 | Net P&L, Avg winner/loser, Expectancy, Best/Worst day, Drawdown | Semantische Farbe (grün/rot), **kein** Glow, **kein** Verlaufs-Tile |
 | Regelgrenzen und Übungskonto-Marker | Amber, ruhig, kein Puls |
 
@@ -1786,6 +1786,25 @@ von Unterschieden.
   together, so two chips describing the same thing never match at once.“ Er gilt
   auch, wenn nur der Größenfilter alles ausschließt. Eine Firma ohne passendes
   Programm verschwindet ganz, keine leere Karte.
+
+### 4.29 Daily Checklist („Daily checklist")
+
+- `card-surface edge-neon` neben der Plan-Karte (4.6). Sie ist Prozess, darf also
+  leuchten. Ab `lg` stehen Plan und Checklist nebeneinander, darüber der Kalender
+  (4.8) in voller Breite. Mobil steht die Checklist unter dem Plan.
+- Titel `cap cap-neon`, darunter die drei Phasen „Pre-market“, „Trading“,
+  „Day review“. Rechts von jeder Phase die Zählung „done/total“ in Mono, 12px,
+  `--color-fg-muted`. Für Screenreader lautet sie „n of m done“.
+- **Ist eine Phase vollständig, leuchtet nur ihre Zählung (`text-glow`).** Kein Toast,
+  keine Animation, keine Feier (§6, §9). Die Zahl selbst trägt die Information, nicht
+  allein die Farbe (§8).
+- Jeder Schritt ist eine native Checkbox (`accent-cyan`) mit seinem Text als Label,
+  40px hoch, Fokusring nach §8.
+- Haken erscheinen sofort, ohne Loading-Zustand. Scheitert das Speichern, springt der
+  Haken zurück, und die Meldung steht als `InlineMessage` am Kartenende. Kein Toast
+  für Fehler.
+- Leere Phase: „No steps in this phase.“ in `--color-fg-subtle`. Ohne Vorlage:
+  „No routine steps yet. Set up your checklist in Settings.“ mit Link.
 
 ## 5. Motion
 

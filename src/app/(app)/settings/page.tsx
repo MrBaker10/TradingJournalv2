@@ -1,8 +1,10 @@
 import { AccountsManager } from "@/components/settings/accounts-manager";
+import { ChecklistTemplate } from "@/components/settings/checklist-template";
 import { ExportCard } from "@/components/settings/export-card";
 import { SecuritySection } from "@/components/settings/security-section";
 import { listAccountRules } from "@/db/queries/account-rules";
 import { listAllAccountsForSettings } from "@/db/queries/accounts";
+import { listChecklistItems } from "@/db/queries/checklist";
 import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
 import { listProgramOptions } from "@/db/queries/prop-firms";
@@ -13,15 +15,17 @@ import { todayInTimeZone } from "@/lib/time";
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   const accounts = await listAllAccountsForSettings(user.id);
-  const [rates, instruments, rules, programs] = await Promise.all([
-    listCommissionRates(
-      user.id,
-      accounts.map((account) => account.id),
-    ),
-    listInstruments(),
-    listAccountRules(user.id),
-    listProgramOptions(),
-  ]);
+  const [rates, instruments, rules, programs, checklistItems] =
+    await Promise.all([
+      listCommissionRates(
+        user.id,
+        accounts.map((account) => account.id),
+      ),
+      listInstruments(),
+      listAccountRules(user.id),
+      listProgramOptions(),
+      listChecklistItems(user.id),
+    ]);
   const today = todayInTimeZone(user.timezone);
   // One attempt read per linked active account; an account has at most one
   // link and a trader only a handful of linked accounts.
@@ -62,6 +66,7 @@ export default async function SettingsPage() {
         today={today}
         timeZone={user.timezone}
       />
+      <ChecklistTemplate items={checklistItems} />
       <div className="max-w-4xl">
         <ExportCard />
       </div>

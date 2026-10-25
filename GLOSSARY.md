@@ -94,6 +94,14 @@ A personal milestone for journaling behaviour, never for profit.
 **Pre-market plan**:
 The daily note written before trading, optionally followed by an end-of-day review.
 
+**Checklist template**:
+The user's reusable list of routine steps, grouped into three fixed phases: pre-market, trading and day review. It is independent of trading strategies.
+_Avoid_: Rulebook, routine, strategy checklist
+
+**Daily checklist**:
+One day's copy of the checklist template, ticked off by hand; it records whether each step was done, feeds neither streak, consistency score nor badges, and is never evaluated as rule adherence.
+_Avoid_: Daily rules, adherence log, pre-market plan
+
 ## Prop firms
 
 **Prop firm**:
