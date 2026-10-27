@@ -21,6 +21,12 @@ time out without them.
 Generate schema migrations with `pnpm db:generate`, apply with `pnpm db:migrate`;
 never use `push`. Keep schema and generated migration in the same commit.
 
+Demo data: `pnpm db:seed:demo` deletes and recreates the user `demo` with about four
+months of made-up journal data (accounts incl. practice and archived, trades, missed
+setups, notes, checklist, weekly reviews, ledger, closed months, badges). It refuses
+any host but localhost and needs `DEMO_USER_PASSWORD` plus the instrument, trade-tag,
+prop-firm and badge seeds. Test data never goes into a migration.
+
 ## Neon and Vercel
 
 **Neon (P2.2).** Production runs on Neon `tradingjournal` (aws-eu-central-1, PG 18),

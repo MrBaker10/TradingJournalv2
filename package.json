@@ -13,6 +13,7 @@
     "db:migrate:preview": "node --env-file=.env.local --env-file=.env.neon.preview ./node_modules/drizzle-kit/bin.cjs migrate",
     "db:migrate:production": "node --env-file=.env.local --env-file=.env.neon.production ./node_modules/drizzle-kit/bin.cjs migrate",
     "db:seed": "node --env-file=.env.local src/db/seed.ts",
+    "db:seed:demo": "node --env-file=.env.local src/db/seed-demo.ts",
     "db:seed:instruments": "node --env-file=.env.local src/db/seed-instruments.ts",
     "db:seed:trade-tags": "node --env-file=.env.local src/db/seed-trade-tags.ts",
     "db:seed:badges": "node --env-file=.env.local src/db/seed-badges.ts",
