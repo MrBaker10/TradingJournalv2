@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 // shortcuts go on `SheetContent` as `onKeyDown`, never on the window.
 
 const SHEET_SIZES = {
-  /** Journal detail, compare. */
+  /** The journal detail. */
   wide: "lg:max-w-5xl",
   /** The analytics detail: bars and one table (Design.md §3.10). */
   analytics: "lg:max-w-3xl",

@@ -355,7 +355,7 @@ the rows are filtered in the query as today. Key figures are shown as the file w
 them, truncated with the full text on hover; nothing parses them.
 
 **Sheet.** One sheet component for every detail and editor: wide (journal detail,
-analytics detail, compare), medium (editors, firm page). It slides fully in from the
+analytics detail), medium (editors, firm page). It slides fully in from the
 right over 600 ms with a soft ease-out and out over 300 ms with ease-in, replacing the
 primitive's short nudge and fade; under reduced motion it appears without movement. Esc
 closes it; keyboard handling inside a sheet is bound on the sheet, because the dialog

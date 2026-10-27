@@ -282,7 +282,7 @@ Each pattern names its **shape**, its **states**, its **motion** and the
 ### 3.10 Sheet
 
 - **Shape.** One sheet component for every detail and editor, from the right.
-  Wide (`max-w-5xl` for the journal detail and compare, `max-w-3xl` for the analytics
+  Wide (`max-w-5xl` for the journal detail, `max-w-3xl` for the analytics
   detail) or medium (`max-w-2xl` for editors and the firm page); full width below `lg` (§3.12).
 - **Behaviour.** Esc closes. Keyboard handling inside a sheet is bound on the sheet,
   because the dialog does not pass key events to `window`. A sheet for an entity the
