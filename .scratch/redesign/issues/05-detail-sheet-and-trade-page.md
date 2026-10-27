@@ -74,7 +74,6 @@ only console entries are the deliberate 404 and `motion`'s reduced-motion notice
 - Removed with its last use: `trade-detail.tsx`.
 - Open, for later tickets: analytics (ticket 08) needs `max-w-3xl`, a third size or a
   `className` on `SheetContent`; `StrategyRules` still uses v1 tokens (ticket 12);
-  `TradeDetailBody` is long; chart-clock `slice(0, 5)` repeats in the journal; Design
-  §3.10's "a sheet for an entity the app can link to holds it in the URL" and §3.3's
-  "not in the URL" read as a contradiction unless the journal exception is spelled out
-  in §3.10.
+  `TradeDetailBody` is long; chart-clock `slice(0, 5)` repeats in the journal.
+- Settled after the commit: Design §3.10 now spells out that the journal detail is not
+  in the URL, because the trade has its own page (be706fd).
