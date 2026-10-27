@@ -19,6 +19,8 @@ import { Button } from "@/components/ui/button";
 const SHEET_SIZES = {
   /** Journal detail, compare. */
   wide: "lg:max-w-5xl",
+  /** The analytics detail: bars and one table (Design.md §3.10). */
+  analytics: "lg:max-w-3xl",
   /** Editors, the firm page. */
   medium: "lg:max-w-2xl",
 } as const;

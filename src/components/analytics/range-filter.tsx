@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { Input } from "@/components/ui/input";
 import { RangePresetChips } from "@/components/ui/range-preset-chips";
 import {
   type AnalyticsSearchParams,
@@ -55,32 +56,35 @@ export function RangeFilter() {
   }
 
   return (
-    <div className="card-surface edge flex flex-wrap items-end gap-3 p-4">
+    <div className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1">
-        <label htmlFor="analytics-from" className="cap">
+        <label
+          htmlFor="analytics-from"
+          className="text-muted-foreground text-xs"
+        >
           From
         </label>
-        <input
+        <Input
           id="analytics-from"
           key={current.from ?? ""}
           type="date"
           defaultValue={current.from ?? ""}
           onChange={(event) => setDate("from", event.target.value)}
-          className="h-10 rounded-ctl border border-white/12 bg-well px-3 text-fg text-sm focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none"
+          className="h-10 w-40 lg:h-8"
         />
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="analytics-to" className="cap">
+        <label htmlFor="analytics-to" className="text-muted-foreground text-xs">
           To
         </label>
-        <input
+        <Input
           id="analytics-to"
           key={current.to ?? ""}
           type="date"
           defaultValue={current.to ?? ""}
           onChange={(event) => setDate("to", event.target.value)}
-          className="h-10 rounded-ctl border border-white/12 bg-well px-3 text-fg text-sm focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none"
+          className="h-10 w-40 lg:h-8"
         />
       </div>
 

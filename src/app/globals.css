@@ -97,9 +97,6 @@
   --color-impact-medium: #ff8f3f;
   --color-impact-high: #f2443a;
 
-  /* --- Value bar (ValueBar), still used by Analytics --- */
-  --color-bar-track: rgba(255, 255, 255, 0.08);
-
   /* --- Metrik-Zelle (§4.7), noch von Ledger und Progress genutzt --- */
   --shadow-metric-cell: inset -1px -1px 0 rgba(255, 255, 255, 0.07);
 

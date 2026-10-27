@@ -406,6 +406,47 @@ describe("getDimensionBreakdowns", () => {
       expect(row?.rCount).toBe(1);
       expect(row?.rSum).toBe(2);
     });
+
+    // The ranking on /analytics needs at least three trades with an R per
+    // bucket, so the count has to reach the page for every dimension.
+    it("counts no R in a bucket where no trade had a stop price", async () => {
+      const { dimensions } = await run({
+        accounts: { Live: false },
+        trades: [
+          { on: ["Live"], setupType: "Reversal" },
+          { on: ["Live"], setupType: "Reversal" },
+        ],
+      });
+
+      const row = bucket(dimensions, "setupType", "Reversal");
+      expect(row?.trades).toBe(2);
+      expect(row?.rCount).toBe(0);
+      expect(row?.rSum).toBeNull();
+    });
+
+    it("counts the R of a trade once in every dimension it falls into", async () => {
+      const { dimensions } = await run({
+        accounts: { A: false, B: false },
+        trades: [{ on: ["A", "B"], setupType: "Reversal", stopPrice: "95" }],
+      });
+
+      expect(bucket(dimensions, "setupType", "Reversal")?.rCount).toBe(1);
+      expect(pick(dimensions, "weekday").map((row) => row.rCount)).toEqual([1]);
+      expect(bucket(dimensions, "account", "A")?.rCount).toBe(1);
+      expect(bucket(dimensions, "account", "B")?.rCount).toBe(1);
+    });
+
+    it("leaves a practice-only trade's R out of the count", async () => {
+      const { dimensions } = await run({
+        accounts: { Live: false, Demo: true },
+        trades: [
+          { on: ["Live"], setupType: "Reversal", stopPrice: "95" },
+          { on: ["Demo"], setupType: "Reversal", stopPrice: "95" },
+        ],
+      });
+
+      expect(bucket(dimensions, "setupType", "Reversal")?.rCount).toBe(1);
+    });
   });
 
   it("leaves missed setups out of every dimension table", async () => {

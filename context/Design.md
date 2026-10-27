@@ -351,6 +351,8 @@ Rules:
   motion every slide, spring, bounce, shake, pulse, sweep and the orb become their
   static end state; colours and checks remain.
 - Heavy libraries (Three.js) load lazily on the page that needs them.
+- A page with a table of contents that follows the scroll gives its last section at
+  least the height of the screen, so every entry can scroll to the top.
 
 ---
 

@@ -1,18 +1,24 @@
 import { describe, expect, it } from "vitest";
 import {
+  ANALYTICS_QUESTIONS,
   buildDimensionRows,
   buildMissedRows,
+  columnOrder,
   DIMENSION_IDS,
   type DimensionAggregateRow,
   type DimensionId,
+  detailOrder,
   formatBucketLabel,
   groupByDimension,
   groupMissedByDimension,
   MISSED_DIMENSION_IDS,
   type MissedAggregateRow,
   NOT_SET_LABEL,
+  rankBuckets,
   shouldExplainMissingAvgR,
+  sortByMetric,
   splitRecordedDimensions,
+  zeroLineLayout,
 } from "../analytics.ts";
 
 function aggregate(
@@ -103,6 +109,16 @@ describe("buildDimensionRows", () => {
       expect(row.avgR).toBe(1.5);
     });
 
+    // The ranking only trusts an avg R carried by enough trades, so the count
+    // travels with the row.
+    it("keeps how many trades carried an R", () => {
+      const [row] = buildDimensionRows("setupType", [
+        aggregate({ bucket: "Reversal", trades: 5, rSum: 3, rCount: 2 }),
+      ]);
+
+      expect(row.rCount).toBe(2);
+    });
+
     it("has no avg R when no trade in the bucket carried one", () => {
       const [row] = buildDimensionRows("setupType", [
         aggregate({ bucket: "Reversal", trades: 5, rSum: null, rCount: 0 }),
@@ -136,6 +152,23 @@ describe("buildDimensionRows", () => {
       expect(ratios.C).toBe(1);
       expect(ratios.A).toBe(0.5);
       expect(ratios.B).toBe(0.25);
+    });
+
+    // Not set often holds most trades; on the shared scale it dwarfed the
+    // real buckets. It keeps its figures and loses its bar.
+    it("leaves Not set out of the scale and gives it no bar", () => {
+      const rows = buildDimensionRows("setupType", [
+        aggregate({ bucket: "A", netPnlCents: 10000 }),
+        aggregate({ bucket: "B", netPnlCents: -5000 }),
+        aggregate({ bucket: null, netPnlCents: 90000 }),
+      ]);
+
+      expect(rows.map((row) => [row.label, row.barRatio])).toEqual([
+        ["A", 1],
+        ["B", 0.5],
+        [NOT_SET_LABEL, null],
+      ]);
+      expect(rows[2].netPnlCents).toBe(90000);
     });
 
     it("draws no bar at all when every bucket nets zero", () => {
@@ -472,5 +505,296 @@ describe("shouldExplainMissingAvgR", () => {
 
   it("has nothing to explain when there are no buckets at all", () => {
     expect(shouldExplainMissingAvgR(grouped([]))).toBe(false);
+  });
+});
+
+describe("rankBuckets", () => {
+  // One aggregate per bucket: avg R is rSum / rCount.
+  function withR(
+    dimension: DimensionId,
+    bucket: string | null,
+    avgR: number,
+    rCount: number,
+  ): DimensionAggregateRow {
+    return aggregate({
+      dimension,
+      bucket,
+      trades: rCount,
+      rSum: avgR * rCount,
+      rCount,
+      netPnlCents: avgR * 10000,
+    });
+  }
+
+  function ranked(rows: DimensionAggregateRow[]) {
+    const { holdingUp, dragging } = rankBuckets(groupByDimension(rows));
+    const name = (bucket: { dimension: DimensionId; row: { label: string } }) =>
+      `${bucket.dimension}:${bucket.row.label}`;
+    return { holdingUp: holdingUp.map(name), dragging: dragging.map(name) };
+  }
+
+  it("ranks by avg R across dimensions, strongest and weakest first", () => {
+    expect(
+      ranked([
+        withR("setupType", "Reversal", 1.2, 4),
+        withR("session", "London", 2.5, 3),
+        withR("hour", "9", -0.8, 5),
+        withR("mistake", "Chased", -1.5, 3),
+        withR("grade", "A", 0.4, 6),
+      ]),
+    ).toEqual({
+      holdingUp: ["session:London", "setupType:Reversal", "grade:A"],
+      dragging: ["mistake:Chased", "hour:09:00"],
+    });
+  });
+
+  // A bucket never looks strong on one or two trades.
+  it("leaves out a bucket with fewer than three trades with an R", () => {
+    expect(
+      ranked([
+        withR("setupType", "Reversal", 3, 2),
+        withR("setupType", "Breakout", 1, 3),
+      ]).holdingUp,
+    ).toEqual(["setupType:Breakout"]);
+  });
+
+  it("counts trades with an R, not all trades", () => {
+    const bucket = aggregate({
+      dimension: "setupType",
+      bucket: "Reversal",
+      trades: 10,
+      rSum: 4,
+      rCount: 2,
+    });
+
+    expect(ranked([bucket]).holdingUp).toEqual([]);
+  });
+
+  it("never ranks the account dimension or Not set", () => {
+    expect(
+      ranked([
+        withR("account", "Live", 2, 10),
+        withR("setupType", null, 2, 10),
+      ]),
+    ).toEqual({ holdingUp: [], dragging: [] });
+  });
+
+  it("puts an avg R of exactly zero on neither side", () => {
+    expect(ranked([withR("setupType", "Flat", 0, 5)])).toEqual({
+      holdingUp: [],
+      dragging: [],
+    });
+  });
+
+  it("shows at most five on each side", () => {
+    const rows = [1, 2, 3, 4, 5, 6].flatMap((index) => [
+      withR("setupType", `Up ${index}`, index / 10, 3),
+      withR("setupType", `Down ${index}`, -index / 10, 3),
+    ]);
+
+    const { holdingUp, dragging } = ranked(rows);
+    expect(holdingUp).toHaveLength(5);
+    expect(holdingUp[0]).toBe("setupType:Up 6");
+    expect(dragging).toHaveLength(5);
+    expect(dragging[0]).toBe("setupType:Down 6");
+  });
+});
+
+describe("ANALYTICS_QUESTIONS", () => {
+  it("puts every one of the eleven dimensions into exactly one question", () => {
+    const placed = ANALYTICS_QUESTIONS.flatMap(
+      (question) => question.dimensions,
+    );
+
+    expect([...placed].sort()).toEqual([...DIMENSION_IDS].sort());
+  });
+
+  it("asks the six questions in the order the page reads them", () => {
+    expect(ANALYTICS_QUESTIONS.map((question) => question.title)).toEqual([
+      "What holds my results up, what drags them down?",
+      "When do I trade well?",
+      "What am I trading, and how?",
+      "How do I execute?",
+      "What gets in my way?",
+      "Where do I hesitate?",
+    ]);
+  });
+});
+
+describe("columnOrder", () => {
+  const labels = (dimension: "weekday" | "hour", buckets: (string | null)[]) =>
+    columnOrder(
+      dimension,
+      buildDimensionRows(
+        dimension,
+        buckets.map((bucket, index) =>
+          aggregate({ dimension, bucket, netPnlCents: index * 100 }),
+        ),
+      ),
+    ).map((row) => row.label);
+
+  // The columns read as a week and as a day, not by money.
+  it("orders weekdays Monday to Sunday", () => {
+    expect(labels("weekday", ["0", "5", "1", "3"])).toEqual([
+      "Monday",
+      "Wednesday",
+      "Friday",
+      "Sunday",
+    ]);
+  });
+
+  it("orders hours through the day", () => {
+    expect(labels("hour", ["14", "9", "10", "8"])).toEqual([
+      "08:00",
+      "09:00",
+      "10:00",
+      "14:00",
+    ]);
+  });
+
+  it("leaves Not set out of the columns", () => {
+    expect(labels("hour", ["9", null])).toEqual(["09:00"]);
+  });
+});
+
+describe("zeroLineLayout", () => {
+  // The axis runs from the largest loss (0) to the largest gain (100), in
+  // percent; a bar is where it starts on that axis and how long it is.
+  it("places the zero line by the ratio of the largest gain to the largest loss", () => {
+    expect(zeroLineLayout([300, -100, 150])).toEqual({
+      zero: 25,
+      bars: [
+        { start: 25, length: 75 },
+        { start: 0, length: 25 },
+        { start: 25, length: 37.5 },
+      ],
+    });
+  });
+
+  it("gives a page of only gains the whole axis", () => {
+    expect(zeroLineLayout([200, 100])).toEqual({
+      zero: 0,
+      bars: [
+        { start: 0, length: 100 },
+        { start: 0, length: 50 },
+      ],
+    });
+  });
+
+  it("gives a page of only losses the whole axis", () => {
+    expect(zeroLineLayout([-50, -100])).toEqual({
+      zero: 100,
+      bars: [
+        { start: 50, length: 50 },
+        { start: 0, length: 100 },
+      ],
+    });
+  });
+
+  it("leaves a value without a bar out of the scale", () => {
+    expect(zeroLineLayout([100, null])).toEqual({
+      zero: 0,
+      bars: [{ start: 0, length: 100 }, null],
+    });
+  });
+
+  it("draws nothing when every value is zero", () => {
+    expect(zeroLineLayout([0, 0])).toEqual({
+      zero: 0,
+      bars: [
+        { start: 0, length: 0 },
+        { start: 0, length: 0 },
+      ],
+    });
+  });
+
+  // Rounded so server and browser print the same SVG attributes.
+  it("rounds to two decimals", () => {
+    expect(zeroLineLayout([1, -2])).toEqual({
+      zero: 66.67,
+      bars: [
+        { start: 66.67, length: 33.33 },
+        { start: 0, length: 66.67 },
+      ],
+    });
+  });
+});
+
+describe("sortByMetric", () => {
+  const rows = buildDimensionRows("setupType", [
+    aggregate({ bucket: "A", trades: 2, wins: 2, netPnlCents: 500 }),
+    aggregate({
+      bucket: "B",
+      trades: 8,
+      wins: 2,
+      netPnlCents: -300,
+      rSum: -1,
+      rCount: 4,
+    }),
+    aggregate({
+      bucket: "C",
+      trades: 4,
+      wins: 3,
+      netPnlCents: 100,
+      rSum: 3,
+      rCount: 2,
+    }),
+    aggregate({ bucket: null, trades: 20, wins: 20, netPnlCents: 9000 }),
+  ]);
+  const order = (metric: Parameters<typeof sortByMetric>[1]) =>
+    sortByMetric(rows, metric).map((row) => row.label);
+
+  it("sorts by the switched metric, highest first", () => {
+    expect(order("pnl")).toEqual(["A", "C", "B", NOT_SET_LABEL]);
+    expect(order("trades")).toEqual(["B", "C", "A", NOT_SET_LABEL]);
+    expect(order("winRate")).toEqual(["A", "C", "B", NOT_SET_LABEL]);
+  });
+
+  it("puts a bucket without a value after the ones that have one", () => {
+    // A has no trade with an R.
+    expect(order("avgR")).toEqual(["C", "B", "A", NOT_SET_LABEL]);
+  });
+});
+
+describe("detailOrder", () => {
+  const rows = (dimension: DimensionId) =>
+    buildDimensionRows(dimension, [
+      aggregate({
+        dimension,
+        bucket: "A",
+        trades: 2,
+        wins: 2,
+        netPnlCents: 500,
+      }),
+      aggregate({
+        dimension,
+        bucket: "B",
+        trades: 8,
+        wins: 1,
+        netPnlCents: -300,
+      }),
+      aggregate({
+        dimension,
+        bucket: "C",
+        trades: 4,
+        wins: 3,
+        netPnlCents: 100,
+      }),
+    ]);
+  const labels = (
+    dimension: DimensionId,
+    metric: Parameters<typeof detailOrder>[2],
+  ) => detailOrder(dimension, rows(dimension), metric).map((row) => row.label);
+
+  it("orders a dimension by the switched metric", () => {
+    expect(labels("setupType", "trades")).toEqual(["B", "C", "A"]);
+  });
+
+  // Do not build: sorting or ranking by account. Accounts keep the net P&L
+  // order of the old table, whatever the switch shows.
+  it("keeps accounts in net P&L order whatever the metric", () => {
+    for (const metric of ["pnl", "winRate", "avgR", "trades"] as const) {
+      expect(labels("account", metric)).toEqual(["A", "C", "B"]);
+    }
   });
 });
