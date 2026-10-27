@@ -223,6 +223,15 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  /* A native select's open list takes the field's background, which is nearly
+     transparent, and some platforms draw it over white while the options keep
+     the light text. The options get the popover surface every other menu uses. */
+  select option,
+  select optgroup {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+  }
 }
 
 /* Standardkarte */
