@@ -8,8 +8,6 @@ interface MetricCellProps {
   tone: MetricTone;
   /** Sign of the underlying money value; ignored unless tone is "money". */
   sign?: number;
-  /** Design.md §4.7: only "Today" is highlighted. */
-  highlight?: boolean;
 }
 
 // Design.md §4.7 and §1: money gets a semantic colour and nothing else,
@@ -28,17 +26,12 @@ export function MetricCell({
   context,
   tone,
   sign = 0,
-  highlight = false,
 }: MetricCellProps) {
   return (
     // Design.md §5: 150ms in, 200ms out. The surface lightens and nothing
     // else — a metric cell is not clickable, and the lift is this project's
     // sign for "you can press this" (same split as the calendar grid).
-    <div
-      className={`flex flex-col gap-1 p-4 shadow-[var(--shadow-metric-cell)] transition-[background-color] duration-200 ease-[var(--ease-soft)] hover:bg-white/[0.03] hover:duration-150 ${
-        highlight ? "bg-[image:var(--gradient-today)]" : ""
-      }`}
-    >
+    <div className="flex flex-col gap-1 p-4 shadow-[var(--shadow-metric-cell)] transition-[background-color] duration-200 ease-[var(--ease-soft)] hover:bg-white/[0.03] hover:duration-150">
       <span className="cap">{label}</span>
       <span
         className={`font-mono text-[21px] font-bold tabular-nums ${valueClass(

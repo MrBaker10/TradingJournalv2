@@ -14,6 +14,7 @@ import {
   YAxis,
 } from "recharts";
 import type { EquitySeries, PlottedPoint } from "@/domain/equity";
+import { SIGN_TEXT, signOf } from "@/lib/dashboard/sign-tone";
 import { type DisplayCurrency, formatCents } from "@/lib/money";
 import {
   formatDateWithYear,
@@ -56,16 +57,14 @@ const STROKE_GRADIENT_ID = "equity-curve-stroke";
 
 // The fill is strongest at the far edge and fades to nothing at the starting
 // line — zero without a balance — so the distance from the start is what the
-// eye reads. It stays well below the
-// calendar's 30%: this is a large surface, and a loud one would make the month
-// look like a mood rather than a record.
-const FILL_OPACITY_FAR = 0.3;
+// eye reads (Design.md §3.2: faint to nothing, no glow).
+const FILL_OPACITY_FAR = 0.2;
 const FILL_OPACITY_AT_ZERO = 0.02;
 
 /**
  * The two-tone split, green above the starting line and red below it. The
  * starting line is the account's starting balance, or zero without one
- * (Design.md §4.15).
+ * (Design.md §3.2).
  *
  * Both gradients are anchored to the **plot area in pixels**
  * (`gradientUnits="userSpaceOnUse"`), not to the bounding box of the filled
@@ -144,15 +143,12 @@ function SplitGradients({ baselineOffset }: { baselineOffset: number }) {
 
 /** Above the start is a gain, below it a loss — against the start, not zero. */
 function toneClass(cents: number, startCents: number): string {
-  if (cents > startCents) return "text-success-fg";
-  if (cents < startCents) return "text-danger-fg";
-  return "text-fg-muted";
+  return SIGN_TEXT[signOf(cents, startCents)];
 }
 
-// Design.md §4.8 forbids a tooltip on the calendar tile, where the amount is
-// already printed on the tile. Here nothing is printed, so a point is only
-// readable through one — kept to a small surface, not a modal, and showing
-// both the day's own result and where the month stood after it.
+// Nothing on the curve is printed, so a point is only readable through a
+// tooltip — kept to a small surface, not a modal, and showing both the day's
+// own result and where the account stood after it.
 function EquityTooltip({
   active,
   payload,
@@ -167,10 +163,10 @@ function EquityTooltip({
   // and no result of its own (decided 2026-09-26).
   if (point.kind === "start") {
     return (
-      <div className="card-surface edge flex flex-col gap-1 px-3 py-2">
-        <span className="cap">Starting balance</span>
+      <div className="flex flex-col gap-1 rounded-md border bg-popover px-2.5 py-1.5 text-popover-foreground shadow-md">
+        <span className="text-muted-foreground text-xs">Starting balance</span>
         <span
-          className={`font-mono text-[15px] font-semibold tabular-nums ${toneClass(point.equityCents, startCents)}`}
+          className={`font-mono text-sm tabular-nums ${toneClass(point.equityCents, startCents)}`}
         >
           {formatCents(point.equityCents, { currency })}
         </span>
@@ -179,10 +175,12 @@ function EquityTooltip({
   }
 
   return (
-    <div className="card-surface edge flex flex-col gap-1 px-3 py-2">
-      <span className="cap">{formatDayLabel(point.date)}</span>
+    <div className="flex flex-col gap-1 rounded-md border bg-popover px-2.5 py-1.5 text-popover-foreground shadow-md">
+      <span className="text-muted-foreground text-xs">
+        {formatDayLabel(point.date)}
+      </span>
       <span
-        className={`font-mono text-[15px] font-semibold tabular-nums ${toneClass(point.equityCents, startCents)}`}
+        className={`font-mono text-sm tabular-nums ${toneClass(point.equityCents, startCents)}`}
       >
         {/* With a starting balance the figure is where the account stood, not
             a result, so it carries no plus sign; without one it is the
@@ -192,7 +190,7 @@ function EquityTooltip({
           currency,
         })}
       </span>
-      <span className="text-fg-muted text-xs tabular-nums">
+      <span className="font-mono text-muted-foreground text-xs tabular-nums">
         {formatCents(point.amountCents, { signed: true, currency })} that day
       </span>
     </div>
@@ -200,11 +198,10 @@ function EquityTooltip({
 }
 
 /**
- * Design.md §4.15: the running month as a cumulative curve.
+ * Design.md §3.2: the scope's result as a cumulative curve from the first
+ * trade to today.
  *
- * Money keeps its semantic colours and gets no glow (§1, §9) — the neon
- * treatment on this page belongs to streak, score and badges, not to the
- * equity line. The whole series arrives finished from the page; nothing here
+ * Money keeps its sign colours and gets no glow (§1). The whole series arrives finished from the page; nothing here
  * adds, multiplies or divides money.
  */
 export function EquityCurve({ series, currency }: EquityCurveProps) {
@@ -225,10 +222,18 @@ export function EquityCurve({ series, currency }: EquityCurveProps) {
   const spansMonths = series.monthTicks.length > 1;
 
   return (
-    <section className="card-surface edge flex flex-col gap-3 p-5">
+    <section
+      aria-labelledby="equity-curve-heading"
+      className="flex flex-col gap-2"
+    >
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="cap cap-neon">Equity curve</h2>
-        <span className="text-fg-subtle text-xs">
+        <h2
+          id="equity-curve-heading"
+          className="text-[11px] text-muted-foreground uppercase tracking-wider"
+        >
+          Equity curve
+        </h2>
+        <span className="text-muted-foreground text-xs">
           {firstDate === undefined
             ? ""
             : `${formatDateWithYear(firstDate)} — today`}
@@ -236,7 +241,7 @@ export function EquityCurve({ series, currency }: EquityCurveProps) {
       </div>
 
       {series.points.length === 0 ? (
-        <p className="py-10 text-center text-fg-subtle text-sm">
+        <p className="py-10 text-center text-muted-foreground text-sm">
           Nothing logged yet. The curve starts with your first entry.
         </p>
       ) : (

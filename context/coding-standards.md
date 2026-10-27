@@ -19,6 +19,7 @@ version upgrades belong in a separate commit that changes nothing else.
 | Zod | 4.5.4 |
 | Recharts | 3.10.1 |
 | motion (ex framer-motion) | 13.2.0 |
+| three.js / @types/three | 0.186.1 / 0.186.0 (streak orb only) |
 | Sonner (Toasts) | 2.0.8 |
 | Biome | 2.5.12 |
 | Vitest / Playwright | 4.1.11 / 1.63.0 |

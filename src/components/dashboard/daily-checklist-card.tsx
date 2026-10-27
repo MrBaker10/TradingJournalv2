@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import Link from "next/link";
 import { useOptimistic, useState, useTransition } from "react";
 import { setChecklistStepChecked } from "@/actions/checklist";
@@ -10,13 +11,13 @@ import {
   CHECKLIST_PHASES,
   CHECKLIST_TICK_FAILED,
 } from "@/schemas/checklist";
+import { PenStrike } from "./pen-strike";
 
 type Tick = { id: number; checked: boolean };
 
-// Today's copy of the checklist template. A process card like the plan card
-// (Design.md §4.6), so it carries the neon edge and a completed phase count
-// glows — but a finished phase gets no toast, animation or celebration, and
-// ticking feeds no streak, score or badge.
+// Today's copy of the checklist template (Design.md §3.2). Ticking a step
+// strikes it through like a pen; a finished phase gets no toast, animation or
+// celebration, and ticking feeds no streak, score or badge.
 export function DailyChecklistCard({ items }: { items: DailyChecklistItem[] }) {
   const [optimisticItems, applyTick] = useOptimistic(
     items,
@@ -49,17 +50,20 @@ export function DailyChecklistCard({ items }: { items: DailyChecklistItem[] }) {
   return (
     <section
       aria-labelledby="daily-checklist-heading"
-      className="card-surface edge-neon flex flex-col gap-3 p-5"
+      className="flex flex-col gap-3"
     >
-      <h2 id="daily-checklist-heading" className="cap cap-neon">
+      <h2
+        id="daily-checklist-heading"
+        className="text-[11px] text-muted-foreground uppercase tracking-wider"
+      >
         Daily checklist
       </h2>
       {items.length === 0 ? (
-        <p className="text-fg-muted text-sm">
+        <p className="text-muted-foreground text-sm">
           No routine steps yet.{" "}
           <Link
             href="/settings"
-            className="text-cyan underline-offset-2 hover:underline"
+            className="text-foreground underline underline-offset-2"
           >
             Set up your checklist in Settings
           </Link>
@@ -72,25 +76,17 @@ export function DailyChecklistCard({ items }: { items: DailyChecklistItem[] }) {
               (item) => item.phase === phase,
             );
             const done = steps.filter((item) => item.checked).length;
-            const complete = steps.length > 0 && done === steps.length;
             return (
               <section
                 key={phase}
                 aria-labelledby={`daily-checklist-${phase}`}
-                className="flex flex-col gap-1"
+                className="flex flex-col"
               >
-                <div className="flex items-center justify-between gap-3">
-                  <h3
-                    id={`daily-checklist-${phase}`}
-                    className="font-medium text-fg text-sm"
-                  >
+                <div className="mb-1 flex items-baseline justify-between gap-3 text-muted-foreground text-xs">
+                  <h3 id={`daily-checklist-${phase}`}>
                     {CHECKLIST_PHASE_LABELS[phase]}
                   </h3>
-                  <span
-                    className={`font-mono text-xs tabular-nums ${
-                      complete ? "text-glow" : "text-fg-muted"
-                    }`}
-                  >
+                  <span className="font-mono tabular-nums">
                     <span aria-hidden="true">
                       {done}/{steps.length}
                     </span>
@@ -100,14 +96,14 @@ export function DailyChecklistCard({ items }: { items: DailyChecklistItem[] }) {
                   </span>
                 </div>
                 {steps.length === 0 ? (
-                  <p className="py-2 text-fg-subtle text-sm">
+                  <p className="py-1 text-muted-foreground text-sm">
                     No steps in this phase.
                   </p>
                 ) : (
                   <ul>
                     {steps.map((item) => (
                       <li key={item.id}>
-                        <label className="flex min-h-10 cursor-pointer items-center gap-3 py-1 text-fg text-sm">
+                        <label className="flex min-h-10 cursor-pointer items-center gap-2.5 rounded-md px-1.5 py-1 text-sm transition-colors duration-150 hover:bg-accent/60 has-focus-visible:ring-3 has-focus-visible:ring-ring/50 lg:min-h-8">
                           <input
                             type="checkbox"
                             checked={item.checked}
@@ -117,11 +113,15 @@ export function DailyChecklistCard({ items }: { items: DailyChecklistItem[] }) {
                                 checked: event.target.checked,
                               })
                             }
-                            className="h-4 w-4 shrink-0 accent-cyan focus-visible:outline-2 focus-visible:outline-cyan focus-visible:outline-offset-2"
+                            className="peer sr-only"
                           />
-                          <span className="min-w-0 break-words">
-                            {item.text}
+                          <span
+                            aria-hidden="true"
+                            className="flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input text-background transition-colors duration-150 peer-checked:border-foreground peer-checked:bg-foreground [&>svg]:opacity-0 peer-checked:[&>svg]:opacity-100"
+                          >
+                            <Check className="size-3" strokeWidth={3} />
                           </span>
+                          <PenStrike text={item.text} on={item.checked} />
                         </label>
                       </li>
                     ))}

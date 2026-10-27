@@ -94,6 +94,25 @@ export function formatCentsPlain(cents: number): string {
   return `${sign}${dollars}.${String(remainder).padStart(2, "0")}`;
 }
 
+/**
+ * A signed amount small enough for a phone's calendar day: `+142`, `-1.6k`.
+ * Whole units, thousands with one truncated decimal, no currency symbol; the
+ * full amount stays in the day's label. Built from the integer cents by
+ * division and remainder, never through a float.
+ */
+export function formatCentsCompact(cents: number): string {
+  if (!Number.isInteger(cents)) {
+    throw new RangeError(`cents must be an integer, got ${cents}`);
+  }
+  const units = Math.trunc(Math.abs(cents) / CENTS_PER_DOLLAR);
+  if (units === 0) return "0";
+  const sign = cents < 0 ? "-" : "+";
+  if (units < 1000) return `${sign}${units}`;
+  const thousands = Math.trunc(units / 1000);
+  const tenths = Math.trunc((units % 1000) / 100);
+  return `${sign}${thousands}.${tenths}k`;
+}
+
 const CENTS_PER_THOUSAND_DOLLARS = 100_000;
 
 /**

@@ -31,10 +31,8 @@
   /* --- Semantisch (Geld & Regeln) --- */
   --color-success: #01b574;
   --color-success-fg: #01d98c; /* Zahlen auf dunkel */
-  --color-success-hi: #22f0a0; /* nur Kalender-Kachel */
   --color-danger: #e31a1a;
   --color-danger-fg: #ff6a6a;
-  --color-danger-hi: #ff7b7b;
   --color-warning: #ffb547;
 
   /* --- Verläufe --- */
@@ -108,53 +106,8 @@
     0 0 24px -12px rgba(255, 181, 71, 0.5);
   --color-bar-track: rgba(255, 255, 255, 0.08);
 
-  /* --- Dashboard: Metrik-Tafel (§4.7) --- */
+  /* --- Metrik-Zelle (§4.7), noch von Ledger und Progress genutzt --- */
   --shadow-metric-cell: inset -1px -1px 0 rgba(255, 255, 255, 0.07);
-  /* Die Zelle "Today" ist hervorgehoben, ihr Wert bleibt semantisch gefärbt:
-     Geld leuchtet nicht (§1). */
-  --gradient-today: linear-gradient(
-    310deg,
-    rgba(0, 117, 255, 0.16) 0%,
-    rgba(33, 212, 253, 0.05) 100%
-  );
-
-  /* --- Dashboard: Kalender-Heatmap (§4.8) --- */
-  /* Hier ist der farbige Schein auf Geldtagen erlaubt: er codiert Dichte über
-     den Monat, nicht Belohnung, und sitzt auf der Kachel statt auf der Zahl. */
-  --gradient-day-win: linear-gradient(
-    310deg,
-    rgba(1, 181, 116, 0.3) 0%,
-    rgba(1, 181, 116, 0.08) 100%
-  );
-  --shadow-day-win: inset 0 0 0 1px rgba(1, 217, 140, 0.45);
-  --gradient-day-loss: linear-gradient(
-    310deg,
-    rgba(227, 26, 26, 0.28) 0%,
-    rgba(227, 26, 26, 0.08) 100%
-  );
-  --shadow-day-loss: inset 0 0 0 1px rgba(255, 106, 106, 0.4);
-  --shadow-day-flat: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  --shadow-day-today:
-    inset 0 0 0 1.5px #21d4fd, 0 0 22px -4px rgba(33, 212, 253, 0.75);
-  /* Hover je Zustand, damit ein grüner Tag beim Überfahren grün bleibt statt
-     weiß zu werden. Der Rand hellt auf, die Fläche kommt aus `hover:bg-white/5`
-     in der Komponente. */
-  --shadow-day-win-hover: inset 0 0 0 1px rgba(1, 217, 140, 0.7);
-  --shadow-day-loss-hover: inset 0 0 0 1px rgba(255, 106, 106, 0.65);
-  --shadow-day-flat-hover: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
-
-  /* --- Dashboard: Equity-Kurve (§4.15) --- */
-  /* Fläche und Linie tragen die semantischen Geldfarben und wechseln an der
-     Nulllinie. Kein Cyan, kein Glow: der Verlauf ist ein Geldwert (§1, §9).
-     Raster und Achsenschrift bleiben deshalb betont neutral, damit die einzige
-     Farbe auf der Karte die Kurve selbst ist. */
-  --color-chart-grid: rgba(255, 255, 255, 0.07);
-  /* Nicht `--color-fg-subtle`: die Y-Achse trägt Geldbeträge, und §8 lässt den
-     dunkelsten Ton nur für Nebeninformationen zu, nie für Werte. */
-  --color-chart-axis: var(--color-fg-muted);
-  /* Die Nulllinie ist heller als das Raster — sie ist keine Hilfslinie, sie ist
-     die Grenze, an der die Kurve die Farbe wechselt. */
-  --color-chart-zero: rgba(255, 255, 255, 0.22);
 
   /* --- Ruhige Prozessfläche (§4.14) --- */
   /* Dasselbe Rezept wie die Geldtage darüber, nur in Blau: schwacher Verlauf
@@ -233,6 +186,10 @@
   --shadow-practice-fog:
     inset 0 0 140px rgb(251 191 36 / 0.27),
     inset 0 0 36px rgb(251 191 36 / 0.25);
+
+  /* A calendar day lifted on hover (Design.md §3.2): a soft drop shadow and a
+     hairline in the field-border colour, as on the dashboard prototype. */
+  --shadow-day-lift: 0 10px 28px -8px rgb(0 0 0 / 0.7), 0 0 0 1px var(--input);
 }
 
 .dark {
@@ -417,59 +374,38 @@ body {
   transition-duration: 300ms;
 }
 
-/* Design.md §4.15. Recharts setzt Farben als SVG-Presentation-Attribute
-   (`stroke="#ccc"`), und in einem Attribut ist `var(--token)` nicht erlaubt —
-   ein Token als Prop durchzureichen wäre also wirkungslos. Eine CSS-Regel auf
-   dasselbe Element schlägt das Attribut, deshalb stehen sämtliche Farben der
-   Kurve hier statt in der Komponente: Raster, Achse, Nulllinie, Cursor-Punkt
-   und die Stopps der beiden Verläufe. Damit bleibt die Regel „keine
-   Farbliterale in Komponenten" aus §2 auch für Diagramme gültig, ohne dass die
-   Komponente einen Inline-Style braucht. Die `recharts-*`-Klassen stammen aus
-   der Bibliothek und sind dort Teil der öffentlichen Oberfläche, die
-   `equity-*`-Klassen setzt die Komponente selbst. */
+/* The equity curve (Design.md §3.2). Recharts sets colours as SVG
+   presentation attributes, where `var()` is not allowed, so a CSS rule on the
+   same element overrides them: grid, axis, starting line, cursor dot and the
+   stops of both gradients. The `recharts-*` classes are the library's public
+   surface; the `equity-*` classes are set by the component. Opacity stays on
+   the stops as `stopOpacity`, a number rather than a colour. */
 .equity-chart .recharts-cartesian-grid line {
-  stroke: var(--color-chart-grid);
+  stroke: var(--border);
 }
-.equity-chart .recharts-reference-line-line {
-  stroke: var(--color-chart-zero);
-}
+.equity-chart .recharts-reference-line-line,
 .equity-chart .recharts-tooltip-cursor {
-  stroke: var(--color-chart-zero);
+  stroke: var(--input);
 }
 .equity-chart .recharts-cartesian-axis-tick-value {
-  fill: var(--color-chart-axis);
-  /* 12px ist die untere Grenze aus §8, nicht die `cap`-Größe: hier stehen
-     Beträge, keine Kapitälchen-Label. */
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
+  fill: var(--muted-foreground);
+  font-size: 0.6875rem;
 }
-/* Geld steht in Mono mit Tabellenziffern (§3), auch auf der Achse — sonst
-   wandert das Komma zwischen zwei Rasterlinien. */
+/* Money in mono with tabular figures, on the axis too. */
 .equity-chart .recharts-yAxis-ticks .recharts-cartesian-axis-tick-value {
   font-family: --theme(--font-mono inline);
   font-variant-numeric: tabular-nums;
 }
-/* Der Punkt unter dem Cursor: Loch in der Seitenfarbe, Rand in der Farbe der
-   Nulllinie. Er markiert die Stelle, er feiert sie nicht. */
 .equity-chart .recharts-active-dot circle {
-  fill: var(--color-bg);
-  stroke: var(--color-chart-zero);
+  fill: var(--background);
+  stroke: var(--muted-foreground);
   stroke-width: 2px;
 }
-
-/* Die Verlaufsstopps. Die Fläche nimmt den satten Ton, die Linie den helleren
-   Vordergrundton — dieselbe Aufteilung wie zwischen Kalenderkachel und Betrag
-   darauf (§4.8). Die Deckkraft bleibt als `stopOpacity` am Element, weil sie
-   eine Zahl ist und die beiden Enden eines Verlaufs sich unterscheiden. */
-.equity-chart .equity-fill-win {
-  stop-color: var(--color-success);
-}
-.equity-chart .equity-fill-loss {
-  stop-color: var(--color-danger);
-}
+.equity-chart .equity-fill-win,
 .equity-chart .equity-line-win {
-  stop-color: var(--color-success-fg);
+  stop-color: var(--positive);
 }
+.equity-chart .equity-fill-loss,
 .equity-chart .equity-line-loss {
-  stop-color: var(--color-danger-fg);
+  stop-color: var(--negative);
 }
