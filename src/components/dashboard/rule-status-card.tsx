@@ -1,3 +1,5 @@
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { RuleStatusLines } from "@/components/rule-status/rule-status-lines";
 import type { LinkedRuleStatus } from "@/lib/prop-firms/rule-status";
 import { formatDateWithYear } from "@/lib/time";
@@ -26,6 +28,17 @@ export function RuleStatusCard({
           {link.firmName} · {link.programName} · Since{" "}
           {formatDateWithYear(attempt.start)}
         </span>
+        {/* Straight into the account's settings sheet (Design.md §3.8). */}
+        <Link
+          href={`/settings?account=${link.accountId}`}
+          className="group ml-auto inline-flex items-center gap-0.5 rounded-sm text-muted-foreground text-xs outline-none transition-colors duration-150 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          Account rules
+          <ChevronRight
+            aria-hidden="true"
+            className="size-3.5 transition-[translate] duration-150 group-hover:translate-x-0.5"
+          />
+        </Link>
       </div>
       <RuleStatusLines status={attempt.status} />
     </section>

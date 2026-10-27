@@ -125,6 +125,26 @@ export interface RuleStatus {
   minTradingDays: MinTradingDaysStatus;
 }
 
+const STATE_RANK: Record<RuleState, number> = { ok: 0, close: 1, breached: 2 };
+
+/**
+ * The worst state among the rules that were checked, for the settings rule
+ * dot. Rules that are not set or not checkable carry no state and are left
+ * out; the profit target is always checked, so there is always a state.
+ */
+export function worstRuleState(status: RuleStatus): RuleState {
+  let worst: RuleState = "ok";
+  for (const { status: state } of Object.values(status)) {
+    if (isRuleState(state) && STATE_RANK[state] > STATE_RANK[worst])
+      worst = state;
+  }
+  return worst;
+}
+
+function isRuleState(state: string): state is RuleState {
+  return state in STATE_RANK;
+}
+
 /**
  * The trading day a date belongs to for the account rules: the streak's rule
  * (`toTradingDay`), Sunday onto the following Monday, except that a Saturday

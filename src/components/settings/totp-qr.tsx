@@ -8,7 +8,7 @@ interface TotpQrProps {
   uri: string;
 }
 
-// Design.md §4.19: dark modules on a white field. The app is dark, the code
+// Design-v1.md §4.19: dark modules on a white field. The app is dark, the code
 // is not — not every authenticator app reads an inverted QR code.
 //
 // Drawn as one React <path> from uqr's module matrix rather than injected as
@@ -26,7 +26,7 @@ export function TotpQr({ uri }: TotpQrProps) {
   }, [uri]);
 
   return (
-    <div className="w-fit rounded-ctl bg-fg p-3">
+    <div className="w-fit rounded-lg bg-white p-3">
       <svg
         viewBox={`0 0 ${size} ${size}`}
         className="h-44 w-44"
@@ -34,7 +34,7 @@ export function TotpQr({ uri }: TotpQrProps) {
         aria-label="QR code for your authenticator app"
         shapeRendering="crispEdges"
       >
-        <path d={path} className="fill-bg" />
+        <path d={path} className="fill-black" />
       </svg>
     </div>
   );

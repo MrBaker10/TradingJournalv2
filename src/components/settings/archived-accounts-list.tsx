@@ -1,10 +1,6 @@
 "use client";
 
-import { ArchiveRestore, Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
-import { hardDeleteAccount, unarchiveAccount } from "@/actions/accounts";
-import { InlineMessage } from "@/components/ui/inline-message";
-import { useTwoClickConfirm } from "@/hooks/use-two-click-confirm";
+import { ChevronRight } from "lucide-react";
 import { calendarDateOf, formatDayLabel } from "@/lib/time";
 
 export interface ArchivedAccountData {
@@ -15,98 +11,46 @@ export interface ArchivedAccountData {
   inUse: boolean;
 }
 
-interface ArchivedAccountRowProps {
-  account: ArchivedAccountData;
-  timeZone: string;
-}
-
-function ArchivedAccountRow({ account, timeZone }: ArchivedAccountRowProps) {
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const deleteConfirm = useTwoClickConfirm();
-
-  function handleRestoreClick() {
-    startTransition(async () => {
-      const result = await unarchiveAccount({ accountId: account.id });
-      if (!result.success) setError(result.error);
-    });
-  }
-
-  function handleDeleteClick() {
-    deleteConfirm.press(() =>
-      startTransition(async () => {
-        const result = await hardDeleteAccount({ accountId: account.id });
-        if (!result.success) setError(result.error);
-      }),
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-1.5 rounded-ctl border border-white/8 px-3 py-2.5">
-      <div className="flex items-center gap-2">
-        <div className="flex flex-1 flex-col">
-          <span className="truncate text-sm text-fg-muted">{account.name}</span>
-          <span className="text-xs text-fg-subtle">
-            Archived{" "}
-            {formatDayLabel(calendarDateOf(account.archivedAt, timeZone))}
-          </span>
-        </div>
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={handleRestoreClick}
-          className="flex h-10 shrink-0 items-center gap-1.5 rounded-xs px-2 text-xs text-fg-subtle transition-colors hover:text-cyan"
-        >
-          <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
-          Restore
-        </button>
-        {account.inUse ? (
-          <span className="shrink-0 text-right text-fg-subtle text-xs">
-            Has trades or ledger entries — stays archived
-          </span>
-        ) : (
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={handleDeleteClick}
-            className={`flex h-10 shrink-0 items-center gap-1.5 rounded-xs px-2 text-xs transition-colors ${
-              deleteConfirm.armed
-                ? "bg-[rgba(227,26,26,.16)] text-danger-fg"
-                : "text-fg-subtle hover:text-danger-fg"
-            }`}
-          >
-            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-            {deleteConfirm.armed ? "Confirm delete" : "Delete permanently"}
-          </button>
-        )}
-      </div>
-      <InlineMessage message={error} />
-    </div>
-  );
-}
-
-interface ArchivedAccountsListProps {
-  accounts: ArchivedAccountData[];
-  /** `archived_at` is an instant; the day it falls on is the user's to decide. */
-  timeZone: string;
-}
-
+/**
+ * The archived accounts under the accounts table (Design.md §3.8). A row
+ * opens the account's sheet, where it can be restored or deleted.
+ */
 export function ArchivedAccountsList({
   accounts,
   timeZone,
-}: ArchivedAccountsListProps) {
+  onOpen,
+}: {
+  accounts: ArchivedAccountData[];
+  /** `archived_at` is an instant; the day it falls on is the user's to decide. */
+  timeZone: string;
+  onOpen: (accountId: number) => void;
+}) {
   if (accounts.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2">
-      <span className="cap">Archived</span>
-      {accounts.map((account) => (
-        <ArchivedAccountRow
-          key={account.id}
-          account={account}
-          timeZone={timeZone}
-        />
-      ))}
+    <div className="flex flex-col gap-1">
+      <h3 className="text-muted-foreground text-xs">Archived</h3>
+      <ul className="flex flex-col">
+        {accounts.map((account) => (
+          <li key={account.id} className="border-b last:border-b-0">
+            <button
+              type="button"
+              onClick={() => onOpen(account.id)}
+              className="group flex min-h-10 w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm outline-none transition-colors duration-150 hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <span className="min-w-0 flex-1 truncate">{account.name}</span>
+              <span className="shrink-0 text-muted-foreground text-xs">
+                Archived{" "}
+                {formatDayLabel(calendarDateOf(account.archivedAt, timeZone))}
+              </span>
+              <ChevronRight
+                aria-hidden="true"
+                className="size-4 shrink-0 text-muted-foreground transition-[translate] duration-150 group-hover:translate-x-0.5"
+              />
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -1,17 +1,22 @@
-import { AccountsManager } from "@/components/settings/accounts-manager";
 import { ChecklistTemplate } from "@/components/settings/checklist-template";
 import { ExportCard } from "@/components/settings/export-card";
 import { SecuritySection } from "@/components/settings/security-section";
+import { SettingsAccounts } from "@/components/settings/settings-accounts";
+import { SettingsSection } from "@/components/settings/settings-section";
 import { listAccountRules } from "@/db/queries/account-rules";
 import { listAllAccountsForSettings } from "@/db/queries/accounts";
 import { listChecklistItems } from "@/db/queries/checklist";
 import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
 import { listProgramOptions } from "@/db/queries/prop-firms";
+import { worstRuleState } from "@/domain/rule-status";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { loadRuleStatus } from "@/lib/prop-firms/rule-status";
 import { todayInTimeZone } from "@/lib/time";
 
+// Settings on one page (Design.md §3.8). The open account sheet is the
+// client's `account` search parameter, resolved against the accounts loaded
+// here — the user's own — so a foreign id opens nothing.
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   const accounts = await listAllAccountsForSettings(user.id);
@@ -34,48 +39,56 @@ export default async function SettingsPage() {
       .filter((account) => account.archivedAt === null)
       .map(async (account) => {
         const link = rules.find((row) => row.accountId === account.id) ?? null;
+        const attempt = link && (await loadRuleStatus(user.id, link, today));
         return {
           ...account,
           commissionRates: rates.filter(
             (rate) => rate.accountId === account.id,
           ),
           rules: link,
-          attempt: link && (await loadRuleStatus(user.id, link, today)),
+          attempt,
+          ruleState: attempt ? worstRuleState(attempt.status) : null,
         };
       }),
   );
   const archived = accounts
     .filter((account) => account.archivedAt !== null)
     .map((account) => ({
-      ...account,
+      id: account.id,
+      name: account.name,
       archivedAt: account.archivedAt as Date,
       inUse: account.hasTrades || account.hasLedgerEntries,
     }));
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="page-title">Settings</h1>
-      <AccountsManager
-        active={active}
-        archived={archived}
-        instruments={instruments.map((instrument) => ({
-          id: instrument.id,
-          symbol: instrument.symbol,
-        }))}
-        programs={programs}
-        today={today}
-        timeZone={user.timezone}
-      />
-      <ChecklistTemplate items={checklistItems} />
-      <div className="max-w-4xl">
+    <SettingsAccounts
+      active={active}
+      archived={archived}
+      instruments={instruments.map((instrument) => ({
+        id: instrument.id,
+        symbol: instrument.symbol,
+      }))}
+      programs={programs}
+      today={today}
+      timeZone={user.timezone}
+    >
+      <SettingsSection
+        id="checklist"
+        hint="Your routine, in three phases. Up to 20 steps per phase, 120 characters per step."
+      >
+        <ChecklistTemplate items={checklistItems} />
+      </SettingsSection>
+      <SettingsSection id="data">
         <ExportCard />
-      </div>
-      <div className="max-w-4xl">
+      </SettingsSection>
+      {/* From lg the last section is at least a screen high, so every
+          section can scroll to the top and the table of contents follows. */}
+      <SettingsSection id="security" className="lg:min-h-[calc(100vh-1.5rem)]">
         <SecuritySection
           username={user.displayUsername ?? user.username}
           twoFactorEnabled={user.twoFactorEnabled}
         />
-      </div>
-    </div>
+      </SettingsSection>
+    </SettingsAccounts>
   );
 }

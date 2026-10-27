@@ -3,6 +3,7 @@ import {
   evaluateRules,
   type RuleStatusInput,
   toRuleTradingDay,
+  worstRuleState,
 } from "../rule-status.ts";
 
 // $50,000 account, $2,000 static drawdown: the floor sits at $48,000 and
@@ -501,5 +502,39 @@ describe("toRuleTradingDay", () => {
     expect(toRuleTradingDay("2026-10-17")).toBe("2026-10-19"); // Saturday
     expect(toRuleTradingDay("2026-10-18")).toBe("2026-10-19"); // Sunday
     expect(toRuleTradingDay("2026-12-27")).toBe("2026-12-28"); // across a month
+  });
+});
+
+describe("worstRuleState — the rule dot", () => {
+  it("is ok while every checked rule is ok", () => {
+    expect(worstRuleState(evaluateRules(input()))).toBe("ok");
+  });
+
+  it("is close when one rule is close and none is breached", () => {
+    // $300 above the $48,000 floor, inside the $400 band.
+    const status = evaluateRules(
+      input({ days: [{ tradingDay: "2026-10-12", netCents: -170_000 }] }),
+    );
+    expect(worstRuleState(status)).toBe("close");
+  });
+
+  it("leaves out rules that are not set or not checkable", () => {
+    // Intraday trailing cannot be checked and no daily loss limit is set, so
+    // even a day far below the static floor leaves only the profit target.
+    const status = evaluateRules(
+      input({
+        rules: { ...input().rules, drawdownType: "intraday_trailing" },
+        days: [{ tradingDay: "2026-10-12", netCents: -500_000 }],
+      }),
+    );
+    expect(status.drawdown.status).toBe("not_checkable");
+    expect(worstRuleState(status)).toBe("ok");
+  });
+
+  it("is breached as soon as one rule is breached", () => {
+    const status = evaluateRules(
+      input({ days: [{ tradingDay: "2026-10-12", netCents: -210_000 }] }),
+    );
+    expect(worstRuleState(status)).toBe("breached");
   });
 });

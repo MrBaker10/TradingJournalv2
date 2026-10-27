@@ -1,33 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { ANALYTICS_QUESTIONS, type QuestionId } from "@/domain/analytics";
+import { useActiveSection } from "@/hooks/use-active-section";
+
+const QUESTION_IDS: readonly QuestionId[] = ANALYTICS_QUESTIONS.map(
+  (question) => question.id,
+);
 
 /**
  * The questions as a table of contents that follows the scroll (Design.md
- * §3.7): an intersection observer marks the question in the upper third of
- * the viewport as current. It relies on every question being able to reach
- * that third, which is why the page gives its last question at least the
- * height of the screen. Hidden below `lg`, where the page is one column
- * (Design.md §3.12).
+ * §3.7), marked by `useActiveSection`. Hidden below `lg`, where the page is
+ * one column (Design.md §3.12).
  */
 export function QuestionToc() {
-  const [current, setCurrent] = useState<QuestionId>(ANALYTICS_QUESTIONS[0].id);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.find((entry) => entry.isIntersecting);
-        if (visible) setCurrent(visible.target.id as QuestionId);
-      },
-      { rootMargin: "0px 0px -70% 0px" },
-    );
-    for (const question of ANALYTICS_QUESTIONS) {
-      const section = document.getElementById(question.id);
-      if (section) observer.observe(section);
-    }
-    return () => observer.disconnect();
-  }, []);
+  const current = useActiveSection(QUESTION_IDS);
 
   return (
     <nav

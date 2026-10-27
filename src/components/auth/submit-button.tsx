@@ -15,9 +15,8 @@ interface SubmitButtonProps {
   disabled?: boolean;
 }
 
-// The primary button from Design.md §4.2 — same states and timings as the
-// one in account-create-form.tsx. Label, spinner and success sit on top of
-// each other, so the button keeps its width in every state.
+// The primary button from Design-v1.md §4.2. Label, spinner and success sit
+// on top of each other, so the button keeps its width in every state.
 export function SubmitButton({
   children,
   loading,

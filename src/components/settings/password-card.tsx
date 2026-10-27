@@ -3,8 +3,10 @@
 import { useState, useTransition } from "react";
 import { AuthField } from "@/components/auth/auth-field";
 import { SubmitButton } from "@/components/auth/submit-button";
+import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/auth-client";
 import { changePasswordSchema } from "@/schemas/auth";
+import { ROW_ACTION, SettingsRow } from "./settings-row";
 
 const SUCCESS_HOLD_MS = 800;
 
@@ -70,25 +72,23 @@ export function PasswordCard() {
   }
 
   return (
-    <div className="card-surface edge flex flex-col gap-4 p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="font-medium text-fg text-sm">Password</span>
-          <span className="text-fg-subtle text-xs">
-            Changing it signs out every other device.
-          </span>
-        </div>
-        {!open && (
-          <button
+    <SettingsRow
+      title="Password"
+      hint="Changing it signs out every other device."
+      action={
+        !open && (
+          <Button
             type="button"
+            variant="outline"
+            size="lg"
             onClick={() => setOpen(true)}
-            className="flex h-10 shrink-0 items-center justify-center rounded-ctl border border-white/12 bg-white/5 px-4 font-medium text-fg text-sm transition duration-200 hover:-translate-y-px hover:border-cyan/35 hover:brightness-110 active:scale-[.978]"
+            className={ROW_ACTION}
           >
             Change password
-          </button>
-        )}
-      </div>
-
+          </Button>
+        )
+      }
+    >
       {open && (
         <form
           onSubmit={handleSubmit}
@@ -141,13 +141,13 @@ export function PasswordCard() {
                 setFormError(null);
               }}
               disabled={isPending || success}
-              className="text-fg-muted text-sm hover:text-fg"
+              className="text-muted-foreground text-sm hover:text-foreground"
             >
               Cancel
             </button>
           </div>
         </form>
       )}
-    </div>
+    </SettingsRow>
   );
 }
