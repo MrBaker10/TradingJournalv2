@@ -21,20 +21,35 @@ copy.
 
 **Blocked by:** 05 (Detail sheet and trade detail page)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A new query returns the current user's account-to-program links with account names, scoped like the queries beside it and excluding practice accounts; a query test against Postgres covers ownership and the practice exclusion.
-- [ ] Size control preselects the linked account's size when there is one, else "Any size"; changing it updates the URL and the cards; the preselection rule is a lib function with Vitest tests beside the existing URL-state tests.
-- [ ] Cards show the six key figures as written, truncated with the full text on hover, and the tags; linked programs come first with the account name; a program without a figure shows "Not recorded".
-- [ ] Clicking the name or figures opens the sheet; the compare toggle is a separate control; a clean load has no hydration warning.
-- [ ] Sheet shows website (https anchor), verified date, program switcher in the head that switches without closing, key figures, tags and all 18 rules; Esc closes it.
-- [ ] Compare panel holds up to three programs verbatim above the cards; rows whose wording differs carry a dot; nothing is sorted or marked as a winner; the selection survives a reload through the URL.
-- [ ] Search, size and tag chips filter in the query as today; the existing prop-firm URL-state tests still pass.
-- [ ] Old prop-firm components without a remaining use are removed.
-- [ ] Gates: lint, typecheck, test, build. Browser at desktop width and 390 px: open with a linked account, change size, search, open a card, switch program in the sheet, Esc, compare three programs, reload; reduced motion emulated once; no new console errors.
+- [x] A new query returns the current user's account-to-program links with account names, scoped like the queries beside it and excluding practice accounts; a query test against Postgres covers ownership and the practice exclusion.
+- [x] Size control preselects the linked account's size when there is one, else "Any size"; changing it updates the URL and the cards; the preselection rule is a lib function with Vitest tests beside the existing URL-state tests.
+- [x] Cards show the six key figures as written, truncated with the full text on hover, and the tags; linked programs come first with the account name; a program without a figure shows "Not recorded".
+- [x] Clicking the name or figures opens the sheet; the compare toggle is a separate control; a clean load has no hydration warning.
+- [x] Sheet shows website (https anchor), verified date, program switcher in the head that switches without closing, key figures, tags and all 18 rules; Esc closes it.
+- [x] Compare panel holds up to three programs verbatim above the cards; rows whose wording differs carry a dot; nothing is sorted or marked as a winner; the selection survives a reload through the URL.
+- [x] Search, size and tag chips filter in the query as today; the existing prop-firm URL-state tests still pass.
+- [x] Old prop-firm components without a remaining use are removed.
+- [x] Gates: lint, typecheck, test, build. Browser at desktop width and 390 px: open with a linked account, change size, search, open a card, switch program in the sheet, Esc, compare three programs, reload; reduced motion emulated once; no new console errors.
 
 ## Do not build
 
 - Parsing, sorting or filtering by numeric rule values; that is a separate data model decision.
 - New rules, firms or data fields.
 - A winner, score or recommendation.
+
+## Review
+
+- Decided with the user: archived accounts do not count as linked; the compare panel
+  shows from one picked program, as in v1; an explicit "Any size" is `size=any`, no size
+  parameter preselects the first linked account's size.
+- Fixed in review: the link shape is derived from `ProgramLink`; one `accountNamesFor`
+  serves the cards and the sheet; unused exports removed.
+- Left open: the open program is not in the URL, which Design §3.10 asks of linkable
+  entities (there is no firm route); Design §3.10 still lists compare as a wide sheet
+  while §3.9 and the spec say inline panel; the sheet head carries a compare toggle and
+  the filters a program count, both from the prototype; toggle classes repeat across
+  five controls; muted controls follow `range-preset-chips` despite Design §5.
+- Gates: lint, typecheck, test (1432 passed, none skipped), build; browser click path at
+  1440 px and 390 px (reduced motion), 32 checks, no console errors.

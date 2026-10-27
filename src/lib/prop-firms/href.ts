@@ -12,6 +12,11 @@ export interface PropFirmsState {
   tags: string[];
   /** Account sizes in whole USD, as `account_size_usd` holds them. */
   sizes: number[];
+  /**
+   * `size=any`: the trader chose "Any size" over the preselection. Absent when
+   * the URL names no size at all, so the page may open on a linked account's.
+   */
+  anySize?: boolean;
   compare: number[];
 }
 
@@ -34,7 +39,7 @@ export function parsePropFirmsState(
     .filter((value) => /^[1-9]\d*$/.test(value))
     .map((value) => Number.parseInt(value, 10));
 
-  return {
+  const state: PropFirmsState = {
     search: firstValue(raw.q)?.trim() ?? "",
     tags: allValues(raw.tag).filter((tag) => tag !== ""),
     sizes: [...new Set(sizes)],
@@ -42,6 +47,25 @@ export function parsePropFirmsState(
     // URL cannot widen the comparison past what the page is built for.
     compare: [...new Set(compare)].slice(0, MAX_COMPARE),
   };
+  // A named size wins over "any", so a hand-edited mix still filters.
+  if (sizes.length === 0 && allValues(raw.size).includes("any")) {
+    state.anySize = true;
+  }
+  return state;
+}
+
+/**
+ * The sizes the catalogue filters by (Design.md §3.9): the ones in the URL,
+ * none after an explicit "Any size", else the size of the first linked
+ * account (`linkedSizes` in the accounts' order), else none.
+ */
+export function effectiveSizes(
+  state: PropFirmsState,
+  linkedSizes: number[],
+): number[] {
+  if (state.sizes.length > 0) return state.sizes;
+  if (state.anySize) return [];
+  return linkedSizes.slice(0, 1);
 }
 
 export function buildPropFirmsHref(
@@ -54,6 +78,7 @@ export function buildPropFirmsHref(
   if (merged.search !== "") params.set("q", merged.search);
   for (const tag of merged.tags) params.append("tag", tag);
   for (const size of merged.sizes) params.append("size", String(size));
+  if (merged.anySize && merged.sizes.length === 0) params.set("size", "any");
   if (merged.compare.length > 0) {
     params.set("compare", merged.compare.join(","));
   }
