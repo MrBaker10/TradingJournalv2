@@ -386,9 +386,12 @@ export interface BadgeCounters {
  * **Count aggregate**, over the whole history and over real accounts only.
  * Backfills count here, unlike in the streak: a late entry still happened.
  */
-export async function getBadgeCounters(userId: number): Promise<BadgeCounters> {
+export async function getBadgeCounters(
+  userId: number,
+  executor: ReadExecutor = db,
+): Promise<BadgeCounters> {
   const [entries, reviews] = await Promise.all([
-    db
+    executor
       .select({
         entriesLogged: sql<number>`count(*)::int`,
         byTheBookTrades: sql<number>`count(*) filter (where ${trades.taken} and ${trades.byTheBook})::int`,
@@ -400,7 +403,7 @@ export async function getBadgeCounters(userId: number): Promise<BadgeCounters> {
           sql`(${trades.taken} = false or ${hasRealAccount})`,
         ),
       ),
-    db
+    executor
       .select({ reviewsWritten: sql<number>`count(*)::int` })
       .from(dailyNotes)
       .where(and(eq(dailyNotes.userId, userId), hasEodReview)),

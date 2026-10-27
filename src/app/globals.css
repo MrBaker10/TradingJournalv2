@@ -97,13 +97,7 @@
   --color-impact-medium: #ff8f3f;
   --color-impact-high: #f2443a;
 
-  /* --- Progress: Hinweisleiste (§4.4) und Score-Balken --- */
-  /* Eigene Namen trotz gleichem Wert wie beim Übungskonto: die Leiste erklärt
-     eine Regel, sie markiert kein Konto. */
-  --color-warning-dim: rgba(255, 181, 71, 0.16);
-  --shadow-notice-amber:
-    inset 0 0 0 1px rgba(255, 181, 71, 0.3),
-    0 0 24px -12px rgba(255, 181, 71, 0.5);
+  /* --- Value bar (ValueBar), still used by Analytics --- */
   --color-bar-track: rgba(255, 255, 255, 0.08);
 
   /* --- Metrik-Zelle (§4.7), noch von Ledger und Progress genutzt --- */

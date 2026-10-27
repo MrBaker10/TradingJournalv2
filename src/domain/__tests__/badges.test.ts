@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   BADGE_DEFINITIONS,
   type BadgeProgress,
+  badgeProgressOf,
   badgesToAward,
   earnedBadges,
   hasFullLoggedWeek,
   MONTH_END_BADGE_KEYS,
+  nextUpBadges,
 } from "../badges.ts";
 
 const nothing: BadgeProgress = {
@@ -252,5 +254,97 @@ describe("badgesToAward", () => {
     for (const monthEnd of MONTH_END_BADGE_KEYS) {
       expect(keys).toContain(monthEnd);
     }
+  });
+});
+
+describe("badgeProgressOf", () => {
+  it("counts towards the badge's own threshold", () => {
+    const progress = { ...nothing, entriesLogged: 132 };
+
+    expect(badgeProgressOf("logged_250", progress)).toEqual({
+      value: 132,
+      target: 250,
+    });
+    expect(badgeProgressOf("logged_1000", progress)).toEqual({
+      value: 132,
+      target: 1000,
+    });
+  });
+
+  it("stops at the threshold once it is passed", () => {
+    expect(
+      badgeProgressOf("streak_7", { ...nothing, longestStreak: 31 }),
+    ).toEqual({ value: 7, target: 7 });
+  });
+
+  it("reads the frozen monthly score for score_90", () => {
+    expect(
+      badgeProgressOf("score_90", { ...nothing, bestMonthlyScore: 84 }),
+    ).toEqual({ value: 84, target: 90 });
+  });
+
+  // A full week is one shape of five days, not a count towards a number.
+  it("has no progress for the full-week badge", () => {
+    expect(badgeProgressOf("full_week", nothing)).toBeNull();
+  });
+
+  it("agrees with the awarding rule at every threshold", () => {
+    const atThreshold = {
+      ...nothing,
+      entriesLogged: 1000,
+      reviewsWritten: 1,
+      longestStreak: 100,
+      byTheBookTrades: 20,
+      bestMonthlyScore: 90,
+    };
+    const earned = new Set(keysFor(atThreshold));
+    for (const badge of BADGE_DEFINITIONS) {
+      const progress = badgeProgressOf(badge.key, atThreshold);
+      if (progress === null) continue;
+      expect(progress.value).toBe(progress.target);
+      expect(earned.has(badge.key)).toBe(true);
+    }
+  });
+});
+
+describe("nextUpBadges", () => {
+  const progress = {
+    ...nothing,
+    entriesLogged: 132,
+    reviewsWritten: 4,
+    longestStreak: 31,
+    byTheBookTrades: 19,
+    bestMonthlyScore: 84,
+  };
+  const earned = [
+    "first_entry",
+    "first_review",
+    "logged_10",
+    "logged_50",
+    "streak_7",
+    "streak_30",
+  ];
+
+  it("names the three unearned badges closest to their threshold", () => {
+    // 19/20, 84/90, 132/250 beat 31/100 and 132/1000.
+    expect(nextUpBadges(progress, earned)).toEqual([
+      "by_the_book_20",
+      "score_90",
+      "logged_250",
+    ]);
+  });
+
+  it("never names an earned badge, even below its threshold", () => {
+    expect(nextUpBadges(progress, [...earned, "by_the_book_20"])).not.toContain(
+      "by_the_book_20",
+    );
+  });
+
+  it("keeps definition order between badges equally close", () => {
+    expect(nextUpBadges(nothing, [])).toEqual([
+      "first_entry",
+      "first_review",
+      "logged_10",
+    ]);
   });
 });

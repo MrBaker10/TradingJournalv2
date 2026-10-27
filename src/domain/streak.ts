@@ -52,6 +52,8 @@ export interface StreakResult {
   graceDayUsed: boolean;
   /** The missed weekday the grace day was spent on, this month. */
   graceDayDate: IsoDate | null;
+  /** Every grace day spent so far, one per month at most, oldest first. */
+  graceDays: IsoDate[];
 }
 
 export const STREAK_WINDOW_HOURS = 48;
@@ -127,7 +129,13 @@ export function calculateStreak(
 ): StreakResult {
   const logged = streakDaysOf(entries, timeZone);
   if (logged.size === 0) {
-    return { current: 0, longest: 0, graceDayUsed: false, graceDayDate: null };
+    return {
+      current: 0,
+      longest: 0,
+      graceDayUsed: false,
+      graceDayDate: null,
+      graceDays: [],
+    };
   }
 
   const sorted = [...logged].sort();
@@ -174,6 +182,7 @@ export function calculateStreak(
     longest,
     graceDayUsed: graceByMonth.has(thisMonth),
     graceDayDate: graceByMonth.get(thisMonth) ?? null,
+    graceDays: [...graceByMonth.values()],
   };
 }
 

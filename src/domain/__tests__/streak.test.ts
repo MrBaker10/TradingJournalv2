@@ -155,6 +155,7 @@ describe("calculateStreak", () => {
       longest: 0,
       graceDayUsed: false,
       graceDayDate: null,
+      graceDays: [],
     });
   });
 
@@ -202,6 +203,7 @@ describe("calculateStreak", () => {
       longest: 0,
       graceDayUsed: false,
       graceDayDate: null,
+      graceDays: [],
     });
   });
 
@@ -273,6 +275,18 @@ describe("calculateStreak", () => {
     expect(result.current).toBe(4);
     expect(result.graceDayUsed).toBe(true);
     expect(result.graceDayDate).toBe("2026-10-01");
+  });
+
+  // The heatmap on /progress dashes every grace day it shows, not only this
+  // month's.
+  it("lists the grace day of every month, oldest first", () => {
+    const result = calculateStreak(
+      loggedDays(["2026-09-28", "2026-09-29", "2026-10-02", "2026-10-05"]),
+      "2026-10-05",
+      "UTC",
+    );
+
+    expect(result.graceDays).toEqual(["2026-09-30", "2026-10-01"]);
   });
 
   it("reports no grace day for the current month when it was spent earlier", () => {

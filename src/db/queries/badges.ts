@@ -71,9 +71,9 @@ export async function getBadgesSeenAt(userId: number): Promise<Date | null> {
 }
 
 /**
- * Marks everything earned so far as seen. Called after the page has shown the
- * unlock card, not while rendering it — otherwise the card would mark itself
- * as seen before the user ever laid eyes on it.
+ * Marks everything earned and logged so far as seen. Called after /progress
+ * has played its process moment, not while rendering it — otherwise the page
+ * would mark the moment as seen before the user ever laid eyes on it.
  */
 export async function setBadgesSeenAt(userId: number): Promise<void> {
   await db

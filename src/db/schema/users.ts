@@ -37,9 +37,10 @@ export const users = pgTable("users", {
     (): AnyPgColumn => accounts.id,
     { onDelete: "set null" },
   ),
-  // When the user last looked at /progress. A badge earned after this is
-  // "newly unlocked" and gets the card from Design.md §6 exactly once. NULL
-  // means they have never looked, so everything earned counts as new.
+  // When the user last looked at /progress. A badge earned or an entry logged
+  // after this plays the page's process moment once (Design.md §3.6), and a
+  // badge earned after it is marked "New". NULL means they have never looked,
+  // so everything earned counts as new.
   badgesSeenAt: timestamp("badges_seen_at", { withTimezone: true }),
   // Same idea as badgesSeenAt, for the streak bump (Design.md §4.3): a trade
   // logged after this timestamp means the tile bumps once on the next visit.
