@@ -60,9 +60,10 @@ screenshot was uploaded to one local demo trade to check the card with image.
   states that the strip shows this page's entries of a split day.
 - Removed with their last use: `trade-row`, `journal-filters`, `quiet-action-class`,
   `tile-label` and its test. `RANGE_PRESETS` is exported from `range-preset-chips`.
-- Open, for later tickets: coding-standards → Charts puts geometry in `src/domain/**`,
-  while `time-strip.ts` follows `src/lib/dashboard/ring.ts` in `src/lib/` (the spec's
-  Testing Decisions allow both; the rule should be settled); `sign-tone` lives in
+- Settled after the commit: coding-standards → Charts now allows geometry that only
+  places marks in `src/lib/<area>/`, as `time-strip.ts` and `ring.ts`; geometry that
+  carries a product rule stays in `src/domain/**` (7267cf8).
+- Open, for later tickets: `sign-tone` lives in
   `lib/dashboard` but is now shared with the journal; a signed-R formatter exists in
   the entry card, recent entries and the detail page; two comments in `prop-firms`
   (`prop-firm-filters.tsx:44`, `prop-firm-card.tsx:24`) name deleted journal files
