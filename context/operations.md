@@ -12,8 +12,9 @@ The `db:*` and `job:*` scripts load `.env.local`. Vitest loads the same file thr
 required by their fixtures. Check prerequisites in the affected tests. Do not treat
 skipped DB tests as passing coverage.
 
-Local Postgres runs in DBngin on `localhost:5432`; start it before `pnpm test` or a
-commit, since the pre-commit hook runs the DB tests.
+Local Postgres: the port and version in `.env.local` (currently 17.11 on
+`localhost:5433`); start it before `pnpm test` or a commit, since the pre-commit hook
+runs the DB tests.
 
 Generate schema migrations with `pnpm db:generate`, apply with `pnpm db:migrate`;
 never use `push`. Keep schema and generated migration in the same commit.
