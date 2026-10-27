@@ -1,5 +1,6 @@
+import { parseArgs } from "node:util";
 import { hashPassword } from "better-auth/crypto";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { calculateConsistencyScore } from "../domain/consistency.ts";
 import { reviewWeekStartOf } from "../domain/review-week.ts";
 import { placeholderEmail } from "../lib/auth/placeholder-email.ts";
@@ -22,14 +23,16 @@ import { instruments } from "./schema/instruments.ts";
 import { ledgerEntries } from "./schema/ledger.ts";
 import { propFirmPrograms, propFirms } from "./schema/prop-firms.ts";
 import { strategyRevisions, tradingStrategies } from "./schema/strategies.ts";
-import { confluenceTags, mistakeTags } from "./schema/trades.ts";
+import { confluenceTags, mistakeTags, trades } from "./schema/trades.ts";
 import { users } from "./schema/users.ts";
 import { weeklyReviews } from "./schema/weekly-reviews.ts";
 
 // `pnpm db:seed:demo`: a local demo user with about four months of made-up
 // journal data, so every page has something to show. Re-running deletes the
 // demo user (everything cascades) and writes it anew; no other user is
-// touched. Local databases only — the script refuses any other host.
+// touched. Local databases by default — another host only when it is named
+// with `--allow-host`, and an existing `demo` there only goes with `--replace`
+// (context/operations.md, Demo data).
 //
 // Needs the reference seeds first (instruments, trade tags, prop firms,
 // badges). Every instrument used settles in USD and every account is a USD
@@ -46,15 +49,61 @@ const HISTORY_DAYS = 120;
 
 type IsoDate = string;
 
-function assertLocalDatabase() {
+interface SeedOptions {
+  /** A non-local host the operator named on purpose, or undefined. */
+  allowHost: string | undefined;
+  /** Replace a `demo` user that already exists on that host. */
+  replace: boolean;
+}
+
+function readOptions(): SeedOptions {
+  const { values } = parseArgs({
+    options: {
+      "allow-host": { type: "string" },
+      replace: { type: "boolean", default: false },
+    },
+  });
+  return { allowHost: values["allow-host"], replace: values.replace };
+}
+
+/**
+ * The database host, checked before anything connects. Local hosts always
+ * pass; any other only when `--allow-host` names exactly that host, so a
+ * production URL loaded by mistake still stops here. Returns whether the
+ * host is remote.
+ */
+function assertAllowedDatabase(options: SeedOptions): boolean {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set.");
   const host = new URL(url).hostname.replace(/^\[|\]$/g, "");
-  if (!LOCAL_HOSTS.has(host)) {
+  if (LOCAL_HOSTS.has(host)) return false;
+  if (options.allowHost !== host) {
     throw new Error(
-      `db:seed:demo only runs against a local database, not '${host}'.`,
+      `db:seed:demo runs against a local database, or against '${host}' only with --allow-host ${host}.`,
     );
   }
+  return true;
+}
+
+/**
+ * On a remote host a `demo` user may be a real person who registered that
+ * name: every user's email is the same kind of placeholder, so nothing marks
+ * the seeded one. Re-seeding there needs `--replace`, given after looking at
+ * what this prints.
+ */
+async function assertNoForeignDemoUser(options: SeedOptions) {
+  const [existing] = await db
+    .select({ id: users.id, createdAt: users.createdAt })
+    .from(users)
+    .where(eq(users.username, DEMO_USERNAME));
+  if (existing === undefined || options.replace) return;
+  const [{ trades: entries }] = await db
+    .select({ trades: count() })
+    .from(trades)
+    .where(eq(trades.userId, existing.id));
+  throw new Error(
+    `A user '${DEMO_USERNAME}' already exists here (id ${existing.id}, created ${existing.createdAt.toISOString()}, ${entries} entries). Check that it is the seeded demo user, then run again with --replace to delete and recreate it.`,
+  );
 }
 
 // mulberry32: small, seedable, good enough for demo data.
@@ -749,7 +798,8 @@ async function closePastMonths(userId: number, today: IsoDate) {
 }
 
 async function seedDemo() {
-  assertLocalDatabase();
+  const options = readOptions();
+  const remote = assertAllowedDatabase(options);
   const password = process.env.DEMO_USER_PASSWORD;
   if (!password || password.length < MIN_PASSWORD_LENGTH) {
     throw new Error(
@@ -770,6 +820,7 @@ async function seedDemo() {
     throw new Error("Trade tags missing — run pnpm db:seed:trade-tags first.");
   }
 
+  if (remote) await assertNoForeignDemoUser(options);
   await resetDemoUser();
   const userId = await createDemoUser(password, today);
   const accountIds = await createAccounts(userId, today);
