@@ -286,7 +286,8 @@ Each pattern names its **shape**, its **states**, its **motion** and the
   detail) or medium (`max-w-2xl` for editors and the firm page); full width below `lg` (§3.12).
 - **Behaviour.** Esc closes. Keyboard handling inside a sheet is bound on the sheet,
   because the dialog does not pass key events to `window`. A sheet for an entity the
-  app can link to holds it in the URL.
+  app can link to holds it in the URL. The journal detail is not in the URL, because
+  the trade has its own page (§3.3).
 - **Motion.** Slides fully in from the right over 600 ms, `cubic-bezier(0.32, 0.72, 0,
   1)`; out over 300 ms ease-in. No fade and no short nudge.
 - **Reduced motion.** Appears and disappears without movement.
