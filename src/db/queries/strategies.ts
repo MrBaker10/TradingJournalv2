@@ -1,6 +1,9 @@
-import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { db } from "../index.ts";
+import { instruments } from "../schema/instruments.ts";
 import { strategyRevisions, tradingStrategies } from "../schema/strategies.ts";
+import { trades } from "../schema/trades.ts";
+import { scopeWhere } from "./scope.ts";
 
 // Strategy lifecycle and public reads. A strategy's name and rules live in
 // immutable revisions (docs/adr/0003): an edit appends a revision and never
@@ -296,4 +299,77 @@ export async function getRevisionStrategyId(
     .where(eq(strategyRevisions.id, revisionId))
     .limit(1);
   return row?.strategyId ?? null;
+}
+
+/** One trade holding a revision of a strategy, as the strategy's sheet lists it. */
+export interface StrategyTradeRow {
+  id: number;
+  strategyId: number;
+  tradeDate: string;
+  taken: boolean;
+  instrumentSymbol: string;
+  /** False: the trade holds rules the strategy has since changed (docs/adr/0003). */
+  onCurrentRules: boolean;
+  /** Every trade holding this strategy, not only the ones listed. */
+  total: number;
+}
+
+/** How many trades a strategy's sheet lists; `total` says how many there are. */
+export const STRATEGY_TRADES_SHOWN = 20;
+
+/**
+ * The latest trades assigned to each of the user's strategies, newest first
+ * per strategy, at most `STRATEGY_TRADES_SHOWN` each. Seen as "All accounts"
+ * sees them: a taken trade only on practice accounts is left out, a missed
+ * setup always shows. One query for the whole page, so the sheet reads rows.
+ */
+export async function listStrategyTrades(
+  userId: number,
+  executor: Pick<typeof db, "select"> = db,
+): Promise<StrategyTradeRow[]> {
+  const ranked = executor
+    .select({
+      id: trades.id,
+      strategyId: sql<number>`${strategyRevisions.strategyId}`.as(
+        "strategy_id",
+      ),
+      tradeDate: trades.tradeDate,
+      taken: trades.taken,
+      instrumentSymbol: sql<string>`${instruments.symbol}`.as(
+        "instrument_symbol",
+      ),
+      onCurrentRules: sql<boolean>`${trades.strategyRevisionId} = (
+        select max(latest.id) from ${strategyRevisions} latest
+        where latest.strategy_id = ${strategyRevisions.strategyId}
+      )`.as("on_current_rules"),
+      position: sql<number>`row_number() over (
+        partition by ${strategyRevisions.strategyId}
+        order by ${trades.tradeDate} desc, ${trades.entryTime} desc, ${trades.id} desc
+      )::int`.as("position"),
+      total: sql<number>`count(*) over (
+        partition by ${strategyRevisions.strategyId}
+      )::int`.as("total"),
+    })
+    .from(trades)
+    .innerJoin(
+      strategyRevisions,
+      eq(strategyRevisions.id, trades.strategyRevisionId),
+    )
+    .innerJoin(instruments, eq(instruments.id, trades.instrumentId))
+    .where(scopeWhere({ userId, selectedAccountId: null }))
+    .as("ranked");
+
+  return executor
+    .select({
+      id: ranked.id,
+      strategyId: ranked.strategyId,
+      tradeDate: ranked.tradeDate,
+      taken: ranked.taken,
+      instrumentSymbol: ranked.instrumentSymbol,
+      onCurrentRules: ranked.onCurrentRules,
+      total: ranked.total,
+    })
+    .from(ranked)
+    .where(lte(ranked.position, STRATEGY_TRADES_SHOWN))
+    .orderBy(ranked.strategyId, ranked.position);
 }

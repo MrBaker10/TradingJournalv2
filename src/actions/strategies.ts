@@ -10,6 +10,7 @@ import {
 } from "@/db/queries/strategies";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import {
+  STRATEGY_ARCHIVE_FAILED,
   STRATEGY_SAVE_FAILED,
   setStrategyArchivedSchema,
   strategyContentSchema,
@@ -95,6 +96,6 @@ export async function setStrategyArchived(
     console.error("Strategy archive change failed", {
       name: error instanceof Error ? error.name : "UnknownError",
     });
-    return { success: false, error: STRATEGY_SAVE_FAILED };
+    return { success: false, error: STRATEGY_ARCHIVE_FAILED };
   }
 }

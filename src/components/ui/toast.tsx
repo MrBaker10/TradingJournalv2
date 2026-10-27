@@ -61,3 +61,27 @@ export function notifyError(message: string) {
     </div>
   ));
 }
+
+/**
+ * Runs a server action and reports it as a toast: the action's
+ * own message when it refuses, `failed` when the request itself breaks, and
+ * `success` when given — a form with its own saved state leaves it out.
+ * Resolves to whether it succeeded, so the form decides what follows.
+ */
+export async function runWithToast(
+  action: () => Promise<{ success: true } | { success: false; error: string }>,
+  messages: { success?: string; failed: string },
+): Promise<boolean> {
+  try {
+    const result = await action();
+    if (!result.success) {
+      notifyError(result.error);
+      return false;
+    }
+    if (messages.success) notifyProcess(messages.success);
+    return true;
+  } catch {
+    notifyError(messages.failed);
+    return false;
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, Check, Receipt } from "lucide-react";
+import { Banknote, Receipt } from "lucide-react";
 import { useId } from "react";
 import {
   CardChoice,
@@ -8,66 +8,11 @@ import {
   FieldError,
   TextField,
 } from "@/components/trades/form-blocks";
-import { PendingIndicator } from "@/components/ui/pending-indicator";
-import { notifyError, notifyProcess } from "@/components/ui/toast";
 import type { LedgerAccount } from "@/db/queries/ledger";
 import { EXPENSE_CATEGORIES, type LedgerKind } from "@/domain/ledger";
 import type { LedgerDraft, LedgerFieldErrors } from "@/hooks/use-ledger-draft";
 import { MAX_LEDGER_NOTE_LENGTH } from "@/schemas/ledger";
 import { EXPENSE_CATEGORY_LABELS } from "./ledger-labels";
-
-/**
- * Runs a ledger or strategy action and reports it as a toast: the action's
- * own message when it refuses, `failed` when the request itself breaks, and
- * `success` when given — a form with its own saved state leaves it out.
- * Resolves to whether it succeeded, so the form decides what follows.
- */
-export async function runWithToast(
-  action: () => Promise<{ success: true } | { success: false; error: string }>,
-  messages: { success?: string; failed: string },
-): Promise<boolean> {
-  try {
-    const result = await action();
-    if (!result.success) {
-      notifyError(result.error);
-      return false;
-    }
-    if (messages.success) notifyProcess(messages.success);
-    return true;
-  } catch {
-    notifyError(messages.failed);
-    return false;
-  }
-}
-
-/**
- * The strategies page's primary button, in the old tokens until its own
- * redesign ticket (12).
- */
-export function SaveButton({
-  pending,
-  label,
-}: {
-  pending: boolean;
-  label: string;
-}) {
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="flex h-11 min-w-36 items-center justify-center gap-2 rounded-ctl bg-[image:var(--gradient-info-soft)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-info-soft)] transition-colors hover:bg-white/5 focus-visible:outline-cyan disabled:opacity-40"
-    >
-      {pending ? (
-        <PendingIndicator label="Saving…" />
-      ) : (
-        <>
-          <Check className="h-4 w-4 text-cyan" aria-hidden="true" />
-          {label}
-        </>
-      )}
-    </button>
-  );
-}
 
 /** An account the form offers; `disabled` shows it without letting it be picked. */
 export type LedgerAccountOption = LedgerAccount & { disabled?: boolean };

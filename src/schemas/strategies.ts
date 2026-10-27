@@ -8,6 +8,10 @@ export const MAX_STRATEGY_NAME_LENGTH = 100;
 export const STRATEGY_SAVE_FAILED =
   "Couldn't save the strategy. Your text is still here — try again.";
 
+/** Shown and returned when archiving or reactivating fails. */
+export const STRATEGY_ARCHIVE_FAILED =
+  "Couldn't change the strategy's status. Try again.";
+
 // An empty chapter is stored as NULL, not as "".
 const chapter = z
   .string()

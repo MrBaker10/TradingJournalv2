@@ -381,8 +381,9 @@ nothing scrolls sideways. The mobile shell's behaviour is unchanged.
 - New reads, all aggregated in SQL and scoped like the queries beside them: the per-bucket
   count of trades with an R for every analytics dimension; the badge counters, the best
   frozen monthly score and the recently reviewed weeks for Progress; the user's account
-  links with account names for Prop Firm Rules. The journal detail sheet reads the list
-  row and issues no second query.
+  links with account names for Prop Firm Rules; the latest trades holding each strategy
+  with their total, seen as "All accounts" sees them, for the Strategies sheet (added in
+  ticket 12). The journal detail sheet reads the list row and issues no second query.
 - Process figures keep ignoring the account selector: streak, score and badges see real
   accounts only. Money keeps the display currency of the selected scope.
 
