@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { EntryCard } from "@/components/journal/entry-card";
 import { HiddenPracticeBanner } from "@/components/journal/hidden-practice-banner";
 import { JournalDay } from "@/components/journal/journal-day";
+import { JournalDetailSheet } from "@/components/journal/journal-detail-sheet";
 import { JournalEmpty } from "@/components/journal/journal-empty";
 import { JournalFilterMenu } from "@/components/journal/journal-filter-menu";
 import { PaginationControls } from "@/components/journal/pagination-controls";
@@ -92,9 +93,10 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
   }
   const layout = journalLayout(rows, days, sortBy);
 
-  // Design.md §3.3: the day log, or a flat list sorted by R. The page head
-  // holds counts for every page of these filters and never a money total — a
-  // range's total belongs to the dashboard and Analytics. "Log trade" lives in
+  // Design.md §3.3: the day log, or a flat list sorted by R, with the wide
+  // detail sheet over it. The page head holds counts for every page of these
+  // filters and never a money total — a range's total belongs to the
+  // dashboard and Analytics. "Log trade" lives in
   // the shell.
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -128,23 +130,27 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
 
       {rows.length === 0 ? (
         <JournalEmpty searchParams={current} />
-      ) : layout.kind === "days" ? (
-        <div className="flex flex-col gap-10">
-          {layout.days.map((day) => (
-            <JournalDay key={day.date} day={day} currency={currency} />
-          ))}
-        </div>
       ) : (
-        <div className="flex flex-col gap-2">
-          {layout.rows.map((trade) => (
-            <EntryCard
-              key={trade.id}
-              trade={trade}
-              currency={currency}
-              lead="date"
-            />
-          ))}
-        </div>
+        <JournalDetailSheet currency={currency}>
+          {layout.kind === "days" ? (
+            <div className="flex flex-col gap-10">
+              {layout.days.map((day) => (
+                <JournalDay key={day.date} day={day} currency={currency} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {layout.rows.map((trade) => (
+                <EntryCard
+                  key={trade.id}
+                  trade={trade}
+                  currency={currency}
+                  lead="date"
+                />
+              ))}
+            </div>
+          )}
+        </JournalDetailSheet>
       )}
 
       <PaginationControls

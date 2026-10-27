@@ -1,7 +1,8 @@
 import { ArrowLeft, Pencil } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { TradeDetail } from "@/components/journal/trade-detail";
+import { TradeDetailBody } from "@/components/journal/trade-detail-body";
+import { buttonVariants } from "@/components/ui/button";
 import { isTradeFxProvisional } from "@/db/queries/fx";
 import { withDisplayCurrency } from "@/db/queries/scope";
 import { getJournalTradeById } from "@/db/queries/trades";
@@ -36,29 +37,37 @@ export default async function TradeDetailPage({
     trade.fxRateDate !== null &&
     (await isTradeFxProvisional(user.id, trade.id));
 
+  // Design.md §3.3: the same content as the journal's detail sheet, at the
+  // trade's own URL so it can be linked and bookmarked.
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <div className="flex items-center justify-between gap-3">
         <Link
           href="/journal"
-          className="flex items-center gap-1.5 text-fg-subtle text-sm transition-colors duration-150 hover:text-fg"
+          className={buttonVariants({
+            variant: "ghost",
+            className: "-ml-2.5 h-10 lg:h-8",
+          })}
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          <ArrowLeft aria-hidden="true" />
           Trade Journal
         </Link>
         <Link
           href={`/journal/${trade.id}/edit`}
-          className="flex h-10 items-center gap-1.5 rounded-ctl bg-[image:var(--gradient-info-soft)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-info-soft)]"
+          className={buttonVariants({
+            variant: "outline",
+            className: "h-10 lg:h-8",
+          })}
         >
-          <Pencil className="h-3.5 w-3.5 text-cyan" aria-hidden="true" />
+          <Pencil aria-hidden="true" />
           Edit
         </Link>
       </div>
 
-      <TradeDetail
+      <TradeDetailBody
         trade={trade}
-        fxProvisional={fxProvisional}
         currency={currency}
+        fxProvisional={fxProvisional}
       />
     </div>
   );

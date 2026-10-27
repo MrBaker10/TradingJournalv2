@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import type { JournalTradeRow } from "@/db/queries/trades";
 import { moneyTone, SIGN_TEXT, signOf } from "@/lib/dashboard/sign-tone";
 import { type DisplayCurrency, formatCents } from "@/lib/money";
+import { useOpenEntry } from "./journal-detail-sheet";
 
 /** Confluences shown on the card; the rest are counted. */
 const VISIBLE_CONFLUENCES = 4;
@@ -16,7 +19,9 @@ function signedR(r: number): string {
  * card without a screenshot has no image field. A missed setup is the same
  * card, marked "Missed setup", and shows no P&L and no R.
  *
- * The whole card links to the entry; it holds no actions of its own.
+ * The whole card links to the entry's page and holds no actions of its own.
+ * Inside the journal a plain click opens the detail sheet instead; a click
+ * with a modifier key or the middle button still opens the page.
  */
 export function EntryCard({
   trade,
@@ -43,10 +48,25 @@ export function EntryCard({
     .filter(Boolean)
     .join(" · ");
   const hiddenConfluences = trade.confluences.length - VISIBLE_CONFLUENCES;
+  const openEntry = useOpenEntry();
 
   return (
     <Link
       href={`/journal/${trade.id}`}
+      onClick={(event) => {
+        if (
+          !openEntry ||
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        ) {
+          return;
+        }
+        event.preventDefault();
+        openEntry(trade, event.currentTarget);
+      }}
       className="flex gap-3 rounded-lg border bg-card p-3 text-card-foreground outline-none transition-[translate,background-color,border-color] duration-150 hover:-translate-y-px hover:border-ring/40 hover:bg-accent/40 focus-visible:ring-3 focus-visible:ring-ring/50 sm:gap-4"
     >
       {shot && (
