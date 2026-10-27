@@ -85,6 +85,18 @@ The run of consecutive logged days, skipping Saturdays and tolerating one grace 
 **Grace day**:
 The one skipped weekday per calendar month that does not break a streak.
 
+**Process metric**:
+A figure measuring journaling discipline: streak, consistency score, badges, by-the-book rate and review habit. It may be rewarded.
+_Avoid_: Process value, habit stat
+
+**Money metric**:
+A figure derived from P&L, such as net P&L, average winner and loser, expectancy or drawdown. It is shown, never rewarded.
+_Avoid_: Performance metric, result
+
+**Process moment**:
+The instant a process metric improves, such as a badge unlocking, a streak extending or a weekly review being completed.
+_Avoid_: Win, achievement, celebration
+
 **Consistency score**:
 A monthly score out of 100 for showing up, journaling completeness, plan adherence and review habit; never for results.
 
