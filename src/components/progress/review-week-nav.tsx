@@ -20,10 +20,10 @@ interface ReviewWeekNavProps {
   reviewedWeeks: IsoDate[];
 }
 
-// Design.md §4.26: a quiet stepper like the calendar's month step (4.8), and a
-// strip of recent weeks so a missed review shows as a gap. The marker is
-// process, so a reviewed week may carry the cyan dot; an open week stays
-// matte, never red — a gap is a prompt, not a failure.
+// A quiet stepper like the calendar's month step, and a strip of recent weeks
+// so a missed review shows as a gap. The marker is process, so a reviewed week
+// carries the `process` dot; an open week stays matte, never red — a gap is a
+// prompt, not a failure.
 export function ReviewWeekNav({
   weekStart,
   currentWeek,
@@ -40,7 +40,7 @@ export function ReviewWeekNav({
           direction="back"
           href={weekHref(shiftReviewWeek(weekStart, -1), currentWeek)}
         />
-        <span className="min-w-[7rem] text-center text-fg-subtle text-xs">
+        <span className="min-w-28 text-center font-mono text-muted-foreground text-xs tabular-nums">
           {isCurrent ? "This week" : `Week of ${formatDayLabel(weekStart)}`}
         </span>
         <WeekStep
@@ -65,16 +65,18 @@ export function ReviewWeekNav({
                 aria-label={`Week of ${formatDayLabel(week)}, ${
                   isReviewed ? "reviewed" : "not reviewed"
                 }`}
-                className={`flex h-8 items-center gap-1.5 rounded-ctl border px-2.5 text-xs transition-colors duration-150 ${
+                className={`flex h-10 items-center gap-1.5 rounded-lg border px-2.5 font-mono text-xs tabular-nums outline-none transition-colors duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 lg:h-8 ${
                   isSelected
-                    ? "border-cyan/60 text-fg"
-                    : "border-white/12 text-fg-subtle hover:border-cyan/35 hover:text-fg"
+                    ? "border-foreground/30 bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 }`}
               >
                 <span
                   aria-hidden="true"
-                  className={`h-2 w-2 rounded-full ${
-                    isReviewed ? "bg-cyan" : "border border-white/30"
+                  className={`size-2 rounded-full ${
+                    isReviewed
+                      ? "bg-process"
+                      : "border border-muted-foreground/50"
                   }`}
                 />
                 {formatDayLabel(week)}
@@ -88,7 +90,7 @@ export function ReviewWeekNav({
 }
 
 const STEP_CLASS =
-  "flex h-7 w-7 items-center justify-center rounded-xs text-fg-subtle";
+  "flex size-10 items-center justify-center rounded-lg text-muted-foreground lg:size-8";
 
 /**
  * One step through the weeks, the calendar's `MonthStep` as a link. Without
@@ -115,7 +117,7 @@ function WeekStep({
     <Link
       href={href}
       aria-label={direction === "back" ? "Previous week" : "Next week"}
-      className={`${STEP_CLASS} transition-colors duration-150 hover:text-fg`}
+      className={`${STEP_CLASS} outline-none transition-colors duration-150 hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50`}
     >
       <Icon className="h-4 w-4" aria-hidden="true" />
     </Link>

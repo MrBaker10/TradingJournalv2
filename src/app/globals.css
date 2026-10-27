@@ -97,9 +97,6 @@
   --color-impact-medium: #ff8f3f;
   --color-impact-high: #f2443a;
 
-  /* --- Metrik-Zelle (§4.7), noch von Ledger und Progress genutzt --- */
-  --shadow-metric-cell: inset -1px -1px 0 rgba(255, 255, 255, 0.07);
-
   /* --- Ruhige Prozessfläche (§4.14) --- */
   /* Dasselbe Rezept wie die Geldtage darüber, nur in Blau: schwacher Verlauf
      plus 1px-Inset-Rand, kein Schein nach außen. Prozess darf sich abheben, es

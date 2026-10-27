@@ -2,7 +2,9 @@
 
 import { Upload } from "lucide-react";
 import { useRef, useState } from "react";
-import { InlineMessage } from "@/components/ui/inline-message";
+import { FieldLabel } from "@/components/trades/form-blocks";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { detectOrders, detectShape } from "@/domain/import/detect";
 import { pairFills } from "@/domain/import/fills";
 import { readFtmoRows } from "@/domain/import/ftmo";
@@ -16,6 +18,7 @@ import { decodeByHeader, headerOf } from "@/lib/csv/decode";
 import { parseDelimited } from "@/lib/csv/parse";
 import { MAX_IMPORT_BYTES, MAX_IMPORT_ROWS } from "@/schemas/import";
 import type { ParsedFile } from "./import-wizard";
+import { StepError } from "./step-error";
 
 interface FileStepProps {
   instruments: InstrumentRef[];
@@ -249,10 +252,10 @@ export function FileStep({ instruments, timeZone, onParsed }: FileStepProps) {
   }
 
   return (
-    <section className="card-surface edge flex flex-col gap-4 p-5">
+    <section className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h2 className="cap cap-neon">Choose a file</h2>
-        <p className="text-[11.5px] text-fg-subtle">
+        <h2 className="font-semibold text-lg">Choose a file</h2>
+        <p className="text-muted-foreground text-xs">
           A CSV or TSV export of your Tradovate fills or your FTMO account
           history, up to {MAX_IMPORT_ROWS} rows and {MAX_MB} MB. Select the
           Tradovate Orders export together with the fills to bring in stops.
@@ -271,35 +274,35 @@ export function FileStep({ instruments, timeZone, onParsed }: FileStepProps) {
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="flex h-28 flex-col items-center justify-center gap-2 rounded-ctl border border-white/12 border-dashed text-fg-subtle transition-colors duration-150 hover:border-cyan/35 hover:text-fg-muted"
+        className="group flex h-28 flex-col items-center justify-center gap-2 rounded-xl border border-input border-dashed text-muted-foreground outline-none transition-[color,background-color,border-color,translate] duration-150 hover:-translate-y-px hover:border-foreground/30 hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <Upload className="h-5 w-5" aria-hidden="true" />
+        <Upload className="size-5" aria-hidden="true" />
         <span className="text-sm">Select a file or two</span>
       </button>
 
-      <div className="flex flex-col gap-2">
-        <label className="cap" htmlFor="import-paste">
-          Or paste the rows
-        </label>
-        <textarea
+      <div className="flex flex-col gap-1">
+        <FieldLabel htmlFor="import-paste">Or paste the rows</FieldLabel>
+        <Textarea
           id="import-paste"
           rows={4}
           value={pasted}
           onChange={(event) => setPasted(event.target.value)}
           placeholder="Paste the header row and the rows below it"
-          className="rounded-ctl bg-well px-3 py-2 font-mono text-[13px] text-fg placeholder:text-fg-placeholder focus:shadow-[var(--shadow-focus)] focus:outline-none"
+          className="min-h-24 font-mono text-[13px]"
         />
-        <button
-          type="button"
-          disabled={pasted.trim() === ""}
-          onClick={handlePaste}
-          className="self-start rounded-ctl bg-[image:var(--gradient-info-soft)] px-4 py-2 text-fg text-sm shadow-[var(--shadow-info-soft)] transition-opacity duration-150 disabled:opacity-40"
-        >
-          Read pasted rows
-        </button>
       </div>
+      <Button
+        type="button"
+        size="lg"
+        variant="outline"
+        className="h-10 self-start px-4"
+        disabled={pasted.trim() === ""}
+        onClick={handlePaste}
+      >
+        Read pasted rows
+      </Button>
 
-      <InlineMessage message={error} />
+      <StepError message={error} />
     </section>
   );
 }

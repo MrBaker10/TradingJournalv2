@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import type { ImportResult } from "@/actions/import";
+import { DrawnCheck } from "@/components/trades/form-blocks";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface ResultStepProps {
   result: ImportResult;
@@ -9,41 +12,45 @@ interface ResultStepProps {
 }
 
 /**
- * Step four: what actually happened.
+ * Step four: what actually happened, confirmed as the action — "Imported 12
+ * trades" — with the trade form's drawn check and no P&L (Design.md §3.11).
  *
  * The counters come from the transaction, not from the preview — the journal
  * may have changed between the two, and the number that gets reported has to
- * be the one that was written.
- *
- * No celebration and no colour on the numbers: an import is bookkeeping, and
- * Design.md keeps the green for a day that was actually traded well.
+ * be the one that was written. Written means new and updated, as the confirm
+ * button counted them.
  */
 export function ResultStep({ result, onAnother }: ResultStepProps) {
+  const written = result.new + result.update;
   return (
-    <section className="card-surface edge flex flex-col gap-4 p-5">
-      <div className="flex flex-col gap-1">
-        <h2 className="cap cap-neon">Done</h2>
-        <p className="text-fg text-sm">
-          Imported {result.new} · updated {result.update} · {result.skip}{" "}
-          already in your journal were skipped.
-        </p>
+    <div className="mx-auto flex max-w-xl flex-col items-center gap-4 py-12 text-center">
+      <DrawnCheck />
+      {/* Only the confirmation is announced, not the buttons below it. */}
+      <div role="status">
+        <h2 className="font-semibold text-xl tracking-tight">
+          Imported {written} {written === 1 ? "trade" : "trades"}
+        </h2>
       </div>
-
-      <div className="flex items-center gap-3">
+      <p className="font-mono text-muted-foreground text-sm tabular-nums">
+        {result.new} new · {result.update} updated · {result.skip} skipped
+      </p>
+      <p className="text-muted-foreground text-xs">
+        Skipped rows were already in your journal.
+      </p>
+      <div className="mt-2 flex flex-wrap justify-center gap-2">
+        <Button size="lg" className="h-10 px-4" onClick={onAnother}>
+          Import another file
+        </Button>
         <Link
           href="/journal"
-          className="flex h-10 items-center rounded-ctl bg-[image:var(--gradient-info)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-button-primary)]"
+          className={cn(
+            buttonVariants({ variant: "outline", size: "lg" }),
+            "h-10 px-4",
+          )}
         >
-          Open the journal
+          View in journal
         </Link>
-        <button
-          type="button"
-          onClick={onAnother}
-          className="rounded-ctl border border-white/12 px-4 py-2 text-fg-muted text-sm transition-colors duration-150 hover:border-cyan/35"
-        >
-          Import another file
-        </button>
       </div>
-    </section>
+    </div>
   );
 }

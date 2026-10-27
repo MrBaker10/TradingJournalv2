@@ -1,11 +1,15 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { saveWeeklyReview } from "@/actions/weekly-reviews";
+import { FieldLabel } from "@/components/trades/form-blocks";
+import { Button } from "@/components/ui/button";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
-import { notifyError, notifyProcess } from "@/components/ui/toast";
+import { Textarea } from "@/components/ui/textarea";
+import { runWithToast } from "@/components/ui/toast";
 import type { WeeklyReview } from "@/db/queries/weekly-reviews";
+import { cn } from "@/lib/utils";
 import {
   MAX_REVIEW_FIELD_LENGTH,
   WEEKLY_REVIEW_SAVE_FAILED,
@@ -16,11 +20,8 @@ interface WeeklyReviewFormProps {
   review: WeeklyReview | null;
 }
 
-const SUCCESS_HOLD_MS = 1400;
-
-// Same field recipe as the plan card (Design.md §4.5, §4.6).
-const FIELD_CLASS =
-  "w-full resize-none rounded-ctl border border-white/12 bg-well px-3 py-2 text-sm text-fg transition-colors duration-200 placeholder:text-fg-placeholder hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60";
+/** How long the button shows "Saved" before it returns (Design.md §3.11). */
+const SAVED_HOLD_MS = 1500;
 
 const FIELDS = [
   {
@@ -46,112 +47,90 @@ const FIELDS = [
 
 type FieldKey = (typeof FIELDS)[number]["key"];
 
-// Design.md §4.26: process, so the card carries the neon edge like the plan
-// card. Saving is explicit; a failed save is an error toast (notifyError), as
-// coding-standards.md asks (decided 2026-10-20), and the text stays in the
-// fields for the next try.
+/**
+ * The review's three answers as the form blocks of Design.md §3.5, on one
+ * page. Every field is optional; the action checks the week and the length.
+ * Saving confirms the action — "Review saved" — on the button and as a toast;
+ * a failed save is an error toast and the text stays in the fields.
+ */
 export function WeeklyReviewForm({ weekStart, review }: WeeklyReviewFormProps) {
   const [values, setValues] = useState<Record<FieldKey, string>>({
     whatWorked: review?.whatWorked ?? "",
     whatDidNotWork: review?.whatDidNotWork ?? "",
     focusNextWeek: review?.focusNextWeek ?? "",
   });
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (loading || success) return;
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => setSaved(false), SAVED_HOLD_MS);
+    return () => clearTimeout(timer);
+  }, [saved]);
 
-    setLoading(true);
-    // The action reports its own failures; this catches the call itself
-    // failing (offline, server gone), which would otherwise leave the button
-    // on "Saving…" for good — the same guard as the ledger's runWithToast.
-    let result: Awaited<ReturnType<typeof saveWeeklyReview>>;
-    try {
-      result = await saveWeeklyReview({ weekStart, ...values });
-    } catch {
-      result = { success: false, error: WEEKLY_REVIEW_SAVE_FAILED };
-    }
-    setLoading(false);
-
-    if (!result.success) {
-      notifyError(result.error);
-      return;
-    }
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), SUCCESS_HOLD_MS);
-    // A habit of its own: the toast names no score, because the weekly
-    // review feeds none.
-    notifyProcess("Weekly review saved");
+  function save() {
+    if (isPending || saved) return;
+    startTransition(async () => {
+      const ok = await runWithToast(
+        () => saveWeeklyReview({ weekStart, ...values }),
+        { success: "Review saved", failed: WEEKLY_REVIEW_SAVE_FAILED },
+      );
+      if (ok) setSaved(true);
+    });
   }
 
   return (
     <form
-      onSubmit={handleSubmit}
-      className="card-surface edge-neon flex flex-col gap-4 p-5"
+      onSubmit={(event) => {
+        event.preventDefault();
+        save();
+      }}
+      aria-label="Your review"
+      className="flex flex-col gap-4"
     >
-      <h2 className="cap cap-neon">Your review</h2>
-
       {FIELDS.map((field) => (
         <div key={field.key} className="flex flex-col gap-1">
-          <label htmlFor={field.id} className="cap">
-            {field.label}
-          </label>
-          <textarea
+          <FieldLabel htmlFor={field.id}>{field.label}</FieldLabel>
+          <Textarea
             id={field.id}
             rows={4}
             maxLength={MAX_REVIEW_FIELD_LENGTH}
             value={values[field.key]}
-            onChange={(event) =>
+            placeholder={field.placeholder}
+            disabled={isPending}
+            onChange={(event) => {
               setValues((current) => ({
                 ...current,
                 [field.key]: event.target.value,
-              }))
-            }
-            disabled={loading || success}
-            placeholder={field.placeholder}
-            className={FIELD_CLASS}
+              }));
+              setSaved(false);
+            }}
+            className="min-h-24"
           />
         </div>
       ))}
 
-      <div className="flex flex-col gap-1">
-        <button
-          type="submit"
-          disabled={loading || success}
-          // The plan card's button (Design.md §4.6, §4.14): calm idle surface,
-          // the success gradient only to confirm the save.
-          className={`relative h-11 w-full rounded-ctl text-sm font-medium text-fg ${
-            success
-              ? "bg-[image:var(--gradient-success)] shadow-[var(--shadow-button-primary)]"
-              : "bg-[image:var(--gradient-info-soft)] shadow-[var(--shadow-info-soft)]"
-          }`}
-        >
-          <span
-            className={`inline-flex items-center justify-center transition-opacity duration-200 ease-linear ${
-              loading || success ? "opacity-0" : "opacity-100"
-            }`}
-          >
-            Save review
-          </span>
-          <span
-            className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ease-linear ${
-              loading ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <PendingIndicator label="Saving…" />
-          </span>
-          <span
-            className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200 ease-linear ${
-              success ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <Check className="h-4 w-4" aria-hidden="true" />
+      <Button
+        type="submit"
+        size="lg"
+        disabled={isPending || saved}
+        // Pending and saved are states of the button, not "unavailable".
+        className={cn(
+          "h-10 min-w-36 self-start px-4",
+          (isPending || saved) && "disabled:opacity-100",
+        )}
+      >
+        {isPending ? (
+          <PendingIndicator label="Saving…" />
+        ) : saved ? (
+          <>
+            <Check aria-hidden="true" />
             Saved
-          </span>
-        </button>
-      </div>
+          </>
+        ) : (
+          "Save review"
+        )}
+      </Button>
     </form>
   );
 }
