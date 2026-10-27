@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TradeForm } from "@/components/trades/trade-form";
+import { buttonVariants } from "@/components/ui/button";
 import { listAssignableAccounts } from "@/db/queries/accounts";
 import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
@@ -46,17 +47,21 @@ export default async function EditTradePage({ params }: EditTradePageProps) {
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <div className="flex flex-col gap-2">
         <Link
           href={`/journal/${trade.id}`}
-          className="flex w-fit items-center gap-1.5 text-fg-subtle text-sm transition-colors duration-150 hover:text-fg"
+          className={buttonVariants({
+            variant: "ghost",
+            className: "-ml-2.5 h-10 w-fit lg:h-8",
+          })}
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          <ArrowLeft aria-hidden="true" />
           Back to trade
         </Link>
-        <h1 className="page-title">
-          Edit {trade.instrumentSymbol} · {trade.tradeDate}
+        <h1 className="font-semibold text-muted-foreground text-sm">
+          Edit <span className="text-foreground">{trade.instrumentSymbol}</span>{" "}
+          · <span className="font-mono tabular-nums">{trade.tradeDate}</span>
         </h1>
       </div>
 
