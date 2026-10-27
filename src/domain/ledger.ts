@@ -101,3 +101,16 @@ export interface LedgerTotalsCents {
 export function ledgerNetCents(totals: LedgerTotalsCents): number {
   return totals.payoutsCents - totals.expensesCents;
 }
+
+/**
+ * An amount with the sign it has for the trader: a payout comes in, an
+ * expense goes out. Whole cents, so the minus is exact; zero stays 0, never
+ * -0, which Intl writes as "-$0.00".
+ */
+export function signedLedgerCents(entry: {
+  kind: LedgerKind;
+  amountCents: number;
+}): number {
+  if (entry.amountCents === 0) return 0;
+  return entry.kind === "payout" ? entry.amountCents : -entry.amountCents;
+}

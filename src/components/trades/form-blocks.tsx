@@ -104,6 +104,7 @@ export function Choice<T extends string>({
   round = false,
   invalid = false,
   disabled = false,
+  isOptionDisabled,
   render,
 }: {
   label: string;
@@ -114,6 +115,8 @@ export function Choice<T extends string>({
   round?: boolean;
   invalid?: boolean;
   disabled?: boolean;
+  /** One option shown but not pickable, while the others are. */
+  isOptionDisabled?: (option: T) => boolean;
   render?: (option: T) => ReactNode;
 }) {
   const id = useId();
@@ -130,7 +133,10 @@ export function Choice<T extends string>({
               key={option}
               variant="outline"
               pressed={active}
-              disabled={disabled}
+              disabled={disabled || isOptionDisabled?.(option)}
+              // So a form's check can focus the first choice of a missing
+              // answer, as it focuses an invalid field.
+              aria-invalid={(invalid && !value) || undefined}
               onPressedChange={() => {
                 if (!active) onChange(option);
                 else if (clearable) onChange("");
@@ -442,6 +448,7 @@ export function TextField({
   numeric = false,
   placeholder,
   hint,
+  maxLength,
   disabled = false,
 }: {
   id: string;
@@ -455,6 +462,7 @@ export function TextField({
   numeric?: boolean;
   placeholder?: string;
   hint?: string;
+  maxLength?: number;
   disabled?: boolean;
 }) {
   const bad = invalid || Boolean(error);
@@ -470,6 +478,7 @@ export function TextField({
         inputMode={numeric ? "decimal" : undefined}
         value={value}
         placeholder={placeholder}
+        maxLength={maxLength}
         required={required}
         disabled={disabled}
         aria-invalid={bad || undefined}

@@ -1,8 +1,7 @@
 import { isValid, parseISO } from "date-fns";
-import { LedgerAddForm } from "@/components/ledger/ledger-add-form";
+import { LedgerEntries } from "@/components/ledger/ledger-entries";
 import { LedgerFilterBar } from "@/components/ledger/ledger-filter-bar";
-import { LedgerList } from "@/components/ledger/ledger-list";
-import { LedgerTotalsCard } from "@/components/ledger/ledger-totals-card";
+import { LedgerTotals } from "@/components/ledger/ledger-totals";
 import {
   getLedgerTotals,
   isLedgerFilterActive,
@@ -71,22 +70,23 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
   ]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="page-title">Ledger</h1>
-      <p className="text-fg-subtle text-xs">
-        Real money around your prop trading — kept apart from your trading P&L.
-      </p>
-
-      <LedgerFilterBar accounts={filterAccounts} />
-      <LedgerTotalsCard totals={totals} currency={currency} />
-      <LedgerAddForm
-        today={todayInTimeZone(user.timezone)}
-        accounts={formAccounts}
-      />
-      <LedgerList
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <LedgerEntries
+        header={
+          <header className="flex flex-col gap-1">
+            <h1 className="page-title">Ledger</h1>
+            <p className="text-muted-foreground text-xs">
+              Real money around your prop trading — kept apart from your trading
+              P&L.
+            </p>
+          </header>
+        }
+        filters={<LedgerFilterBar accounts={filterAccounts} />}
+        totals={<LedgerTotals totals={totals} currency={currency} />}
         entries={entries}
         filtered={isLedgerFilterActive(filter)}
         accounts={formAccounts}
+        today={todayInTimeZone(user.timezone)}
       />
     </div>
   );

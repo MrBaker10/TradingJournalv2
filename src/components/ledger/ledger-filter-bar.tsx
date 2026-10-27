@@ -1,6 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { SELECT_CLASS } from "@/components/settings/fields";
+import { FieldLabel } from "@/components/trades/form-blocks";
+import { Input } from "@/components/ui/input";
 import type { LedgerAccount } from "@/db/queries/ledger";
 import { buildHref, type SearchParamMap } from "@/lib/search-params";
 
@@ -9,10 +12,7 @@ interface LedgerFilterBarProps {
   accounts: LedgerAccount[];
 }
 
-const FILTER_FIELD_CLASS =
-  "h-10 w-full rounded-ctl border border-white/12 bg-well px-3 text-fg text-sm transition-colors hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none sm:w-auto";
-
-// Design.md §4.25: the page's own account filter and a range of entry dates,
+// The page's own account filter and a range of entry dates,
 // mirrored into searchParams like the analytics range. The server checks the
 // account against the user's own; this only writes what was picked. The
 // fields stay uncontrolled for the reason given in RangeFilter, and their
@@ -24,15 +24,13 @@ export function LedgerFilterBar({ accounts }: LedgerFilterBarProps) {
   const current: SearchParamMap = Object.fromEntries(searchParams.entries());
 
   function update(overrides: SearchParamMap) {
-    router.push(buildHref("/ledger", current, overrides));
+    router.push(buildHref("/ledger", current, overrides), { scroll: false });
   }
 
   return (
-    <div className="card-surface edge flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="ledger-filter-account" className="cap">
-          Account
-        </label>
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+      <div className="flex flex-col gap-1 sm:w-48">
+        <FieldLabel htmlFor="ledger-filter-account">Account</FieldLabel>
         <select
           id="ledger-filter-account"
           key={current.account ?? ""}
@@ -40,7 +38,7 @@ export function LedgerFilterBar({ accounts }: LedgerFilterBarProps) {
           onChange={(event) =>
             update({ account: event.target.value || undefined })
           }
-          className={FILTER_FIELD_CLASS}
+          className={SELECT_CLASS}
         >
           <option value="">All accounts</option>
           {accounts.map((account) => (
@@ -51,11 +49,9 @@ export function LedgerFilterBar({ accounts }: LedgerFilterBarProps) {
         </select>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="ledger-filter-from" className="cap">
-          From
-        </label>
-        <input
+      <div className="flex flex-col gap-1 sm:w-48">
+        <FieldLabel htmlFor="ledger-filter-from">From</FieldLabel>
+        <Input
           id="ledger-filter-from"
           key={current.from ?? ""}
           type="date"
@@ -63,21 +59,19 @@ export function LedgerFilterBar({ accounts }: LedgerFilterBarProps) {
           onChange={(event) =>
             update({ from: event.target.value || undefined })
           }
-          className={FILTER_FIELD_CLASS}
+          className="h-10 font-mono tabular-nums"
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="ledger-filter-to" className="cap">
-          To
-        </label>
-        <input
+      <div className="flex flex-col gap-1 sm:w-48">
+        <FieldLabel htmlFor="ledger-filter-to">To</FieldLabel>
+        <Input
           id="ledger-filter-to"
           key={current.to ?? ""}
           type="date"
           defaultValue={current.to ?? ""}
           onChange={(event) => update({ to: event.target.value || undefined })}
-          className={FILTER_FIELD_CLASS}
+          className="h-10 font-mono tabular-nums"
         />
       </div>
     </div>
