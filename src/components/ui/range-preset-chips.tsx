@@ -1,6 +1,6 @@
 import type { RangePreset } from "@/lib/time";
 
-const PRESETS: { value: RangePreset; label: string }[] = [
+export const RANGE_PRESETS: { value: RangePreset; label: string }[] = [
   { value: "30d", label: "30 days" },
   { value: "90d", label: "90 days" },
   { value: "month", label: "This month" },
@@ -19,7 +19,7 @@ interface RangePresetChipsProps {
 export function RangePresetChips({ active, onSelect }: RangePresetChipsProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {PRESETS.map((preset) => (
+      {RANGE_PRESETS.map((preset) => (
         <button
           key={preset.value}
           type="button"

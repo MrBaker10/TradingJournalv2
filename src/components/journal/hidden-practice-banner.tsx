@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { setSelectedAccount } from "@/actions/accounts";
+import { buttonVariants } from "@/components/ui/button";
 import type { JournalHiddenPracticeCount } from "@/db/queries/trades";
 
 interface HiddenPracticeBannerProps {
@@ -27,9 +28,9 @@ export function HiddenPracticeBanner({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-ctl border border-practice/30 bg-practice-dim px-4 py-2.5 text-sm">
-      <span className="cap-practice rounded-xs px-1.5 py-0.5">Practice</span>
-      <span className="text-fg-muted">
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-400/30 border-l-2 border-l-amber-400 bg-amber-400/5 px-4 py-2.5 text-sm">
+      <span className="font-medium text-amber-300">Practice</span>
+      <span className="text-muted-foreground">
         {hiddenCounts.length === 1
           ? `${hiddenCounts[0].count} trade${
               hiddenCounts[0].count === 1 ? "" : "s"
@@ -42,7 +43,11 @@ export function HiddenPracticeBanner({
           type="button"
           disabled={isPending}
           onClick={() => reveal(entry.accountId)}
-          className="rounded-xs border border-practice/40 px-2 py-1 text-practice text-xs transition-colors hover:bg-practice-dim disabled:opacity-60"
+          className={buttonVariants({
+            variant: "outline",
+            className:
+              "h-10 border-amber-400/40 text-amber-300 hover:bg-amber-400/10 hover:text-amber-300 lg:h-8 dark:border-amber-400/40",
+          })}
         >
           {entry.accountName} ({entry.count})
         </button>
