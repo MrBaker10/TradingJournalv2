@@ -21,13 +21,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${instrumentSans.variable} ${plexMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
+    <html lang="en" className="h-full">
+      {/* Theme and font classes on <body>: overlays portal into it
+          (coding-standards.md → Styling). */}
+      <body
+        className={`dark ${instrumentSans.variable} ${plexMono.variable} min-h-full flex flex-col antialiased`}
+      >
         <MotionConfig reducedMotion="user">
-          <div className="page-glow fixed inset-0 -z-10 pointer-events-none" />
           {children}
           <ToastViewport />
         </MotionConfig>

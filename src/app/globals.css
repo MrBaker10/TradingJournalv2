@@ -1,4 +1,10 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Dark only (Design.md §1): `dark` is the theme class on <body>, never a
+   toggle. The generated shadcn components carry `dark:` variants. */
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   /* --- Flächen --- */
@@ -78,18 +84,12 @@
   --radius-ctl: 12px;
   --radius-xs: 9px;
 
-  /* --- Schrift --- */
-  --font-sans:
-    var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
-
   /* --- Motion --- */
   --ease-soft: cubic-bezier(0.2, 0.7, 0.3, 1);
 
   /* --- Übungskonto --- */
   --color-practice: #ffb547; /* = warning, eigener Name für eigene Bedeutung */
   --color-practice-dim: rgba(255, 181, 71, 0.16);
-  --shadow-practice: inset 3px 0 0 0 #ffb547;
 
   /* --- Econ-Impact: nur das Ordner-Icon im Econ-Kalender (§4.23) ---
      Eigene Namen, eigene Werte: das Rot ist nicht --color-danger (Verlust), das
@@ -181,11 +181,100 @@
     inset 0 0 0 1px rgba(33, 212, 253, 0.45),
     0 0 30px -8px rgba(0, 117, 255, 0.7);
 
-  /* --- Sidebar / Navigation (§4.1) --- */
+  /* --- Sidebar / Navigation (§4.1); still used by the badge grid --- */
   --color-nav-idle: rgba(255, 255, 255, 0.06);
-  --color-nav-hover: rgba(255, 255, 255, 0.04);
-  --color-nav-active-ring: rgba(33, 212, 253, 0.28);
-  --color-divider-glow: rgba(33, 212, 253, 0.45);
+}
+
+/* Design v2 (Design.md §2). The values sit on `.dark`, the theme class on
+   <body>, so overlays that portal into <body> get them too. `inline` makes
+   each utility read the variable on the element it is used on. */
+@theme inline {
+  --font-sans:
+    var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  /* Money in its sign colour; process is the one accent (Design.md §1). */
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-process: var(--process);
+}
+
+@theme {
+  /* Practice account selected: a soft amber fog over the content area, the
+     sidebar excluded — one wide faint shadow, one narrow stronger one. The
+     amber is the practice stripe's (`amber-400`); values confirmed on the
+     dashboard prototype (handoffs/HANDOFF-2026-10-26-redesign-prototype.md). */
+  --shadow-practice-fog:
+    inset 0 0 140px rgb(251 191 36 / 0.27),
+    inset 0 0 36px rgb(251 191 36 / 0.25);
+}
+
+.dark {
+  --background: oklch(0.155 0.004 270);
+  --foreground: oklch(0.96 0.003 270);
+  --card: oklch(0.185 0.004 270);
+  --card-foreground: oklch(0.96 0.003 270);
+  --popover: oklch(0.2 0.005 270);
+  --popover-foreground: oklch(0.96 0.003 270);
+  --primary: oklch(0.94 0.003 270);
+  --primary-foreground: oklch(0.2 0.004 270);
+  --secondary: oklch(0.24 0.005 270);
+  --secondary-foreground: oklch(0.96 0.003 270);
+  --muted: oklch(0.23 0.005 270);
+  --muted-foreground: oklch(0.66 0.01 270);
+  --accent: oklch(0.24 0.006 270);
+  --accent-foreground: oklch(0.96 0.003 270);
+  --destructive: oklch(0.68 0.19 22);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.62 0.12 265);
+  --radius: 0.5rem;
+  --sidebar: oklch(0.14 0.004 270);
+  --sidebar-foreground: oklch(0.9 0.003 270);
+  --sidebar-primary: oklch(0.62 0.15 265);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.21 0.005 270);
+  --sidebar-accent-foreground: oklch(0.96 0.003 270);
+  --sidebar-border: oklch(1 0 0 / 7%);
+  --sidebar-ring: oklch(0.62 0.12 265);
+  --positive: oklch(0.76 0.13 160);
+  --negative: oklch(0.7 0.15 22);
+  --process: oklch(0.72 0.14 265);
+
+  color-scheme: dark;
+}
+
+/* In the base layer, so any border or outline colour a component sets wins. */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
 }
 
 /* Standardkarte */
@@ -284,10 +373,13 @@
     );
 }
 
+/* The tokens and the font variables are defined on <body> itself (theme and
+   font classes), so read them here directly rather than through a `:root`
+   variable that was resolved before they existed. */
 body {
-  background: var(--color-bg);
-  color: var(--color-fg);
-  font-family: var(--font-sans);
+  background: var(--background);
+  color: var(--foreground);
+  font-family: --theme(--font-sans inline);
 }
 
 /* Design.md §5. MotionConfig reducedMotion="user" covers everything `motion`
@@ -354,7 +446,7 @@ body {
 /* Geld steht in Mono mit Tabellenziffern (§3), auch auf der Achse — sonst
    wandert das Komma zwischen zwei Rasterlinien. */
 .equity-chart .recharts-yAxis-ticks .recharts-cartesian-axis-tick-value {
-  font-family: var(--font-mono);
+  font-family: --theme(--font-mono inline);
   font-variant-numeric: tabular-nums;
 }
 /* Der Punkt unter dem Cursor: Loch in der Seitenfarbe, Rand in der Farbe der

@@ -88,8 +88,8 @@ version upgrades belong in a separate commit that changes nothing else.
 - Tailwind for all styling. shadcn/ui on Base UI for every primitive (button, dialog,
   sheet, menu, input, tooltip, command palette, …); a hand-built primitive is deleted
   when its last use is replaced. Generated components live in `src/components/ui/`.
-  The packages enter `package.json` with the redesign's shell-and-tokens ticket; until
-  then they are planned, not installed.
+  Installed with the redesign's shell-and-tokens ticket (`components.json`, style
+  `base-nova`); `cn` is shadcn's class merger, re-exported from `src/lib/utils.ts`.
 - No inline styles, with one exception: a screen position measured at runtime (an
   anchored portal's `left`/`top`/`bottom`/`width`), which no class can express. Type
   it narrowly so nothing else rides along.

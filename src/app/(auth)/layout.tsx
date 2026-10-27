@@ -5,6 +5,13 @@ import type { ReactNode } from "react";
 // the running server's value, not the one present at build time.
 export const dynamic = "force-dynamic";
 
+// The v1 page glow stays behind these pages until their redesign ticket
+// (.scratch/redesign/issues/14-*); the app shell has none.
 export default function AuthLayout({ children }: { children: ReactNode }) {
-  return children;
+  return (
+    <>
+      <div className="page-glow fixed inset-0 -z-10 pointer-events-none" />
+      {children}
+    </>
+  );
 }

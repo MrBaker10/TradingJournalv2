@@ -9,22 +9,18 @@ import { activeNavItem } from "./nav-items";
 import type { ShellProps } from "./sidebar";
 import { SidebarContent } from "./sidebar-content";
 
-// Tailwind's `lg`: from here the desktop sidebar takes over (Design.md §4.1).
+// Tailwind's `lg`: from here the desktop sidebar takes over (Design.md §3.12).
 const DESKTOP_QUERY = "(min-width: 64rem)";
 
 const DRAWER_TRANSITION = { duration: 0.24, ease: [0.2, 0.7, 0.3, 1] } as const;
 
-// The card gradient is translucent; over page content the bar and the panel
-// lay it on the page background so nothing shows through.
-const OPAQUE_CARD = "[background:var(--gradient-card),var(--color-bg)]";
-
 const ICON_BUTTON_CLASS =
-  "flex h-11 w-11 shrink-0 items-center justify-center rounded-ctl text-fg-muted transition-colors hover:bg-nav-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-[var(--color-cyan)] focus-visible:outline-offset-2";
+  "flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/70 transition-[color,background-color,scale] duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-ring active:scale-95";
 
 /**
  * Below `lg`: a top bar with the page title, a menu button that opens the
  * sidebar's content as a drawer, and the account selector, always in view
- * (Design.md §4.1, §4.12). The drawer is a native modal
+ * (Design.md §3.1, §3.12). The drawer is a native modal
  * `<dialog>`, so the page behind is inert, focus stays inside and returns to
  * the menu button on close. It closes after its exit animation has run, except
  * at `lg`, where it is hidden at once and closes at once.
@@ -33,8 +29,7 @@ export function MobileShell({
   displayName,
   accounts,
   selectedAccountId,
-  practiceSelected,
-}: ShellProps & { practiceSelected: boolean }) {
+}: ShellProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -76,14 +71,7 @@ export function MobileShell({
 
   return (
     <>
-      <header
-        className={`card-surface edge ${OPAQUE_CARD} sticky top-4 z-30 flex h-14 items-center gap-2 px-3 lg:hidden ${
-          // The practice stripe sits beside the card's own shadow (§4.12).
-          practiceSelected
-            ? "shadow-[var(--shadow-practice),var(--shadow-card)]"
-            : ""
-        }`}
-      >
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-sidebar-border bg-sidebar px-2 text-sidebar-foreground lg:hidden">
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -94,7 +82,7 @@ export function MobileShell({
         >
           <Menu className="h-5 w-5" aria-hidden="true" />
         </button>
-        <span className="min-w-0 flex-1 truncate text-[15px] text-fg">
+        <span className="min-w-0 flex-1 truncate text-[15px] font-medium">
           {title}
         </span>
         <AccountSwitcher
@@ -116,7 +104,7 @@ export function MobileShell({
         // The browser may close it without a cancelable `cancel`, e.g. on a
         // repeated Escape; the state has to follow, or the menu cannot reopen.
         onClose={() => setOpen(false)}
-        className="m-0 h-dvh max-h-none w-full max-w-none bg-transparent p-0 text-fg backdrop:bg-transparent lg:hidden"
+        className="m-0 h-dvh max-h-none w-full max-w-none bg-transparent p-0 text-sidebar-foreground backdrop:bg-transparent lg:hidden"
       >
         <AnimatePresence onExitComplete={() => dialogRef.current?.close()}>
           {open && (
@@ -137,16 +125,18 @@ export function MobileShell({
                 animate={{ x: 0 }}
                 exit={{ x: "-100%" }}
                 transition={DRAWER_TRANSITION}
-                className={`card-surface edge ${OPAQUE_CARD} fixed inset-y-0 left-0 flex w-[min(85vw,300px)] flex-col overflow-y-auto`}
+                className="fixed inset-y-0 left-0 flex w-[min(85vw,300px)] flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar"
               >
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  aria-label="Close navigation"
-                  className={`${ICON_BUTTON_CLASS} absolute top-3 right-3 z-10`}
-                >
-                  <X className="h-5 w-5" aria-hidden="true" />
-                </button>
+                <div className="flex h-14 shrink-0 items-center justify-end px-2">
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    aria-label="Close navigation"
+                    className={ICON_BUTTON_CLASS}
+                  >
+                    <X className="h-5 w-5" aria-hidden="true" />
+                  </button>
+                </div>
                 <SidebarContent
                   displayName={displayName}
                   onNavigate={() => setOpen(false)}
