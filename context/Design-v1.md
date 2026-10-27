@@ -1,0 +1,1999 @@
+# Design.md — Trading-Journal
+
+> **Archived 2026-10-27 as Design v1.** Superseded by `Design.md` (ADR 0004). Kept
+> whole so that "Design §…" references in code comments, `decisions.md`, `history.md`
+> and earlier tickets still resolve. Not a source of truth for new work.
+
+Designspezifikation für die App hinter dem Login. Sie beschreibt, **wie** die
+bestehenden Screens aussehen und sich verhalten sollen, nicht welche Features es
+gibt. Grundlage: Vision-UI-Designsprache in der Palette „Marineblau · Azure",
+Schrift Instrument Sans, plus die Empfehlungen aus Kapitel 09 (Emotional Design
+Case Studies).
+
+Eine vollständige Landing-Page ist **nicht** Teil dieses Dokuments und kommt später
+separat. Die bestehende Startseite bietet nur Anmeldung und Registrierung; die
+zulässigen öffentlichen Routen stehen in `coding-standards.md` → „Visibility“.
+
+**Stack-Vorgaben aus `coding-standards.md`, die hier gelten:** Tailwind CSS v4 mit
+`@theme` in `src/app/globals.css`, keine `tailwind.config.*`, shadcn/ui wo
+möglich, keine Inline-Styles. Alles unten Genannte ist deshalb als Token oder
+`@utility` formuliert, nicht als Style-Attribut.
+
+**Dark only.** Es gibt keinen Light Mode und keinen Theme-Toggle. Glow liest sich
+auf Hell als Unschärfe, und das Leitprinzip in Abschnitt 1 hätte auf Weiß keine
+Entsprechung. Light Mode steht in der Roadmap unter Future und wäre eine eigene
+Runde, keine Token-Überschreibung.
+
+**Motion:** `motion` (vormals `framer-motion`), Version 13.2.0. Siehe die
+Reduced-Motion-Auflage in Abschnitt 5.
+
+**Schrift:** Instrument Sans und IBM Plex Mono über `next/font`, selbst gehostet,
+kein externer Font-Request.
+
+---
+
+## 1. Das Leitprinzip
+
+> **Neon markiert Prozess. Geld leuchtet nicht.**
+
+Auf der Progress-Seite steht: *„Consistency, not P&L. Nothing on this page ranks
+or rewards money."* Diese Aussage ist die Designregel, nicht nur ein Satz im UI.
+
+| Element | Behandlung |
+|---|---|
+| Streak, Consistency, Badges, By the book, Reviews, Screenshots, Links, Daily checklist | Verlaufsfüllung, Neon-Rand, Glow-Text |
+| Net P&L, Avg winner/loser, Expectancy, Best/Worst day, Drawdown | Semantische Farbe (grün/rot), **kein** Glow, **kein** Verlaufs-Tile |
+| Regelgrenzen und Übungskonto-Marker | Amber, ruhig, kein Puls |
+
+Konsequenzen, die daraus folgen und nicht verhandelbar sind:
+
+- Kein Konfetti, kein Sound, keine Prozent-Delta-Badges („+18 %") bei Geldwerten.
+- Kein Badge, kein Streak-Fortschritt und kein Score, der an P&L hängt.
+- Ein roter Tag löst keine Animation aus. Kein Shake, kein Blinken, kein Alarm.
+- Ein grüner Tag löst keine Feier aus. Die Zahl ist grün, das ist alles.
+
+Begründung aus den Lektionen: L07 verlangt, dass Belohnungen **proportional und
+verdient** sind, L08 verlangt **bedeutungsvolle Metriken** statt hohler Punkte.
+Ein glühender P&L-Wert würde beides brechen, weil ein guter Monat Zufall sein kann.
+
+---
+
+## 2. Tokens
+
+Vollständig in `src/app/globals.css` unter `@theme`. Werte in Hex/RGBA, weil das
+Farbmodell aus dem Vision-UI-Vorbild kommt und exakt getroffen werden soll.
+
+```css
+@import "tailwindcss";
+
+@theme {
+  /* --- Flächen --- */
+  --color-bg:            #0F1535;
+  --color-card-from:     rgba(6, 11, 40, 0.94);
+  --color-card-to:       rgba(10, 14, 35, 0.49);
+  --color-inset-from:    rgba(24, 29, 60, 0.94);
+  --color-inset-to:      rgba(10, 14, 35, 0.49);
+  --color-well:          rgba(6, 11, 40, 0.66);   /* Inputs */
+
+  /* --- Text --- */
+  --color-fg:            #FFFFFF;
+  --color-fg-muted:      #A0AEC0;
+  --color-fg-subtle:     #718096;
+  --color-fg-placeholder:#5B6B8C;
+
+  /* --- Akzent (Prozess) --- */
+  --color-info:          #0075FF;
+  --color-cyan:          #21D4FD;
+
+  /* --- Semantisch (Geld & Regeln) --- */
+  --color-success:       #01B574;
+  --color-success-fg:    #01D98C;   /* Zahlen auf dunkel */
+  --color-success-hi:    #22F0A0;   /* nur Kalender-Kachel */
+  --color-danger:        #E31A1A;
+  --color-danger-fg:     #FF6A6A;
+  --color-danger-hi:     #FF7B7B;
+  --color-warning:       #FFB547;
+
+  /* --- Verläufe --- */
+  --gradient-info:  linear-gradient(310deg, #0075FF 0%, #21D4FD 100%);
+  --gradient-card:  linear-gradient(126.97deg,
+                      var(--color-card-from) 19.41%,
+                      var(--color-card-to)   76.65%);
+  --gradient-inset: linear-gradient(126.97deg,
+                      var(--color-inset-from) 19.41%,
+                      var(--color-inset-to)   76.65%);
+  --gradient-dark:  linear-gradient(310deg, #141727 0%, #3A416F 100%);
+  --gradient-edge:  linear-gradient(126.97deg,
+                      rgba(255,255,255,.20),
+                      rgba(255,255,255,.04) 60%,
+                      rgba(255,255,255,.12));
+  --gradient-edge-neon: linear-gradient(310deg,
+                      rgba(33,212,253,.85),
+                      rgba(0,117,255,.28) 55%,
+                      rgba(255,255,255,.10));
+
+  /* --- Schatten & Neon --- */
+  --shadow-card:      0 20px 50px -30px rgba(0,0,0,.9);
+  --shadow-neon:      0 0 14px rgba(33,212,253,.55), 0 0 42px rgba(0,117,255,.35);
+  --shadow-neon-soft: 0 0 10px rgba(33,212,253,.35);
+  --shadow-neon-edge: 0 0 26px -6px rgba(0,117,255,.42);
+  --shadow-neon-hover:0 0 20px rgba(33,212,253,.70), 0 0 54px rgba(0,117,255,.50);
+  --shadow-focus:     0 0 0 3px rgba(33,212,253,.16), 0 0 22px -6px rgba(33,212,253,.55);
+  --shadow-button-primary:       0 0 0 1px rgba(33,212,253,.5), var(--shadow-neon);
+  --shadow-button-primary-hover: 0 0 0 1px rgba(33,212,253,.5), var(--shadow-neon-hover);
+
+  /* --- Radien --- */
+  --radius-card: 20px;
+  --radius-ctl:  12px;
+  --radius-xs:   9px;
+
+  /* --- Schrift --- */
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* --- Motion --- */
+  --ease-soft: cubic-bezier(.2, .7, .3, 1);
+
+  /* --- Übungskonto --- */
+  --color-practice:      #FFB547;          /* = warning, eigener Name für eigene Bedeutung */
+  --color-practice-dim:  rgba(255,181,71,.16);
+  --shadow-practice:     inset 3px 0 0 0 #FFB547;
+
+  /* --- Econ-Impact (nur Ordner-Icon, 4.23) --- */
+  --color-impact-low:    #F2D14B;          /* gelb */
+  --color-impact-medium: #FF8F3F;          /* orange, nicht warning */
+  --color-impact-high:   #F2443A;          /* rot, nicht danger */
+}
+```
+
+**Keine Farbliterale in Komponenten.** Die `rgba(...)`-Werte, die unten in
+Abschnitt 4 zur Beschreibung stehen, werden beim Bauen der jeweiligen Komponente
+als Token ergänzt, nicht als Literal übernommen. Das ist nicht Kosmetik: es ist
+die einzige Vorbereitung, die einen späteren Light Mode überhaupt möglich hält.
+
+### Hintergrund der Seite
+
+Drei radiale Verläufe, `position: fixed`, `pointer-events: none`, hinter allem.
+Nicht pro Seite variieren — der Hintergrund ist konstant, damit Navigation ruhig
+wirkt.
+
+```css
+@utility page-glow {
+  background:
+    radial-gradient(700px 440px at   0%   0%, rgba(0,117,255,.26), transparent 66%),
+    radial-gradient(640px 400px at 100%   2%, rgba(33,212,253,.16), transparent 66%),
+    radial-gradient(900px 520px at  50% 108%, rgba(0,117,255,.13), transparent 70%);
+}
+```
+
+### Utilities
+
+```css
+/* Standardkarte */
+@utility card-surface {
+  background: var(--gradient-card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  position: relative;
+}
+
+/* Verlaufsrahmen (1px, per Mask) — neutral */
+@utility edge {
+  &::after {
+    content: "";
+    position: absolute; inset: 0; padding: 1px;
+    border-radius: inherit;
+    background: var(--gradient-edge);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude; -webkit-mask-composite: xor;
+    pointer-events: none;
+  }
+}
+
+/* Verlaufsrahmen — Neon, nur für Prozess-Karten */
+@utility edge-neon {
+  box-shadow: var(--shadow-card), var(--shadow-neon-edge);
+  &::after {
+    content: "";
+    position: absolute; inset: 0; padding: 1px;
+    border-radius: inherit;
+    background: var(--gradient-edge-neon);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude; -webkit-mask-composite: xor;
+    pointer-events: none;
+  }
+}
+
+/* Glühende Zahl — ausschließlich Prozess-Werte */
+@utility text-glow {
+  color: var(--color-cyan);
+  text-shadow: 0 0 22px rgba(33,212,253,.65);
+}
+
+/* Kapitälchen-Label */
+@utility cap {
+  font-size: .656rem;      /* 10.5px */
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--color-fg-muted);
+}
+@utility cap-neon {
+  color: var(--color-cyan);
+  text-shadow: var(--shadow-neon-soft);
+}
+```
+
+### Blur-Budget
+
+`backdrop-filter` ist teuer und ruckelt beim Scrollen, sobald viele Karten es
+gleichzeitig haben. Deshalb: **echter Blur nur auf Sidebar und Toasts.** Alle
+anderen Karten bekommen nur den Verlauf, keinen Blur. Das ist optisch praktisch
+nicht unterscheidbar und kostet nichts.
+
+---
+
+## 3. Typografie
+
+Zwei Familien, klare Aufteilung:
+
+- **Instrument Sans** — alles außer Zahlen.
+- **IBM Plex Mono** mit `font-variant-numeric: tabular-nums` — **alle** Zahlen:
+  Preise, R-Multiples, Geld, Zählwerte, Datumsangaben in Tabellen, Streak-Tage,
+  Score. Grund: Zahlen in Spalten müssen untereinander stehen, und ein wechselnder
+  Zeichenabstand bei laufenden Werten wirkt unruhig.
+
+| Rolle | Größe | Gewicht | Besonderheit |
+|---|---|---|---|
+| Seitentitel („Welcome back, Sascha") | 19px | 700 | uppercase, `letter-spacing: .06em` |
+| Sektionslabel („Plan today's session") | 10.5px | 600 | `cap` + `cap-neon` |
+| Kachelwert (Streak, Consistency) | 26px | 700 | mono, `text-glow` |
+| Metrikwert (Net P&L …) | 21px | 700 | mono, semantische Farbe |
+| Kartentitel | 15px | 600 | — |
+| Body | 14px | 400 | `line-height: 1.5` |
+| Sekundär / Hilfetext | 12–13px | 400 | `--color-fg-muted` |
+| Fußnote | 11.5px | 400 | `--color-fg-subtle` |
+
+**Kapitälchen** sind für Labels und Tabellenköpfe gesetzt — das ist Teil des
+Looks. Sie gelten **nicht** für Fließtext, Fehlermeldungen, Microcopy oder
+Buttons. Wenn ein Label länger als etwa 22 Zeichen wird, ist es zu lang für
+Kapitälchen und muss gekürzt werden, nicht umgebrochen.
+
+---
+
+## 4. Komponenten
+
+### 4.1 Sidebar
+
+**Small screens (mobile-shell).** Below the large breakpoint the sidebar is not shown
+in the page. A slim top bar takes its place, sticky at the top of the document:
+
+- `card-surface edge`, 56px high, 12px side padding; the page's 16px gutter around it.
+  Bar and drawer panel lay the card gradient over `--color-bg`: the gradient alone is
+  translucent and content would show through while it scrolls underneath.
+- Left: menu button (44px, icon only, `aria-label="Open navigation"`,
+  `aria-expanded`), then the active navigation item's label as the page title in
+  `--color-fg`, 15px, truncated. Pages keep their own heading; the title only orients.
+- Right: the account selector from 4.12, always visible, at most 45% of the bar; the
+  title gives way first. While a practice account is selected the bar carries
+  `--shadow-practice` as well.
+- No glow on the bar; the menu button follows the sidebar's icon-button hover and
+  the focus ring from §8. While the drawer is open the button reports
+  `aria-expanded="true"`; the bar itself shows no open state, the drawer covers it.
+
+The menu button opens a **drawer**: the sidebar's own content (brand, divider,
+navigation, user card — the account selector lives in the bar) on a `card-surface edge` panel, docked left,
+`min(85vw, 300px)` wide, full height, its own scroll. A close button (44px) sits in the
+panel's top-right corner. Behind it a backdrop of `rgba(0,0,0,.6)`. It is a modal
+dialog: the page behind is inert and does not scroll, Escape and a backdrop tap close
+it, choosing a page closes it, and focus returns to the menu button. At the large
+breakpoint an open drawer closes; there is only ever one navigation on screen. There
+is one navigation list, shared by sidebar and drawer — not a second navigation system.
+
+At the large breakpoint and above, the existing fixed-width sidebar and separate
+content scroll area stay as they are.
+
+
+- Karte mit `card-surface edge`, `position: sticky`, `top: 24px`,
+  `height: calc(100vh - 48px)`, eigener Scroll.
+- Marke: 28px Tile mit `--gradient-info` und `--shadow-neon`, darunter Wortmarke
+  in Kapitälchen.
+- Trenner: 1px Linie als Verlauf von transparent über `rgba(33,212,253,.45)` nach
+  transparent, mit `0 0 8px` Schein.
+- Nav-Item: 30px Icon-Tile, matt (`rgba(255,255,255,.06)`) im Ruhezustand.
+- **Aktiv**: Item bekommt Inset-Verlauf plus `inset 0 0 0 1px rgba(33,212,253,.28)`,
+  das Icon-Tile wechselt auf `--gradient-info` mit `--shadow-neon`. Nur ein
+  aktives Item, nie zwei.
+- Hover: nur Hintergrund `rgba(255,255,255,.04)` und Textfarbe. Kein Glow, sonst
+  ist die Unterscheidung aktiv/hover weg.
+- Fuß: Nutzerkarte mit Inset-Verlauf, darin Sign-out als einzelner Icon-Button.
+  Kein Theme-Toggle, die App ist dark only.
+- Acht Items in dieser Reihenfolge: Dashboard, Trade Journal, Analytics,
+  Progress, Prop Firm Rules, Econ Calendar, Ledger, Settings.
+- Über der Nutzerkarte sitzt der Kontoschalter aus 4.12.
+
+### 4.2 Buttons
+
+Zwei Varianten. Primär trägt den Verlauf, sekundär ist Glas.
+
+```
+primary : background var(--gradient-info); color #fff;
+          box-shadow var(--shadow-button-primary)
+ghost   : background rgba(255,255,255,.05);
+          box-shadow inset 0 0 0 1px rgba(255,255,255,.12)
+```
+
+Fünf Zustände, festes Timing-Set (L09):
+
+| Zustand | Dauer | Verhalten |
+|---|---|---|
+| idle → hover | 150 ms | `translateY(-1px)`, `brightness(1.1)`, `--shadow-neon-hover` |
+| hover → idle | 200 ms | zurück, langsamer als rein, damit schnelles Überfahren nicht flackert |
+| active | 100 ms | `scale(.978)`, kein Versatz |
+| loading | 200 ms Crossfade | Label `opacity: 0`, Spinner absolut zentriert eingeblendet |
+| success | 800 ms Haltezeit | Grüner Verlauf `#019A63 → #01D98C`, danach zurück auf idle |
+
+**Der Button behält in jedem Zustand seine Breite.** Label und Overlay liegen
+übereinander, das Overlay ist `position: absolute; inset: 0`. Nichts unter dem
+Button darf springen (L09).
+
+Der Erfolgszustand ist der einzige Ort, an dem Grün leuchten darf — er bestätigt
+eine Handlung, nicht einen Geldbetrag.
+
+**Offen seit Designrunde 1:** Der „Save plan"-Button im Dashboard trägt im
+Ruhezustand die ruhige Prozessfläche aus 4.14 statt `--gradient-info` und
+`--shadow-button-primary`. Alle übrigen Primärbuttons („New trade", Trade
+speichern, Konto anlegen) stehen noch auf der lauten Variante oben. Das ist ein
+bewusster Zwischenstand, kein Versehen: die neue Tonalität wird erst an einer
+Seite beurteilt, bevor sie sich über das Projekt legt. Der Erfolgszustand bleibt
+in **beiden** Varianten laut.
+
+### 4.3 Gamification-Kacheln (Streak, Consistency, Badges)
+
+- `card-surface edge-neon`, Padding 18/20.
+- Links: `cap`-Label, Wert 26px mono mit `text-glow`, darunter Zusatzzeile in
+  `--color-fg-subtle` („Longest 21d", „of 100 · 16/19 days", „Tap for criteria",
+  „This month").
+- Rechts: 46px Tile, **ruhige Prozessfläche nach 4.14** — `--gradient-info-soft`,
+  `--shadow-info-soft`, Icon in `--color-cyan`. Bis zur Designrunde 1 waren das
+  `--gradient-info` und `--shadow-neon`; die Kachel überstrahlte damit den Wert,
+  den sie beschriftet.
+- Der Streak-Tile bumpt bei einem neu geloggten Trade **einmal**:
+  `scale(1) → 1.14 → 1` über 620 ms mit `--ease-soft`. Kein Dauerpuls.
+  Ausgelöst wird er über `users.dashboard_seen_at` — gebumpt wird, wenn seit dem
+  letzten Dashboard-Besuch ein Trade dazukam, und die Kachel verbucht den Bump
+  danach selbst. Bis zur Designrunde 1 stand hier, er sei „das einzige animierte
+  Element im Dashboard"; das stimmte schon davor nicht, weil der Kalender sich
+  beim Laden aufbaut und seit Designrunde 1 auch einen Hover hat.
+
+**Kleine Form: Statuskarte (Progress).** Auf `/progress` stehen Streak und Badges
+neben der Score-Karte, die dort die Hauptsache ist. Dafür gibt es eine kleinere Form
+der Kachel: `card-surface edge-neon`, Padding 16/20, eine Zeile. Links das
+`cap`-Label, rechts auf einer Grundlinie der Wert 20px mono mit `text-glow` und
+daneben die Zusatzzeile in `--color-fg-subtle` („Longest 21d", „of 12"). **Keine
+Icon-Kachel, kein Hover, kein Bump** — die Karte ist Status, kein Einstieg. Eine
+Consistency-Statuskarte gibt es auf Progress nicht: die Aufschlüsselung trägt den
+Score, er steht dort genau einmal. Die drei Dashboard-Kacheln oben bleiben
+unverändert.
+
+### 4.4 Hinweisleiste (Grace Day)
+
+Volle Breite, `--radius-card`, Amber-Inset:
+`inset 0 0 0 1px rgba(255,181,71,.3)` plus `0 0 24px -12px rgba(255,181,71,.5)`.
+30px Icon-Tile in `rgba(255,181,71,.16)`. Erste Teilsatz fett und weiß, Rest in
+`--color-fg-muted`. Chevron rechts, klickbar, öffnet die Streak-Regeln.
+
+Diese Leiste ist eine Erklärung, keine Warnung. Kein Rot, kein Ausrufezeichen,
+kein Dismiss-Button — sie verschwindet, wenn der Grace Day nicht mehr aktuell ist.
+
+**Platz.** Auf `/progress` über die volle Breite oberhalb von Score und
+Statuskarten, nicht in der Streak-Karte: sie erklärt die Zahlen darunter und wird
+vor ihnen gelesen. Die Streak-Regeln stehen als geschlossene Aufklappzeile unter
+dem Score-Raster; der Chevron der Leiste öffnet sie und scrollt zu ihnen. Offen
+stehen die Regeln in einer ruhigen `card-surface edge`-Karte — sie sind Erklärung,
+kein Prozesswert, und bekommen deshalb keine Neon-Kante.
+
+### 4.5 Formularfelder
+
+Die Regeln aus L10, wörtlich umgesetzt:
+
+- **Label steht immer über dem Feld** und bewegt sich nie. Keine Floating Labels,
+  keine Platzhalter als Label-Ersatz.
+- Feld: `--color-well`, `1px solid rgba(255,255,255,.12)`, `--radius-ctl`.
+- Hover: Rand auf `rgba(33,212,253,.35)`, 200 ms.
+- Fokus: Rand `--color-cyan` plus `--shadow-focus`, 200 ms. Kein Layout-Wechsel.
+- **Die Meldungszeile unter dem Feld existiert von Anfang an** mit
+  `min-height: 18px`. Sie wird nur ein- und ausgeblendet (`opacity`,
+  `translateY(-3px)`, 200 ms), nie eingefügt. Damit springt nichts, wenn eine
+  Meldung erscheint.
+- Live-Validierung beim Tippen, nicht erst beim Absenden. Zwischenstufen sind
+  erlaubt: zu kurz → neutraler Hinweis, gültig → grüne Bestätigung.
+- Fehler: `--color-danger-fg`, weicher Randwechsel. **Kein Shake**, kein hartes
+  Rot, kein Icon-Sprung.
+
+Sechs Zustände, die jedes Feld können muss: default, hover, focus, valid,
+invalid, disabled (z. B. „Locked — imported from CSV").
+
+### 4.6 Plan-Karte („Plan today's session")
+
+- `card-surface edge-neon` — sie ist Prozess, darf also leuchten.
+- Einleitungstext, dann Feld „Pre-market plan" mit Placeholder
+  „Levels, bias, what you'll take and what you'll leave alone."
+- Live-Feedback: unter 20 Zeichen neutraler Hinweis („A bit more — levels and
+  bias, not just a word."), ab 20 Zeichen grüne Bestätigung („Reads like a plan
+  you can be held to").
+- Absenden mit leerem Feld: Meldung am Feld, Fokus zurück ins Feld. **Kein Modal,
+  kein Toast für Fehler** — Fehler stehen dort, wo sie entstehen.
+- „Add end-of-day review" ist ein Aufklapper, kein neuer Screen:
+  `max-height` 0 → 230px über 300 ms, Chevron dreht 180°.
+
+### 4.7 Metrik-Tafel
+
+Die Monatskennzahlen liegen in **einer** Karte als 4-Spalten-Raster, getrennt
+durch `inset -1px -1px 0 rgba(255,255,255,.07)` pro Zelle — nicht als einzelne
+schwebende Karten. Grund: dreizehn optisch identische Karten erzeugen keine
+Hierarchie, man sucht dann jede Zahl einzeln.
+
+Pro Zelle: `cap`-Label, Wert 21px mono, optionale Kontextzeile
+(„Per trade", „From equity peak", „Sep 3").
+
+**Alle Zellen zeigen All Time, außer Today** (entschieden 2026-09-26,
+dashboard-all-time; ersetzt „Net P&L ist die eine Ausnahme vom Monat"): jede Zahl der
+Tafel läuft seit dem ersten Trade im gewählten Scope, Kontextzeile „All time" wo sie
+keinen eigenen Kontext hat. Net P&L ist damit genau der letzte Punkt der Equity-Kurve
+(4.15) minus Startguthaben; Best und Worst day können in jedem Monat liegen. Today ist
+der heutige Tag. Der Consistency Score (4.3) bleibt ein Monatswert.
+
+- Geldwerte: `--color-success-fg` / `--color-danger-fg`, kein Glow.
+- Regelwerte: `--color-warning`.
+- Prozesswerte: `text-glow`.
+- Die Zelle **Today** ist hervorgehoben: Inset-Verlauf
+  `rgba(0,117,255,.16) → rgba(33,212,253,.05)` und Wert in `text-glow`. Sie ist
+  der einzige Wert, der sich im Tagesverlauf ändert.
+
+Drei Kennzahlen kommen zu Dashboard1 hinzu und sind Prozesswerte, also `text-glow`:
+**Missed setups**, **By the book** und **Current streak**. „Room to daily loss"
+gehört ausdrücklich **nicht** dazu: der Wert setzt voraus, dass ein Konto sein
+Prop-Firm-Programm kennt, und diese Verknüpfung liegt in der Roadmap unter Future.
+
+### 4.8 Kalender-Heatmap
+
+- Wochentagskopf `S M T W T F S` in Kapitälchen, `--color-fg-subtle`.
+- 7-Spalten-Raster, Lücke 8px, Zelle `aspect-ratio: 1/.82`, `--radius-ctl`.
+- Leere Vormonatszellen: transparent, kein Rahmen.
+- Geloggter Tag zeigt Tageszahl oben, darunter Betrag (mono, 700) und
+  Trade-Anzahl.
+- Grüner Tag: Verlauf aus `rgba(1,181,116,.3)`, Inset `rgba(1,217,140,.45)`,
+  Betrag in `--color-success-hi`.
+- Roter Tag: Verlauf aus `rgba(227,26,26,.28)`, Inset `rgba(255,106,106,.4)`,
+  Betrag in `--color-danger-hi`.
+- Breakeven-Tag: neutral, Betrag in `--color-fg-muted`.
+- **Heute**: `inset 0 0 0 1.5px var(--color-cyan)` plus
+  `0 0 22px -4px rgba(33,212,253,.75)` — unabhängig davon, ob der Tag grün, rot
+  oder leer ist.
+- Hover, in zwei Stufen (Designrunde 1):
+  - **Jede** Zelle hellt Fläche und Rand auf — `hover:bg-white/5` plus der
+    Hover-Rand ihres Zustands (`--shadow-day-win-hover`, `--shadow-day-loss-hover`,
+    `--shadow-day-flat-hover`), 150 ms. Der Rand bleibt dabei in seiner Farbe:
+    ein grüner Tag wird heller grün, nicht weiß.
+  - **Nur Tage mit Einträgen** heben sich zusätzlich um `translateY(-2px)`. Ein
+    leerer Tag ist kein Link, und ihn anzuheben würde eine Reaktion versprechen,
+    die beim Klick ausbleibt.
+- Kein Tooltip-Modal; Klick öffnet die Trades des Tages im Journal.
+
+**Monatswechsel.** Im Kopf, beidseitig des Monatsnamens, zwei stille Pfeile in
+`--color-fg-subtle`, auf Hover `--color-fg` — 28px, kein Rahmen, keine Fläche. Das
+Raster daneben ist das Laute auf dieser Karte; ein auffälliger Pfeil zöge den Blick von
+dem Monat weg, den er zeigen soll.
+
+- **Vorwärts endet beim laufenden Monat, rückwärts beim Monat des ersten Trades.**
+  Beide Enden sind deaktiviert statt unsichtbar, damit die Karte nicht die Form
+  wechselt. Ohne Trades sind beide aus.
+- Der gewählte Monat steht als `?month=YYYY-MM` in der URL und übersteht damit einen
+  Reload; der laufende Monat schreibt keinen Parameter, weil „jetzt" kein Zustand ist,
+  der synchron gehalten werden muss.
+- **Nur das Raster wandert.** Metrik-Tafel, Consistency Score und Streak bleiben auf
+  dem laufenden Monat: die obere Hälfte des Dashboards beantwortet „wie läuft es
+  gerade", und eine Tafel, die dem Blättern stillschweigend folgt, beantwortet das
+  nicht mehr. Der Kalender ist damit das Stöberwerkzeug, der Rest der Seite der Stand.
+- Der Cyan-Ring von „heute" trifft in anderen Monaten einfach nicht zu.
+
+Hier ist der farbige Schein auf Geldtagen ausdrücklich erlaubt, weil er
+**Dichte** codiert und nicht Belohnung: man erkennt auf einen Blick, wie der
+Monat verteilt ist. Er ist auf der Kachel, nicht auf der Zahl im Dashboard.
+
+### 4.9 Trade-Zeile („Recent trades")
+
+- Zeile als eigene Fläche mit Inset-Rahmen, 10px Abstand zur nächsten.
+- Links 38px Instrument-Tile, ruhige Prozessfläche nach 4.14:
+  `--gradient-info-soft` mit `--shadow-info-soft` und cyanem Symbol für
+  gehandelte Trades, `--gradient-dark-soft` mit `--shadow-dark-soft` und
+  Symbol in `--color-fg-muted` für verpasste Setups. **Beide sind gleich
+  gebaut**, die Farbe ist der einzige Unterschied — verpasste Setups werden
+  nicht kleiner, blasser oder weiter unten dargestellt. Sie sind gleichwertige
+  Einträge. Bis zur Designrunde 1 trugen beide den satten Verlauf.
+- Das Tile zeigt das Symbol bis zum ersten Punkt: aus einem CFD wie `US100.cash`
+  wird `US100`, Futures-Wurzeln bleiben unverändert. Ab fünf Zeichen steht das
+  Kürzel in 9px statt 11px, damit es im Tile bleibt; das volle Symbol steht
+  daneben in der Titelzeile (entschieden 2026-09-25, `src/lib/journal/tile-label.ts`).
+  Ab sieben Zeichen rückt das Kürzel mit `-0.06em` Tracking zusammen, damit es nicht
+  am Rand des Tiles anliegt (entschieden 2026-09-26).
+- Titelzeile: Instrument, dahinter die Richtung als ruhiger Text in
+  `--color-fg-muted` (`MNQ · Short`), dann Tags nur für `Missed`, `Grade B` und
+  die Confluence-Anzahl; darunter Metazeile in `--color-fg-subtle`.
+- **Kein Ergebnis-Tag** (geändert in der Designrunde Journal, 2026-10-21). Das
+  Ergebnis (`win`/`loss`) ist brutto, der Betrag netto der Kommission — ein
+  „Win" stand so neben einem roten Betrag. Betragsfarbe und R tragen das
+  Ergebnis allein. Die Richtung ist Teil des Titels, kein Tag.
+- Hat der Eintrag Confluences, steht dahinter ein weiterer `cap`-Tag mit ihrer
+  **Anzahl** („3 Confluences"), nicht ihre Namen. Ausgeschrieben stünden bei
+  fünf Confluences zwei Zeilen dort, wo bei anderen eine steht, und die Liste
+  wäre nicht mehr überfliegbar. Die Badges selbst stehen auf der Detailseite
+  (4.20).
+- **Unter `sm`** zeigt die Titelzeile nur Instrument, Richtung und `Missed`;
+  `Grade` und die Confluence-Anzahl stehen erst ab `sm`. Die Titelzeile bricht
+  nicht um, jede Zeile bleibt zweizeilig, und der Betrag rechts wird nie
+  gekürzt. Wird es eng, kürzt sich nur das Instrument; Richtung und Tags
+  bleiben ganz, ebenso die Metazeile bis auf ihr Ende.
+- **Metazeile in zwei Varianten:** unter einem Tageskopf der Journal-Liste
+  (4.27) beginnt sie mit der Einstiegszeit auf der Chart-Uhr (`09:42 · NY AM ·
+  Breaker`), weil der Kopf das Datum schon trägt; in der flachen Liste
+  (Sortierung nach R) und in „Recent trades" mit dem Datum.
+- Rechts: Betrag mono, darunter R-Multiple. Bei verpassten Setups steht dort
+  „—" und als Unterzeile „+1.80R would-be" in `--color-fg-subtle` — der
+  hypothetische Wert wird nie in Grün gezeigt. Datenherkunft: `mfe_r` auf einem
+  Eintrag mit `taken = false`, es gibt keine eigene Spalte dafür.
+- Screenshots und Links erscheinen nicht in der Zeile. Siehe 4.13 und 4.20.
+- **Die Zeile ist ein Link auf `/journal/[id]`.** Hover: `translateY(-1px)` plus
+  Neon-Inset, als CSS-Transition.
+
+**Geändert mit S14.** Bis dahin klappte ein Klick die Zeile an ihrer Stelle auf
+(260 ms). Das Aufklappen ist ersatzlos entfallen: die Detailzeile konnte das
+Nötige nicht mehr fassen — Confluences nach Gruppe, Mistakes, Notizen in voller
+Länge, Chart-Vorschauen und der Weg ins Bearbeiten — und zwei Orte für dieselben
+Felder hätten sich auseinanderentwickelt. „Recent trades" auf dem Dashboard
+benutzt dieselbe Komponente und verhält sich mit.
+
+### 4.10 Schnellzugriff-Karten
+
+Vier gleich große Karten am Fuß des Dashboards: Kapitälchen-Titel in
+`cap-neon`, darunter ein Satz in `--color-fg-muted`. Hover: `translateY(-2px)`
+plus Neon-Inset. Texte wie im Ist-Stand („Where your edge actually lives",
+„15 firms, 2026 rule sets").
+
+### 4.11 Toast
+
+- Unten rechts, gestapelt, `gap: 10px`, `aria-live="polite"`.
+- Inset-Verlauf, `inset 0 0 0 1px rgba(33,212,253,.45)` plus
+  `0 0 30px -8px rgba(0,117,255,.7)`, echter Blur erlaubt.
+- 26px Häkchen-Tile in `--gradient-info`.
+- Einblenden 240 ms, Standzeit 4200 ms, Ausblenden 300 ms.
+- Nie blockierend, nie mittig, nie mit Button. Ein Toast ist eine Bestätigung,
+  keine Entscheidung.
+- **Fehler-Toast** (`notifyError`, seit weekly-review): dieselbe Fläche, statt des
+  Häkchens ein `CircleAlert` in `--color-danger-fg` auf matter Kachel (`white/6`),
+  kein Schein. Nur für eine Aktion, die als Ganzes scheitert und kein Feld hat, an dem
+  die Meldung stehen könnte (Weekly Review, Ledger, Konto-Editor und Kontozeile);
+  Feldfehler bleiben am Feld.
+- **Nur über `notifyProcess` und `notifyError`.** Der Toaster läuft `unstyled`; ein
+  direktes `toast.success`/`toast.error` von Sonner erscheint ohne Fläche und am Rand
+  abgeschnitten. Außer `src/components/ui/toast.tsx` importiert nichts Sonner, ein
+  Wächtertest (`toast-imports.test.ts`) hält das fest.
+
+---
+
+### 4.12 Kontoschalter und Übungskonto
+
+Der Schalter sitzt in der Sidebar über der Nutzerkarte, nicht im Seitenkopf, damit
+er auf jeder Seite an derselben Stelle steht. Unterhalb des großen Breakpoints sitzt
+er rechts in der Top-Bar aus 4.1 — auch dort auf jeder Seite an derselben Stelle und
+nie hinter dem Menü verborgen. Sein Aufklapper öffnet dort nach unten, rechtsbündig
+am Schalter, mindestens 240px breit und nie über den Bildschirmrand hinaus.
+
+- Fläche mit Inset-Verlauf, `--radius-ctl`, darin `cap`-Label „ACCOUNT", darunter
+  der Kontoname in 14px 600.
+- Aufgeklappt: „All accounts" zuerst, danach die echten Konten in ihrer
+  Sortierreihenfolge, darunter durch einen Trenner abgesetzt die Übungskonten.
+- „All accounts" bedeutet alle echten Konten. Das steht als Unterzeile in
+  `--color-fg-subtle` im Aufklapper, damit die Zahl nicht erklärt werden muss.
+- Archivierte Konten erscheinen nicht.
+
+**Der Übungskonto-Marker ist keine Dekoration, sondern eine Absicherung.** Ist ein
+Übungskonto gewählt, rendert die App Zahlen in derselben grünen und roten Semantik
+wie echtes Geld. Ohne dauerhaften Marker sieht ein Backtest-Ergebnis aus wie ein
+Kontoauszug. Deshalb:
+
+- `--shadow-practice` als 3px-Amber-Streifen an der linken Kante des Inhaltsbereichs,
+  fixiert, scrollt nicht weg — unterhalb des großen Breakpoints zusätzlich an der
+  Top-Bar aus 4.1, die beim Scrollen stehen bleibt.
+- Amber-Chip „PRACTICE" in `cap` neben dem Kontonamen im Schalter, mit
+  `--color-practice-dim` als Fläche.
+- Kein Glow, kein Puls, keine Animation. Amber ist hier ruhig, wie bei den
+  Regelgrenzen.
+- **Nicht** blasser, kleiner oder tiefer platziert. Ein Übungskonto ist kein
+  minderwertiger Eintrag, es ist ein anders etikettierter.
+
+Der Wechsel des Kontos ist ein Farb- und Zahlenwechsel, kein Seitenwechsel: 200 ms
+Crossfade auf den Werten, das Layout bleibt stehen.
+
+**Account management (Settings, account-settings-redesign).** Replace the tile grid
+with a vertical list, maximum width 56rem. Each compact row shows account name,
+a neutral Default tag, the amber Practice marker, and currency and starting balance
+in mono. Edit is a labeled action; default, order and archive remain separate controls.
+A header-level Add account button replaces the large empty tile.
+
+Only one editor is open: directly below the edited row, or above the list for a new
+account. It uses the existing card surface, 20–24px padding, sentence-case labels,
+44px controls, and a two-column currency/balance group that stacks on mobile.
+Field order: name, currency/balance, Practice, collapsed Commission disclosure.
+The footer shows unsaved status, Cancel, and Create account / Save account, using
+the quiet blue process surface from 4.14. No glow on balances.
+
+All fields and commission rows are a local draft until explicit save. Input blur,
+toggle changes and Enter in a field do not save. Cancel/close/account switching
+confirm before discarding a changed draft. Navigation is guarded; reload uses the
+native browser warning. Saving locks the editor and competing account actions;
+errors retain the draft. Success closes the editor and announces the saved result.
+Default selection, ordering and archive remain independent and are disabled while
+an editor is open. Commission changes never update existing trade commissions.
+
+**Account currency.** Use a native select in the shared editor. Once trades exist,
+disable it and explain: “Locked — this account has trades”. Currency changes retain
+the entered starting-balance amount in the newly selected currency. An unchanged
+amount and currency preserve the existing USD conversion and rate date.
+
+**Practice lock (ledger, ticket 06).** Once ledger entries exist, disable the Practice
+toggle the same way and explain below its description: “Locked — this account has
+ledger entries”. The server refuses the switch either way.
+
+**Prop firm program link (prop-firm-link, ticket 01).** A section in the same editor,
+between Practice and the Commission disclosure, part of the same draft and the same
+explicit save. Heading “Prop firm program” with the help line “Link the program you
+bought and enter its rules as your firm states them for this account.” A native select
+“Program”: first option “Not linked”, then the programs grouped by firm (`optgroup`).
+Picking a program reveals the rule fields; picking “Not linked” hides them and saving
+removes the link — the typed values stay in the draft until the editor closes.
+
+- Fields, labels above (4.5), two columns from `sm`, one below: Evaluation start (date,
+  default today in `users.timezone`) and Profit target; Max drawdown and Drawdown type
+  (select: Static, EOD trailing, Intraday trailing); Lock level, only for EOD trailing —
+  for any other type the field falls away rather than standing locked; Daily loss
+  limit, Consistency (%) and Minimum trading days, each optional. Amounts in mono with
+  “(USD)” in the label, since prop firm limits stay in USD.
+- Below each field, in `--color-fg-subtle`, the program's text for that rule, verbatim,
+  prefixed with “Program:” — “Program: $2,000 (EOD)”. Nothing is parsed into
+  the field (ADR 0001). A rule the program has no text for shows no line.
+- Below the select, the program's account size as reference and the line “The
+  account's starting balance is the attempt's starting balance.”
+- Help lines in `--color-fg-subtle`: Evaluation start “Trades before this day don't
+  count.” Drawdown type, per type: Static “The floor stays at starting balance minus the
+  drawdown.”, EOD trailing “The floor follows your highest end-of-day balance.”,
+  Intraday trailing “Shown as not checkable — the journal has no intraday balance.”
+  Lock level “Optional. The floor stops trailing at this balance.” Consistency
+  “Optional. The largest share of total profit one day may hold.” Daily loss limit and
+  Minimum trading days “Optional.”
+- Messages: an empty Profit target or Max drawdown reads “Enter the profit target” /
+  “Enter the max drawdown”; typed text that is no number reads “Enter the amount as a
+  number”; zero “Enter an amount above 0”.
+- Practice: on a practice draft the select is disabled with “Practice accounts can't be
+  linked.” While a program is selected, the Practice toggle is locked like the ledger
+  lock: “Locked — linked to a prop firm program”. The server refuses both either way.
+- Linking needs a starting balance: without one, the Starting balance field shows
+  “Enter a starting balance to link a prop firm program.”
+- The account row names the link in its detail line after the starting balance:
+  “/ Firm · Program” in `--color-fg-muted`. No status, no colour — rule status is its
+  own surface (tickets 02 and 06).
+
+**Rule status (prop-firm-link, tickets 02–06).** A linked account's row carries a panel
+below its main line, separated by the row's `border-white/8` rule, with `cap` label
+“Rule status” and beside it, in `--color-fg-subtle`, “Since {attempt start}” — the
+evaluation start, or the latest reset expense on the account in the ledger when that is
+later (ticket 05). Below, one line per rule, label left in `--color-fg-muted`, figures
+right in mono, all in USD. A payout on the account inside the attempt lowers the balance
+from its date, so profit target and drawdown read it; daily loss, consistency and
+trading days count trading P&L only:
+
+- **Profit target:** “{progress} of {target}”, progress signed (`+$1,200.00`). Always
+  `--color-fg`, never green, also once reached — it informs, it does not reward.
+- **Max drawdown (static and EOD trailing, ticket 03):** “{distance} to floor {floor}”,
+  followed by the state word. The EOD trailing floor is the highest end-of-day balance
+  minus the drawdown, rises only on a new end-of-day high, never falls and stops at the
+  lock level (a lock level under the starting floor leaves the floor where it is); it
+  reads the same as a static one.
+  Ok: figures in `--color-fg`, no word. Close: “Close” and the distance in
+  `--color-warning`, when the distance to the floor is at most **20 %** of the drawdown
+  amount (`DRAWDOWN_CLOSE_PERCENT`, exactly 20 % is close). Breached: “Breached” and the
+  distance in `--color-danger-fg`, once any end-of-day balance of the attempt reached
+  the floor — also after it recovered. A trailing floor is measured against the floor
+  as it stood at the previous day's close.
+- **Intraday trailing:** “Not checkable — no intraday balance” in `--color-fg-subtle`,
+  no floor and no distance: the journal has no intraday balance, and a guessed floor
+  would be a wrong number.
+- **Minimum trading days:** “{done} of {required} days”, `--color-fg`, no close state.
+- **Daily loss limit (ticket 04):** “Today {net} · {distance} left of {limit}”, today's
+  net signed. Only today's trading day counts; the distance is the limit plus today's
+  net, so a green day widens it. Close at most **20 %** of the limit left
+  (`DAILY_LOSS_CLOSE_PERCENT`, exactly 20 % is close), breached once today's loss
+  reaches the limit; word and colour as for the drawdown.
+- **Consistency (ticket 04):** “Best day {best} · {share} % of {total} · limit {limit} %”,
+  share with one decimal. Close within **5 percentage points** below the limit
+  (`CONSISTENCY_CLOSE_POINTS`, exactly limit − 5 is close), breached above the limit —
+  exactly the limit is still allowed. While total profit is zero or negative: “No
+  profit yet” in `--color-fg-subtle`, no share.
+- Every rule left empty reads “Not set” in `--color-fg-subtle`.
+- No glow, no icon, no badge, no animation; the state word carries the meaning, colour
+  only repeats it.
+- **Dashboard card (ticket 06):** the same lines in a `card-surface edge` card, `p-5`,
+  between the metric panel and the equity curve — `edge`, not `edge-neon`: rules are
+  money, not process. Heading `cap` “Rule status”, beside it in `--color-fg-subtle`
+  “{Firm} · {Program} · Since {attempt start}”. Shown only while exactly one linked
+  account is selected; for “All accounts” and an unlinked account the card is absent,
+  not empty. Figures stay in USD whatever the dashboard's display currency. No link,
+  no motion, no effect on any tile or score.
+
+**Archived accounts.** Each archived row offers Restore. Delete permanently appears only
+for an account with no trades and no ledger entries; otherwise its place holds a quiet
+note in `--color-fg-subtle`: “Has trades or ledger entries — stays archived”. The
+server refuses the delete either way (ledger, ticket 02).
+
+**Anzeigewährung (display-currency, 2026-09-25).** Geldbeträge stehen in der Währung der
+Konten, die eine Ansicht zeigt — `€1,234.56` neben `$1,234.56`, beide in derselben
+en-US-Schreibweise mit Tausenderkomma und Dezimalpunkt; nur das Zeichen wechselt. Es
+gibt keinen Schalter und keinen Kurs im UI. Das Override-Feld im Trade-Formular ist als
+„P&L override (USD)" beschriftet, weil dort in der gespeicherten Währung eingegeben wird.
+
+### 4.13 Screenshots und Links am Trade
+
+Beide liegen auf der Detailseite (4.20), je in einem eigenen Abschnitt. Seit S14
+nicht mehr in einer aufgeklappten Zeile — die gibt es nicht mehr.
+
+- Screenshot: 56px Vorschau-Tile, `--radius-xs`, Inset-Rahmen. Klick öffnet ein
+  Lightbox-Overlay, kein neuer Tab. Maximal drei.
+- Link: Chip mit `--gradient-inset`, 1px Inset-Rand, Kapitälchen-Label aus dem
+  Titel oder der Domain, davor ein 14px Icon. Beliebig viele.
+- Ein Link öffnet in einem neuen Tab, mit `rel="noopener noreferrer"`.
+- **Kein Abruf der Zieladresse, nirgends.** Keine Metadaten, kein oEmbed, kein
+  eingebettetes Chart, kein Thumbnail, das der Server holt. Das wäre ein
+  serverseitiger Abruf einer fremden URL und ist in `coding-standards.md`
+  verboten.
+- **Die eine Ausnahme, und warum sie keine ist (S14):** bei einem
+  TradingView-Snapshot (`tradingview.com/x/<id>/`) ergibt sich die Bildadresse
+  aus der Linkadresse durch eine feste Regel — Verzeichnis ist das erste Zeichen
+  der id, kleingeschrieben. Der Chip trägt dann über dem Label eine 16:9-Vorschau
+  im Seitenverhältnis des Charts. **Abgeleitet, nicht abgerufen:**
+  `snapshotImageUrl` in `src/lib/links.ts` ist reine Zeichenkettenarbeit, das
+  Bild holt der Browser über ein `<img>`, der Server sieht die Adresse nie. Das
+  Verbot oben bleibt damit unangetastet. Lädt das Bild nicht, fällt der Chip auf
+  seine Textform zurück; jeder andere Host bleibt von vornherein Text.
+- Fehlt beides, steht dort nichts. Kein leerer Platzhalter, kein „Add screenshot"
+  in der Leseansicht. **Seit S14 gilt dieser Satz wieder wörtlich:** der
+  Stift-Auslöser, den S6 als bewusste Abweichung in die Leseansicht gesetzt
+  hatte, ist verschwunden — Anhänge werden im Bearbeiten-Formular verwaltet.
+
+### 4.14 Ruhige Prozessfläche
+
+Eingeführt in Designrunde 1, weil `--gradient-info` plus `--shadow-neon` auf dem
+Dashboard alles andere überstrahlte — die Icon-Kacheln und der Save-Button waren
+heller als die Zahlen, die sie begleiten.
+
+Das Rezept ist nicht neu erfunden, sondern von den Geldtagen der Kalender-Heatmap
+(4.8) übernommen und nur eingefärbt: **schwacher Verlauf, 1px-Inset-Rand in der
+Akzentfarbe, kein Schein nach außen.**
+
+```
+--gradient-info-soft: linear-gradient(310deg,
+                        rgba(0,117,255,.30) 0%,
+                        rgba(0,117,255,.08) 100%);
+--shadow-info-soft:   inset 0 0 0 1px rgba(33,212,253,.45);
+```
+
+Die Deckkraftwerte `.30 → .08` und der Rand bei `.45` sind zeichengleich mit
+`--gradient-day-win` und `--shadow-day-win`. Dass beide Flächen dieselbe Rezeptur
+tragen, ist der Punkt: eine ruhige Fläche sieht überall gleich ruhig aus,
+unabhängig von ihrer Farbe.
+
+**Wofür.** Flächen, die etwas *begleiten*: Icon-Kacheln, sekundäre Aktionsflächen,
+alles, was neben einem Wert steht und nicht wichtiger sein darf als er. Das Icon
+darauf steht in `--color-cyan`, nicht in Weiß — Weiß wäre auf der nun dunklen
+Fläche wieder der hellste Punkt und hätte das Problem nur verschoben.
+
+**Wofür nicht.** Der Erfolgszustand eines Buttons (4.2) und die „Heute"-Markierung
+im Kalender (4.8). Beide bestätigen oder verorten etwas und dürfen deshalb
+leuchten.
+
+**Stand.** Benutzt vom Dashboard — die drei Gamification-Kacheln (4.3) und der
+„Save plan"-Button (4.6) — von der Trade-Detailseite: Bearbeiten-Button und
+Badges (4.20) — vom Trade-Formular: ausgewählte Chips (4.22) — und von der
+Progress-Seite: die Icon-Kachel eines erreichten Badges (Cyan-Icon; die Karte
+behält `edge-neon`, ein offenes Badge bleibt matt auf `edge`; der Hinweis „Evaluated
+once the month is over." steht in `--color-fg-subtle`, Amber bleibt Regelgrenzen und
+Übungskonto vorbehalten). Ob sie sich über das übrige Projekt legt, entscheidet die
+nächste Runde.
+
+---
+
+### 4.15 Equity-Kurve
+
+Die **ganze Handelshistorie** als kumulierte Flächenkurve, vom ersten Trade bis heute,
+in einer `card-surface edge`-Karte über die volle Breite, zwischen Metrik-Tafel (4.7)
+und Kalenderraster (4.8). Kopf wie beim Kalender: `cap cap-neon` links, rechts in
+`--color-fg-subtle` der Zeitraum statt eines Monatsnamens — „13 Aug 2026 — today".
+
+**Die Kurve beginnt beim Startguthaben** (entschieden 2026-09-25, account-balance): bei
+einem einzeln gewählten Konto bei dessen Guthaben, bei „All accounts" bei der Summe der
+echten Konten. Ohne Guthaben ist der Start 0 und alles unten Gesagte gilt wörtlich. Mit
+Guthaben übernimmt die **Startlinie** jede Rolle, die unten die Nulllinie hat: Farbwechsel,
+Grenze der Fläche, hellere Linie, fester Teil des Y-Bereichs. Über dem Start ist grün,
+darunter rot — gemessen am eigenen Startkapital, nicht an der absoluten Null, die bei
+einem Konto mit 50.000 $ nie auf der Achse liegt.
+
+**Der letzte Punkt minus Startguthaben ist die Net-P&L-Zahl der Tafel darüber**
+(entschieden 2026-09-26, ersetzt „bewusst nicht die Zahl der Tafel"): Net P&L zeigt
+seit diesem Tag All Time, nicht mehr den laufenden Monat.
+
+**Die Kurve beginnt mit einem Startpunkt** (entschieden 2026-09-26): vor dem ersten Tag
+steht ein eigener Punkt beim Startguthaben — ohne Guthaben bei 0 —, auf der X-Achse
+„Start", im Tooltip „Starting balance" mit dem Betrag. Die Kurve verlässt ihn mit dem
+ersten Tag sichtbar nach oben oder unten: 25.000 $, dann 25.400 $.
+
+**Die Kurve ist ein Geldwert.** Sie bekommt deshalb semantische Farbe und keinen
+Schein — kein Cyan, kein `text-glow`, kein Halo (1, 9). Die Ausnahme von 4.8 gilt
+hier ausdrücklich nicht: dort codiert der Schein die Dichte über den Monat und
+sitzt auf einer kleinen Kachel, hier wäre er eine Feier auf einer großen Fläche.
+
+- **Zweifarbig an der Nulllinie.** Linie in `--color-success-fg` über Null und
+  `--color-danger-fg` darunter, Fläche in `--color-success` / `--color-danger`.
+  Der Wechsel liegt exakt auf `y = 0`, nicht am Rand des gezeichneten Bereichs.
+- **Die Fläche verläuft vom Rand zur Null**, `.30 → .02` Deckkraft. Weit weg von
+  Null ist sie am kräftigsten, an der Nulllinie verschwindet sie. Gelesen wird
+  damit der Abstand zu Null, nicht die Farbe an sich. `.30` ist derselbe Startwert
+  wie bei `--gradient-day-win` und `--gradient-info-soft` (4.8, 4.14).
+- **Die Fläche liegt zwischen Kurve und Nulllinie**, nicht zwischen Kurve und
+  Rahmenunterkante. Eine Verluststrecke ist ein Loch unter der Linie, keine Säule
+  vom Boden aus.
+- **Raster** nur waagerecht, gestrichelt `3 4`, in `--color-chart-grid`. Die
+  Nulllinie ist heller (`--color-chart-zero`) — sie ist keine Hilfslinie, sondern
+  die Grenze, an der die Kurve die Farbe wechselt.
+- **Achsen** ohne eigene Linie und ohne Ticks, Beschriftung in
+  `--color-chart-axis` bei 12px. Nicht kleiner und nicht in `--color-fg-subtle`:
+  auf der Y-Achse stehen Beträge, und 8 lässt den dunkelsten Ton nur für
+  Nebeninformationen zu. Die Y-Achse steht in Mono mit Tabellenziffern, weil dort
+  Geld steht (3).
+- **Die X-Achse richtet sich nach dem, was gezeichnet ist.** Liegen alle Punkte in
+  einem Monat, trägt sie Tageslabels „Sep 3"; sobald die Reihe über eine Monatsgrenze
+  geht, Monatslabels „Sep 2026". Ein Tageslabel ohne Jahr ist über mehrere Jahre
+  mehrdeutig, und bei zweihundert Punkten ohnehin nicht lesbar.
+- **Keine Lückenfüllung.** Ein Punkt je Tag, an dem etwas eingetragen wurde, gleich
+  weit auseinander — plus der Startpunkt davor, die einzige Ausnahme. Eine Equity-Kurve zählt Handelstage; Wochenenden und Feiertage als
+  flache Strecken auszurollen gäbe der Kurve Länge ohne Information.
+- **Y-Bereich** immer inklusive Null, nach außen auf runde Beträge gerundet, vier
+  Schritte. Eine Kurve, die nur gestiegen ist, zeigt die Null trotzdem — sonst
+  fehlt die Linie, von der sie sich entfernt hat.
+- **Hover**: senkrechte Cursorlinie in `--color-chart-zero`, ein Punkt auf der
+  Kurve (Loch in `--color-bg`, Rand in derselben Farbe) und eine kleine
+  `card-surface edge`-Fläche mit Datum, Stand und Tagesergebnis. Mit Startguthaben
+  ist der Stand der Kontostand ohne Vorzeichen, gefärbt nach über oder unter dem Start. Kein Modal, kein
+  Klickziel: der Weg zu den Trades eines Tages ist die Kalenderkachel.
+
+**Noch nichts eingetragen.** Kein leeres Achsenkreuz, sondern derselbe ruhige Satz wie
+unter „Recent trades" (4.9) — auf den ersten Eintrag bezogen, nicht auf den Monat.
+
+**Motion.** Der Aufbau ist die Einzeichnung der Kurve beim Laden, einmal. Recharts
+animiert in JavaScript — weder `MotionConfig` noch der
+`prefers-reduced-motion`-Block in `globals.css` erreicht das, die Animation muss in
+der Komponente abgeschaltet werden (5).
+
+**Stand.** Eine Kurve über die ganze Historie, dem Kontoschalter folgend. Der
+Zeitraum ist fest; ein Umschalter (1M/3M/YTD) ist bewusst nicht gebaut, solange
+niemand ihn vermisst. Kurven pro Konto nebeneinander stehen weiterhin in der Roadmap
+unter Future und brauchen eine eigene Runde. Die Balkendiagramm-Frage von Analytics
+ist entschieden: kein Diagramm (4.16).
+
+---
+
+### 4.16 Analytics-Dimensionstabelle
+
+Entstanden in S12a aus den vorhandenen Primitiven und in der Designrunde Progress und
+Analytics (2026-10-21) gegen das Dashboard gehalten und entworfen. Was hier steht,
+beschreibt die Umsetzung und hält die Festlegungen fest, die sie nötig gemacht haben.
+
+**Die Karte.** Eine `card-surface edge`-Karte je Dimension, Kopf `cap cap-neon`
+(„By setup type"), darunter bei Bedarf eine Hinweiszeile in `--color-fg-subtle`.
+Elf Karten in einem zweispaltigen Raster mit `items-start` — eine Dimension mit zwei
+Buckets darf nicht auf die Höhe einer mit zwanzig gezogen werden, das liest sich wie
+eine Karte, die ihre Daten verloren hat.
+
+**Die Zeile.** Bucket links, vier Zahlen rechts in Mono mit Tabellenziffern: Trades,
+Win, Net P&L, Avg R. Darunter ein 3px-Balken über die volle Zeilenbreite. Ein Bucket
+ohne Wert steht als „Not set" kursiv in `--color-fg-subtle` und sortiert immer ans
+Ende — es ist die Abwesenheit eines Wertes, kein Wert, der die anderen geschlagen hat.
+
+**Nur Dimensionen mit Daten werden Karten.** Eine Dimension ist *nicht erfasst*, wenn sie
+keine Zeilen hat oder nur den Bucket „Not set". Hat sie auch nur einen gesetzten Bucket,
+behält sie ihre Karte. Die Entscheidung trifft das reine Analytics-Modul
+(`splitRecordedDimensions`), nicht die Seite. Die erfassten Karten stehen in **einem**
+zweispaltigen Masonry (CSS-Spalten, `break-inside-avoid`, ab `lg`; darunter eine Spalte)
+in der bisherigen Reihenfolge der Dimensionen — kein Raster mit `items-start`, das
+Löcher lässt. Die Reihenfolge liest sich spaltenweise (erst die linke Spalte von oben
+nach unten, dann die rechte), nicht mehr zeilenweise wie im Raster. Die übrigen stehen in **einer** Zeile unter dem Masonry: „Not recorded in
+this range: By setup type, By entry model." in `--color-fg-subtle`, die Namen so, wie
+die Karten heißen. Sind alle erfasst, entfällt die Zeile.
+
+**Ein Hinweis zum Avg-R-Strich.** Hat in der ganzen Auswertung kein Bucket ein Avg R
+(kein Trade im Zeitraum hat einen Stop-Preis), steht **einmal** über den Karten eine
+Zeile in `--color-fg-subtle`: „Avg R shows — until a trade in this range has a stop
+price." Hat auch nur ein Bucket ein Avg R, steht sie nicht dort — auch wenn dieser Bucket in
+einer nicht erfassten Dimension liegt, denn dann wäre der Satz falsch. Ohne erfasste
+Dimension steht sie ebenso nicht: keine Karte zeigt dann einen Strich, den sie
+erklären könnte. Auch diese Entscheidung trifft das Modul
+(`shouldExplainMissingAvgR`).
+
+**Eine Komponente für alle Tabellen.** Kopfzeile und Zeile kommen aus
+`src/components/analytics/bucket-table.tsx`; die Spalten (Beschriftung und Breite)
+stehen je Tabelle einmal und gelten für Kopf und Zeilen. Sie wird von den
+Dimensionskarten, Hold time und Risk calibration (4.17) und den Missed Setups benutzt;
+Exit efficiency hat keine Zeilen. Risk calibration hat wie bisher keine Kopfzeile, ihre
+schmalen Zeilen bleiben deshalb ohne Beschriftungszeile — der Kartentitel nennt, was
+gezählt wird.
+Die Zahlenfarbe bestimmt der Aufrufer je Zelle — die Zeile färbt nichts selbst.
+
+**Schmal (unter `sm`) hat die Zeile zwei Zeilen.** Zuerst der Bucket in voller Länge,
+umbrechend statt abgeschnitten, darunter die Zahlen in Mono, getrennt durch ein
+`·` in `--color-fg-subtle`. Die Spaltenköpfe werden zu **einer** Beschriftungszeile
+über den Zeilen („Trades · Win · Net P&L · Avg R") in derselben Reihenfolge. Der
+Balken bleibt unter den Zahlen. Ab `sm` ist alles wie vorher: ein Bucket links,
+Zahlen in festen Spalten rechts, `truncate`.
+
+**Der Balken ist die Stelle, an der 1 zur Regel wird.** Er kommt aus einer einzigen
+Komponente (`src/components/ui/value-bar.tsx`), und die entscheidet die Farbe, nicht
+der Aufrufer:
+
+- `tone="gain"` / `tone="loss"` — **Geld.** `--color-success` / `--color-danger`,
+  flach. Kein Verlauf, kein Schein, keine Feier auf dem besten Bucket. Skaliert gegen
+  den größten **Absolutwert** der Dimension, damit der schlechteste und der beste
+  Bucket vergleichbar schwer gezeichnet werden.
+- `tone="process"` — **Prozess.** `--gradient-info`, dieselbe Füllung wie die
+  Consistency-Balken in 4.3. Benutzt von den Missed Setups unten.
+
+Die Breite läuft über einundzwanzig feste Klassen in Fünf-Prozent-Schritten, nicht
+über einen Inline-Style. „No inline styles" ist hart, und Tailwind erzeugt nur
+Klassen, die es im Quelltext sieht. Auf 3px ist der Unterschied zwischen zwei
+Schritten ohnehin unsichtbar, und die genaue Zahl steht daneben.
+
+**Acht Zeilen, dann ein Aufklapper.** „Stunde" hat bis zu 24 Buckets, „Confluence"
+rund 30 — elf Karten in voller Länge sind keine Seite. Sichtbar sind acht, der Rest
+hängt hinter „Show all (n)" im 260ms-Aufklapper aus 5. **Abgeschnitten wird nichts:**
+„nichts verschwindet lautlos" gilt hier wie beim Übungskonto-Zähler im Journal.
+
+**Missed Setups** stehen als eigener Abschnitt unter den elf Karten, mit
+`cap cap-neon`-Überschrift und vier Karten in `cap`. Sie tragen **keine einzige
+Geldzahl** — nur Anzahl und Anteil. Ihr Balken ist Prozess und darf deshalb Neon
+tragen: ein Missed Setup speist Streak und Badges und fasst kein Geld an. Dass er
+genau so aussieht wie ein Score-Balken, ist die Aussage, nicht ein Versehen. Ohne
+Missed Setups im Zeitraum steht der Abschnitt wie jeder leere Abschnitt als **eine
+Zeile in einer `card-surface edge`-Fläche** (4.17, „Leerzustände"), nicht als loser Text
+ohne Fläche — der einzige Abschnitt, der vorher keine hatte.
+
+**Der Anteil hat einen erklärungsbedürftigen Nenner**, und die Erklärung steht auf
+dem Schirm statt in diesem Dokument: ein Missed Setup trägt kein Konto, ist also in
+jeder Kontoauswahl sichtbar, während die genommenen Trades daneben gefiltert sind.
+Auf einem kleinen Konto liest sich daraus sonst schnell eine Quote, die es nicht gibt.
+Eine Zeile unter der Abschnittsüberschrift sagt das (7).
+
+**Zeitraumfilter.** `card-surface edge` über der ganzen Seite, Von/Bis plus vier
+Presets als Chips aus einer mit dem Journal geteilten Komponente (4.27). Die Datumsfelder sind **uncontrolled**:
+ein `type="date"` feuert sein Change-Event mit leerem Wert, solange das Datum halb
+getippt ist, und ein Rückschreiben dieses Wertes setzt den Datumseditor des Browsers
+mitten in der Eingabe zurück. Ein `key` auf dem Feld erzwingt den Remount, wenn ein
+Preset den Zeitraum löscht; der Journal-Filter macht es seit der Designrunde Journal
+genauso, weil dort Presets und `Clear` die Daten ebenfalls löschen.
+
+**Kein Diagramm.** Auf dieser Seite läuft kein Recharts. Der waagerechte Balken ist
+das einzige Primitiv, und keine Zeile führt irgendwohin — der Weg zu den Trades einer
+Dimension ist der Journal-Filter, nicht ein Drilldown von hier.
+
+**Stand.** Elf Dimensionen, ein Zeitraum, dem Kontoschalter folgend. Haltedauer,
+Risikokalibrierung und Exit-Effizienz sind seit S12b da und stehen in 4.17 — sie
+haben die Bucket-Tabelle behalten, nur mit anderen Spalten. Die Designrunde Progress
+und Analytics (2026-10-21) hat die Seite gegen das Dashboard gehalten.
+
+**Nicht auf der Komponente** stehen die Vorschautabelle des Imports (4.18, außerhalb
+der Analytics-Runde) und **Past months** auf Progress (4.24). Letzteres zeigt unter
+`sm` nur Monat und Score und lässt die vier Teilwerte weg, statt sie in eine zweite
+Zeile zu setzen. Das wäre ein Sonderfall in der Komponente für genau einen Aufrufer.
+
+---
+
+### 4.17 Execution-Auswertungen
+
+Die drei Abschnitte aus S12b, unter den elf Dimensionskarten und über den Missed
+Setups: **Hold time**, **Risk calibration**, **Exit efficiency**. Sie beantworten
+nicht, *welcher* Bucket zahlt, sondern *wie* ein Trade gefahren wurde. Aufbau,
+Karten und Zeilen sind die aus 4.16 — was hier steht, sind die Unterschiede.
+
+**Keine Geldzahl, nirgends.** Auf diesen drei Abschnitten steht kein einziger Betrag.
+Alles ist ein R-Vielfaches, eine Dauer oder eine Anzahl. Das ist keine Sparsamkeit,
+sondern die Trennlinie: Ausführungsqualität ist Prozess, und Prozess wird hier nicht
+in Geld gemessen.
+
+**Die Farbregel folgt daraus** und ist der Grund, warum dieser Abschnitt überhaupt
+nötig ist:
+
+- **Balken tragen Neon** (`ValueBar tone="process"`), wie die Consistency-Balken in
+  4.3 und die Missed-Setups in 4.16. Eine Verteilung ist ein Prozesswert.
+- **Der erfasste Anteil leuchtet** (`text-glow`). Er sagt, wie gut ausgeführt wurde,
+  nicht wie viel verdient — derselbe Wertetyp wie der Consistency Score.
+- **Alles Hypothetische bleibt weiß.** MFE, Post-exit MFE und das entgangene R sind
+  Beträge, die nie realisiert wurden. 4.9 verbietet für den „would-be R" einer
+  verpassten Position ausdrücklich Grün, und hier gilt dasselbe: `text-fg`, kein
+  Erfolgs-Ton, keine semantische Farbe. **Ein nicht verdienter Gewinn wird nie
+  eingefärbt wie ein verdienter.**
+- Und weil nichts davon Geld ist, taucht auch `--color-success` / `--color-danger`
+  in keinem der drei Abschnitte auf.
+
+**Hold time** ist eine Karte mit zwei Zeilen, Gewinner und Verlierer, je mit
+Durchschnittsdauer und Trade-Anzahl. Die Dauer steht als `1h 35m`, unter einer Stunde
+als `40m` — auf ganze Minuten gerundet, weil die Eingabe eine Chart-Uhr war und eine
+Sekundenangabe eine Genauigkeit behaupten würde, die es nie gab. Weder Zeile ist
+eingefärbt: länger halten ist für sich genommen weder gut noch schlecht.
+
+**Risk calibration** sind vier Karten im Zweierraster — MAE und MFE, je nach Gewinnern
+und Verlierern getrennt. Kopfzeile trägt den Mittelwert plus „avg over n": ein
+Mittelwert über zwei Trades ist eine andere Aussage als einer über zweihundert, und
+die Karte sagt, welche. Darunter fünf Bucket-Zeilen mit Anzahl, Anteil und Balken.
+Die Karte hat keine Kopfzeile (der Titel nennt, was gezählt wird); nur unter `sm`, wo
+die Zeile zweizeilig wird, steht eine Beschriftungszeile „Trades · Share“ über den
+Zeilen, damit „4 · 33%" lesbar ist. Ab `sm` bleibt es ohne Kopfzeile.
+**Leere Buckets bleiben stehen** — die Form der Verteilung ist der Befund, und eine
+fehlende Zeile würde die Lücke verbergen, die sie zeigen soll.
+
+**Exit efficiency** ist eine Karte mit zwei Zahlen nebeneinander: der erfasste Anteil
+in Prozent (leuchtend) und das entgangene R (weiß). Nur Gewinner, und nur Trades mit
+einem eingetragenen Post-exit MFE.
+
+**Leerzustände** sagen, *warum* nichts da ist — „No post-exit MFE recorded in this
+range. It is a manual field and only appears when a trade has a stop price." Das ist
+wichtiger als sonst, weil alle drei Abschnitte auf optionalen Handeingaben beruhen: ein
+leerer Abschnitt heißt hier meistens „nicht erfasst", nicht „nicht passiert".
+
+**Hat ein Abschnitt gar nichts, schrumpft er auf eine Zeile:** eine `card-surface
+edge`-Fläche, Padding 16/20, links der Titel in `cap cap-neon`, rechts der erklärende
+Satz in `--color-fg-subtle` (schmal darunter). Das gilt für Hold time (kein Trade mit
+Exit), Risk calibration (weder MAE noch MFE erfasst), Exit efficiency (kein Post-exit
+MFE) und Missed setups (4.16). Die Beschreibung unter der Überschrift entfällt dann —
+wie bei „Past months" (4.24). Hat auch nur eine Karte Daten, bleibt der Abschnitt
+wie bisher, samt der leeren Karten daneben: dort ist die Lücke der Befund.
+
+Eine zweite Ursache kommt dazu: **ein Trade ohne Stop-Preis liefert keine Excursion**,
+weil MFE und MAE in R angegeben sind und R ohne Stop nicht definiert ist. Die MAE- und
+MFE-Karten können also leer bleiben, obwohl Werte eingetippt wurden. Das ist dieselbe
+Linie, die avg R in 4.16 schon zieht.
+
+**Stand.** Entworfen in der Designrunde Progress und Analytics (2026-10-21). Mit diesem
+Abschnitt ist §F vollständig.
+
+---
+
+### 4.18 Import-Flow
+
+Vier Schritte auf einer Route (`/journal/import`): Datei → Konto → Vorschau → Ergebnis.
+Das erste mehrstufige UI des Projekts; es gab kein Muster zum Abschauen, deshalb steht
+hier, was festgelegt wurde.
+
+**Der Einstieg.** Ein zweiter Knopf neben „New trade" in `/journal`, in der ruhigen
+Prozessfläche aus 4.14 (`--gradient-info-soft`, `--shadow-info-soft`). Importieren ist
+die seltenere Handlung und darf den lauten Primärknopf nicht doppeln. Keine Karte in
+`/settings` — dort liegt der Export, aber der Import gehört dorthin, wo die Trades sind.
+
+**Die Schrittanzeige** ist eine Zeile aus vier Kapitälchen-Labels mit 1px-Strichen
+dazwischen. Der aktuelle Schritt trägt `cap-neon`, erledigte `text-fg-muted`, kommende
+`text-fg-subtle`. **Kein Fortschrittsbalken:** ein Balken behauptet einen Anteil, und
+vier Schritte sind kein Anteil. Der Fortschritt ist hier auch kein Prozesswert im Sinn
+von §1 — er misst nichts, er verortet nur.
+
+**Schritt 1** ist eine gestrichelte Ablagefläche (`border-white/12 border-dashed`, auf
+Hover `border-cyan/35`) über einem Textfeld zum Einfügen. Darunter steht in
+`text-fg-subtle`, dass die Datei im Browser gelesen wird und nicht hochgeladen — das ist
+kein technisches Detail, sondern der Grund, warum hier kein Ladebalken kommt.
+
+**Schritt 2** sind Konto-Chips im Muster von `account-multi-select`, aber einfach
+wählbar. Übungskonten stehen in einer eigenen Gruppe unter der Überschrift „Practice",
+tragen die Bernsteinkante (`border-practice/40`, Hover `bg-practice-dim`) und darunter
+den Satz, dass ihre Trades aus jeder kombinierten Zahl fallen. Die Bernsteinfarbe ist
+hier dieselbe Warnung wie der Randstreifen am `<main>` (4.13): die Zahlen dieses Kontos
+sehen aus wie echtes Geld.
+
+**Die Vorschautabelle.** Vier Zähler über der Tabelle — New, Update, Skip, Invalid —
+als `cap`-Label mit 19px-Monozahl. Die Tabelle selbst folgt dem Zeilen-Layout aus 4.16:
+Kopfzeile `border-white/8`, Zeilen `divide-white/6`, Label links `truncate`, Zahlen
+rechts in Mono bei 13px mit `tabular-nums`. Unter jeder Zeile steht Zeilennummer und
+Grund in 11.5px.
+
+Das Urteil je Zeile ist ein Prozesswert und trägt Farbe nach §1: `new` in Cyan,
+`update` in Weiß, `skip` in `text-fg-subtle`. **Die Spalte „File P&L" bleibt farblos.**
+Sie zeigt die P&L, die die Datei behauptet, zum Vergleich — geschrieben wird sie nie,
+das Journal rechnet jede P&L selbst. Eine Zahl, die nicht übernommen wird, darf nicht
+aussehen wie eine verdiente; das ist dieselbe Linie, die 4.17 für alles Hypothetische
+zieht.
+
+Ungültige Zeilen stehen in einer eigenen Karte darunter, Grund in `text-danger-fg`,
+Zeilennummer rechts. Sie blockieren den Rest der Datei nicht, und die Karte sagt das.
+
+**Schritt 4** ist ein Satz, kein Konfetti: „Imported 42 · updated 0 · 0 already in your
+journal were skipped." Keine Farbe auf den Zahlen. Ein Import ist Buchhaltung — §1 hält
+das Grün für einen Tag zurück, der gut gehandelt wurde, nicht für einen, der erfolgreich
+eingelesen wurde.
+
+**Die Batch-Liste** steht dauerhaft unter dem Wizard, auf jedem Schritt. Je Zeile
+Dateiname, Konto, Datum und Form, rechts der Knopf „Remove 41 of 42". **Die zwei Zahlen
+sind der Punkt:** die erste sagt, was verschwindet, die Differenz, was bleibt, weil
+daran gearbeitet wurde. Der Knopf ist der erste Löschpfad für Trades im Projekt und
+fragt deshalb in sich selbst nach — ein zweiter Klick auf „Click again to remove",
+**kein `window.confirm`**, das jedes weitere Browser-Ereignis blockieren würde. Die
+Kante wird dabei rot (`border-danger-fg/60`), gefüllt wird sie nicht: rot als Fläche
+ist in diesem Projekt ein Verlust, nicht eine Warnung.
+
+**Wofür nicht.** Keine Zeile in der Vorschau ist editierbar, es gibt kein
+Spalten-Mapping und keinen Fortschritt über mehrere Dateien. Wer eine Spalte anders
+haben will, ändert sie im Export.
+
+**Stand.** §4.5 kannte den Import bisher nur als Beispiel für einen disabled-Zustand
+(„Locked — imported from CSV"); dieser Abschnitt ist der erste, der den Screen
+beschreibt. Gebaut, nicht entworfen.
+
+Die Vorschautabelle war die **fünfte** Kopie des Zeilen-Layouts. Die Analytics-Tabellen
+sind inzwischen zusammengeführt (`bucket-table.tsx`, 4.16); die Vorschau liegt
+außerhalb dieser Runde und bleibt eine eigene Kopie.
+
+### 4.19 Anmeldung, Registrierung und Sicherheit
+
+Die ersten Screens außerhalb von `(app)`: Login und Registrierung sind die einzigen
+Seiten, die ohne Session erreichbar sind (`proxy.ts`). Sie haben **keine Sidebar**. Das
+Journal beginnt erst hinter dem Login, und eine Sidebar mit sieben Punkten, von denen
+keiner erreichbar ist, wäre ein Versprechen ohne Inhalt.
+
+**Aufbau.** Eine einzelne `card-surface edge`-Karte, 400px breit, horizontal und
+vertikal mittig auf dem `page-glow`-Hintergrund. Oben die Marke aus 4.1 (28px-Tile mit
+`--gradient-info` und `--shadow-neon`, Wortmarke in `cap`), darunter der Titel in
+`page-title`. Kein `edge-neon`: Anmelden ist weder Prozess noch Geld (§1).
+
+- Felder nach 4.5, Label über dem Feld, Meldungszeile von Anfang an da.
+- Ein Primärbutton über die volle Kartenbreite, mit den fünf Zuständen aus 4.2. Der
+  Erfolgszustand entfällt: nach dem Anmelden folgt sofort das Dashboard, ein grüner
+  Haken davor wäre eine Feier ohne Anlass.
+- Unter dem Button ein Satz in `--color-fg-subtle` mit Link in `--color-cyan` zur
+  jeweils anderen Seite. Ist die Registrierung geschlossen, entfällt der Link auf
+  „Create account", und `/register` sagt in einem Satz, dass hier keine neuen Konten
+  angelegt werden.
+
+**Der Code-Schritt.** Ist 2FA aktiv, ersetzt ein zweiter Zustand derselben Karte das
+Formular: ein Feld „Authentication code" in Mono mit Tabellenziffern,
+`inputmode="numeric"`, `autocomplete="one-time-code"`. Darunter ein Textlink „Use a
+backup code instead", der dasselbe Feld auf einen Backup-Code umstellt. **Keine zweite
+Seite**, weil ein Zurück-Klick sonst mitten im Login landet.
+
+**Fehler** stehen in der Meldungszeile unter dem Passwortfeld, nie unter dem
+Nutzernamen: „Username or password is wrong." ist ein Satz für beide Fälle. Wer den
+Satz nach Feldern aufteilt, verrät, welche Nutzernamen es gibt.
+
+**Settings, Abschnitt „Security".** Drei Karten in `card-surface edge` unter dem
+Export, im Muster der Export-Karte (Titel `text-sm font-medium`, Erklärung in
+`--color-fg-subtle`, Aktion rechts):
+
+- **Profile** zeigt den Nutzernamen als Text in Mono, nicht als Feld. Ein Feld, das
+  deaktiviert ist, fragt „warum darf ich nicht?"; ein Text sagt, dass es so ist.
+- **Password** klappt ein Formular mit drei Feldern auf (aktuelles, neues,
+  Wiederholung). Erfolg ist der grüne Button-Zustand aus 4.2, keine Toast-Meldung.
+- **Two-factor authentication** zeigt „On" oder „Off" als `cap`. Einrichten öffnet
+  in derselben Karte: Passwort bestätigen → QR-Code (dunkle Module in `--color-bg` auf
+  weißer Fläche, 176px — invertierte Codes erkennt nicht jede Authenticator-App) mit dem Schlüssel darunter in Mono zum Abtippen →
+  Code eingeben. Danach erscheinen die Backup-Codes **genau einmal** als Raster in
+  Mono mit dem Satz, dass sie nur jetzt sichtbar sind. Kein Download, kein Druck —
+  die Karte sagt, sie abzuschreiben.
+- **Delete account** steht zuletzt und getrennt. Der Button ist ghost mit
+  `text-danger-fg`, das Passwortfeld erscheint erst nach dem ersten Klick, gelöscht
+  wird mit einem zweiten, der „Delete account and all data" heißt — dieselbe
+  zweistufige Bestätigung wie „Remove" in 4.18, kein `window.confirm`. Die Kante wird
+  dabei rot (`border-danger-fg/60`), gefüllt wird sie nicht.
+
+**Sidebar.** Der Sign-out-Button aus 4.1 bekommt seine Funktion. Kein Bestätigungsdialog:
+Abmelden verliert nichts.
+
+**Stand.** Gebaut, nicht entworfen.
+
+---
+
+### 4.20 Trade-Detailseite und Bearbeiten
+
+Zwei Routen, seit S14: `/journal/[id]` liest, `/journal/[id]/edit` schreibt. Sie
+sind getrennt, weil das Nachschlagen eines Trades der häufigere Vorgang ist und
+kein offenes Formular verdient.
+
+**Detailseite.** Über dem Inhalt eine Zeile: links ein Zurück-Link „Trade
+Journal" mit Pfeil in `--color-fg-subtle`, rechts der Bearbeiten-Button auf der
+ruhigen Prozessfläche nach 4.14 (`--gradient-info-soft`, Stift in
+`--color-cyan`) — er begleitet den Trade, er ist nicht wichtiger als er.
+
+Darunter Karten in `card-surface edge`, in dieser Reihenfolge:
+
+- **Kopf** — die eine laute Stelle der Seite. Links das Instrument als
+  Seitentitel (`page-title`, 19px 700 uppercase nach §3), daneben die Tags
+  Richtung, Ergebnis und Note auf der neutralen Fläche (`--gradient-dark-soft`,
+  `--shadow-dark-soft`, `cap` in `--color-fg`); darunter Metazeile aus 4.9 und
+  Instrumentname in `--color-fg-muted`, das Datum in Mono. Rechts der Betrag in
+  26px 700 Mono, darunter das R in 14px Mono.
+- **Execution** — keine Kacheln, sondern vier Zeilen auf einer Fläche, getrennt
+  durch 1px-Linien: **Prices** (Stop, Entry, Exit), **Time** (Entry, Exit, Held),
+  **Excursion** (MFE, MAE, Post-exit MFE in R), **Process** (Contracts, Entry
+  model, Felt, By the book). Links der Zeilenname in `cap`, rechts die Werte mit
+  kleinem Label in `--color-fg-subtle` darüber, Wert 15px 600 in Mono, Freitext
+  in Sans. Die Zeilen fassen zusammen, was zusammen gelesen wird — Preise
+  erzählen den Verlauf, Zeiten die Dauer. Leere Werte fehlen ganz statt „—" zu
+  zeigen, eine Zeile ohne Werte fehlt auch. „Held" ist die Haltedauer aus
+  derselben SQL-Rechnung wie in 4.17, über Mitternacht plus 24 Stunden. Hat der
+  Trade einen Stop-Preis, ersetzt das Preisband aus 4.21 die Zeile „Prices".
+- **Accounts** (Badges wie unten, mit dem Practice-Marker aus 4.12),
+  **Confluences** (nach Gruppe gegliedert, Gruppenname in `--color-fg-subtle`,
+  darunter die Badges), **Mistakes**, **Notes** (Fließtext, Zeilenumbrüche
+  bleiben), **Screenshots**, **Links** (beide nach 4.13).
+
+Ein Abschnitt ohne Inhalt erscheint nicht. Abschnittstitel stehen in `cap` +
+`cap-neon`, wie jedes Sektionslabel nach §3.
+
+**Ab `lg` zwei Spalten.** Der Kopf bleibt volle Breite. Darunter links der Trade —
+Execution, Notes, Screenshots, Links —, rechts eine 20rem breite Spalte mit
+Accounts, Confluences und Mistakes. Die rechte Spalte läuft über die Zeilen der
+linken, und der Überhang landet unter der letzten linken Karte, nie zwischen zwei
+Karten. Fehlen alle drei Abschnitte der rechten Spalte, nimmt die linke die volle
+Breite. Unter `lg` eine Spalte in der Reihenfolge der Aufzählung oben. Grund: auf
+Desktop stand ein einzelner Account-Chip in einer 1350px breiten Karte.
+
+Badges tragen die ruhigen Flächen aus 4.14, kein Schein nach außen, Label in
+13px 500 in `--color-fg` und in der Schreibweise, in der der Nutzer es angelegt hat
+— keine Kapitälchen, weil es Namen sind und §3 Kapitälchen für längere Texte
+ausschließt. Der Practice-Marker aus 4.12 bleibt ein `cap`-Tag. Confluences und Accounts stehen auf der blauen
+(`--gradient-info-soft`, `--shadow-info-soft`), dieselbe wie der
+Bearbeiten-Button. **Mistakes stehen auf der neutralen** (`--gradient-dark-soft`,
+`--shadow-dark-soft`): ein Fehler ist Prozessdatum, aber nichts Verdientes, und
+in Cyan sähe er aus wie eine Belohnung. Der Link-Chip aus 4.13 bleibt auf
+`--gradient-inset` mit `edge`.
+
+**Geändert in der Designrunde der Detailseite.** Vorher trugen die Badges
+`--gradient-inset`, die Account-Chips `--color-well`, die Execution-Felder ein
+loses Raster und der Betrag 18px — die Seite hatte keinen Blickfang und wirkte
+dunkel. Ein Zwischenstand mit Execution-Kacheln wurde verworfen: acht gleiche
+Kacheln in einer Karte trennten, was zusammengehört, und liefen bei schmaler
+Breite über.
+
+Farbe: der Betrag semantisch grün oder rot, sonst nichts. Bei einem verpassten
+Setup steht „—" und darunter das would-be R in `--color-fg-subtle`, nie grün —
+4.9 und 4.17 gelten hier unverändert.
+
+**Bearbeiten.** Kein eigener Entwurf: es ist dasselbe Formular wie „New trade" (4.22),
+vorbefüllt, mit den Feldregeln aus 4.5 und den Buttonzuständen aus 4.2. Der
+Primärbutton heißt „Save changes", sein Erfolgszustand zeigt die neue Zahl und
+führt danach auf die Detailseite zurück.
+
+- Screenshots und Links speichern **sofort**, nicht erst beim Absenden — der
+  Trade existiert schon, und ein Bild kann eine Server Action ohnehin nicht
+  mitnehmen. Ein Satz in `--color-fg-subtle` unter den beiden Feldern sagt das,
+  damit der Unterschied nicht geraten werden muss.
+- Der Missed-Schalter bleibt bedienbar: wird umgeschaltet und gespeichert,
+  verschwinden Exit, Kontrakte, Ergebnis und Kontozuweisung.
+- Ein archiviertes Konto, auf dem dieser Trade schon liegt, steht weiter zur
+  Auswahl und trägt einen `cap`-Tag „Archived". Sonst verlöre ein Trade beim
+  Speichern stumm seine Zuweisung, und ein Trade ohne Konto ist ein Zustand, den
+  die Domain verbietet.
+- **Löschen** steht zuletzt und in einer eigenen Karte, getrennt vom
+  Speichern-Button. Ghost-Button mit `text-danger-fg`, zwei Klicks: der erste
+  macht daraus „Click again to confirm" mit roter Kante und
+  `--color-danger`-Fläche bei 15 %, der zweite löscht. Nach drei Sekunden ohne
+  zweiten Klick fällt er zurück. Kein `window.confirm`, kein Modal — dieselbe
+  Mechanik wie „Delete account" in 4.19 und das Entfernen eines Screenshots.
+
+**Stand.** Gebaut, nicht entworfen.
+
+
+**Strategie.** Hat der Trade eine Strategie, steht vor „Notes" eine Karte „Strategy" in
+derselben Form wie „Notes" (`Section`): Name in `--color-fg`, darunter die Kapitel als
+Klartext (`cap` über `--color-fg-muted`, leere Kapitel entfallen). Gezeigt wird die
+Revision, die dem Trade zugewiesen wurde, nicht der aktuelle Stand der Strategie
+(ADR 0003). Eine archivierte Strategie trägt „Archived" in `--color-fg-subtle`.
+
+### 4.21 Preisband
+
+Auf der Detailseite (4.20) in der Execution-Karte an der Stelle der Zeile
+„Prices", sobald der Trade einen Stop-Preis hat. Ohne Stop ist R nicht definiert,
+dann bleibt die Zeile.
+
+**Was es zeigt.** Eine Achse in R, nicht in Preisen: Stop bei −1R, Entry bei 0,
+Exit beim erzielten R. Long und Short sehen gleich aus — der Stop steht immer links.
+Dahinter die Spannen MAE (−|MAE| bis 0) und MFE (0 bis |MFE|), nach dem Exit der
+Post-exit-Lauf gestrichelt. MFE und MAE zählen über den Betrag wie in 4.17. Die
+Achse reicht mindestens von −1R bis +1R und wächst mit MAE, MFE, Exit und
+Post-exit; unter ihr stehen die ganzen R, bei langen Achsen ausgedünnt.
+
+**Farbe.** Nur die Strecke Entry → Exit und der Exit-Marker sind grün oder rot,
+ohne Glow (§1). MAE, MFE und Post-exit sind hypothetisch und bleiben neutral —
+`--color-fg-subtle` und `--color-fg-muted` in geringer Deckkraft (4.17). Stop in
+`--color-fg-muted`, Entry in `--color-fg`.
+
+**Verpasstes Setup.** Kein Exit, keine realisierte Strecke, kein Grün: Stop, Entry
+und die would-be-Spanne bis MFE (4.9).
+
+**Beschriftung.** Über jedem Marker Name in `--color-fg-subtle` und Preis in Mono
+`--color-fg`, 11px. Ein Label steht mittig über seinem Marker, am Rand bündig zum
+Rand. Würden sich zwei Labels überschneiden, rutscht eines eine Zeile höher. Ob sie
+sich überschneiden, hängt von der echten Breite ab — das Band misst sich deshalb
+und rechnet neu, wenn sich die Breite ändert. Die Zahlen zu MFE, MAE und Post-exit
+stehen weiter in der Zeile „Excursion"; das Band zeigt die Form, nicht die Werte.
+
+**Nicht.** Kein Hover, kein Tooltip, keine Animation. Keine Kursdaten — das Band
+zeigt ausschließlich, was am Trade eingetragen ist.
+
+
+### 4.22 Trade-Formular
+
+„New trade" und „Edit" (4.20) sind dasselbe Formular. Es liest sich in der
+Reihenfolge, in der die Detailseite den Trade zeigt — man gibt ein, wie man später
+liest.
+
+**Abschnitte.** Karten in `card-surface edge`, Titel in `cap` + `cap-neon`:
+
+- **Trade** — Missed-Schalter, Datum · Instrument · Richtung (ab `sm` auf 12 Spalten
+  3 · 5 · 4, weil das Instrument den längsten Wert trägt), darunter Accounts.
+- **Execution** — Entry- und Exit-Zeit, Kontrakte; Entry-, Exit- und Stop-Preis;
+  das Preisband aus 4.21 live; MFE, MAE, Post-exit MFE; P&L-Override.
+- **Setup** — Session, Setup-Typ, Entry-Modell, Confluences.
+- **Review** — Grade, Felt, Result, By the book, Mistakes, Notes.
+- **Attachments** — Screenshots und Links.
+
+**Pflichtfelder** tragen ein `*` in `--color-cyan` hinter dem Label und `required` am
+Feld. Das Formular hat `noValidate`: der Browser zeigt keine eigenen Blasen, die
+Zod-Validierung aus 4.5 bleibt die einzige. Welche Felder Pflicht sind, sagt allein
+`createTradeSchema`. Pflicht-Selects zeigen „Select…", optionale „—" — der
+Unterschied ist Absicht.
+
+**By the book** ist ein optionales Select mit `—`, `Yes`, `No`. `—` ist
+unbeantwortet; auch eine frühere Antwort lässt sich damit wieder leeren.
+
+**Chips.** Nicht gewählt: `--color-well`, 1px-Rand, `--color-fg-muted`. Gewählt:
+genau das Badge der Detailseite — Confluences und Accounts auf der blauen ruhigen
+Fläche, Mistakes auf der neutralen (4.14, 4.20). Was man anklickt, sieht aus wie das,
+was man später liest. Gruppennamen der Confluences stehen in `--color-fg-subtle`,
+12px, Normalschreibung, damit sie unter dem Feldlabel leiser sind als es.
+
+**Preisband live.** Sobald Entry und Stop gültig und verschieden sind, zeigt
+Execution das Band aus 4.21 aus den getippten Werten; das R kommt aus derselben
+`calculatePnl`-Rechnung wie die Leiste. Ohne Stop steht dort ein Satz in
+`--color-fg-subtle`, wie man es bekommt. Das Band bewegt sich nur mit der Eingabe.
+
+**Feste Leiste.** Am Ende des Formulars, `sticky` am unteren Rand des Inhaltsbereichs:
+links das Live-P&L als Metrikwert (21px 700 Mono, nur grün oder rot, kein Glow) mit
+dem R in 14px daneben, bei einem Missed Setup „Missed setup — no P&L" in
+`--color-fg-subtle`; rechts der Primärbutton aus 4.2 mit fester Mindestbreite statt
+über die ganze Breite. Die Fläche darunter ist deckend, ohne Blur (Blur-Budget, §2).
+Beim Bearbeiten steht die Löschen-Karte **unter** dem Formular, nicht zwischen Inhalt
+und Leiste.
+
+**Stand.** Gebaut nach einem Design-Review mit dem `frontend-design`-Skill. Offen:
+die Mistake-Labels sind in den Seed-Daten kleingeschrieben, die Confluences nicht;
+das ist Datenpflege, kein Layout.
+
+**Strategie im Formular.** Im Abschnitt „Setup" ein Select „Strategy" mit „No strategy" als
+Vorgabe, unabhängig von Setup type, Entry model und Confluences. Es bietet die aktiven
+Strategien und die dem Trade bereits zugewiesene, auch archiviert (Zusatz „· Archived").
+Wechselt oder leert man sie beim Bearbeiten, setzt das Formular „By the book" zurück und
+sagt es in `text-xs` unter dem Select; der Server löscht die Antwort ebenfalls.
+
+### 4.23 Econ-Kalender
+
+Entstanden in P2.4, aus vorhandenen Primitiven gebaut: **tragfähig, aber nicht
+entworfen.**
+
+**Filterkarte.** `card-surface edge` über der Liste, drei Gruppen in der Chip-Optik
+der Prop-Firm- und Analytics-Filter: „Show“ (Today · This week · Next week · Both,
+Default Today), „Impact“
+(ein Chip „High impact only“), „Currency“ (Mehrfachauswahl, nur die Währungen der
+gewählten Woche(n), ein gewählter Chip bleibt stehen, auch wenn die Woche ihn nicht
+mehr hat — sonst ließe er sich nicht abwählen). Der ganze Zustand steht in der URL.
+
+**Ein Tag, eine Karte.** `card-surface edge`, Kopf `cap` („Mon 28 Sep“), darunter das
+Zeilenmuster aus 4.16: Kopfzeile `border-white/8`, Zeilen `divide-white/6`. Links Zeit
+(Mono 13px, `--color-fg-muted`), Währung (Mono), Impact direkt vor dem Event, das es
+bewertet, dann der Titel (`truncate`, voller Titel im `title`-Attribut); rechts
+Forecast und Previous (Mono, rechtsbündig, leer = „—“ in `--color-fg-subtle`).
+
+**Vergangene Termine** (Zeitpunkt ≤ jetzt, beim Laden entschieden) bleiben stehen,
+werden aber auf halbe Deckkraft gedimmt — Ordner eingeschlossen — und von einer
+durchgehenden 1px-Linie in `--color-fg-muted` über die volle Zeilenbreite gekreuzt,
+kein `line-through` je Text, das an jeder Spaltenlücke abreißen würde. Für
+Screenreader steht ein unsichtbares „Past:“ vor dem Titel. Kein Timer: eine Zeile,
+die bei offener Seite vergeht, bekommt ihre Linie beim nächsten Laden. Tag und Uhrzeit stehen in `users.timezone`, und die Zeile
+darüber nennt die Zone mit einem Link nach Settings.
+
+**Impact-Ordner.** Vor dem Wort ein gefüllter 14px-Ordner (`Folder` aus
+`lucide-react`, `fill-current`) wie bei Forex Factory: Low gelb
+(`--color-impact-low`), Medium orange (`--color-impact-medium`), High rot
+(`--color-impact-high`), Holiday grau (`--color-fg-subtle`). Die drei Farben sind
+**eigene Tokens mit eigenen Werten**: Rot heißt in dieser App Verlust, Amber heißt
+Übungskonto, und ein Wirtschaftstermin ist keins von beiden — derselbe Grund, aus dem
+`--color-practice` einen eigenen Namen hat. Kein Schein, keine Bewegung. Das Wort
+bleibt daneben stehen (High `--color-fg` halbfett, Medium `--color-fg-muted`, Low und
+Holiday `--color-fg-subtle`), der Ordner ist `aria-hidden` — Farbe ist nie der einzige
+Träger (§8). Entschieden 2026-09-28 auf Wunsch, ersetzt „Impact ist Text, keine
+Farbe“.
+
+**Leerzustände.** „Today“ ohne Zeilen sagt „Nothing on the calendar today.“ „Next week“ ohne Zeilen sagt, dass Forex Factory die Woche erst im
+Laufe der Woche veröffentlicht. Ganz leer heißt „noch nicht synchronisiert“, gefiltert
+leer heißt „No event matches these filters.“
+
+### 4.24 Score-Verlauf („Past months")
+
+Entstanden in P2.6 (month-close), aus vorhandenen Primitiven gebaut und in der
+Designrunde Progress und Analytics (2026-10-21) gegen die übrigen Screens gehalten.
+
+**Die Karte.** Auf `/progress` volle Breite zwischen Streak/Score-Raster und
+Badge-Raster. `card-surface edge-neon`, weil der Score Prozess ist wie in 4.3. Kopf
+`cap cap-neon` „Past months", darunter eine Zeile in `--color-fg-subtle`, dass ein Monat
+zwei Tage nach seinem Ende eingefroren wird.
+
+**Die Zeile.** Das Zeilen-Layout aus 4.16, aber als eigene Kopie, nicht aus der
+geteilten Komponente (Grund dort): Monat links als
+„September 2026", rechts in Mono 13px mit Tabellenziffern der Score als ganze Zahl in
+`text-glow`, dann die vier Teilwerte mit einer Nachkommastelle in `--color-fg-muted` und
+dem Maximum in `--color-fg-subtle` („27.4 / 40"). Die Beschriftungen sind die der
+Live-Aufschlüsselung (Showing up, Journaling, Adherence, Review), damit ein Monat vor und
+nach dem Einfrieren gleich heißt. Neueste zuerst, alle Monate, keine Balken, kein
+Diagramm. Unter `sm` bleiben nur Monat und Score.
+
+**Leerzustand.** Ohne eingefrorenen Monat schrumpft die Karte auf eine Zeile:
+`card-surface edge-neon`, Padding 16/20, links `cap cap-neon` „Past months", rechts
+„Your first month appears here once it is over." in `--color-fg-subtle`. Die Zeile über
+das Einfrieren zwei Tage nach Monatsende steht nur in der Karte mit Daten.
+
+### 4.25 Ledger
+
+Entstanden mit dem Ledger (Phase 3), aus vorhandenen Primitiven gebaut: **tragfähig,
+aber nicht entworfen.** Der Ledger ist echtes Geld,
+kein Prozess: **nirgends Neon, kein `text-glow`, keine Feier** — weder beim ersten
+Eintrag noch bei einer Auszahlung. Er steht neben dem Trading-P&L, nie darin (ADR 0002).
+
+**Die Seite.** `/ledger`, achtes Navigations-Item zwischen Econ Calendar und Settings,
+Icon `Wallet`. Titel „Ledger", darunter eine Zeile in `--color-fg-subtle`: „Real money
+around your prop trading — kept apart from your trading P&L." Von oben: Filter, Summen,
+Formular, Liste. Der Kontoschalter aus 4.12 wirkt hier nicht; die Seite bekommt ihren
+eigenen Kontofilter.
+
+**Filter.** Eine `card-surface edge`-Leiste wie der Zeitraumfilter der Analytics-Seite,
+Felder nach 4.5 mit Label darüber: **Account** als Select, erste Option „All accounts"
+(Default), danach die echten Konten in der Reihenfolge des Kontoschalters, archivierte
+nur, wenn sie Einträge haben, ohne Markierung; dann **From** und **To** als Datumsfelder
+auf das Eintragsdatum. Der Zustand steht in den searchParams (`account`, `from`, `to`),
+ein Reload zeigt dieselbe Auswahl. Summen und Liste folgen demselben Filter; ohne
+Kontofilter zählen Einträge ohne Konto mit. Unter `sm` stehen die Felder untereinander.
+
+**Summen.** Eine `card-surface edge`-Karte als Raster wie die Metrik-Tafel 4.7, drei
+Zellen: Payouts, Expenses, Ledger net. `cap`-Label, Wert 21px Mono mit Tabellenziffern,
+Kontextzeile mit der Anzeigewährung. Payouts `--color-success-fg`, Expenses
+`--color-danger-fg`, Ledger net nach Vorzeichen; jeder der drei Werte bei 0 ohne
+Vorzeichen in `--color-fg`. Kein Glow. Unter `sm`
+stehen die Zellen untereinander.
+
+**Formular „Add entry".** `card-surface edge`, Kopf `cap`. Felder nach 4.5, Label über
+dem Feld, Meldungszeile immer vorhanden:
+
+- **Kind** als zwei Chips in der Filter-Optik (Expense · Payout), Default Expense:
+  native Radios in `fieldset`/`legend`, das Radio selbst `sr-only`, der Fokusring
+  auf dem Chip.
+- **Category** als Select (Evaluation, Reset, Activation, Subscription, Data, Other),
+  nur bei Expense sichtbar; bei Payout fällt das Feld weg, statt gesperrt zu stehen.
+- **Account** als Select, erste Option „No account" (Default), danach die echten,
+  nicht archivierten Konten in der Reihenfolge des Kontoschalters. Übungskonten
+  erscheinen nie — der Ledger ist echtes Geld (ADR 0002). Hilfszeile „Leave empty for
+  costs no account owns, like a data feed."
+- **Date** als Datumsfeld, Default heute in `users.timezone`.
+- **Amount (USD)** Mono, `inputMode="decimal"`, Hilfszeile „0 is fine — a free reset
+  still counts." Höchstens $100 Mio. je Eintrag („That amount is too large").
+- **Note** einzeilig, optional, höchstens 500 Zeichen.
+
+Unter `sm` eine Spalte. Ab `sm` zwei Spalten: Category und Account in der ersten Zeile
+(bei Payout steht Account allein links), Date und Amount in der zweiten. Speichern
+explizit mit dem Primärbutton aus 4.2 („Add entry"), Bestätigung als Toast („Entry
+added"). Danach leeren sich Amount und Note, Kind, Category, Account und Date bleiben —
+wer drei Monate Abo nachträgt, wählt nicht dreimal dieselbe Kategorie.
+
+**Die Liste.** `card-surface edge`, Kopf `cap` „Entries", Zeilenmuster aus 4.16
+(`divide-white/6`). Neueste zuerst, bei gleichem Datum der zuletzt angelegte oben.
+Links das Datum („12 Oct 2026", Mono 13px, `--color-fg-muted`), dann die Art („Expense ·
+Reset" bzw. „Payout") in `--color-fg`, darunter die Notiz in `--color-fg-subtle`,
+abgeschnitten, voller Text im `title`. Ab `sm` eine Spalte **Account** vor dem Betrag,
+`--color-fg-muted`, abgeschnitten; ohne Konto „No account" in `--color-fg-subtle`. Ein
+später archiviertes Konto behält seinen Namen, ohne Markierung — der Eintrag gehört
+zu diesem Konto, egal ob es noch aktiv ist. Unter `sm` steht das Konto in der Zeile
+unter der Art, vor der Notiz, getrennt durch „ · ". Rechts der Betrag in USD, so wie
+erfasst, Mono mit Tabellenziffern, in fester Breite rechtsbündig, damit die Konto-Spalte
+über alle Zeilen fluchtet: Payout `+$500.00` in `--color-success-fg`, Expense `-$150.00` in
+`--color-danger-fg`, ein Betrag von 0 ohne Vorzeichen in `--color-fg-muted`. Die Art
+steht immer als Text daneben; Farbe ist nie der einzige Träger (§8).
+
+**Bearbeiten.** Inline unter der Zeile (entschieden 2026-10-19): rechts in jeder Zeile
+ein Ghost-Button „Edit" (`--color-fg-muted`, Hover `--color-cyan`). Er klappt unter der
+Zeile dasselbe Formular wie „Add entry" auf, vorbefüllt, Kopf `cap` „Edit entry", auf
+`--color-well`-Fläche abgesetzt. Nur eine Zeile ist zugleich offen; „Edit" an einer
+anderen schließt die erste ohne Speichern, „Edit" an der offenen schließt sie. Unten
+links „Save changes" (Primärbutton 4.2) und „Cancel" (Ghost), rechts „Delete" (Ghost,
+`text-danger-fg`). Speichern explizit, Toast „Entry saved", danach schließt das
+Formular. Ein archiviertes Konto, auf dem der Eintrag schon liegt, bleibt als Option
+„Name · Archived" wählbar, wie beim Trade (4.20); jedes andere archivierte Konto und
+jedes Übungskonto nie. Ist das Konto des Eintrags inzwischen ein Übungskonto, steht es
+als „Name · Practice" gesperrt in der Liste, damit sichtbar ist, warum Speichern damit
+abgelehnt wird.
+
+**Löschen.** Zwei Klicks wie in 4.20: der erste macht aus „Delete" „Click again to
+confirm" mit `border-danger-fg/60` und `--color-danger` bei 15 %, der zweite löscht;
+nach drei Sekunden ohne zweiten Klick fällt er zurück. Kein `window.confirm`, kein
+Modal. Toast „Entry deleted". Liste und Summen folgen sofort.
+
+**Leerzustand.** In der Listenkarte zentriert, `--color-fg-subtle`: „Nothing in the
+ledger yet. Add what prop trading costs you — evaluations, resets, activations,
+subscriptions, data — and every payout you receive." Findet ein aktiver Filter nichts:
+„No entries match this filter."
+
+**Microcopy.** Betrag ungültig: „Amount in USD — digits and up to two decimals."
+Kategorie fehlt: „Pick a category for this expense." Speichern fehlgeschlagen:
+„Couldn't add the entry. Your input is still here — try again." bzw. beim Bearbeiten
+„Couldn't save the changes. Your input is still here — try again." Löschen
+fehlgeschlagen: „Couldn't delete the entry — try again." Eintrag inzwischen weg (anderer
+Tab): „This entry no longer exists."
+
+### 4.26 Weekly Review
+
+Entstanden in weekly-review, aus vorhandenen Primitiven gebaut: **tragfähig, aber nicht
+entworfen.** Diese Fassung deckt die Tickets 01 bis 04
+ab.
+
+**Einstieg.** Auf `/progress` eine Karte in voller Breite zwischen Streak/Score-Raster
+und „Past months", geformt wie die Schnellzugriff-Karten (4.10): `card-surface
+edge-neon`, Kopf `cap cap-neon` „Weekly review", ein Satz in `--color-fg-muted`, rechts
+ein Chevron in `--color-fg-subtle`, Hover hebt die Karte um 2px. Kein neuer
+Navigationspunkt; auf `/progress/weekly-review` bleibt „Progress" aktiv.
+
+**Die Seite.** Rücklink „Progress" wie auf der Trade-Detailseite, Titel „Weekly
+Review", darunter in `--color-fg-muted` der Zeitraum („18 Oct 2026 – 23 Oct 2026") und dass
+die Woche von Sonntag bis Freitag läuft und nichts als die Gewohnheit zählt. Darunter
+ab `lg` zwei Spalten im Verhältnis 3 : 2, links das Formular in einer Karte
+`card-surface edge-neon` (Prozess wie 4.6), rechts die Zusammenfassung; darunter
+untereinander, Formular zuerst.
+
+**Wochenwechsel.** Zwischen Kopf und Formular ein Stepper wie der Monatsschritt der
+Kalender-Heatmap (4.8): zwei Chevrons in `--color-fg-subtle`, dazwischen „This week" bzw.
+„Week of Oct 4" in `text-xs`. Auf der aktuellen Woche steht der Vorwärts-Chevron bei 30 %
+Deckkraft und ist kein Link. Die Woche steht im Search-Param `?week=` (der Sonntag); die
+aktuelle Woche ist die Seite ohne Parameter. Ein ungültiger oder zukünftiger Wert öffnet die
+aktuelle Woche.
+
+**Leiste der letzten Wochen.** Unter dem Stepper die letzten acht Wochen (die aktuelle
+eingeschlossen) als Links mit 8px-Punkt und „Oct 18": `rounded-ctl`, Rand `white/12`,
+die gewählte Woche mit Rand in `cyan/60`. Eine Woche mit Review trägt einen gefüllten
+Punkt in `--color-cyan`, eine offene einen hohlen Punkt mit Rand `white/30` — **nie
+rot**: eine Lücke ist eine Einladung, kein Versagen. Ein Review, dessen drei Felder alle
+geleert wurden, zählt nicht als geschrieben. Entschieden in Ticket 02 statt eines Markers
+am Stepper allein, weil der nur eine Woche zeigt und Lücken so unsichtbar blieben.
+
+**Die Felder.** Drei Textfelder im Rezept aus 4.5/4.6, je vier Zeilen, alle optional:
+„What worked", „What did not work", „Focus next week". Kein Live-Feedback, keine
+Pflichtfelder — eine Woche darf mit einer Zeile beginnen.
+
+**Zusammenfassung.** Karte `card-surface edge-neon`, Kopf `cap cap-neon` „The week in
+numbers". Vier Zellen der Metrik-Tafel (4.7) im 2-Spalten-Raster. Prozesswerte in
+`text-glow`: „Logged days" mit Kontext „Of 5 trading days", „By the book" als Prozent
+mit Kontext „3 of 5 taken" (ohne genommene Trades „—"), „Missed setups". Als letzte
+Zelle „Net P&L" mit Kontext „All real accounts": Geldwert in `--color-success-fg` /
+`--color-danger-fg` (bei 0 `--color-fg`), **kein Glow**, in der Anzeigewährung von
+„All accounts" — gezeigt, nicht gefeiert, und nie die erste Zahl der Karte.
+Darunter `cap` „Top mistakes": bis zu drei Zeilen, Bezeichnung links in `--color-fg`,
+Anzahl rechts in Mono `--color-fg-muted` („3×"), häufigste zuerst; ohne Fehler „No
+mistakes tagged." in `--color-fg-subtle`. Leere Woche statt der Zellen, zentriert in
+`--color-fg-subtle`: „No entries this week. A week off is worth a review too." Die
+Karte rechnet immer aus den Trades und folgt nie dem Kontoschalter.
+
+**Speichern.** Der Button aus 4.6/4.14 mit dem Text „Save review": ruhige Fläche im
+Ruhezustand, „Saving…" während des Speicherns, Erfolgsverlauf mit „Saved" als
+Bestätigung, dazu der Prozess-Toast „Weekly review saved" ohne Hinweis auf einen Score,
+weil der Weekly Review keinen speist. Ein fehlgeschlagenes Speichern meldet der
+Fehler-Toast aus 4.11 (`notifyError`) nach `coding-standards.md` → Error handling, nie ein
+Modal; der Text bleibt in den Feldern. Entschieden 2026-10-20 für den Weekly Review; die
+Plan-Karte (4.6) behält ihre Meldung unter dem Button.
+
+**Microcopy.** Speichern fehlgeschlagen: „Couldn't save. Your text is still here — try
+again." Woche hat noch nicht begonnen: „This week hasn't started yet. Pick the current week or
+an earlier one." Wochenstart kein Sonntag (nur bei manipulierter Anfrage): „This isn't a
+review week. Reload the page and try again." Einstieg ohne Review: „Step back once a week: what worked, what did
+not, what to focus on."; mit Review: „Reviewed this week. Open it to add a thought."
+
+---
+
+### 4.27 Journal-Liste
+
+Entworfen in der Designrunde Journal (2026-10-21). `/journal` liest sich nach
+Tagen, nicht als flache Folge von Zeilen.
+
+**Gliederung nach Trade date.** Bei Sortierung nach Datum stehen die Einträge
+in Tagesgruppen, gruppiert nach dem Handelsdatum — dieselbe Gruppierung wie
+der Kalender (4.8), ohne Sonntags-Roll: ein Sonntags-Trade steht unter „Sun".
+Innerhalb eines Tages laufen die Einträge nach Einstiegszeit in derselben
+Richtung wie die Tage, und die Metazeile der Zeile beginnt mit der Uhrzeit
+(4.9). Bei Sortierung nach R gibt es **keine** Gruppen: Tagesköpfe würden die
+besten und schlechtesten Trades auseinanderreißen; die Metazeile trägt dort das
+Datum.
+
+**Tageskopf.** Eine Zeile ohne eigene Fläche über der Gruppe, 10px Abstand zur
+ersten Zeile wie zwischen den Zeilen: links das Kurzdatum (`Mon 20 Oct`) in
+`--color-fg`, dahinter in `--color-fg-muted` (Zahlen sind Werte, §8) die Zahl der Einträge und, wenn
+größer null, der Missed Setups (`4 entries · 1 missed`). Unter `sm` steht nur
+die Zahl (`4 · 1 missed`), der Kopf bleibt einzeilig. Die Zahlen gelten für den
+**ganzen Tag** innerhalb der aktiven Filter, nicht für die Zeilen dieser Seite:
+läuft ein Tag über die Seitengrenze, wiederholt die nächste Seite seinen Kopf
+mit denselben Zahlen.
+
+**Tagessumme.** Rechts im Kopf das Netto-P&L des Tages: mono, `text-sm`,
+semantisch grün oder rot wie der Betrag der Zeile (4.9), **kein Glow** (§1),
+rechtsbündig mit den Beträgen der Zeilen darunter. Sie gilt wie die Zahlen für
+den ganzen Tag innerhalb der Filter und ist die Summe der Zeilenbeträge — ohne
+Instrumentfilter also dieselbe Zahl wie der Kalendertag (4.8), mit
+Instrumentfilter nur die des Instruments. Ein Tag nur aus Missed Setups hat
+**keine** Summe, auch keine Null; ein Tag mit genommenen Trades ohne Exit
+zeigt `$0.00` wie der Kalender. Null ist grün wie in der Zeile (4.9).
+
+**Kopfzeile.** `page-title` auf allen Breiten wie auf jeder Seite, rechts
+daneben `Import` (ruhige Prozessfläche, 4.14) und `New trade` (primär). Beide
+Knöpfe brechen nicht um; auf dem Handy darf der Titel zweizeilig werden.
+
+**Filterleiste.** Eine schlanke `card-surface edge`-Leiste (`px-3 py-2.5`)
+statt der früheren Formularkarte, auf breitem Schirm in einer Zeile: die vier
+Zeitraum-Presets als Chips — dieselben wie in Analytics (4.16), aus einer
+gemeinsamen Komponente —, dann `From`, `To` und `Instrument` mit ihrem Label
+als `cap` links neben dem Feld (das Select nach Assetklasse gruppiert), rechts
+der Sortier-Umschalter `Date`/`R` und, nur bei aktivem Filter, `Clear`. Wird
+es schmaler, bricht die Leiste um, sie schneidet nichts ab. Preset und
+getipptes Datum gelten nie zugleich, wie in Analytics: ein Preset löscht die
+Daten (die Felder remounten über `key`), ein Datum löscht das Preset; der
+Server löst das Preset gegen das „heute" des Users auf. Aktiv ist ein Filter,
+wenn ein Preset außer „All time", ein Datum oder ein Instrument gesetzt ist;
+die Sortierung zählt nicht und bleibt bei `Clear` erhalten.
+
+**Unter `sm`** ist die Leiste zugeklappt: ein Knopf `Filters` mit der Zahl der
+aktiven Filter (`Filters · 2`) öffnet sie an Ort und Stelle; offen stapeln
+sich ihre Gruppen untereinander. Chips, Sortierknöpfe und `Clear` sind 40px
+hoch (§8).
+
+**Zählzeile.** Unter der Leiste eine ruhige Zeile ohne Fläche:
+`42 entries · 38 taken · 4 missed` für alle Seiten der aktuellen Filter, in
+`--color-fg-muted` (Zahlen sind Werte, §8), **ohne** Geldsumme — die Summe eines
+Zeitraums steht auf Dashboard und Analytics. Ohne Missed Setups entfällt der
+letzte Teil nicht, er zeigt `0 missed`. Direkt darunter das unveränderte
+Practice-Banner (4.12), das zur Zählung gehört.
+
+**Leerzustände.** Zwei, beide als eine ruhige `card-surface edge`-Fläche ohne
+Illustration und ohne Akzentfarbe, Text in `--color-fg-muted`, Knöpfe in der
+Optik des `Filters`-Knopfs (`bg-well`, 1px-Rand, 40px):
+
+- **Kein Filter aktiv, keine Einträge:** „No entries yet." mit `New trade` und
+  `Import` als Weg zum ersten Eintrag.
+- **Filter aktiv, kein Treffer:** „No entries match these filters." mit
+  `Clear filters`, das dieselben Filter wie `Clear` löscht und die Sortierung
+  stehen lässt.
+
+Welcher gilt, entscheidet dieselbe „Filter aktiv"-Regel wie `Clear`. Das
+Practice-Banner steht weiter darüber: sind im kombinierten Blick nur
+Übungskonto-Einträge vorhanden, sagt der Leerzustand „No entries yet." und das
+Banner zeigt, wo sie sind — nichts verschwindet lautlos.
+
+Eine Seitenzahl hinter der letzten Seite (`?page=99`) zeigt keinen Leerzustand,
+sondern führt mit denselben Filtern und derselben Sortierung auf Seite 1 zurück —
+sonst stünde „No entries yet." unter einer Zählzeile mit Einträgen.
+
+### 4.28 Prop Firm Rules: Firmenkarte, Größenwahl, Größenfilter, Vergleich
+
+Entworfen für prop-firm-sizes (2026-10-22). Ein Prop firm program ist eine
+Produktlinie in einer Kontogröße (`GLOSSARY.md`); die Seite zeigt trotzdem **eine
+Karte pro Firma**, damit sie mit vielen Größen überschaubar bleibt. Gebaut nur aus
+vorhandenen Primitiven: `card-surface edge`, die Filter-Chips (4.23, 4.27), der
+Aufklapper und der Vergleich der bestehenden Seite. Regelwerte sind Text in
+`--color-fg`, **ohne Glow** und ohne Akzentfarbe — die Seite dokumentiert, sie
+belohnt nichts.
+
+**Firmenkarte, zugeklappt.** `card-surface edge`, `p-4`, drei Zeilen:
+
+1. Kopf wie bisher: links der Aufklapp-Knopf (Chevron, Firmenname `text-sm`
+   `font-medium` in `--color-fg`, daneben der Name des gewählten Programms in
+   `--color-fg-muted` `text-xs`), rechts die Spalte mit `Compare`, `Website` und
+   „Last verified …“. Der Programmname steht für die Produktlinie: es gibt kein
+   eigenes Feld dafür, und die App zerlegt keinen Namen. `Website` ist ein
+   Textlink in `--color-cyan` mit Icon, Hover unterstreicht, kein Glow; „Last
+   verified“ steht in `--color-fg-muted`, das Datum dahinter in `--color-fg` Mono
+   mit Tabellenziffern. Fehlt eine Angabe, bleiben „Website not recorded“ und
+   „Never verified“ in `--color-fg-subtle`.
+2. Die Größenwahl (unten), eingerückt auf die Textkante des Firmennamens.
+3. Die Summary tags des **gewählten** Programms in der bisherigen `cap`-Optik auf
+   `bg-well`. Sie wechseln mit der Größe.
+
+Größenwahl und Tags liegen außerhalb des Aufklapp-Knopfs — Knöpfe lassen sich nicht
+schachteln. Aufgeklappt wird über den Kopf.
+
+**Firmenkarte, aufgeklappt.** Darunter wie bisher die achtzehn Felder des gewählten
+Programms als `dl`, ab `sm` zweispaltig, Notes über beide Spalten; ein fehlender
+Wert heißt „Not recorded“ in `--color-fg-subtle`. Ein Größenwechsel bei offener
+Karte tauscht die Werte an Ort und Stelle, ohne die Aufklapp-Animation erneut zu
+spielen; die Karte bleibt offen.
+
+**Größenwahl.** Eine Reihe Segmente in der Chip-Optik: nicht gewählt `bg-well`,
+1px `border-white/12`, `--color-fg-muted`, Hover `border-cyan/35`; gewählt
+`border-cyan/50`, `bg-cyan-dim`, `--color-cyan`. 40px hoch (§8), Abstand 6px, bricht
+auf schmalen Schirmen um. Beschriftung in der Form „50k“ (USD durch 1000, „$7,500“
+also „7.5k“), Reihenfolge die der Datei (`position`),
+wie der Kurator sie schreibt — in der Regel aufsteigend, erzwungen wird das nicht. Genau ein Segment ist gewählt.
+
+- Das Segment wechselt nur das gezeigte Programm der Karte: lokaler Zustand, nicht
+  in der URL, kein Server-Roundtrip, Farb- und Randwechsel nach §5 (200 ms, nicht
+  die 150 ms der heutigen Tag-Chips).
+- Es zeigt nur die Programme, die die aktiven Filter passieren (Suche, Tags,
+  Größen). Welches vorgewählt ist, regelt die Spec: ein Programm der Firma im
+  Vergleich (bei mehreren das zuerst gewählte), sonst die eine gefilterte Größe, sonst die kleinste passende, sonst
+  das erste nach `position`.
+- Ist eine Kontogröße unbekannt oder tragen zwei Programme einer Karte dieselbe
+  Größe, sind **alle** Segmente dieser Karte mit dem Programmnamen beschriftet —
+  nie „Unknown“, nie zwei gleiche Beschriftungen.
+
+**Größenwahl, Barrierefreiheit.** Die Reihe ist ein `fieldset` (Rolle group)
+mit `aria-label="Account size, <Firma>"`. Jedes Segment ist ein `button` mit
+`aria-pressed`; sein zugänglicher Name ist seine sichtbare Beschriftung („50k“
+oder der Programmname), die Firma nennt das Gruppenlabel. Bedienung mit Tab von
+Segment zu Segment, Enter oder Leertaste wählt — dasselbe Muster wie alle Chips der
+App, kein Roving-Tabindex. Fokusring bei `focus-visible` genau nach §8
+(`2px solid var(--color-cyan)`, `outline-offset: 2px`); die heutigen Tag-Chips
+haben keinen und bekommen ihn mit der Size-Gruppe. Ohne Bewegung
+(reduced motion) bleibt der gewählte Zustand an Fläche, Rand und `aria-pressed`
+erkennbar.
+
+**Compare an der Karte.** Die Checkbox gilt dem **gewählten** Programm: sie ist
+angehakt, wenn genau diese Größe im Vergleich steht, und ein Wechsel der Größe
+zeigt den Haken der neuen. So lassen sich zwei Größen einer Firma vergleichen:
+Größe wählen, haken, andere Größe wählen, haken. Die Grenze von drei bleibt.
+
+**Größenfilter.** In der Filterkarte eine eigene Gruppe „Size“ zwischen „Search“
+und „Filter“: Label `cap`, darunter die Chips aller bekannten Kontogrößen,
+aufsteigend, in der Form „50k“. Mehrfachauswahl, gewählte Größen gelten mit ODER,
+die drei Gruppen untereinander mit UND. Chips in der Optik und mit `aria-pressed`
+wie die Tag-Chips daneben; beide Reihen sind 40px hoch (§8) — die Tag-Chips
+übernehmen die Höhe, wenn die Size-Gruppe gebaut wird, damit die Karte eine
+Chiphöhe hat. Die gewählten Größen stehen in der URL. Gibt es keine einzige
+bekannte Größe, entfällt die Gruppe.
+
+**Vergleich.** Tabellenkörper wie auf der bestehenden Seite, höchstens drei
+Spalten in der Reihenfolge der Auswahl. Ein verglichenes Programm bleibt in der
+Tabelle, auch wenn die Filter es aus der Liste nehmen. Der Spaltenkopf ist eine Zeile „Firma ·
+Programm“: Firma `text-sm` `font-medium` in `--color-fg`, Trenner und Programmname in
+`--color-fg-muted`, Umbruch erlaubt. So stehen zwei Größen einer Firma
+unterscheidbar nebeneinander. Kein Gewinner, keine Sortierung, keine Hervorhebung
+von Unterschieden.
+
+**Leer- und Randzustände.**
+
+- **Firma mit einer Größe** — oder nach dem Filtern mit nur einer passenden:
+  keine Größenwahl, die Zeile entfällt. Der Programmname im Kopf nennt die Größe.
+- **Kontogröße unbekannt:** Das Programm erscheint ohne Größenfilter normal, in
+  einer Größenwahl mit Programmnamen (oben). Es liefert keinen Size-Chip und passt
+  auf keinen Größenfilter.
+- **Keine Firma passt:** der bestehende Satz „No firm matches. Filters narrow
+  together, so two chips describing the same thing never match at once.“ Er gilt
+  auch, wenn nur der Größenfilter alles ausschließt. Eine Firma ohne passendes
+  Programm verschwindet ganz, keine leere Karte.
+
+### 4.29 Daily Checklist („Daily checklist")
+
+- `card-surface edge-neon` neben der Plan-Karte (4.6). Sie ist Prozess, darf also
+  leuchten. Ab `lg` stehen Plan und Checklist nebeneinander, darüber der Kalender
+  (4.8) in voller Breite. Mobil steht die Checklist unter dem Plan.
+- Titel `cap cap-neon`, darunter die drei Phasen „Pre-market“, „Trading“,
+  „Day review“. Rechts von jeder Phase die Zählung „done/total“ in Mono, 12px,
+  `--color-fg-muted`. Für Screenreader lautet sie „n of m done“.
+- **Ist eine Phase vollständig, leuchtet nur ihre Zählung (`text-glow`).** Kein Toast,
+  keine Animation, keine Feier (§6, §9). Die Zahl selbst trägt die Information, nicht
+  allein die Farbe (§8).
+- Jeder Schritt ist eine native Checkbox (`accent-cyan`) mit seinem Text als Label,
+  40px hoch, Fokusring nach §8.
+- Haken erscheinen sofort, ohne Loading-Zustand. Scheitert das Speichern, springt der
+  Haken zurück, und die Meldung steht als `InlineMessage` am Kartenende. Kein Toast
+  für Fehler.
+- Leere Phase: „No steps in this phase.“ in `--color-fg-subtle`. Ohne Vorlage:
+  „No routine steps yet. Set up your checklist in Settings.“ mit Link.
+
+## 5. Motion
+
+| Moment | Dauer | Kurve |
+|---|---|---|
+| Hover rein | 150 ms | ease-out |
+| Hover raus | 200 ms | ease-out |
+| Druck | 100 ms | ease-in |
+| Farb-/Randwechsel | 200 ms | `--ease-soft` |
+| Loading-Crossfade | 200 ms | linear |
+| Erfolg halten | 800 ms | — |
+| Zeile aufklappen (Analytics, 4.16) | 260 ms | `--ease-soft` |
+| Aufklapper (Review) | 300 ms | `--ease-soft` |
+| Drawer rein/raus (4.1, Panel `translateX`, Backdrop Opacity) | 240 ms | `--ease-soft` |
+| Streak-Bump | 620 ms | `--ease-soft`, einmalig |
+| Kalender/Score-Aufbau beim Laden | 900–1300 ms | `--ease-soft`, mit 240 ms Verzögerung |
+
+Regeln:
+
+- **Alles unter 300 ms**, außer den drei bewusst langsamen Momenten oben (L08:
+  über 300 ms bricht die Verbindung zwischen Handlung und Reaktion).
+- Kein Element animiert **ohne Auslöser**, außer dem einmaligen Aufbau beim
+  Laden einer Seite.
+- Keine Animation darf Layout verschieben. Bewegt werden nur `opacity`,
+  `transform`, `box-shadow`, `max-height` und Farben.
+- Vollständige Unterstützung für `prefers-reduced-motion: reduce` — dann sind
+  **alle** Transitions und Animationen aus, und jeder Zustand muss ohne Bewegung
+  erkennbar bleiben (Spinner wird zu statischem Text „Saving…", Streak-Bump
+  entfällt, Kalender steht sofort).
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+```
+
+**Die Zeile `animation-iteration-count` ist nicht optional.** Eine Endlosanimation
+wie ein rotierender Spinner läuft mit `infinite`; eine Dauer von `.01ms` stoppt sie
+nicht, sie dreht sie hunderttausendmal pro Sekunde. Erst der gekappte Zähler beendet
+sie. Der Block stand bis 2026-09-13 ohne diese Zeile hier und war damit genau für
+die Elemente wirkungslos, für die er am nötigsten ist.
+
+**Der CSS-Block oben genügt nicht.** `motion` animiert über JS-gesetzte
+Inline-Styles und ignoriert die Regel vollständig. Es braucht zusätzlich
+`<MotionConfig reducedMotion="user">` an der App-Wurzel. Ohne das ist die Zusage
+in diesem Abschnitt für alles falsch, was mit `motion` gebaut wird, und genau das
+wäre eine stille Barrierefreiheitslücke.
+
+Arbeitsteilung: Hover, Fokus, Farb- und Randwechsel bleiben CSS-Transitions.
+`motion` übernimmt nur das Aufklappen von Zeilen und Aufklappern, den Drawer der
+mobilen Shell, den Streak-Bump und den Aufbau von Kalender und Score beim Laden.
+
+---
+
+## 6. Micro-Rewards
+
+Aus L07: proportional, verdient, nicht blockierend. Aus L08: sofort, konsistent,
+sichtbarer Fortschritt.
+
+| Auslöser | Reaktion | Größe |
+|---|---|---|
+| Trade geloggt | Toast + Streak-Bump | klein |
+| Plan gespeichert | Toast | klein |
+| Tag reviewed | Toast + Consistency-Wert aktualisiert | klein |
+| Missed Setup geloggt | Toast, gleiche Größe wie bei einem echten Trade | klein |
+| Streak-Meilenstein (7 / 30 / 100) | Karte im Dashboard, einmalig je Meilenstein | mittel |
+| Badge freigeschaltet | Karte plus Badge füllt sich auf Progress | mittel |
+| Profitabler Tag | **nichts** | — |
+| Grüner Monat | **nichts** | — |
+
+Toast-Texte nennen immer die **Prozess**folge, nie Geld:
+„Trade logged · streak 15 days · consistency +2", nicht „Nice profit!".
+
+Ein verpasstes Setup wird genauso belohnt wie ein gehandelter Trade. Das ist
+absichtlich: es ist die einzige Möglichkeit, ehrliches Journaling nicht zu
+bestrafen.
+
+**Korrigiert in Designrunde 1:** Die Meilenstein-Karte stand hier als „einmalig
+für eine Session". Gebaut ist sie als **einmalig je Meilenstein**, gemerkt in
+`users.streak_milestone_seen` — genauso wie die Badge-Karte auf Progress seit S9
+über `users.badges_seen_at` merkt. Eine Session-Merkung hätte dieselbe Karte in
+jedem neuen Tab erneut gezeigt, und das ist keine Belohnung, sondern Rauschen.
+Wer 30 erreicht, ohne die 7er-Karte je gesehen zu haben, bekommt 30 — nicht
+beides nacheinander.
+
+---
+
+## 7. Microcopy
+
+Ton: sachlich, direkt, auf Augenhöhe. Kein „Oops", keine Entschuldigung, kein
+Ausrufezeichen, kein Emoji im UI.
+
+| Situation | Nicht so | So |
+|---|---|---|
+| Plan leer | „This field is required" | „Write your levels first — this is what plan adherence checks against." |
+| Preis ungültig | „Invalid input" | „Price only — digits and up to two decimals." |
+| Plan zu kurz | „Too short" | „A bit more — levels and bias, not just a word." |
+| Speichern fehlgeschlagen | „Error submitting form" | „Couldn't save. Your text is still here — try again." |
+| Noch keine Gewinner | „N/A" | „No winning trades yet" |
+| Noch nichts geloggt | „0" | „Log a trade — taken or missed — and this month's score starts building." |
+
+Leerzustände erklären, was als Nächstes passiert, und geben nie das Gefühl, man
+hinke hinterher. Der Ist-Stand („No winning trades yet", „Nothing logged this
+month yet") hat genau die richtige Tonalität — die wird beibehalten.
+
+---
+
+## 8. Barrierefreiheit
+
+- Fokusring überall sichtbar: `2px solid var(--color-cyan)`, `outline-offset: 2px`.
+  Nie `outline: none` ohne Ersatz.
+- Interaktive Flächen mindestens 40px hoch.
+- Farbe ist nie der einzige Träger einer Information: das Ergebnis steht als
+  Vorzeichen an Betrag und R, `missed` als Text im Tag, nicht nur als Farbe.
+- Kalenderzellen brauchen ein `aria-label` mit Datum, Betrag und Trade-Anzahl,
+  weil die visuelle Kodierung sonst nicht ankommt.
+- Toasts in einem `aria-live="polite"`-Container.
+- Kontrast: `--color-fg-subtle` (#718096) auf `--color-bg` ist mit 12px die
+  untere Grenze und nur für Nebeninformationen erlaubt, nie für Werte oder
+  Bedienelemente.
+
+---
+
+## 9. Anti-Patterns
+
+Direkt aus den Lektionen, hier als Verbotsliste:
+
+- Antwortzeit über 300 ms ohne Loading-Zustand (L08).
+- Inkonsistente Rückmeldung — dieselbe Handlung reagiert manchmal, manchmal
+  nicht (L08).
+- Übergroße Feier für eine kleine Handlung (L08, L07).
+- Bedeutungslose Metriken, die nicht mit echtem Fortschritt zusammenhängen (L08).
+- Verschwindende oder wandernde Labels (L10).
+- Fehler erst beim Absenden, alle gleichzeitig (L10).
+- Shake, hartes Rot, springende Felder (L10, L11).
+- Layout-Shift beim Loading (L09).
+- Animation, die Bedienung verlangsamt oder ohne Auslöser läuft (L11).
+- Glow oder Feier auf Geldwerten (Abschnitt 1).
+
+---
+
+## 10. Entschieden und noch offen
+
+Die fünf Punkte dieses Abschnitts sind abgearbeitet:
+
+1. **„Nicht bauen"-Liste** — gefunden, sie hat zwei Orte: dauerhafte Grenzen unter
+   „Not Building" in `project-overview.md`, der Zaun pro Branch in
+   `current-feature.md`. Dieses Dokument bleibt trotzdem bei den Screens, die es
+   gibt.
+2. **Motion-Bibliothek** — `motion` 13.2.0 ist eingeplant, mit der Arbeitsteilung
+   und der `MotionConfig`-Auflage aus Abschnitt 5.
+3. **Light Mode** — entfällt. Dark only, kein Toggle, Light Mode in der Roadmap
+   unter Future.
+4. **Zusatzkennzahlen** — Missed setups, By the book und Current streak sind
+   aufgenommen. „Room to daily loss" ist gestrichen.
+5. **Landing-Page** — bleibt ein separates Dokument. Die bestehende minimale
+   Startseite und Auth-Routen sind in `coding-standards.md` → „Visibility“ geregelt.
+
+Offen bleiben zwei, weil sie Gestaltung und nicht Entscheidung sind:
+
+- **Prop Firm Rules:** Firmenkarte, Größenwahl, Größenfilter und Vergleichskopf
+  sind in 4.28 entworfen. Offen bleibt die Regel-Detailtabelle; sie braucht eine
+  eigene Runde.
+- **Der Econ-Kalender** (4.23) ist aus den Tabellen- und Chip-Primitiven gebaut und
+  nie gegen die anderen Screens gehalten. Offen besonders: ob das Impact-Rot neben
+  einer roten Verlustzahl auf demselben Schirm unterscheidbar genug bleibt.
+
+**In der Designrunde Progress und Analytics (2026-10-21) entworfen und damit nicht
+mehr offen:** die Progress-Seite (4.3, 4.4, 4.14, 4.24) und Analytics (4.16, 4.17).
+Die Balkendiagramm-Frage ist entschieden: Analytics behält den 3px-Wertebalken als
+einziges Primitiv und bekommt **kein Diagramm** — jede Zahl bleibt neben ihrem Balken.
+
+---
+
+## Herkunft der Regeln
+
+| Lektion | Woraus hier was wurde |
+|---|---|
+| L07 Micro-Rewards | Abschnitt 6, Streak-Bump, Proportionalität, reduced-motion |
+| L08 Feedback-Loops | 300-ms-Grenze, Konsistenz, sichtbarer Fortschritt, Anti-Patterns |
+| L09 Button-Feedback | Fünf Button-Zustände, festes Timing-Set, kein Layout-Shift |
+| L10 Form-Animationen | Feste Labels, Live-Validierung, reservierte Meldungszeile, weiche Fehler |
+| L11 Trust & Premium | Glide statt Snap, Glow statt Flash, ruhige sensible Momente |
+| L04 Layered Scroll | Nur für die Landing-Page relevant, hier absichtlich nicht verwendet |

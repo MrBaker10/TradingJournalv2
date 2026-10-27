@@ -85,7 +85,11 @@ version upgrades belong in a separate commit that changes nothing else.
 
 ## Styling
 
-- Tailwind for all styling. shadcn/ui where a primitive exists.
+- Tailwind for all styling. shadcn/ui on Base UI for every primitive (button, dialog,
+  sheet, menu, input, tooltip, command palette, …); a hand-built primitive is deleted
+  when its last use is replaced. Generated components live in `src/components/ui/`.
+  The packages enter `package.json` with the redesign's shell-and-tokens ticket; until
+  then they are planned, not installed.
 - No inline styles, with one exception: a screen position measured at runtime (an
   anchored portal's `left`/`top`/`bottom`/`width`), which no class can express. Type
   it narrowly so nothing else rides along.
@@ -101,28 +105,34 @@ version upgrades belong in a separate commit that changes nothing else.
   Google's servers at build time even though the browser never does. Vendor files from
   the font's official foundry repo (e.g. GitHub releases), not from Google. See
   `project-overview.md` Decisions.
-- **Money does not glow.** Process values get the neon treatment, money values get a
-  semantic colour and nothing else. `Design.md` section 1 is the rule, not a suggestion.
+- **Money is shown, never rewarded.** Money values get the `positive` or `negative`
+  sign colour and nothing else; process metrics use the `process` colour. Nothing glows
+  at rest. `Design.md` §1 is the rule, not a suggestion.
+- Theme and font classes sit on `body`, because shadcn overlays portal into `body`.
 
 ## Motion
 
-- `motion` for row expansion, disclosure panels, the mobile navigation drawer, the
-  streak bump, the load-in of calendar and score, and the sidebar's active-nav-indicator (`AnimatePresence`
-  scale/opacity spring, independent per item). CSS transitions for everything else:
-  hover, focus, colour and border changes.
+- `motion` for layout highlights that spring between options, press feedback, pop-in
+  checks, step transitions, the shake, the drawn save check, the mobile navigation
+  drawer, and the pulse and light sweep at process moments. CSS transitions for
+  everything else: hover, focus, colour and border changes. Budgets: `Design.md` §4.
+- Three.js for the streak orb only, loaded lazily inside an effect, with the static SVG
+  fallback before load, without WebGL and under reduced motion. GSAP is reserved for
+  the landing page and billing; the app does not use it and it is not installed.
 - **Hover is CSS even when `motion` already wraps the component.** Reaching for
   `whileHover` because the element happens to be a `motion.div` is the easy mistake:
   the calendar's 2px lift was written that way in S8, looked right in review, and never
   took effect once. It is CSS now.
 - **Tailwind v4 drives `translate-*` through the `translate` property, not `transform`.**
   A `transition-[…]` that names `transform` therefore does not cover it and the value
-  jumps. Read the generated stylesheet for the property that is actually set, rather
+  jumps. The same holds for `scale-*`: a lift or press transition names `translate`
+  and `scale`. Read the generated stylesheet for the property that is actually set, rather
   than the one the utility name suggests.
 - **`<MotionConfig reducedMotion="user">` at the app root is mandatory.** The
   `prefers-reduced-motion` CSS block does not stop `motion`, which animates through
   JS-set inline styles. Without it the accessibility promise in `Design.md` is false.
 - No animation without a trigger, and none that shifts layout. Only `opacity`,
-  `transform`, `box-shadow`, `max-height` and colours move.
+  `translate`, `scale`, `transform`, `box-shadow`, `max-height` and colours move.
 
 ## Charts
 
@@ -131,7 +141,7 @@ version upgrades belong in a separate commit that changes nothing else.
   axis domain and its tick values are domain logic and belong in `src/domain/**` with
   tests, not in a `useMemo` inside the chart.
 - A figure with no hover, no tooltip and no axis interaction may be hand-built SVG
-  instead of Recharts — the price band (`Design.md` §4.21) is. Give the `<svg>` no
+  instead of Recharts — the price band on the trade detail page is. Give the `<svg>` no
   `viewBox` and set positions as percentage attributes (`x="37.5%"`): text keeps its
   size and nothing needs an inline style. Geometry still comes from `src/domain/**`.
 - **A CSS variable does not resolve inside an SVG presentation attribute.**
@@ -295,7 +305,7 @@ Non-negotiable, because this is a P&L tool:
   `http`, no `javascript:`, no `data:`.
 - **Never fetch a user-supplied URL server-side.** No metadata scraping or server-side
   thumbnail discovery. Browser-loaded preview images may be derived by the pure string
-  rule `snapshotImageUrl` in `src/lib/links.ts`; see `Design.md` §4.13.
+  rule `snapshotImageUrl` in `src/lib/links.ts`; see `Design.md` → Dense list and detail.
 - Never embed a third-party URL in an iframe. Render an anchor with
   `target="_blank" rel="noopener noreferrer"`.
 - Links are per-trade data and, like notes and screenshots, never leave the owner's

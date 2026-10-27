@@ -31,7 +31,7 @@ unchanged text already available in the conversation.
 | Product behaviour, scope, open decisions | Relevant sections of `context/project-overview.md` |
 | Locate modules or understand boundaries | `context/project-structure.md` |
 | Code changes | Relevant sections of `context/coding-standards.md` and nearby code/tests |
-| UI | `context/Design.md`: principles, relevant tokens/component, motion and accessibility |
+| UI | `context/Design.md`: principles, tokens, the page's pattern, motion and accessibility; the winning view on the ticket's `prototype/*` branch for detail |
 | Money, accounts, time, SQL | Product rules + coding standards for money/time/database + affected domain/query tests |
 | Prop firm rules or seeder | `context/PropFirmsData.md` |
 | Migrations, seeds, deployment, cron operations | `context/operations.md` |
@@ -65,12 +65,13 @@ Historical notes do not override current specifications. Decisions are append-on
   route exceptions and their protections. Do not broaden them implicitly.
 - **Links:** HTTPS anchors only; never fetch a user-supplied URL server-side or embed
   an iframe. Browser-loaded preview images may be derived by the pure string rule
-  `snapshotImageUrl` in `src/lib/links.ts` (Design §4.13).
+  `snapshotImageUrl` in `src/lib/links.ts` (Design → Dense list and detail).
 - **Domain:** `src/domain/**` is pure, with no DB or `next/*` imports. Ship Vitest
   coverage with domain changes. Aggregate in SQL, not TypeScript.
 - **Accounts with trades:** archive rather than hard-delete. A trade has ≥1 account.
 - **UI:** dark only. Money gets semantic colour, no glow or celebration. Process
-  values may glow; selected practice accounts retain the amber edge stripe.
+  metrics use the `process` colour; expressive animation only at process moments.
+  Selected practice accounts retain the amber edge stripe and fog the content area.
   Keep `<MotionConfig reducedMotion="user">` at the root.
 - **Econ:** read `econ_events` at request time; feed fetch/parse stays in `src/lib/econ/`.
 

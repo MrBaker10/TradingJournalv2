@@ -150,9 +150,9 @@ nothing is published.
 ### H) Prop Firm Rules
 
 15 firms with 2026 rule sets, one program per account size of each firm's existing
-product lines, 18 rule fields each. One card per firm with a size control, search,
-size and filter chips, expandable detail, compare of up to three programs, firm
-website link and a "last verified" date.
+product lines, 18 rule fields each. Size first, one card per program at that size,
+search and tag chips, the firm's page with all rules in a sheet, compare of up to three
+programs, firm website link and a "last verified" date.
 
 **Source of record: `context/PropFirmsData.md`.** Curated by hand, no API. The app
 never invents a rule; if a field is unknown it says so, and conflicts between a firm's
@@ -401,13 +401,16 @@ and information density, not a design spec.
 
 Its governing rule, because it constrains features and not only styling:
 
-> **Neon marks process. Money does not glow.**
+> **Money is shown, never rewarded.**
 
-Streak, consistency, badges, by-the-book, reviews, screenshots and links get the
-gradient fill, the neon edge and the glowing number. Net P&L, average winner and loser,
-expectancy, best and worst day and drawdown get a semantic colour and nothing else — no
-glow, no gradient tile, no celebration. Rule limits and the practice-account marker are
-amber and calm. A profitable day triggers nothing.
+Streak, consistency, badges, by-the-book and reviews are process metrics: they carry
+the one process colour, and only a process moment (a badge earned, a streak extended,
+a review written) gets expressive animation, in proportion to the moment. Net P&L,
+average winner and loser, expectancy, best and worst day and drawdown are money
+metrics: sign colour and nothing else — no glow, no highlight, no celebration. Feedback
+confirms the action ("Trade logged"), never the outcome, so a winning and a losing
+trade are confirmed alike. Rule limits and the practice-account marker are amber and
+calm. A profitable day triggers nothing.
 
 Also settled there and load-bearing elsewhere:
 
@@ -415,9 +418,10 @@ Also settled there and load-bearing elsewhere:
 - **Monospace numerals** with tabular figures for every number, so columns align.
 - Colours are `@theme` tokens; no hex or `rgba()` literal in a component.
 - A **practice account is marked permanently** while selected, because its numbers
-  render in the same green and red as real money.
-- Responsive web only. Sidebar across seven sections behind login; route exceptions
-  are defined in `coding-standards.md` → “Visibility”.
+  render in the same green and red as real money: an amber fog over the content area
+  and the amber stripe on the account.
+- Responsive web only. A sidebar of three groups (Daily, Review, Set up) behind login;
+  route exceptions are defined in `coding-standards.md` → “Visibility”.
 - Empty states carry the rules, since a new account has no data to show.
 
 ---
@@ -552,8 +556,8 @@ and branch per item. Terms in `GLOSSARY.md`.
 
 - Light mode — a separate design round, not a token override
 - Landing page — the only public surface, own document
-- Prop Firm Rules rule detail table (the firm card, size control and compare header
-  are designed in `Design.md` 4.28)
+- Prop Firm Rules rule detail table (the catalogue, firm sheet and compare panel are
+  designed in `Design.md` → Reference catalogue)
 - Richer prop firm compare
 - Per-account equity curves side by side
 - **Personal rulebook** — the trader's own rules (max daily loss, sessions) with daily
@@ -838,7 +842,8 @@ a feature is in progress, and move up here once they affect the project as a who
 ## 📌 Status
 
 - Stack decided 2026-09-08: Next.js, ground-up rebuild, local first, Vercel later
-- Design settled in `context/Design.md`; nothing is blocking implementation
+- Design v2 in `context/Design.md` (redesign, ADR 0004); v1 archived as
+  `context/Design-v1.md`
 - Specification derived from the screenshots; `PropFirmsData.md` is the rules source
 
 ---
