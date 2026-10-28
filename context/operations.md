@@ -12,8 +12,9 @@ The `db:*` and `job:*` scripts load `.env.local`. Vitest loads the same file thr
 required by their fixtures. Check prerequisites in the affected tests. Do not treat
 skipped DB tests as passing coverage.
 
-Local Postgres: the port and version in `.env.local` (currently 18.6 in the Docker
-container `pg-tradingjournal` on `localhost:5433`); start it before `pnpm test` or a
+Local Postgres: host, port and version come from `.env.local`, which differs per
+machine (macOS: DBngin, PostgreSQL 18.4 on `localhost:5432`; Windows/WSL: Docker
+container `pg-tradingjournal`, 18.6 on `localhost:5433`); start it before `pnpm test` or a
 commit, since the pre-commit hook runs the DB tests. After restoring a dump, run
 `vacuumdb --analyze-only`: `pg_restore` leaves no planner statistics and the DB tests
 time out without them.
