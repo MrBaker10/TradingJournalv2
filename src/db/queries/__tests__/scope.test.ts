@@ -1,4 +1,4 @@
-import { eq, sql, TransactionRollbackError } from "drizzle-orm";
+import { and, eq, sql, TransactionRollbackError } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../index.ts";
 import { accounts } from "../../schema/accounts.ts";
@@ -7,6 +7,8 @@ import { instruments } from "../../schema/instruments.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
 import {
+  assignmentInScope,
+  assignmentMoney,
   moneyContribution,
   moneyWeight,
   type QueryScope,
@@ -406,6 +408,50 @@ describe("visibility per account scope", () => {
         "practiceOnly",
         "shared",
       ]);
+    },
+  );
+});
+
+describe("assignment money against figure money", () => {
+  /** Assignment money of every in-scope assignment, summed. */
+  async function assignmentSum(selected: AccountName | null): Promise<number> {
+    return inRollback(async (tx) => {
+      const f = await fixture(tx);
+      const scope = scopeFor(f, selected);
+      const rows = await tx
+        .select({ money: assignmentMoney(scope) })
+        .from(trades)
+        .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
+        .innerJoin(tradeAccounts, eq(tradeAccounts.tradeId, trades.id))
+        .innerJoin(
+          accounts,
+          and(
+            eq(accounts.id, tradeAccounts.accountId),
+            assignmentInScope(scope),
+          ),
+        )
+        .where(scopeWhere(scope));
+      return sum(rows.map((row) => cents(row.money)));
+    });
+  }
+
+  it.for([
+    // copy 800 + 700, shared −1150, foreign 2450.
+    ["all accounts", null, 2800],
+    // copy 800, shared −1150.
+    ["one real account", "Live", -350],
+    // practiceOnly 400, shared −1400.
+    ["the practice account", "Demo", -1000],
+  ] as const)(
+    "adds up to the figure over the assignments %s covers, commissions included",
+    async ([, selected, expected], ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const figureSum = sum(
+        Object.values(await figures(selected)).map((row) => row.money),
+      );
+      expect(figureSum).toBe(expected);
+      expect(await assignmentSum(selected)).toBe(figureSum);
     },
   );
 });

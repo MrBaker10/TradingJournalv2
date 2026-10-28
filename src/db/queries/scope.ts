@@ -238,7 +238,9 @@ export function commissionDisplayCents(
 }
 
 /** The commission of the assignment row in scope, display cents; 0 unknown. */
-function assignmentCommissionCents(currency: AccountCurrency): SQL<number> {
+function assignmentCommissionCents(
+  currency: AccountCurrency = "USD",
+): SQL<number> {
   return commissionDisplayCents(
     sql`coalesce(${tradeAccounts.commission}, 0)`,
     currency,
@@ -358,6 +360,31 @@ export function rowCommission(scope: QueryScope): SQL<number> {
       else ${allCommissionCents(scope.currency)}
     end
   )`;
+}
+
+/**
+ * Assignment money: one assignment's amount, display cents — the trade's
+ * gross minus what that one account paid, not the whole copy-trade's
+ * commission. For a breakdown that fans a trade out over its accounts
+ * (analytics by account): the fan-out is the multiplier, so nothing here
+ * multiplies a second time. Needs `trade_accounts` joined, narrowed by
+ * `assignmentInScope`; over those rows it sums to `moneyContribution`.
+ */
+export function assignmentMoney(scope: QueryScope): SQL<number | null> {
+  return sql<number | null>`(
+    ${tradeDisplayCents(scope.currency)} - ${assignmentCommissionCents(scope.currency)}
+  )`;
+}
+
+/**
+ * The join condition on `accounts` for the assignments a scope covers: with
+ * all accounts the real ones, with one account selected that account only —
+ * the one path allowed to read a practice account, and it yields one row.
+ */
+export function assignmentInScope(scope: QueryScope): SQL {
+  return scope.selectedAccountId === null
+    ? eq(accounts.isPractice, false)
+    : eq(accounts.id, scope.selectedAccountId);
 }
 
 /** How many executions a row's gross stands for: the same accounts as above. */
