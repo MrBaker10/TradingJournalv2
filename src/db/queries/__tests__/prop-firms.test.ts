@@ -6,6 +6,7 @@ import {
   listAccountSizes,
   listProgramOptions,
   listPropFirms,
+  listSummaryTags,
 } from "../prop-firms.ts";
 
 // The prop firm reference lists (prop-firm-sizes). Every case runs in a
@@ -225,5 +226,69 @@ describe("size filter", () => {
         { usd: 100_000, label: "100k" },
       ]),
     );
+  });
+});
+
+// One firm keeps a program on sale next to a discontinued one; the other firm
+// sells nothing any more. Tags and sizes no other seeded program could carry,
+// so their absence proves the filter rather than an empty catalogue.
+const GONE_TAG = "Discontinued list test tag";
+const GONE_SIZE_USD = 987_000;
+
+async function firmsWithDiscontinued(tx: Tx) {
+  const since = new Date("2026-10-01T00:00:00Z");
+  const [firm] = await tx
+    .insert(propFirms)
+    .values({ name: FIRM })
+    .returning({ id: propFirms.id });
+  await tx.insert(propFirmPrograms).values([
+    { firmId: firm.id, name: "Select 25k", position: 1 },
+    {
+      firmId: firm.id,
+      name: "Select 50k",
+      position: 2,
+      accountSizeUsd: `${GONE_SIZE_USD}.00`,
+      summaryTags: [GONE_TAG],
+      discontinuedAt: since,
+    },
+  ]);
+  const [earlier] = await tx
+    .insert(propFirms)
+    .values({ name: EARLIER_FIRM })
+    .returning({ id: propFirms.id });
+  await tx.insert(propFirmPrograms).values({
+    firmId: earlier.id,
+    name: "Rapid 150k",
+    position: 1,
+    discontinuedAt: since,
+  });
+}
+
+describe("discontinued programs", () => {
+  it("leave the firm list, and a firm with nothing on sale leaves with them", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const names = await inRollback(async (tx) => {
+      await firmsWithDiscontinued(tx);
+      const rows = await listPropFirms({ search: SEARCH }, tx);
+      return rows.map((row) => `${row.firm.name} · ${row.program.name}`);
+    });
+
+    expect(names).toEqual([`${FIRM} · Select 25k`]);
+  });
+
+  it("offer no summary tag and no account size", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const chips = await inRollback(async (tx) => {
+      await firmsWithDiscontinued(tx);
+      return {
+        tags: await listSummaryTags(tx),
+        sizes: (await listAccountSizes(tx)).map((size) => size.usd),
+      };
+    });
+
+    expect(chips.tags).not.toContain(GONE_TAG);
+    expect(chips.sizes).not.toContain(GONE_SIZE_USD);
   });
 });

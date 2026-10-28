@@ -4,6 +4,7 @@ import {
   numeric,
   pgTable,
   text,
+  timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
@@ -66,6 +67,10 @@ export const propFirmPrograms = pgTable(
     scaling: text("scaling"),
     endOfDayRule: text("end_of_day_rule"),
     notes: text("notes"),
+    // Set by the seeder when the program is no longer in the file, cleared
+    // when it is back (docs/adr/0005). Null means on sale. The row stays, so
+    // linked accounts keep their link; the catalogue shows on-sale only.
+    discontinuedAt: timestamp("discontinued_at", { withTimezone: true }),
   },
   (table) => [
     // Firm plus program is what the seeder upserts on, so re-running it updates
