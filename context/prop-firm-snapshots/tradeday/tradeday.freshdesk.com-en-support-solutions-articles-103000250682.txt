@@ -1,0 +1,64 @@
+All
+Articles
+Recent Searches
+Clear all
+No recent searches
+Popular Articles
+Articles
+View all
+Topics
+View all
+Tickets
+View all
+Sorry! nothing found for
+Funded accounts, withdrawals and the impact of drawdowns
+Modified on Sun, 31 May at 1:58 PM
+A trader can request a withdrawal from Funded Sim accounts after meeting the requirements for the account type.
+For Quick Pay accounts, a withdraw can be made once the account has a positive balance.
+For Fast Pass accounts, the trader needs to have a positive balance and a minimum of 5 profitable days.
+See the FAQ here for more information on withdraw conditions for each account type.
+For evaluations and Funded Sims, the Trailing Max Drawdown will trail until they reach the starting account balance, at which time the trailing drawdown will freeze and no longer trail.
+Graduation from Quick Pay Funded Sim to Funded Live:
+A trader’s performance in the Funded Sim account is reviewed at the $10,000 threshold (please see FAQ here ) and assessed for an extension in the Funded Sim account or a move to a new Funded Live account. Most traders will be moved to Funded Live at this threshold.
+When you reach the threshold, you must stop trading . During the End of Day run (4:30pm CT), account access will automatically be paused and the account will be reviewed overnight. After review, the trader may be moved to Funded Live or granted an extension in the Funded Sim account. We aim to allow traders to resume before the US cash equity market opens the next day.
+The threshold is based on gross profits (Gross profit = the profits in the trading account + withdrawals they have taken from the account).
+When a move to a Funded Live account is triggered, only the profits remaining in the account (gross profits minus the withdrawals) will be transferred to the Funded Live account. All profits will be subject to the profit split when being moved to Funded Live (50/50 for any balance below $4000 and 80/20 for any balance above $4000).
+When the profits are transferred to the Funded Live account, no additional drawdown will be added at this stage.
+Please note: at the transfer stage, risk limits may be adjusted to reflect trader withdrawals and balances being sent to the Funded Live account.
+An example of a trader reaching the Quick Pay threshold:
+A trader has earned $10,000 (after commission) in the Funded Sim. This is gross profit.
+The trader has taken payouts totaling $3500.
+The gross profit is $10,000 (after commission), and the net profit is $6,500 (the profits remaining in the trading account after withdrawals).
+The remaining profits of $6500 will be transferred to the Funded Live account. $2500 will be transferred at 80/20 profit split, and $4000 will be transferred at 50/50 profit split. The total remaining will be $2500 * 80% + $4000 * 50% = $4000.
+The maximum drawdown limit will be set to $0.
+Graduation from Fast Pass Funded Sim to Funded Live:
+On the 5th payout request the account will be moved from Funded Sim to a new Funded Live account
+The Funded Live account will start with $0 balance.
+The Funded Live account will have the same EOD drawdown as the account tier.
+A note on withdrawals that significantly impact the drawdown.
+TradeDay created a flexible withdrawal policy to give traders maximum flexibility and empower them to manage their trading accounts. However, please note that when a trader loses their Funded Sim account, we review the trading before allowing the trader to sign back up for an evaluation.
+Traders who lose their Funded Live accounts will be subject to a three month cooling off period, during which they will not be able to participate in TradeDay evaluations. Traders will be able to re-apply to take new evaluations after this 3 month period by emailing fundedtrader@tradeday.com
+Traders who make frequent or large withdrawals that leave the account vulnerable to hitting the drawdown may be viewed as mismanaging the account and may not be invited to rejoin the TradeDay team to retake another evaluation. We want traders who are looking for a long-term partnership so we can help them grow and develop.
+Was this article helpful?
+No
+Yes
+That’s Great!
+Thank you for your feedback
+Sorry! We couldn't be helpful
+Thank you for your feedback
+Your e-mail address
+*
+Let us know how can we improve this article! *
+Need more information
+Difficult to understand
+Inaccurate/irrelevant content
+Missing/broken link
+Select at least one of the reasons
+Please give your comments
+CAPTCHA verification is required.
+Cancel
+Send
+Feedback sent
+We appreciate your effort and will try to fix the article
+X
+0 of 0

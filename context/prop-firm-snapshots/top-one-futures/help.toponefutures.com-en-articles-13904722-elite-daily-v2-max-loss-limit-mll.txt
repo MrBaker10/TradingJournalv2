@@ -1,0 +1,101 @@
+Elite Daily V2 – Max Loss Limit (MLL)
+This article explains about the Max Loss Limit (MLL) on the Elite Daily V2 Accounts
+Table of contents
+The Max Loss Limit (MLL) is the maximum total loss your account can sustain before it is permanently breached . Unlike the Daily Loss Limit, the MLL is based on an End of Day (EOD) trailing drawdown model.
+Good to know: the MLL level moves up only at the end of the trading day, based on your closing balance, and locks in at your starting balance + $100 once your account has grown enough. The breach level is checked in real time. If your equity goes at or below it at any moment, the account is breached. There are no warnings when the MLL is breached.
+Max Loss Limit by Account Size
+Account size
+Max Loss Limit
+Evaluation accounts
+$25,000
+$1,000
+$50,000
+$2,000
+$100,000
+$3,000
+$150,000
+$4,500
+Funded accounts
+$25,000
+$1,000
+$50,000
+$2,000
+$100,000
+$2,500
+$150,000
+$3,500
+How the End of Day Trailing Drawdown Works
+The MLL follows a trailing model, but it only adjusts at the end of each trading day. This means:
+Your breach level is active from the moment you start: starting balance minus your max drawdown (e.g. $50,000 − $2,000 = $48,000).
+It trails upward as your account reaches new highs.
+It moves up only at the end of the day, based on your closing balance. Intraday highs don’t move it.
+It does not move down if your balance decreases.
+The breach level is checked in real time. If your equity goes at or below it at any moment, the account is breached.
+As your account grows, the drawdown level locks in at your starting balance + $100 and does not continue to trail.
+Example: $50K Evaluation Account
+Step
+Amount
+Starting balance
+$50,000
+MLL
+$2,000
+Initial breach level
+$50,000 - $2,000 = $48,000
+You close Day 1 at
+$52,000
+New trailing level
+$52,000 - $2,000 = $50,000
+Before Day 1 closes, your breach level is already $48,000. From the next day, if your equity goes at or below $50,000 at any moment, the account is breached.
+Example: intraday dip
+Step
+Amount
+Breach level
+$48,000
+Your equity drops during the day to
+$47,500
+Result
+Breached , even if the day would have closed at $48,500
+Example: $100K Funded Account
+Step
+Amount
+Starting balance
+$100,000
+MLL
+$2,500
+Initial breach level
+$97,500
+You close the day at
+$108,000
+New breach level
+$100,100 (the drawdown locks at the starting balance + $100)
+From then on, if your equity goes at or below $100,100 at any moment, the account is terminated.
+Important Difference: DLL vs MLL
+Rule
+Intraday?
+Based on
+Result
+Daily Loss Limit
+Yes
+Previous day close
+Trading paused for the day
+Max Loss Limit
+Yes, checked in real time (the level only moves at end of day)
+End of day balance
+Permanent breach
+What Happens If You Hit the Max Loss Limit?
+If your account equity goes at or below the breach level at any time, the account is permanently breached and trading access is removed. There are no warnings when the MLL is breached.
+Related articles
+Elite Daily V2 – Daily Loss Limit (DLL) - Funded Phase
+Elite Daily V2 – Daily Loss Limit (DLL) - Evaluation Phase
+Elite DAILY V2 - Overview
+Elite Daily V2 - Reset Fees
+Understanding the Drawdown Lock
+Related Articles
+Understanding the Drawdown in Elite Accounts
+Elite ACCESS – Maximum Loss Limit (MLL) (EOD)
+Elite Daily V2 – Daily Loss Limit (DLL) - Evaluation Phase
+Elite ACCESS Intraday - Maximum Loss Limit - Evaluation Phase (EOD)
+X-Daily Spark – Maximum Drawdown (MLL) (EOD)
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

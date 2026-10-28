@@ -1,0 +1,168 @@
+Road To Live Trading - Legacy Challenge & Rapid Challenge (Former)
+August 29, 2026
+Table of contents
+Note: New Rapid purchases after July 10th will follow the new live structure . Existing accounts will follow the current structure stated below.
+TL;DR: The FundedNext Live Trading Program allows consistent simulated traders to transition into live trading with real capital after reaching $100,000 in Total Active Profits or 5 withdrawals from a single Flex Account (or earlier by discretionary review). Eligible Profit is calculated as 80% of simulated profit and split into Settlement Withdrawal (50%), Live Deposit (25%, capped at $50,000), and a Reserve for automatic refills. The program includes a defined Auto Liquidation Threshold, structured withdrawal rules, and a Reserve system designed to support sustainable, long-term trading growth.
+The FundedNext Live Trading Program is a professional trading initiative that allows successful simulated traders to transition into trading with real capital. It recognizes consistent performance in FundedNext simulated accounts, converts a portion of simulated profits into live trading capital, and provides a structured system—including settlement withdrawal and a reserve—to support sustainable growth and long-term trading success.
+1. Eligibility for Review
+A trader becomes eligible for the FundedNext Live Trading Program review after reaching the Qualification Threshold of $100,000 in Total Active Profits across all active FundedNext Futures Accounts.
+Total Active Profits include:
+Withdrawals taken from all active accounts.
+Current simulated profits across all active accounts.
+In some cases, traders may be considered for review before, based on a demonstrated history of consistent and steady trading performance in Simulated or prior Live accounts. Evaluation will be done on a case-by-case basis so that exceptional consistency across multiple challenge-to-live journeys may qualify for live-only allocation.
+Important :
+Selection is discretionary and not guaranteed.
+Reviews are conducted by the FundedNext Risk Desk Team.
+The review process is typically completed within 5 business days.
+Traders can continue to trade as usual after achieving a total Active Profit of $100,000
+If the trader is selected to undergo the review process, all active FundedNext Accounts will be temporarily paused.
+2. Transition to the Live Trading Program
+Once selected, your simulated trading phase ends, and you transition into real capital (Live) trading. All simulated accounts are closed, and your total Simulated Profit is converted into Eligible Profit, which is then distributed into three components:
+Settlement Withdrawal (50% withdrawal of all your Eligible Profits)
+Live Trading Deposit (25% deposit for live trading)
+Reserve (remaining Eligible Profit for auto-refills)
+Note: This distribution is subject to change based on the trader’s evaluation.
+What Happens to My Current Challenge and FundedNext Accounts?
+All your active FundedNext Accounts will be disabled.
+All your active Challenges will be closed.
+Account Purchase option is temporarily halted throughout the duration of your Live Trading Journey.
+FundedNext Live Account may take 3-7 business days to be processed.
+If any Bolt FundedNext Account is active during the transition, that account will also be closed. Since Bolt does not have a path to live, one last reward will be provided based on the account's rules and available PnL.
+3. How Simulated Profit Is Calculated and Split
+Eligible Profit
+Eligible Profit = 80% of Total Simulated Profit
+Distribution of Eligible Profit
+50% → Settlement Withdrawal
+Paid within 3–5 business days.
+25% → Live Deposit
+Used as your starting live trading balance.
+Up to $50,000
+Remaining amount → Reserve
+No cap
+Used to refill your live account after withdrawals.
+If 25% of Eligible Profit exceeds $50,000, the excess is added to the Reserve.
+4. How Are Flex Accounts Being Handled?
+During the transition period, all Flex Challenge Accounts will be closed. Flex FundedNext Accounts with at least 1 successful withdrawal will be eligible for transition. Flex FundedNext Accounts with 0 withdrawal will be closed alongside the Challenge Accounts. These accounts will maintain our Flex live account framework click here .
+5. Auto Liquidation Threshold (Maximum Loss Limit)
+The Auto Liquidation Limit follows a trailing end-of-day (EOD) system. If your account equity (including unrealized losses) falls below this level, your live account is automatically liquidated.
+Initial Threshold (Before First Withdrawal)
+Set at 20% of your initial Live Deposit
+This allows up to 80% drawdown from your starting balance
+Examples:
+$20,000 deposit → Threshold at $4,000
+$40,000 deposit → Threshold at $8,000
+$50,000 deposit → Threshold at $10,000
+Threshold After First Withdrawal
+After your first withdrawal, the threshold locks permanently at your initial Live Deposit amount
+The threshold does not trail or increase, even if your account balance grows due to your trading performance or from Reserve refills.
+Important Notes:
+The threshold is locked in two scenarios: once equity has trailed to the 80% drawdown, or after the first withdrawal.
+The threshold is based on account equity, not balance.
+Unrealized losses count.
+If triggered, the account is permanently closed.
+How many contracts can I trade?
+The number of contracts you can trade in a Live Account depends on your deposit amount . Deposits below $15,000 allow up to 2 E-Mini contracts or 6 Micro E-mini contracts. Deposits from $15,000 to $30,000 allow 3 E-Mini contracts or 9 Micro E-mini contracts. Deposits above $30,000 allow 5 E-Mini contracts or 15 Micro E-mini contracts.
+Live Accounts have contract limits based on your deposit amount.
+Deposit below $15,000
+2 Minis | 6 Micros
+Deposit from $15,000 to $30,000
+3 Minis | 9 Micros
+Deposit above $30,000
+5 Minis | 15 Micros
+6. The Reserve System
+What Is the Reserve?
+The Reserve is a refill pool created from your Eligible Profit. It automatically adds funds back into your live account every time you withdraw, helping sustain your trading capital.
+How Reserve Refills Work?
+First $10,000 withdrawn (cumulative):
+100% match
+$1 withdrawn → $1 added from Reserve
+After $10,000 withdrawn:
+50% match
+$2 withdrawn → $1 added from Reserve
+Refills continue automatically until the Reserve reaches $0.
+Reserve Limits
+The Reserve has no maximum cap.
+It stops refilling only when fully depleted.
+7. Live Trading Withdrawals
+Profit Split
+Trader will receive 80% Performance Reward upon each withdrawal request.
+Minimum Withdrawal
+$100 per withdrawal request
+Withdrawal Frequency Rules
+You must generate at least $500 in new closed profit between withdrawal requests.
+This applies to every withdrawal after the first one.
+The CME rules are applicable during the withdrawal requests.
+Withdrawals cannot be processed during an active trading session. Traders must conclude the trading day and submit their request the following day.
+Full Balance Withdrawal
+You may request to withdraw your entire live balance, leaving a minimum of $160 in the account as per the closing procedure, after:
+45 Benchmark days
+Each day must have at least $150 in profit.
+Note: This will permanently close the Live account. By doing so, you will lose access to any outstanding Reserve.
+Will My Withdrawal Trigger Auto Liquidation?
+Only if the Reserve is depleted and a withdrawal brings your balance down to the Auto Liquidation Threshold, your account will automatically liquidate.
+How Long Does It Take to Process a Withdrawal from the Live Account?
+Withdrawals from the Live account take approximately 2–5 business days to process, as this is handled directly by NinjaTrader Brokerage. Because of this processing timeframe, the FundedNext Brand Promise will not be maintained for Live account withdrawals.
+8. What Happens When the Reserve Is Depleted?
+Once the Reserve reaches zero:
+No further automatic refills occur.
+You continue trading with your remaining live balance.
+Withdrawals continue under the standard 80/20 split.
+The Auto Liquidation Threshold remains unchanged.
+Scenario 1: $50,000 Total Simulated Profit
+Let us assume a trader has withdrawn $50,000 in Performance Rewards and currently has $50,000 in Simulated Profits.
+Starting Numbers:
+Total Simulated Profit: $50,000
+Eligible Profit (80%): $40,000
+Initial Distribution:
+Settlement Withdrawal: $20,000 ✓ (instantly rewarded)
+Live Deposit: $10,000 (live account balance)
+Reserve: $10,000 (refill pool)
+Withdrawals:
+Result Summary:
+Settlement cash: $20,000
+Started live trading with: $10,000
+Auto Liquidation Threshold: $2,000 (80% of $10K initial)
+After first withdrawal, threshold locks at $10,000 permanently
+Withdrawals taken: $10,000
+Total Reserve injected: $10,000
+Reserve DEPLETED after three withdrawals
+Scenario 2: $300,000 Total Simulated Profit
+Starting Numbers:
+Total Simulated Profit: $300,000
+Eligible Profit (80%): $240,000
+Initial Distribution:
+Settlement Withdrawal: $120,000 ✓ (instant cash)
+Live Deposit: $50,000 (live balance is capped at $50,000)
+Reserve: $70,000 (refill pool)
+Withdrawals:
+At the third withdrawal here, the trader has already withdrawn $10,000 and a $10,000 matching deposit has also been added back from the reserve. From the next withdrawal onward, the reserve will match $1 for every $2 withdrawn (2:1).
+For every withdrawal here, the trader is getting a 2:1 match from the reserve, and in the ninth withdrawal, the reserve has been depleted completely. Going forward, the withdrawal will not be matched from the reserve.
+9. Multiple Accounts Handling
+All active FundedNext Futures Accounts are combined when calculating:
+Total Simulated Profit
+Eligible Profit
+Settlement Withdrawal
+Live Deposit
+Reserve
+10. Declining or Restarting the Program
+Can I decline the Live transition?
+No. Once selected, the transition to the Live Trading Program is mandatory and cannot be declined.
+What happens if my Live Account is liquidated?
+The account is permanently closed.
+You lose access to the Live account along with all reserve and leftover balance.
+The account cannot be reset.
+11. Purpose of the Live Trading Program Structure
+The Live Trading Program is designed to:
+Reward consistency, disciplined traders.
+Offer real trading capital.
+Sustain long-term growth through the Reserve refill system.
+For high-performing traders, this structure allows gradual scaling beyond the initial live balance with high risk management.
+Related Articles
+Road to Live Trading - Rapid, Flex & Direct
+What is FundedNext Futures Legacy Challenge?
+FundedNext Futures Legacy Challenge All Rules
+FundedNext Futures Legacy FundedNext Account: All Rules
+What is FundedNext Futures Flex Challenge?
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

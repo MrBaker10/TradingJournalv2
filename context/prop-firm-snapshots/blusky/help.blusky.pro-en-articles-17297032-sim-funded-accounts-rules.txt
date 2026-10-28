@@ -1,0 +1,228 @@
+Sim Funded Accounts Rules
+Sim Funded Accounts Rules
+Table of contents
+🚀 Important Update — Effective October 1, 2026
+We’ve updated the path from Sim Funded to Live Brokerage .
+Your existing Sim Funded rules remain in place, including the $10,000 total-profit threshold for a Brokerage Review , but there are important changes to what happens once you’re approved for Brokerage.
+What’s New
+Minimum payout request: $500
+Your payouts still count toward the $10,000 Brokerage Review threshold
+When approved for Brokerage, you can now choose to:
+🚀 Go Live , or
+💵 Take a one-time buyout
+New Live Brokerage accounts begin at $0
+Eligible Sim Funded profits are placed into your Bonus Vault instead of becoming your live starting balance
+Existing Brokerage accounts continue under the structure they were opened with
+More details are included below.
+1. Sim Funded Accounts
+Your Sim Funded Account is the stage between Buffer and Live Brokerage.
+It allows you to continue building your trading record and requesting payouts without waiting for a live brokerage account to be opened.
+Your Sim Funded Account remains simulated. Your orders do not reach the live market until you transition into Live Brokerage.
+Most Brokerage-style trading and risk rules continue to apply during Sim Funded, including:
+Contract limits
+Risk controls
+Account reviews
+Trading restrictions when applicable
+Account activity requirements
+2. Withdrawals & Reviews
+Minimum Payout
+The minimum payout request is:
+$500
+Payouts must be requested in whole-dollar amounts.
+Once you submit a payout request, stop trading until the requested funds have been removed from your account.
+Brokerage Reviews
+Before exceeding $10,000 in total profit per account , you must open a Support Review Ticket .
+Your total profit includes:
+Current profit balance + all payouts already received
+Reviews may take up to 5 trading days .
+⚠️ Trading while your account is under review may result in account forfeiture.
+Risk Reviews may also occur at any time. You do not need to be at $10,000 in profit to be reviewed.
+We may also conduct a Risk Review based on your previous account history with us.
+Important
+Your Buffer does not count toward the $10,000 Brokerage threshold and is not withdrawable.
+The $10,000 threshold refers to profit only .
+3. Profit & Risk Rules
+To encourage consistency and sustainable trading:
+Stop trading for the day after reaching $5,000 in daily profit
+Stop trading for the week after reaching $10,000 in weekly profit
+Reaching the weekly threshold may trigger a review
+These limits are designed to promote consistency and discourage oversized or unsustainable risk-taking.
+Our Risk Team may also apply additional controls when necessary, including:
+Contract limits
+Daily loss limits
+Temporary trading restrictions
+Additional account reviews
+If you breach the drawdown on 3 or more Sim Funded or Live Brokerage accounts , we may restrict you to a single active Sim Funded or Live Brokerage account at the Risk Team’s discretion.
+Account reviews may occur at any time, and review timelines may vary.
+Trading During a Review
+Do not trade an account while it is under review.
+Trading during an active review may result in automatic account loss .
+Trading Within Your Risk Limits
+All trading activity must stay within your assigned contract limits and any temporary risk restrictions currently applied to your account.
+If trades are found to be outside those limits, automated account adjustments may be made.
+These can include:
+P&L Adjustments — recalculation or reversal of applicable profits or losses
+Balance Updates — corrections to total account equity
+Position Liquidations — partial or full closure of non-compliant positions
+4. The $10K Brokerage Qualification Rule
+Your payouts count toward your progress to Brokerage.
+Once your total profit, including payouts, reaches $10,000 , you must stop trading and request a Brokerage Review .
+This means your Brokerage qualification is based on your total profitability , not just the amount currently showing in your account.
+Example
+You earn $10,500 in total profit and have already withdrawn $6,000 .
+You have still reached the $10,000 Brokerage threshold because the $6,000 in payouts counts toward your total profit.
+Once you reach the threshold:
+Stop trading
+Open a Support Review Ticket
+Wait for your Brokerage Review
+If we determine that you are not yet ready for Live Brokerage, you may be asked to continue trading your Sim Funded Account to build a longer track record.
+You may then be reviewed again at a later date.
+🆕 5. What Happens When You’re Approved for Brokerage?
+This is where the process has changed.
+Previous Structure
+Previously, qualifying Standard-plan traders could have up to $10,000 per account, minus payouts already received , used when establishing their Live Brokerage starting balance.
+For example:
+If you generated $10,000 in qualifying profit and had already withdrawn $6,000:
+$10,000 − $6,000 = $4,000
+Your Live Brokerage account could begin with a $4,000 starting balance under the previous structure.
+Across three eligible Sim Funded Accounts, the previous maximum was $30,000 per trader .
+Orbit accounts already worked differently. Your Orbit Brokerage account began at $0 , with the applicable risk buffer duplicated into the live environment instead of transferring your Sim Funded balance.
+New Structure — Effective October 1, 2026
+For new Brokerage transitions, your Sim Funded profit no longer becomes your Live Brokerage starting balance.
+Once you’re approved, you can choose between:
+🚀 Option 1: Go Live
+If you accept your Brokerage call-up:
+Your Live Brokerage account starts at $0
+Your drawdown is based on your qualifying account size
+Your live P&L begins at $0
+Eligible Sim Funded profits are placed into your Bonus Vault
+Example: 50K Account
+If your qualifying account has a $2,000 drawdown :
+Live Starting Balance: $0
+Live Drawdown: $2,000
+Eligible Sim Funded Profit: Bonus Vault
+Your Sim Funded profits remain separate from the real capital used inside your Brokerage account.
+💵 Option 2: Take the Buyout
+If you’re approved for Brokerage but do not want to move live, you can choose a one-time cash buyout equal to 50% of your applicable drawdown .
+Example
+For a qualifying account with a $2,000 drawdown :
+Buyout: $1,000
+After taking the buyout, a cooldown applies before you can return to Evaluations.
+Existing Brokerage Accounts
+If your Brokerage account was opened before the October 1 update, your account remains under the structure it was originally opened with.
+The new $0 starting balance + Bonus Vault / Buyout option applies to new Brokerage transitions going forward.
+6. Payouts
+Payouts are available daily, subject to your account’s payout rules and limits.
+Processing
+Requests submitted before 11:00 AM ET may be processed anytime that same business day
+Requests submitted after 11:00 AM ET may be processed the following business day
+You do not need to open a Support ticket to request a payout
+Minimum Request
+$500
+Profit Between Payout Requests
+After submitting a payout request, you must generate at least $500 in new profit through normal trading activity before submitting your next payout request.
+Simply flipping contracts or placing trades solely to qualify for another payout does not count. Trade with intent and as you normally would.
+Example: If you submit a $700 payout request, you must generate at least $500 in new trading profit before you are eligible to submit another payout request, subject to your account’s other payout requirements and rolling 7-day cap.
+7. Platform Rules
+Volumetrica
+You may set your own Daily Loss Limit where supported.
+Tradovate
+Contract scaling is available based on available margin.
+Rithmic
+Contract scaling is not available unless your specific Brokerage setup states otherwise.
+Contract Reference by Balance
+Account Balance
+Minis
+Micros
+$3,500
+3
+35
+$3,000
+3
+30
+$2,000
+2
+20
+$1,500
+1
+15
+Your actual contract limits are the limits displayed on your account.
+8. More Accounts. More Payouts. More Flexibility.
+You can have up to:
+3 Sim Funded Accounts
+You may also request payouts daily, provided you meet the applicable payout requirements and remain within your rolling payout cap.
+How Payout Caps Work
+Sim Funded payout caps operate on a rolling 7-day basis .
+Your cap does not reset on a fixed calendar week.
+Instead, each approved payout remains part of your rolling total for 7 days and then falls off individually.
+Sim Funded Payout Limits
+Account
+7-Day Payout Cap
+25K
+$1,500
+50K
+$2,500
+100K
+$3,000
+150K Static
+$1,500
+200K Static
+$2,500
+300K Static
+$3,000
+Example: 50K Propel Account
+Your 7-day payout cap is $2,500 .
+You request:
+Tuesday, April 7 — $700
+Remaining available cap: $1,800
+Thursday, April 9 — $500
+Remaining available cap: $1,300
+Monday, April 13 — $1,300
+Remaining available cap: $0
+On Tuesday, April 14 , the original $700 payout falls outside the rolling 7-day window, so $700 becomes available again.
+On Thursday, April 16 , the $500 payout falls off and another $500 becomes available.
+Key Takeaways
+Your payout cap uses a rolling 7-day window
+It does not reset on a fixed day of the week
+Each payout individually frees up cap space after 7 days
+You may request payouts whenever you have available capacity within your rolling cap
+Orbit Plans
+For Orbit accounts, your applicable consistency requirement resets after each successfully processed payout.
+Across three eligible accounts, the maximum combined potential payout cap can reach:
+$9,000 within the applicable 7-day window
+9. Scaling
+Your initial contract limits may generally fall within:
+Micros: 15–30
+E-minis: 1–3
+If you demonstrate consistent risk management and account growth, you may request an increase in your contract limits.
+Any scaling decision is based on your account performance and applicable risk parameters.
+10. Your Path to Brokerage
+The core qualification rule remains simple:
+$10,000 in total profit per account = Brokerage Review
+Your payouts count toward that $10,000.
+What has changed is what happens after you’re approved .
+Previously
+Qualifying accounts could transfer up to $10,000 minus payouts into the Brokerage structure, with up to $30,000 across three accounts .
+Going Forward
+When you’re called up:
+Go Live
+Start Brokerage at $0
+Receive your applicable live drawdown
+Eligible Sim Funded profits move into your Bonus Vault
+or
+Take the Buyout
+Receive 50% of your applicable drawdown as a one-time cash payout
+Complete the applicable cooldown
+Return to Evaluations afterward
+Note: Once your Live Brokerage invitation is issued , your active Sim Funded Accounts are ineligible for additional trading or payout requests.
+Any trades placed or payout requests submitted after the invitation is issued may be voided , regardless of when the invitation is opened or acknowledged.
+Your Sim Funded stage is considered complete from the time the Live Brokerage invitation is issued ✅
+Related Articles
+Sim Funded and Live Brokerage Contract Size
+Sim Funded Payouts
+Payouts
+Sim Funded Accounts Processing
+Live Brokerage: Qualifying, Transitioning and Trading a Live Account
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

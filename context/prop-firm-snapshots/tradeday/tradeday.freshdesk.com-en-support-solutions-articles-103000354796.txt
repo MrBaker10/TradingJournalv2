@@ -1,0 +1,82 @@
+All
+Articles
+Recent Searches
+Clear all
+No recent searches
+Popular Articles
+Articles
+View all
+Topics
+View all
+Tickets
+View all
+Sorry! nothing found for
+Multiple Accounts
+Modified on Tue, 8 Sep at 5:44 AM
+Traders can have up to 10 accounts at any one time.
+The maximum number of active Funded Sim accounts is 5 (If a trader passes 10 evaluations, 5 will be queued, while the other 5 will be active).
+Traders can have multiple accounts across different evaluation tiers and drawdown types.
+Traders can only have multiple accounts on 1 broker.
+Each Funded Sim account will be evaluated separately.
+Traders can have up to 5 Funded Live accounts. When in Funded Live, you will not be able to purchase additional accounts.
+Traders can use a copy trader to copy trades from their personal account elsewhere into their TradeDay evaluation and Funded accounts.
+Traders can have only one username and only one user per household. DO NOT sign up under different usernames.
+Number of multiple accounts and signing up
+Traders can have up to 10 accounts at any one time. The total is calculated across all evaluation account types.
+If a trader passes more than 5 evaluations, 5 of these will be moved to Funded Sim status. Any additional passed evaluations will be queued and moved to an active Funded Sim only when 1 of the 5 Funded Sim accounts is lost or when Funded Sim accounts are moved to Funded Live.
+If a trader has an active Funded Live account, they will not be able to purchase additional accounts until they have been off-boarded from the Funded Live.
+Brokers
+Traders can only have multiple accounts on 1 broker. A trader cannot split the trading account across different brokers (for example, you cannot have a 50k evaluation on Tradovate and a 50k evaluation on Rithmic).
+Evaluation tiers and Drawdowns
+There are no restrictions on having multiple accounts across different drawdown types or evaluation tiers. However, as mentioned above, they all need to be on the same broker.
+Multiple accounts and Funded Sim Thresholds
+Upon reaching each of the Quick Pay Funded Sim thresholds (see FAQ here ), each Funded Sim account will be evaluated separately, and the Head of Trading will make a decision on whether to extend or to transition individual or multiple accounts to a Funded Live account. There is no threshold for Fast Pass Funded Sim accounts.
+Multiple accounts and Funded Live accounts.
+Traders can have up to 5 Funded Live accounts. When moving from Quick Pay Funded Sim to Quick Pay Funded Live, the profits from each Funded Sim account will be moved into a new Funded Live account. For a Fast Pass Funded sim to Funded live a new account will be created. The position limits for Funded Live will be the same as those for the Funded Sim that passed, but they may be reduced to reflect the account balance and risk.
+If the trader already has 5 Funded Live accounts, any additional Funded Sim accounts will have their balance merged with an existing Funded Live account. The position limits for the Funded Live account will be set at the highest level among the Funded Sim accounts from which the trader is graduating, but they may be reduced to reflect the account balance and risk.
+TradeDay reserves the right to reduce position limits based on withdrawals and losses.
+Example:
+The trader passes 10 evaluations.
+5 evaluations are onboarded to 5 new Funded Sim accounts, 5 evaluations are queued for Funded Sim.
+5 active Funded Sims are then graduated to 5 Funded Live accounts.
+The 5 queued Funded Sims are onboarded and now active. The trader now has 5 Funded Sim and 5 Funded Live accounts.
+The trader then trades the 5 Funded Sims.
+The trader has 3 active Funded Sim graduated to Funded Live. As there is 5 funded lives, the 3 funded sims are merged to existing Funded Live accounts.
+Now has 2 active Funded Sims and 5 active Funded Live accounts.
+Traders can have a max of 5 Funded Live accounts.
+How to get set up on Multiple Accounts
+Each new account is purchased as a new subscription and is managed separately. After you have signed up for your initial evaluation, you can add a new account by creating a new subscription. The easiest way to do this is to log in to the member’s area and select "ADD SUBSCRIPTION" from the top-right profile menu.
+You can also purchase accounts from the TradeDay shop.
+Full instructions on how to purchase and set up can be found in the member’s area on this page here .
+Hedging
+Hedging is prohibited at TradeDay (the practice of simultaneously going long in one account and short in another account for the same product). Users caught hedging will be offboarded and suspended, and will forfeit all profits in funded accounts.
+Do you need a trade copier?
+TradeDay has secured discounts on trade copying software for our traders.
+If you are interested in trade copying across different accounts, some platforms have built-in trade copiers (for example, Tradovate, and Quantower). However, if you need to purchase one, we recommend the copiers below.
+Before purchasing one of these trade copiers, please ensure that it offers the features you require and is compatible with your setup. You will need to contact their support for help with this.
+Tradesyncer Get 10% off with code: TDTC
+Flowbots Replikanto Get 20% off with code: tradeday
+Expert Trading Programmers Get $25 Off with code: TradeDay25OFF or $50 Off with code: TradeDay25
+Was this article helpful?
+No
+Yes
+That’s Great!
+Thank you for your feedback
+Sorry! We couldn't be helpful
+Thank you for your feedback
+Your e-mail address
+*
+Let us know how can we improve this article! *
+Need more information
+Difficult to understand
+Inaccurate/irrelevant content
+Missing/broken link
+Select at least one of the reasons
+Please give your comments
+CAPTCHA verification is required.
+Cancel
+Send
+Feedback sent
+We appreciate your effort and will try to fix the article
+X
+0 of 0

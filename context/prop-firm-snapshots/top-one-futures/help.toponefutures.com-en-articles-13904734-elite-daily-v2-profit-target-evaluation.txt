@@ -1,0 +1,66 @@
+Elite Daily V2 – Profit Target (Evaluation)
+This article explains about the Profit Target Requirement during the Elite Daily V2 Evaluation Phase
+Table of contents
+The Profit Target defines the amount of net profit required to successfully pass the Elite Daily evaluation. Elite Daily is a one phase evaluation model, meaning you only need to reach one profit target to qualify for funding.
+Important: although there is no minimum day requirement, the 40% Consistency Rule must still be respected. No single trading day may account for more than 40% of your total profit at the time of passing.
+Profit Target by Account Size
+Account size
+Profit target
+$25,000
+$1,500 (6%)
+$50,000
+$3,000 (6%)
+$100,000
+$6,000 (6%)
+$150,000
+$9,000 (6%)
+How the Profit Target Works
+The target is based on the starting balance
+The required profit is 6%
+Profit must be based on closed PnL
+Floating profits do not count
+All trades must be closed for the account to be reviewed
+40% Consistency Rule Still Applies
+Although there is no minimum day requirement, the 40% Consistency Rule must still be respected: no single trading day may account for more than 40% of your total profit at the time of passing. See Elite Daily V2 – 40% Consistency Target (Evaluation Only) for the full details.
+Example: $50K Account (Not Compliant)
+Day
+Profit
+Day 1
+$2,000
+Day 2
+$1,000
+Total
+$3,000 (target reached)
+Check consistency: largest day = $2,000. $2,000 / $3,000 = 66% . This would not meet the 40% rule. You would need to continue trading to distribute profits more evenly.
+Example: Compliant
+Day
+Profit
+Day 1
+$1,200
+Day 2
+$1,000
+Day 3
+$800
+Total
+$3,000
+Largest day = $1,200. $1,200 / $3,000 = 40% . This passes both the profit target and the consistency requirement.
+Important Notes
+Profit must be closed
+40% consistency is checked at time of review
+DLL and MLL rules must also be respected
+Sim Funded accounts do not have a profit target
+Related articles
+Elite Daily V2 – 40% Consistency Target (Evaluation Only)
+Elite DAILY V2 - Overview
+Elite Daily V2 – Daily Loss Limit (DLL) - Evaluation Phase
+Elite Daily V2 – Max Loss Limit (MLL)
+Elite Daily V2 - I've passed the Evaluation, what's next?
+Related Articles
+Elite Daily V2 – Contract Scaling Plan
+Elite ACCESS – Evaluation Profit Target
+Elite DAILY V2 - Overview
+Elite Daily V2 – 40% Consistency Target (Evaluation Only)
+Elite ACCESS Intraday - Evaluation Profit Target
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

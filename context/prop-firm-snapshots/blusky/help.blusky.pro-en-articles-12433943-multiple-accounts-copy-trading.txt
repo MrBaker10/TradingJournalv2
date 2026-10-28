@@ -1,0 +1,75 @@
+Multiple Accounts/Copy Trading
+Multiple Accounts/Copy Trading
+Table of contents
+You can have any number of Evaluation Accounts of any combination. Funded accounts can only be 3 at any time (Sim Funded, Instant Sim Funded or Direct to Funded Accounts. Traders in the same household, must be in control of their own accounts, and must be trading on different machines.
+Account Size
+Max Accounts
+Trade Copier Allowed
+Propel 25K
+Unlimited
+Yes
+Launch Plan 50K
+Unlimited
+Yes
+Propel 50K
+Unlimited
+Yes
+Orbit 50K
+Unlimited
+Yes
+Launch Plan 100K
+Unlimited
+Yes
+Propel 100K
+Unlimited
+Yes
+Orbit 100K
+Unlimited
+Yes
+Propel 150K
+Unlimited
+Yes
+Launch Plan 200K
+Unlimited
+Yes
+Propel 200K
+Unlimited
+Yes
+Orbit 200K
+Unlimited
+Yes
+Propel 300K
+Unlimited
+Yes
+Direct 2 Funded
+3*
+Yes
+Sim Funded Accounts
+3 *
+Yes
+Live Brokerage Accounts
+2 *
+Yes
+*If you are in Live Brokerage, you cannot trade in Sim Funded at the same time.
+**No person shall place or accept buy and sell orders in the same product and expiration month, and, for a put or call option, the same strike price, where the person knows or reasonably should know that the purpose of the orders is to avoid taking a bona fide market position exposed to market risk (transactions commonly known or referred to as wash trades or wash sales). Buy and sell orders for different accounts with common beneficial ownership that are entered with the intent to negate market risk or price competition shall also be deemed to violate the prohibition on wash trades. Additionally, no person shall knowingly**
+This means you cannot go long in one account and short in another account under you user ID and control.
+If this happens, in Sim or Live accounts the we may permanently close your account. No exceptions.
+CME rule 534 prohibits this type of trading and below are some links for your reference:
+CME Rule 534
+CME Rule 575
+Also see:
+CME Rule 432: General Offenses
+CME Rule 531: Prohibited Pre-Arranged Trading
+CME Rule 533: Simultaneous Opposite Orders
+CME Rule 539: Noncompetitive Trades
+CME Rule Book
+CFTC Rules 4.41 - Hypothetical or Simulated performance results have certain limitations, unlike an actual performance record, simulated results do not represent actual trading. Also, since the trades have not been executed, the results may have under-or-over compensated for the impact, if any, of certain market factors, such as lack of liquidity. Simulated trading programs in general are also subject to the fact that they are designed with the benefit of hindsight. No representation is being made that any account will or is likely to achieve profit or losses similar to those shown.
+Related Articles
+Sim Funded Account Resets
+Resets
+Sim Funded Accounts Processing
+Orbit Plans: Two Phases, Faster Payouts
+Live Brokerage: Qualifying, Transitioning and Trading a Live Account
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

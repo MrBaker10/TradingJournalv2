@@ -1,0 +1,45 @@
+Sim Funded Payouts
+Sim Funded Payouts
+Payouts
+=> Daily Payout Processing:
+Payouts requested before 11AM ET on weekdays (excluding holidays) will be processed on the same day . Transfer times may take from 1-3 business days, depending on your bank and payout method. Payouts requested after 11AM ET will be processed the next business day .
+=> No minimum days for payouts:
+There are NO minimum days to trade to request your first payout, you just need to be above the minimum account balance in your Sim Funded Account.
+You will be funded in a Sim Funded Account first after Buffer Stage and Orbit Evaluation , so all the profits you make (Not including the Buffer from the Buffer Phase) in it are real and we're happy to send them to you. It's also how we scale our business.
+=> Payouts in your Sim Funded Account:
+Minimum withdrawal amount: $500
+Minimum Payout - To qualify your Sim Funded for payouts, you must be above your initial starting balance by $500.
+Profit Between Payout Requests: You must generate at least $500 in new profit through normal trading activity between payout requests before submitting another payout request. Flipping contracts or placing trades solely to meet this requirement will not qualify.
+Max payout amount (Sim Funded Only): Up to $3000 per week depending on your account size, as detailed here:
+Payouts must be whole dollar amounts.
+Hedging even in Sim Environment , especially in a Funded State, will close your account.
+Sim Funded Rules
+Please be reasonable when withdrawing so you leave enough buffer to continue trading. If you are just creating accounts to immediately close them, we may decline your application for future evaluations.
+Account Size
+Minimum balance
+$25,000
+$26,500
+$50,000
+$53,000
+$100,000
+$103,500
+Keep in mind the safety buffer (Minimum balance) is not available for withdrawal.
+=> Profit Sharing
+Our business model is focused on retaining successful traders. The more you make, the more of that profit you get to keep. All payouts are 90% Trader / 10% BluSky unless changed by a Risk Team decision.
+Risk Reviews
+=> Payment Processing
+Gusto.com and Rise Pay (riseworks.io) are used for payouts.
+=> Taxes
+You will be paid as an individual contractor by 1099 NEC under FL law(If you need a 1099 NEC for your LLC you must select Gusto as your payout method).
+Non-US citizens must submit a W-8BEN on first payout. No reports are sent for Non-US citizens.
+*Onboarding must be completed within 30 days from date of submission or payout will be voided.
+*Any payout issues must be brought within 30 days or the payout is voided.
+=> For any tax advice, consult with your personal accountant.
+BluSky Trading Company LLC reserves the right to payout the trader at any time and under any circumstances. Being paid out is the same 1099 as taking money from a Brokerage account, being paid out does not imply any type of employment with BluSky.
+Related Articles
+Payouts
+Sim Funded Accounts Processing
+Instant Funding: Direct to Funded and Instant Sim Funded
+Sim Funded Accounts Rules
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃

@@ -1,0 +1,21 @@
+Prime Consistency
+August 11, 2026
+Table of contents
+Overview
+Consistency helps encourage disciplined risk management by ensuring no single trading day accounts for a disproportionate amount of your profits. This promotes steady, repeatable trading habits throughout the evaluation.
+Calculation
+All Prime Funded Accounts are subject to a 40% Consistency Rule. This means your largest single trading day's profit cannot exceed 40% of your total account profit when requesting a payout. After each approved payout, your consistency calculation resets and begins again from your new account balance.
+Largest Trading Day Profit ÷ Total Profit Earned = Consistency %
+Example:
+Largest Single Day Profit: $800
+Total Account Profit: $2,500
+$800 ÷ $2,500 = 0.32 (32%)
+Related Articles
+Prime Payout Requirements
+Velocity Consistency
+Straight to Funded(S2F) Consistency Percentage
+Premier+ Consistency
+S2F Accelerate Plan Consistency Percentage
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

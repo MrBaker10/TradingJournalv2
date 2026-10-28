@@ -1,0 +1,52 @@
+Professional Stage Structure
+September 7, 2026
+Table of contents
+Overview
+The Professional Stage is FFF's live market trading program, designed for traders who have demonstrated consistent profitability and disciplined risk management. Traders become eligible after achieving 3 approved payouts or $10,000 in total approved payouts on Simulated Funded Accounts, subject to a final risk review. Qualified traders then transition into the Professional Stage, where they gain access to live market trading framework and real payout opportunities under FFF's professional risk management framework.
+Transition from Simulated to Pro
+Entry into the Professional Stage is based on consistent performance, disciplined risk management, and overall trading stability. Qualification is not automatic .
+To be considered for advancement, traders must meet one of the following requirements:
+Minimum of 3 approved payouts on Simulated Funded Accounts
+OR
+Minimum of $10,000 in total approved Simulated Funded payouts
+Meeting either requirement does not guarantee advancement . All qualifying accounts undergo a final review by the Risk Management Team to verify responsible trading, consistent profitability, and compliance with program standards.
+Final advancement is based on overall trading performance, risk management, and account stability. Not solely on reaching the payout requirements.
+Early Advancement
+FFF reserves the right to advance a trader to the Professional Stage prior to meeting the standard payout requirements based on an evaluation of their overall trading performance, consistency, risk management, account activity, and demonstrated trading stability.
+Early advancement is determined at the discretion of the Risk Management Team and is based on the trader’s overall performance and activity on the FFF platform.
+Account Tiers
+Professional Stage accounts may be issued in the following tiers:
+$50,000
+$100,000
+$150,000
+All tiers operate under the same Professional Stage rules, with tier-specific risk parameters defined in the relevant policy articles.
+All traders begin the Professional Stage with one Professional account . Future account allocations are determined on a case-by-case basis, taking into consideration the trader's funded account history, overall performance, consistency, and risk management.
+End-of Position (EOP) Drawdown
+PSA uses an End-of-Position (EOP) drawdown model. Under this structure, the drawdown level updates only when a position is fully closed.
+During the early phase of a PSA, the drawdown may trail upward as realized profits are generated at End-of-Position (EOP).
+This trailing behavior continues until the drawdown reaches the program’s lock threshold:
+$50,000 accounts lock at $50,100
+$100,000 accounts lock at $100,100
+$150,000 accounts lock at $150,100
+Once the drawdown reaches its lock level, it becomes static and will not move again for the remainder of that Live account.
+Risk Framework
+Professional Stage accounts operate under Risk Management oversight and include the following components:
+Personalized Max Drawdown , assigned per account
+End-of-Position (EOP) Drawdown , as defined in the Drawdown Guidelines
+Daily Loss Limit (DLL) , governed by the Scaling Plan=
+There are no consistency rules in the Professional Stage
+Starting Position and Scaling
+All Professional Stage account contract limits are determined on a case by case basis. Requests to increase contract sizes may be made but are subject to live team review and approval.
+Profit Split
+All Professional Stage accounts operate under a fixed profit split:
+80% to the trader / 20% to FFF
+This split applies at all stages and for all account tiers.
+Related Articles
+Professional Stage Account – Performance Check Account (PCA)
+Professional Stage Payouts
+Professional Stage Operational Policies
+Live Stage Structure
+Professional Stage Account – Performance Check Account (PCA)
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

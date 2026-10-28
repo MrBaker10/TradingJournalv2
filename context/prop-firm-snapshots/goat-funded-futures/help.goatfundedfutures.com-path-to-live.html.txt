@@ -1,0 +1,145 @@
+Path to Live
+Path To Live
+Learn how traders qualify for live capital, how the transition works, live account specifications, payouts, and common Path to Live questions.
+How to qualify The live account Payouts on live Breach and restrictions Common questions
+What is the Path to Live?
+The Path to Live is how GFF rewards its most consistent traders with the next step in their journey: a live brokerage account, trading real capital that we provide. Once you qualify, your simulated funded account becomes a live account, you trade with real GFF capital, and you keep 90% of every withdrawal — with the freedom to request payouts daily and no per-payout caps. It is the opportunity to turn proven sim performance into a long-term partnership trading live.
+Who is the Path to Live for?
+Every GFF trader. The opportunity is open across every product, EOD Challenge, 1-Day-Pass-Plan, Instant Classic, Flex Challenge and Daily Payouts, and every account size. There is nothing extra to buy and nothing to sign up for: your place is earned purely through your trading on the sim funded account you already hold.
+Why does GFF offer this?
+Because we want to grow alongside the traders who prove they have a genuine edge. The Path to Live is how GFF backs its best performers with real capital on a live brokerage account — the structure used by the most established firms in the industry — and builds a lasting partnership rather than a one-off relationship. For you, that means trading real GFF capital, daily uncapped payouts, and a clear runway to scale your results over time.
+Is live trading open?
+Yes. GFF live accounts are open and the first traders are already trading real GFF capital. There is no launch date to wait for. Transition is decided by the risk team's review of your trading, so the best thing you can do is keep building a consistent track record on your sim funded account.
+What happens between approval and activation?
+Once the risk team approves you, we email you directly with the size and structure of your live account, the Live Funded Trader Agreement, any remaining KYC, and the onboarding steps for the live platform.
+While your live account is being set up, your eligible sim accounts are held and trading on them is paused. This keeps the transition clean: your sim track record is locked in and nothing changes on it while the live account opens.
+As soon as your live account is active, you are trading real GFF capital with daily uncapped payouts and a 90% profit share.
+Updated 9 October 2026
+Eligibility: How do I qualify for a live account?
+How do I qualify for a live account?
+There is no public payout count, dollar target, or numeric milestone that "unlocks" a live account. Our risk team reviews every funded trader based on the full picture, meaning your consistency, how you manage drawdowns, your trading conduct, and your overall risk profile, and identifies when you are ready to move to live capital.
+The best path to live is to trade like you intend to keep trading: consistent, disciplined, and risk-aware. Strong trading patterns are noticed regardless of payout count.
+Why no public threshold?
+We want traders focused on developing genuine consistency, not chasing a specific number. A public threshold encourages optimising for the threshold rather than for trading quality, which is the actual signal we look for. Removing it keeps the program aligned around the right thing: building the kind of track record we can trust on live capital.
+What does the risk team look at?
+The full picture of your trading with us, including but not limited to:
+Consistency of your trading and your results over time
+How you manage drawdowns and risk
+Trading conduct, for example how you handle news, position sizing, and behaviour around the daily reset
+Your overall risk profile and account history
+There is no single metric that triggers transition. It is a holistic call by the risk team.
+Can I ask the risk team to move me to live?
+You do not need to. The team has full visibility into every funded account and reaches out directly when a trader is approved for transition. Asking for review does not move you up the queue, sustained consistency does.
+Does my product type affect when I move to live?
+The transition criterion is the same on every product (EOD, 1-Day-Pass-Plan, Instant Classic, Flex and Daily Payouts): risk team review of your trading history. What can differ in practice is how quickly different products build a track record, since 1-Day-Pass-Plan and Daily Payouts accounts move faster per cycle while EOD and Instant Funded need more winning days per payout, but the decision itself is product-agnostic.
+Do account sizes have different criteria?
+No, the criterion is the same across 25K, 50K, 100K, and 150K accounts. The size of your eventual live account scales with your sim portfolio (see What happens when I transition from sim to live? ), but the path itself is consistent.
+Will my existing payouts count?
+Yes, your entire trading history with us is what the risk team reviews. Every approved payout, your consistency, how you have handled drawdowns, your overall risk profile. If you have already built a strong track record, the risk team has visibility into that and factors it into their review.
+How will I know I'm being moved to live?
+We will reach out to you directly by email the moment your account is approved. Your transition notice walks you through the size and structure of your live account, the Live Funded Trader Agreement, any remaining KYC, and step-by-step onboarding for the live platform.
+Updated 9 October 2026
+Transition: What happens when I transition from sim to live?
+What happens to my sim account when I transition?
+When you move to live, your sim account closes and your live account opens with a clean slate. Any profit you have not yet withdrawn from the sim account at that moment does not carry across and is not paid out separately — but because GFF's structure rewards withdrawing as you earn, this is typically just the small buffer since your last payout. Live then more than makes up for it: no per-payout caps, daily withdrawals, and 90% of everything you make from the first dollar.
+What if I have multiple sim accounts?
+Great news if you trade more than one account: when the risk team approves you for transition, every sim account that has taken at least one approved payout is combined into a single live account with you . Your live account size is determined by summing your eligible sim account sizes, capped at 150K — GFF's largest live tier.
+A few examples:
+1× 50K → 50K Live ($2,000 drawdown)
+2× 25K 1-Day-Pass-Plan → 50K Live ($2,000 drawdown)
+3× 50K → 150K Live ($4,500 drawdown — sum capped at GFF max)
+1× 100K + 1× 150K → 150K Live ($4,500 drawdown — sum capped)
+Any sim account that has not taken a payout yet is simply closed and its account fee refunded to you.
+Why do all my eligible accounts move to live together?
+Because once you have proven yourself, we want your whole book on live — not just one account. Combining every eligible account into your live account means your full track record is rewarded at once, with your sim sizes adding together (up to the 150K cap) to give you the biggest possible live account to trade.
+Can I decline the transition to live?
+Transitioning is the whole point of the Path to Live, so once you are approved it is not something you opt out of. That is by design — it is the step up you have been earning: real GFF capital, daily uncapped payouts, and a 90% profit share.
+Do I need to sign anything?
+Yes — you will receive the GFF Live Funded Trader Agreement, which covers your live account. It is separate from the agreement that applied to your sim accounts.
+Will I trade on the same platform?
+In most cases, yes. Your transition email confirms which platforms and data providers are available for your live account. If the platform you use on sim is not available on live yet, we will walk you through switching to one that is.
+Updated 9 October 2026
+Live Account Specifications: What are the live account specifications?
+What's the starting balance of my live account?
+Your live account starts at a $0 balance , with the trading capital fully provided by GFF. The size of your live account is based on your eligible sim accounts at transition — summed together, capped at 150K, GFF's largest live tier. Everything you earn above $0 is yours to withdraw, subject only to the minimum payout amount.
+What are the contract limits on my live account?
+Live accounts have their own contract limits, calibrated to your live drawdown rather than inherited from your sim plan. These are flat: no scaling, no tiers to track.
+50K Live: 2 minis / 20 micros
+100K Live: 3 minis / 30 micros
+150K Live: 5 minis / 50 micros
+What's the drawdown on my live account?
+Your live account uses a static drawdown — a fixed loss limit that stays the same throughout the life of the account. You can lose up to the drawdown amount from your starting balance before your account is breached, and that buffer never closes in as your profits grow.
+Static drawdown by account size:
+50K: $2,000
+100K: $3,000
+150K: $4,500
+Unlike the trailing drawdown on your challenge, the live floor does not move as you scale — every dollar of profit you make above your starting balance becomes additional cushion on top of your drawdown buffer. Your room to trade through normal swings grows alongside your account.
+Is there a Daily Loss Limit (DLL) on live?
+No — live accounts come with no Daily Loss Limit by default, giving you more room to trade your edge. If you would like one as a personal discipline tool, the risk team is happy to set it up on request.
+Is there a consistency rule on live?
+No — there is no consistency rule on live. You have already proven your consistency to get here, so live gives you the freedom to trade without it.
+What's the profit split on my live account?
+90/10 — you keep 90%, from the very first dollar of profit.
+Live accounts follow the live account profit-sharing structure from day one. Any promotional payout structures or profit-sharing benefits available on simulated accounts do not apply to live accounts unless explicitly stated. Please refer to your Live Account Agreement for the applicable profit-sharing terms.
+Can I scale my account size on live?
+No. Your live account size is set at transition, from your eligible sim account sizes combined and capped at 150K, and stays at that size. There is no scaling plan on live.
+Are the trading rules the same as sim?
+Largely, yes — which keeps things familiar. The news-trading buffer (two minutes around high-impact events) and the no overnight/weekend holding rule carry over from sim.
+Updated 9 October 2026
+Payouts on Live: How do live account payouts work?
+When can I request my first live payout?
+Right away. As soon as you are $500 in profit above your starting balance (i.e. a $500 live balance), you can request your first payout — with no winning-day requirement to wait through. There is no holding period: earn it, request it.
+How often can I request payouts on live?
+Daily. Live unlocks daily payouts — request one on any business day your balance is at least $500 above your starting balance. No weekly windows, no waiting your turn.
+Is there a cap on how much I can withdraw on live?
+No cap at all. The progressive per-payout caps you saw on sim (e.g. $1,500 / $2,000 / $2,500 / $2,750 on EOD 50K) are gone on live . Withdraw any amount above your starting balance, with just the $500 minimum — your upside is uncapped.
+What's the minimum payout request?
+$500 — the same minimum you know from sim. Since live starts at $0, you will just need $500 of profit on the account before your first withdrawal.
+Will my live withdrawals be paid the same way as sim?
+Yes, the same methods as sim: Rise, or crypto (USDT on Tron or USDC on Ethereum).
+What happens if I don't withdraw?
+It is entirely your call. Profit above your starting balance stays in your account until you decide to take it — there is no deadline, so you are free to let it build.
+Updated 22 October 2026
+Breach & Cooldown: What happens if a live account breaches?
+What counts as a breach on my live account?
+A live account is breached if your cumulative losses reach the full drawdown amount from your starting balance. For example, on a 50K live account with a $2,000 static drawdown and a $0 starting balance, the breach floor sits at -$2,000. A breached account closes and does not reopen, but there is a clear route back (below).
+What happens when my live account breaches?
+Two things happen:
+Your live account closes.
+A 21-day cooldown begins , during which new activity is paused — no trading new GFF accounts, no new evaluations, and no payout requests during this window.
+Why is the cooldown 21 days?
+It is a short reset between cycles — a chance to step back and come back fresh and on form for your next account. The 21-day length is in line with the wider industry.
+Can I get back to live after a breach?
+Absolutely. Once your 21-day cooldown ends and you pass a new challenge, the risk team looks at your history with us and can place you straight back into live — so you are earning daily payouts again right away — or have you take a few sim payouts first. It is decided case by case, with a strong track record working in your favour.
+How many times can I come back?
+There is no fixed limit. After each cooldown you can take a new challenge, and the risk team sets your route back. As with any partnership, GFF retains the usual discretion set out in the Trader Agreement.
+Updated 7 August 2026
+Multi-Account & Restrictions: Path to Live Restrictions & Multi-Account Rules
+How many live accounts can I have at once?
+One. Your live account is a single consolidated account, built from the sum of your eligible sim account sizes at transition and capped at 150K. After a breach and re-qualification through a new challenge, you earn your next live account through the standard route (see What happens if a live account breaches? ).
+Can I trade sim and live at the same time?
+Once you go live, you are all-in on live — which is the point. Every sim funded account with at least one payout is combined into your live account, and any without a payout is closed and refunded. From there, your GFF trading is live, on real capital.
+Can my family member trade GFF if I'm on live?
+Can my family member trade GFF?
+No. Members of your immediate family or household may not hold or trade GFF accounts at the same time as you. This applies across every account type and phase — evaluation, funded, and live. Each GFF challenge and account is designed to assess and reward the independent performance of a single trader. When accounts are held by connected individuals, positions can be coordinated, mirrored, or placed in opposition across those accounts in a way that manufactures evaluation passes and payouts not earned through genuine individual trading — and that risk exists whether the balance is simulated or live. To keep the program fair for every trader and the model sustainable, we do not permit connected parties to participate concurrently. Accounts found to be held or traded by related parties in breach of this rule are closed without refund.
+Are there country restrictions for live accounts?
+Yes. The same restricted countries list that applies to sim accounts applies to live. On top of that, our broker runs its own checks when your live account is opened and may decline additional countries at onboarding.
+If it turns out a live account is not available in your jurisdiction when you qualify, we will let you know directly and talk through the options. Because the Path to Live is built around moving onto live, continuing together may depend on live being available to you.
+Will I be charged anything to transition?
+No — GFF fully sponsors your account and your transition, so moving onto live costs you nothing. It is our investment in you.
+Updated 9 October 2026
+Common Questions: Path to Live – Frequently Asked Questions
+Will my live account have the same trading hours and instruments as sim?
+Yes — the same CME-listed futures instruments and trading hours you are used to. The difference is that live runs on real-time market data and real execution rather than simulated fills.
+Is there onboarding support when I transition?
+Yes — you are supported the whole way. Your transition email includes a clear brief on what changes from sim to live, your live account specs, and a direct line to the risk team, while customer support is on hand for any questions about the account, payouts, or platform.
+Do I get any documentation about my live account?
+Yes. You will get written confirmation of your live account specifications (size, drawdown, payout policy, and terms), the Live Funded Trader Agreement, and access to your live account dashboard in the GFF portal.
+Will GFF publicly announce when I'm on live?
+Only if you want us to. We do not announce individual transitions, and any community shout-outs for top performers are entirely opt-in — your call.
+Will my account be flagged differently in my dashboard?
+Yes — live accounts stand out clearly from sim in your GFF dashboard. You will see account type, current balance, drawdown floor, withdrawable profit, and payout history all at a glance.
+Who do I contact with questions?
+For anything about your transition or live account, reach the risk team through your usual GFF support channel. For general payout, billing, or platform questions, customer support is your first stop as always.
+Updated 7 August 2026
+Back to top

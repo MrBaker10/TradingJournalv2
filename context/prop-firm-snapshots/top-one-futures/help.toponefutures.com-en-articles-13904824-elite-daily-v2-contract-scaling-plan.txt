@@ -1,0 +1,86 @@
+Elite Daily V2 – Contract Scaling Plan
+This article explains about the Contract Scaling Plan on the Elite Daily V2 Funded Phase
+Table of contents
+The Contract Scaling Plan applies only to funded Elite Daily accounts. There are no scaling restrictions during the evaluation phase. Once funded, your maximum contract size increases as your account equity grows. Your allowed contract size updates based on your closing balance at the end of each trading day .
+Good to know: contract increases apply the following trading day after your closing balance qualifies. Intraday profits do not unlock higher scaling tiers until the day closes, and scaling never overrides the DLL or MLL rules.
+Key Principles
+Scaling applies only to funded accounts
+No scaling requirements during evaluation
+Contract limits update daily based on end of day balance
+Scaling is based on simulated profits
+Traders must remain within the allowed contract size at all times
+Base Maximum Contracts
+Account size
+Max contracts
+$25K
+1 Mini / 10 Micros
+$50K
+3 Minis / 30 Micros
+$100K
+5 Minis / 50 Micros
+$150K
+7 Minis / 70 Micros
+Contract Scaling Levels (Funded Only)
+As your funded account grows, your contract limits increase.
+Simulated profits
+Max contracts
+$25K account
+$0 to $1,500+
+1 Mini / 10 Micros (Full Allocation)
+$50K account
+$0 to $1,499
+1 Mini / 10 Micros
+$1,500 to $1,999
+2 Minis / 20 Micros
+$2,000+
+3 Minis / 30 Micros (Full Allocation)
+$100K account
+$0 to $1,499
+2 Minis / 20 Micros
+$1,500 to $1,999
+3 Minis / 30 Micros
+$2,000 to $2,999
+4 Minis / 40 Micros
+$3,000+
+5 Minis / 50 Micros (Full Allocation)
+$150K account
+$0 to $1,499
+3 Minis / 30 Micros
+$1,500 to $1,999
+4 Minis / 40 Micros
+$2,000 to $2,999
+5 Minis / 50 Micros
+$3,000 to $4,499
+6 Minis / 60 Micros
+$4,500+
+7 Minis / 70 Micros (Full Allocation)
+How Scaling Is Calculated
+Scaling tiers are determined by your funded account closing balance, your total simulated profit and your end of day equity. Contract increases apply the following trading day after your closing balance qualifies. Intraday profits do not unlock higher scaling tiers until the day closes.
+Trader Responsibility
+It is the trader's personal responsibility to monitor and follow the clearly outlined contract scaling rules on funded accounts. Exceeding your allowed contract limit is considered a rule violation. If the contract scaling rules are not followed:
+Trades may be rejected or reduced
+The account may be flagged for review
+Profits generated while exceeding contract limits may be removed
+Payout requests may be deemed ineligible
+Compliance with scaling rules is mandatory for payout eligibility.
+Important Clarifications
+Scaling applies per individual account
+Contract limits do not combine across multiple accounts
+Simulated profit determines scaling tier
+Contract limits are based on end of day balance
+Scaling does not override DLL or MLL rules
+Related articles
+Elite DAILY V2 - Overview
+Elite Daily V2 – Daily Payout Rules
+Elite Daily V2 – Daily Loss Limit (DLL) - Funded Phase
+Elite Daily V2 – Max Loss Limit (MLL)
+Maximum Contracts Explained
+Related Articles
+Maximum Contracts Explained
+Elite Daily V2 – Profit Target (Evaluation)
+Elite ACCESS – Contract Scaling Plan
+Elite ACCESS Intraday – Contract Scaling Plan
+X-Daily Spark – Contract Limits & Scaling
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

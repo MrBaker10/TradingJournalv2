@@ -1,0 +1,20 @@
+Inactivity rules
+How long an account can go without a trade.
+Account
+Rule
+Standard accounts
+Closed after 29 days without trading
+Instant accounts bought after 23 Nov 2025
+Closed after 7 days without trading
+Live accounts
+Closed after 29 days without trading
+Instant accounts are closed after 7 days without trading; all other accounts after 29 days without trading. There is no time limit to pass an evaluation.
+Need a pause for health, personal or technical reasons? Contact Support before the deadline.
+Related Articles
+Instant drawdown and staying active
+Scalping rules
+Trading hours and the 2% price-limit rule
+Consistency rules explained
+Live account rules and costs
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃

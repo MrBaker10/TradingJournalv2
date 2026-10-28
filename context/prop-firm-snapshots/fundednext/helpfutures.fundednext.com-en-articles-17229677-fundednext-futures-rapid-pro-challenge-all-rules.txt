@@ -1,0 +1,135 @@
+FundedNext Futures Rapid Pro Challenge All Rules
+Table of contents
+TL;DR: To pass the Rapid Pro Challenge , you must reach the profit target for your account size while respecting the Maximum Loss Limit and all trading rules. There is no Consistency Rule in the Challenge Account and no daily loss limit by default — though you can add one via the optional Daily Loss Limit Add-On at purchase. The MLL is 1,000(25K) , 2,000(50K) , 2,500(100K) on a Trailing End-of-Day basis. There is no time limit to pass.
+What is the FundedNext Futures Rapid Pro Challenge?
+The Rapid Pro Challenge is one of two paths in the Rapid Pro & Daily model, built for flexibility and control . It has lighter restrictions during the Challenge Phase , letting you reach your target in a single day or across multiple days. Once you pass, you progress to a Rapid Pro FundedNext Account where you can withdraw Performance Rewards every 3 days.
+What are the available account sizes in the Rapid Pro Challenge?
+The Rapid Pro Challenge is available in three account sizes . The Profit Target and Maximum Loss Limit for each are:
+Account Size
+Profit Target
+Maximum Loss Limit
+$25,000
+$1,500
+$1,000
+$50,000
+$3,000
+$2,000
+$100,000
+$5,000
+$2,500
+What is the pricing of the Rapid Pro Challenge?
+The Rapid Pro & Daily model follows a flat 50% discount on all purchases.
+Account Size
+Original Price
+Discounted Price (50% Off)
+$25,000
+$159.98
+$79.99
+$50,000
+$299.98
+$149.99
+$100,000
+$499.98
+$249.99
+Rapid Pro also offers an optional Daily Loss Limit Add-On that lowers the price in exchange for adding a daily loss limit:
+Account Size
+Standard Pro Price
+Price with DLL Add-On
+$25,000
+$79.99
+$59.99 (−$20)
+$50,000
+$149.99
+$109.99 (−$40)
+$100,000
+$249.99
+$199.99 (−$50)
+🔗 See: How does the Add-On feature work with the FundedNext Futures Challenges?
+Can I reset my Rapid Pro Challenge?
+Yes — you can reset your account as long as it is still in the Challenge Phase . Once your account progresses to a Rapid Pro FundedNext Account , the reset option is no longer available.
+Account Size
+Reset Price
+Reset Price (with DLL Add-On)
+$25,000
+$84.99
+$67.99
+$50,000
+$174.99
+$117.99
+$100,000
+$299.99
+$207.99
+🔗 For more details, see: What are the reset conditions and fees at FundedNext Futures?
+Is there a Consistency Rule in the Rapid Pro Challenge?
+No. The Consistency Rule does not apply during the Rapid Pro Challenge Account. You can meet the profit target in a single day or spread it across multiple days , depending on your trading style.
+Note: A 40% Consistency Rule does apply once you reach your Rapid Pro FundedNext Account.
+What are the contract limits in the Rapid Pro Challenge?
+Your contract limit is the maximum number of contracts you can hold at once. It's fixed at account creation and does not increase with profit.
+Account Size
+Maximum Contracts
+$25,000
+2 e-mini / 20 micro e-mini
+$50,000
+4 e-mini / 40 micro e-mini
+$100,000
+6 e-mini / 60 micro e-mini
+You can mix e-mini and micro e-mini contracts using the 1:10 ratio (1 e-mini = 10 micro e-mini). If you exceed the limit, only the excess contracts count as violations: profit from them is deducted , while losses still count.
+🔗 See: What is the contract limit policy at FundedNext Futures?
+What is the Maximum Loss Limit in the Rapid Pro Challenge?
+The Maximum Loss Limit (MLL) is the total amount you can lose before your account is permanently breached . It follows a Trailing End-of-Day (EOD) system, updating once per day based on your highest balance that day.
+Account Size
+Maximum Loss Limit
+MLL Locks At
+$25,000
+$1,000
+$25,100
+$50,000
+$2,000
+$50,100
+$100,000
+$2,500
+$100,100
+Important notes:
+The MLL adjusts at the end of each trading day , not in real time.
+It stops trailing and locks once your balance reaches the lock point for your size ($25,100 / $50,100 / $100,100).
+If your floating loss breaches the MLL during a live trade, your account is breached instantly .
+🔗 See: What is the maximum loss limit at FundedNext Futures and how does it work?
+Is there a daily loss limit in the Rapid Pro Challenge?
+By default, no. The Rapid Pro Challenge has no daily loss limit , giving you more flexibility in trade management.
+If you selected the optional Daily Loss Limit Add-On at purchase, a daily loss limit applies based on your account size:
+Account Size
+Daily Loss Limit (with Add-On)
+$25,000
+$500
+$50,000
+$1,000
+$100,000
+$1,250
+The Add-On must be chosen at purchase and cannot be added or removed afterward .
+🔗 See: How does the Add-On feature work with the FundedNext Futures Challenges?
+What trading rules must I follow in the Rapid Pro Challenge?
+You must follow all prohibited strategy rules throughout the Rapid Pro Challenge to maintain disciplined and ethical trading. Breaking any of these can result in a breach.
+🔗 See: What are the prohibited trading strategies of FundedNext Futures?
+What is the Micro-Scalping policy for the Rapid Pro Challenge Account?
+Micro-scalping is opening and closing trades within 10 seconds to capture small, rapid price movements. Scalping is valid, but a high concentration of these trades affects trading consistency, so FundedNext Futures monitors a Micro-Scalping threshold across all account types.
+During the Challenge Phase :
+The Micro-Scalping percentage is the share of your total recorded profit from trades closed within 10 seconds, evaluated per cycle .
+Only profitable trades count — you can close losing trades any time without affecting this rule.
+At 30% , you receive a compliance warning (no penalty).
+At 40% or above , your ability to reach the profit target and advance is placed on hold ; it resumes automatically once your percentage drops back below 40%.
+🔗 See: What is the Micro-Scalping policy in FundedNext Futures?
+Is there a time limit to pass the Rapid Pro Challenge?
+No. There is no time limit — take as long as you need to reach your profit target while following the rules.
+What happens after I pass the Rapid Pro Challenge?
+Once you meet the profit target while following the Maximum Loss Limit and all trading rules, you move to a Rapid Pro FundedNext Account , where the 40% Consistency Rule applies and you can withdraw Performance Rewards every 3 days.
+🔗 See: FundedNext Futures Rapid Pro FundedNext Account — All Rules
+🔗 See: I just passed my Challenge Account — what happens next?
+Related Articles
+FundedNext Futures Legacy Challenge All Rules
+FundedNext Futures Rapid Pro FundedNext Account: All Rules
+FundedNext Futures Rapid Daily Challenge All Rules
+FundedNext Futures Rapid Daily FundedNext Account All Rules
+FundedNext Futures Flex Challenge All Rules
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

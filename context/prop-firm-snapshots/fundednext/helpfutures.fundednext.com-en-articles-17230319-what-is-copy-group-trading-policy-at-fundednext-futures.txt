@@ -1,0 +1,33 @@
+What is copy & group trading policy at FundedNext Futures?
+Table of contents
+TL;DR : At FundedNext Futures , Copy and Group Trading is generally prohibited to ensure traders are evaluated based on individual skill , independent decision-making , and consistent risk management . Copy trading is allowed only when traders copy their own trades , either between their own FundedNext Accounts or between FundedNext and other prop firms , provided all accounts are owned by the same individual and verified. Using signal services , group trading , or copying trades from other traders’ accounts is strictly prohibited , even through automated tools.
+What is Copy and Group Trading?
+Copy Trading refers to replicating trades from another trader or using signal services to execute trades.
+Group Trading occurs when multiple traders collaborate—often in real-time—to achieve specific Rewards by executing similar trades simultaneously.
+Why is Copy and Group Trading (generally) prohibited?
+At FundedNext Futures, we evaluate each trader based on their individual trading ability, focusing on independent decision-making, proper risk management, and long-term consistency.
+Relying on others—either through signal services or coordination with other traders—misrepresents a trader’s true capabilities and undermines fair competition. That’s why unauthorized Copy and Group Trading is strictly prohibited.
+What Is Allowed?
+FundedNext supports flexibility for traders who manage their own accounts. The following forms of copy trading are permitted:
+Copy trading within FundedNext is allowed. Traders can freely copy trades between their own FundedNext Accounts.
+Copy trading between FundedNext and other prop firms is allowed if the trader owns all accounts involved. FundedNext may request verification that all accounts involved are registered under the exact same name as per FundedNext records; any variation in spelling or identity will not be accepted.
+Use of any copy trading tools is allowed, including:
+Tradovate’s built-in copy trading feature
+NinjaTrader modules like Replikanto
+Any third-party platforms, as long as they are used for copying one’s own trades only
+What can they not do?
+To preserve the integrity of our evaluation process, the following actions are strictly prohibited:
+Traders cannot group trade or coordinate trades with other traders, whether inside or outside FundedNext.
+Traders cannot subscribe to any trading signal services or use external signals to guide their trading decisions.
+Traders are not allowed to copy trades from another person’s account within FundedNext, even through automated tools or trade copiers.
+Example of prohibited behavior:
+A trader joins a signal group where a provider sends trade instructions. Instead of performing an independent analysis, the trader blindly copies those trades to pass the Challenge. This results in unearned success based on someone else’s skill and violates our evaluation principles.
+Related Articles
+What are the prohibited trading strategies of FundedNext Futures?
+FundedNext Futures — Most Frequently Asked Questions
+What is the Micro-Scalping policy in FundedNext Futures?
+Does FundedNext Futures Allow High-Frequency Trading (HFT)?
+What is the Disciplined Trader Program of FundedNext Futures, and how does it help traders build consistency?
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

@@ -1,0 +1,42 @@
+How Many Accounts Can I Hold with FundedNext Futures, and What Is the Maximum Allocation Available?
+Table of contents
+TL;DR: For Challenge Accounts , you can hold a combined allocation of up to $750,000 at a time — with no limit on how many Challenges you buy per month and unlimited resets within that cap. For FundedNext Accounts , you can have up to 5 active accounts at any time (per user and per household), with a maximum of 10 issued per calendar month . You can freely mix and match account sizes ($25K, $50K, $100K, $150K) within these limits.
+FundedNext Futures lets you hold multiple accounts , subject to maximum allocation rules that keep trading fair and risk managed. These limits differ between Challenge Accounts and FundedNext Accounts , and you can combine different account sizes as long as you stay within the allowed cap.
+What are the maximum allocation limits?
+Challenge Accounts: Up to $750,000 in total allocation at any one time.
+You can purchase as many Challenges as you want in a month.
+Resets are unlimited , up to the maximum allocation.
+FundedNext Accounts: You can hold up to 5 active FundedNext Accounts at any given moment, regardless of individual account sizes or models. This limit applies per user and per household .
+What does "household" mean at FundedNext Futures?
+A household is defined as family members or multiple users who share the same residential address or IP address .
+This definition matters because the 5 active FundedNext Account limit applies at the household level , not just per individual. In other words, everyone trading from the same address or IP is counted together toward that limit — so a household cannot exceed 5 active FundedNext Accounts in total, regardless of how many individual users it includes.
+If multiple traders in your home use FundedNext Futures, keep this shared limit in mind when planning your accounts. If our team detects trading activity from the same address or IP across multiple accounts, it may be assessed under the household rule.
+How do the allocation limits work?
+You can mix and match different account sizes when building your allocation. FundedNext Futures offers four sizes:
+$25,000
+$50,000
+$100,000
+$150,000
+What is the allocation for FundedNext Futures Challenges?
+You may hold multiple Challenge Accounts with a combined allocation of up to $750,000 . Examples of allowed allocations:
+Five $150K Challenges → $750K (at the limit)
+Four $100K + Two $50K Challenges → $500K (within limit)
+Two $25K + Six $100K Challenges → $650K (within limit)
+What is the allocation for Futures FundedNext Accounts?
+Once you pass your Challenge, your funded accounts fall under the FundedNext Account allocation limit :
+You can hold up to 5 active FundedNext Accounts at a time, regardless of size or model.
+A maximum of 10 FundedNext Accounts can be issued to you within a calendar month .
+If you reach the active limit, you won't receive additional accounts right away. A new account earned after passing a Challenge is placed on hold (pending) .
+Pending accounts are activated only when allocation opens up — for example, when one of your active accounts is breached or discontinued , or when a new calendar month begins.
+🔗 For the full step-by-step, see: I just passed my Challenge Account — what happens next?
+Important Note:
+Maximum allocation limits are subject to periodic review and may be adjusted at FundedNext’s discretion.
+Related Articles
+What are the reset conditions and fees at FundedNext Futures?
+FundedNext Futures Legacy FundedNext Account: All Rules
+What is FundedNext Futures Rapid Pro & Daily Challenge?
+What is FundedNext Futures Flex Challenge?
+FundedNext Futures Flex FundedNext Account All Rules
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

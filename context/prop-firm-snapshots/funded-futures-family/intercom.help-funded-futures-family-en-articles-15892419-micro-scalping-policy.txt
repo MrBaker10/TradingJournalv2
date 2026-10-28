@@ -1,0 +1,14 @@
+Micro-scalping Policy
+August 11, 2026
+Micro-scalping is permitted at Funded Futures Family on both Evaluation and Funded accounts; however, it is closely monitored to ensure it aligns with real-market conditions and maintains the integrity of our trading environment.
+Under our updated policy, over 50% of your trades and over 50% of your total profits must come from positions held longer than 10 seconds . Traders may still take quick market opportunities, but the majority of trading activity must reflect time-in-market behavior that is realistic and sustainable in a live environment.
+We do not permit trading activity that relies on bots, algorithms, or any strategy that cannot be reliably executed in a true live trading setting. All trader activity must reflect genuine and repeatable trading behavior without technical manipulation. Violations of this policy may result in payout denial, reversion of profits to the day prior to the first violation flagged in account, and/or account closure.
+This review process ensures consistency, protects the integrity of our programs, and prepares traders for successful long-term transitions into live trading accounts.
+Related Articles
+Live Stage Structure
+News Trading Policy
+Fair Play and Integrity Policy
+Bots/Algorithmic Trading Policy
+Prohibited Trading Conduct
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃

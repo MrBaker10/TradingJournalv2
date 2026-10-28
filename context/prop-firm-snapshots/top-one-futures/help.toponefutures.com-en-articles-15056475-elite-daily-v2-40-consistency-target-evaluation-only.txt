@@ -1,0 +1,54 @@
+Elite Daily V2 – 40% Consistency Target (Evaluation Only)
+The 40% Consistency Rule applies during the Elite Daily evaluation phase.
+Table of contents
+The 40% Consistency Rule applies during the Elite Daily evaluation phase . Although there are no minimum trading days beyond the required minimum to pass, traders must demonstrate balanced profit distribution in order to qualify for funding.
+The rule: no single trading day may account for more than 40% of your total profit at the moment the profit target is reached. There is no consistency rule once funded.
+What Is the 40% Consistency Rule?
+No single trading day may account for more than 40% of your total profit at the moment the profit target is reached. This rule is designed to encourage consistent trading performance rather than relying on one oversized trading day.
+How It Is Calculated
+Formula: Largest Profitable Day / Total Profit x 100. If the result exceeds 40%, the account is not yet eligible to pass.
+Examples ($50K Account, $3,000 Profit Target)
+Example
+Trading results
+Calculation
+Result
+Violation
+Day 1: $2,000. Day 2: $1,000.
+Total profit = $3,000. Largest day = $2,000. $2,000 / $3,000 = 66%
+Not compliant. The trader must continue trading to distribute profits more evenly.
+Compliant
+Day 1: $1,200. Day 2: $1,000. Day 3: $800.
+Total profit = $3,000. Largest day = $1,200. $1,200 / $3,000 = 40%
+Passes the consistency requirement.
+What Happens If You Exceed the Rule?
+If the 40% consistency threshold is exceeded:
+The account does not yet qualify to pass
+Sim funding will not be issued
+The trader must continue trading
+Additional profits must be generated to reduce the percentage impact of the largest trading day
+The rule does not automatically fail the account. It simply requires more balanced profit distribution before passing.
+Important Notes
+Applies only during the evaluation phase
+Checked when the profit target is reached
+Based on closed profits only
+Recalculated continuously as profits increase
+There is no consistency rule once funded
+Summary
+Largest trading day may not exceed 40% of total profits
+Applies only during evaluation
+Encourages consistent trading behavior
+Violations can be corrected by generating additional profits
+Related articles
+Elite Daily V2 – Profit Target (Evaluation)
+Elite DAILY V2 - Overview
+Elite Daily V2 – Daily Loss Limit (DLL) - Evaluation Phase
+Elite Daily V2 - I've passed the Evaluation, what's next?
+Related Articles
+Elite Daily V2 – Profit Target (Evaluation)
+Elite Daily V2 – Contract Scaling Plan
+Elite ACCESS – Funded Consistency Rule (40%)
+Elite DAILY V2 - Overview
+Elite ACCESS Intraday - Consistency Rule (40%) - Funded
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

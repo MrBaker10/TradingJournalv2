@@ -244,5 +244,4 @@ First filled 2026-10-28 from the research notes in `.scratch/prop-firm-sizes/`.
 - https://support.thetradingpit.com/is-copy-trading-allowed-1
 - https://support.thetradingpit.com/inactivity-breach-policy-0-0
 - https://support.thetradingpit.com/is-hedging-allowed-0-0
-- https://support.thetradingpit.com/prohibited-trading-practices
 - https://support.thetradingpit.com/what-is-the-minimum-and-maximum-number-of-contracts-i-can-trade

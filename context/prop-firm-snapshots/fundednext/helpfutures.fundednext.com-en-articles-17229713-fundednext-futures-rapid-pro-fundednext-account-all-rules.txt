@@ -1,0 +1,147 @@
+FundedNext Futures Rapid Pro FundedNext Account: All Rules
+Table of contents
+TL;DR: On the Rapid Pro FundedNext Account a 40% Consistency Rule applies — your highest single-day profit must be 40% or less of total profit before a withdrawal is eligible (takes at least 3 days ). You also need $500 profit in the cycle. The Maximum Loss Limit still applies — 1,000(25K) , 2,000(50K) , 2,500(100K) . Rewards can be withdrawn every 3 days at a 90% Reward Share , and the account concludes after 5 Performance Rewards . You can earn Rising Trader, Champion Trader, and Limitless Trader certificates.
+A Performance Reward is your share of the profits you earn for your skill and effort while trading a FundedNext Account after passing the Rapid Pro Challenge. (At FundedNext Futures, what other firms call a "payout" is called a Performance Reward .) With Rapid Pro, rewards can be withdrawn every 3 days once eligible. Here are all the rules that apply once you're funded.
+Is there a Consistency Rule on the Rapid Pro FundedNext Account?
+Yes. Unlike the Challenge Phase, the Rapid Pro FundedNext Account applies a 40% Consistency Rule . If your highest profit in a single day is more than 40% of your total profit, you'll need to keep trading until your results become more consistent.
+There's no fixed number of days — it depends on your performance — but it takes at least 3 days to satisfy the rule. Once your highest profit day is 40% or less of total profit, you become eligible to withdraw.
+Formula: Highest Profit Contribution = (Highest Profit Day ÷ Total Profit) × 100%
+40% or less → rule met (withdrawal eligible).
+More than 40% → rule not met (keep trading).
+Example
+Day
+Profit Made
+Total Profit
+Highest Profit Day
+Highest Profit Contribution
+Within Rule?
+1
+$1,500
+$1,500
+$1,500
+100.00%
+❌
+2
+$1,200
+$2,700
+$1,500
+55.56%
+❌
+3
+$1,800
+$4,500
+$1,800
+40.00%
+✅
+The trader satisfies the rule on Day 3 , becoming eligible for a Performance Reward.
+🔗 See: Is there any consistency rule to be followed in the FundedNext Futures Challenge & FundedNext Account?
+What are the contract limits on the Rapid Pro FundedNext Account?
+Your contract limit is fixed at account creation and does not increase with profit. Rapid Pro applies the same limits on the FundedNext Account as during the Challenge:
+Account Size
+Maximum Contracts
+$25,000
+2 e-mini / 20 micro e-mini
+$50,000
+4 e-mini / 40 micro e-mini
+$100,000
+6 e-mini / 60 micro e-mini
+You can mix e-mini and micro e-mini contracts using the 1:10 ratio . If you exceed the limit, only the excess contracts are violations: profit from them is deducted , and losses still count.
+🔗 See: What is the contract limit policy at FundedNext Futures?
+Is a buffer required on the Rapid Pro FundedNext Account?
+No. The Rapid Pro FundedNext Account does not use a buffer rule. Withdrawal eligibility is based on the 40% Consistency Rule instead. The buffer rule applies only to the Rapid Daily model.
+What is the Maximum Loss Limit on the Rapid Pro FundedNext Account?
+The Maximum Loss Limit (MLL) continues to apply on your funded account, using the same Trailing End-of-Day (EOD) system as the Challenge:
+Account Size
+Maximum Loss Limit
+MLL Locks At
+$25,000
+$1,000
+$25,100
+$50,000
+$2,000
+$50,100
+$100,000
+$2,500
+$100,100
+Important notes:
+The MLL adjusts at the end of each trading day , not in real time.
+It stops trailing and locks once your balance reaches the lock point for your size ($25,100 / $50,100 / $100,100).
+A floating loss that breaches the MLL during a live trade breaches your account instantly .
+🔗 See: What is the maximum loss limit at FundedNext Futures and how does it work?
+Is there a daily loss limit on the Rapid Pro FundedNext Account?
+By default, no. However, if you purchased the optional Daily Loss Limit Add-On , it also applies to your Rapid Pro FundedNext Account: 500(25K) , 1,000(50K) , 1,250(100K) .
+🔗 See: How does the Add-On feature work with the FundedNext Futures Challenges?
+What are the Performance Reward eligibility criteria for the Rapid Pro FundedNext Account?
+Before each withdrawal, you must meet the criteria for your account size:
+Criteria
+$25K Account
+$50K Account
+$100K Account
+Consistency Rule
+40%
+40%
+40%
+Minimum Profit (current cycle)
+$500
+$500
+$500
+Minimum Withdrawal
+$250
+$250
+$250
+Maximum Withdrawal
+$800
+$1,200
+$2,500
+Reward Share
+90%
+90%
+90%
+Rewards can be withdrawn every 3 days once these criteria are met.
+🔗 See: What are Benchmark Days at FundedNext Futures?
+How much can I withdraw, and how often, from the Rapid Pro FundedNext Account?
+You can withdraw a minimum of $250 up to your size-based maximum ( $800 / $1,200 / $2,500 ), provided you've met the 40% Consistency Rule and have at least $500 profit in the current cycle. Rewards can be withdrawn every 3 days .
+What is my Reward Share from the Rapid Pro FundedNext Account?
+You receive a 90% Reward Share of the requested Performance Reward.
+🔗 See: What will be my Reward Share from the Futures FundedNext Account?
+What is the Rapid Pro FundedNext Account withdrawal journey?
+Trade until your highest single-day profit is 40% or less of your total profit (at least 3 days) and you have $500 profit in the cycle.
+Request a withdrawal (minimum $250 , up to your size cap), receiving a 90% Reward Share . Rewards can be requested every 3 days .
+After your 5th Performance Reward , the Rapid Pro FundedNext Account is concluded .
+What certificates will I receive from the Rapid Pro FundedNext Account?
+FundedNext Futures awards certificates to recognize your achievements:
+Certificate
+How you earn it
+Rising Trader
+Completing the Challenge Phase
+Champion Trader
+Withdrawing a Performance Reward
+Limitless Trader
+Receiving your 5th Performance Reward
+Certificates are issued automatically — log in to your FundedNext Dashboard , open the Certificates section on the left, and click to generate. Your certificate is sent to your registered email.
+🔗 See: Does FundedNext Futures offer any Certificates?
+What trading rules must I follow on the Rapid Pro FundedNext Account?
+All prohibited strategy rules continue to apply on your Rapid Pro FundedNext Account, just as during the Challenge Phase. Breaking any of these can result in a breach.
+🔗 See: What are the prohibited trading strategies of FundedNext Futures?
+What is the Micro-Scalping policy for the Rapid Pro FundedNext Account?
+Micro-scalping is opening and closing trades within 10 seconds to capture small, rapid price movements. FundedNext Futures monitors a Micro-Scalping threshold across all account types.
+On your FundedNext Account :
+The Micro-Scalping percentage is the share of your total recorded profit from trades closed within 10 seconds, evaluated per cycle .
+Only profitable trades count — you can close losing trades any time without affecting this rule.
+At 30% , you receive a compliance warning (no deduction).
+At 40% or above , the Micro-Scalping portion of your profit for that cycle is deducted in full . Your account is never terminated for micro-scalping, and future micro-scalping profit is subject to the same ongoing deduction.
+If that deduction equals or exceeds your net profit for the cycle, no Performance Reward is issued and withdrawal is disabled for that cycle. A full breakdown appears in your dashboard.
+🔗 See: What is the Micro-Scalping policy in FundedNext Futures?
+How do I request my Performance Reward from the Rapid Pro FundedNext Account?
+Once you've met all the eligibility criteria, you can request your Performance Reward at the end of the trading day by transferring your profits to your wallet.
+Please note: placing a trade on the same day removes the transfer-to-wallet option for that day. So if you intend to request your Performance Reward, do it on a day when you haven't opened a new trade — otherwise you'll need to wait until the next eligible day to transfer.
+🔗 See: How can I withdraw my Performance Reward?
+Related Articles
+FundedNext Futures Legacy FundedNext Account: All Rules
+FundedNext Futures Rapid Pro Challenge All Rules
+FundedNext Futures Rapid Daily Challenge All Rules
+FundedNext Futures Rapid Daily FundedNext Account All Rules
+FundedNext Futures Flex FundedNext Account All Rules
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

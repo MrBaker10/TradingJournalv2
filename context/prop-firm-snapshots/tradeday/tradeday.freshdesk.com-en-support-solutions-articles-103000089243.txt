@@ -1,0 +1,50 @@
+All
+Articles
+Recent Searches
+Clear all
+No recent searches
+Popular Articles
+Articles
+View all
+Topics
+View all
+Tickets
+View all
+Sorry! nothing found for
+Slippage rule for Funded Live traders
+Modified on Wed, 9 Sep at 3:18 PM
+The rule only applies to Funded Live traders.
+Traders who graduate from Funded Sim to Funded Live will have position limits set according to the evaluation account from which they graduated, but these limits may be adjusted based on the balance transferred from the Funded Sim account.
+If trading losses cause your Funded Live account balance to fall below the required slippage buffer, all open positions will be automatically liquidated.
+The slippage thresholds are as follows:
+- $25K & $50K account: $500
+- $100K account: $750
+- $150K account: $1,000
+Any funds remaining in the account after this will be paid to the trader at the 90/10 split.
+Please note: The Head of Trading reserves the right to increase the slippage limit if a trader is considered a high-risk trader or during times of extreme market volatility. In both cases, the trader will be notified.
+Why do we have the slippage rule?
+TradeDay funds traders in the live market with real capital and manages risk as a professional trading group.
+The slippage rule helps TradeDay protect capital from slippage during aggressive and volatile market moves.
+Was this article helpful?
+No
+Yes
+That’s Great!
+Thank you for your feedback
+Sorry! We couldn't be helpful
+Thank you for your feedback
+Your e-mail address
+*
+Let us know how can we improve this article! *
+Need more information
+Difficult to understand
+Inaccurate/irrelevant content
+Missing/broken link
+Select at least one of the reasons
+Please give your comments
+CAPTCHA verification is required.
+Cancel
+Send
+Feedback sent
+We appreciate your effort and will try to fix the article
+X
+0 of 0

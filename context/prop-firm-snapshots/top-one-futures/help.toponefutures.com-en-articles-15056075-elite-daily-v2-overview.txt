@@ -1,0 +1,171 @@
+Elite DAILY V2 - Overview
+This article gives an overview of Elite Daily V2 accounts launched on 5/11/26
+Table of contents
+The Elite Daily V2 Plan is a one phase evaluation model built for disciplined futures traders who want an End of Day trailing drawdown, daily payout eligibility, structured contract scaling and fast progression to funded status. Available account sizes: $25,000, $50,000, $100,000 and $150,000 .
+Key highlights: one phase evaluation, End of Day trailing drawdown, 40% consistency rule during the evaluation only, daily payouts from Day 1 with a 50% Daily Progression Rule, 90/10 profit split, no activation fee and a maximum of 5 funded accounts per trader.
+Evaluation Phase: Elite Daily V2 Rules
+Rule
+$25K
+$50K
+$100K
+$150K
+Profit Target
+$1,500 (6%)
+$3,000 (6%)
+$6,000 (6%)
+$9,000 (6%)
+Daily Loss Limit
+$500
+$1,000
+$1,250
+$1,850
+Max Accounts
+5
+5
+5
+5
+Max Contracts
+1
+3
+5
+7
+Drawdown Type
+End of Day (EOD)
+End of Day (EOD)
+End of Day (EOD)
+End of Day (EOD)
+Trailing Max Drawdown
+$1,000
+$2,000
+$3,000
+$4,500
+Consistency Rule
+40%
+40%
+40%
+40%
+Activation Fee
+None
+None
+None
+None
+Reset on Evaluation
+$66
+$82
+$154
+$215
+Funded Account Phase: Elite Daily V2 Rules
+Rule
+$25K
+$50K
+$100K
+$150K
+Daily Loss Limit
+$500
+$1,000
+$1,250
+$1,850
+Trailing Drawdown
+$1,000
+$2,000
+$2,500
+$3,500
+Drawdown Type
+EOD
+EOD
+EOD
+EOD
+Drawdown Locks At
+$25,100
+$50,100
+$100,100
+$150,100
+Profit Split
+90/10
+90/10
+90/10
+90/10
+Payout Frequency
+Daily
+Daily
+Daily
+Daily
+Contract Scaling
+1
+1, 2, 3
+2, 3, 4, 5
+3, 4, 5, 6, 7
+Min Trading Days (Funded)
+1
+1
+1
+1
+Minimum Payout
+$500
+$500
+$500
+$500
+Max Payout Per Request
+$750
+$1,000
+$1,500
+$2,250
+Payout Buffer
+$1,500
+$2,500
+$3,500
+$4,500
+Payout Buffer %
+6%
+5%
+3.5%
+3%
+Reset on Funded
+$299
+$499
+$849
+$1,250
+Key Rule Highlights
+Rule
+Details
+One Phase Evaluation
+Only one phase is required to pass.
+End of Day Trailing Drawdown
+The breach level trails at the end of the trading day with your highest closed balance, not intraday. The breach level is checked in real time. If your equity goes at or below it at any moment, the account is breached. See Max Loss Limit (MLL) .
+Daily Loss Limit
+A Daily Loss Limit applies during both the evaluation and funded phases: $500 on $25K, $1,000 on $50K, $1,250 on $100K and $1,850 on $150K.
+Daily Payouts
+Funded traders may request payouts daily, starting from Day 1.
+Consistency Rule (40%, Evaluation Only)
+No single trading day may account for more than 40% of total profits during the evaluation phase.
+Daily Progression Rule
+For each payout request, at least 50% of the payout amount must come from profits generated since your last payout. Example: if requesting $1,000, at least $500 must be new profit generated since the previous withdrawal.
+News Rule (Funded Only)
+No trades may be executed or closed 2 minutes before and 2 minutes after major high-impact news events.
+No Activation Fee
+Unlike other plans, Elite Daily has no activation fee.
+Purchase Guidelines
+To support disciplined trading and maintain fair participation across the platform, the following limits apply:
+Traders may purchase up to 10 evaluation accounts within any rolling 30-day period starting from the initial purchase date
+Each evaluation account may be reset a maximum of 12 times within a 30-day window
+A trader may maintain no more than 5 active funded accounts at any given time
+Important Notes
+Maximum 5 funded accounts per trader
+Consistency rule applies only during the evaluation phase
+Resets are available for both evaluation and funded accounts
+Contract scaling rules apply once funded
+Related articles
+Elite Daily V2 – Profit Target (Evaluation)
+Elite Daily V2 – Max Loss Limit (MLL)
+Elite Daily V2 – Daily Payout Rules
+Elite Daily V2 – Contract Scaling Plan
+Elite Daily V2 - I've passed the Evaluation, what's next?
+Related Articles
+Elite Daily V2 – Daily Loss Limit (DLL) - Funded Phase
+Elite Daily V2 – Max Loss Limit (MLL)
+Elite ACCESS Accounts – Overview
+Elite Daily V2 – Daily Loss Limit (DLL) - Evaluation Phase
+Elite Daily V2 – Daily Payout Rules
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

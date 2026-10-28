@@ -1,0 +1,67 @@
+All
+Articles
+Recent Searches
+Clear all
+No recent searches
+Popular Articles
+Articles
+View all
+Topics
+View all
+Tickets
+View all
+Sorry! nothing found for
+Prohibited Trade Practices
+Modified on Tue, 10 Jun, 2025 at 7:30 AM
+All first payout requests are run through our security processes to ensure that the profits have been earned in accordance with our policies, and not in breach of our prohibited trade practices.
+The simulated market is a very close representation of what it's like to trade a live market, however, it's not a perfect match.
+This represents a challenge for TradeDay, its funding partners, and its traders.
+There are a number of types of trading that can take advantage of the simulated fill algorithm and will perform well in the evaluation, but we know with a very high level of certainty they will lose the trading group's money when funded into the live markets.
+We ask short term traders to be aware of and adhere to our scalping policy, found by clicking here.
+A very small percentage of traders are either unaware of these weaknesses or set out to exploit these weaknesses in order to game the system . As such we ban these types of approaches. These include:
+Using trading bots or Automated Trading Systems (ATS) purchased from a third party. Or multiple users using the same trading bots and ATS's. Please see our policy here.
+Using any trading strategy intended to exploit or create errors in the Services or Trading Platform such as errors in the display of prices or delays in their updates;
+Using any trading strategy that includes disruptive practices (as determined in TradeDay’s sole discretion), including but not limited to any conduct prohibited by the CME Group’s rules, including spoofing and layering strategies.
+Using automated trading systems designed to scalp at an extremely high frequency. We do not allow strategies that produce more than 200 trades in a day.
+Order splitting. Entering multiple orders at the same price at the same time.
+Initiating trades in gapped, illiquid markets to profit from stray fills.
+Continued exploiting the lack of slippage in the sim environment to achieve unrealistic stop-loss execution, such as bracketing data releases.
+Performing trades any time outside the best bid or offer.
+Performing trades using an external or slow Data feed.
+Performing, alone or in concert with any other persons, including between connected accounts or accounts held with different TradeDay parties, trades, or combinations of trades, the purpose of which is to manipulate, abuse, or give the user an unfair advantage, for example, by engaging in any short-term or high frequency trades or simultaneously entering into opposite positions.
+Signing up using different usernames and email addresses.
+Performing trades in conflict with the terms and conditions of TradeDay of the User Section and the terms and conditions of the Evaluation.
+Using any software, artificial intelligence, ultra-high speed, or mass Data entry which might manipulate, abuse, or give the user an unfair advantage;
+Otherwise performing trades in contradiction with how trading is actually performed in the applicable futures markets, or in a way that establishes justified concerns that TradeDay might suffer financial or other harm as a result of User’s activities.
+Using any instruments that may adversely affect the operation of the Trading Platform or Services or that would be intended to misuse any errors, bugs, or other deficiencies.
+Circumventing geographical restrictions of availability or any other technical restrictions;
+Using a VPN or VPS to mask the location of the trading. Please see our policy here.
+Engaging in other conduct which, in the sole discretion of TradeDay, represents uncommercial activity , is intended to game the market, or otherwise is not a viable trading strategy.
+At TradeDay, Funded Traders are not permitted to trade within 2% of a price limit. Traders in breach of this policy will lose their funded account
+Using strategies designed to capture queue advantage by gaming the simulated matching engine. Please see our scalping policy here .
+Hedging is prohibited at TradeDay (the practice of simultaneously going long in one account and short in another account for the same product).
+All profits generated from prohibited trade practices will be confiscated.
+All passed evaluations are subject to review and traders found guilty of ignorance of our policies, or abusing our policies, will not be funded, and the trader will not be eligible for refunds.
+Was this article helpful?
+No
+Yes
+That’s Great!
+Thank you for your feedback
+Sorry! We couldn't be helpful
+Thank you for your feedback
+Your e-mail address
+*
+Let us know how can we improve this article! *
+Need more information
+Difficult to understand
+Inaccurate/irrelevant content
+Missing/broken link
+Select at least one of the reasons
+Please give your comments
+CAPTCHA verification is required.
+Cancel
+Send
+Feedback sent
+We appreciate your effort and will try to fix the article
+X
+0 of 0

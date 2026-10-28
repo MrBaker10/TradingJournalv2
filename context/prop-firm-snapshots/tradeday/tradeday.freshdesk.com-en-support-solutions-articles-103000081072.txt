@@ -1,0 +1,65 @@
+All
+Articles
+Recent Searches
+Clear all
+No recent searches
+Popular Articles
+Articles
+View all
+Topics
+View all
+Tickets
+View all
+Sorry! nothing found for
+Can I trade news or data releases?
+Modified on Sat, 22 Feb, 2025 at 8:49 AM
+TradeDay does not fail you for accidentally trading tier 1 economic data releases.
+TradeDay will auto-liquidate all open positions 2 minutes before TradeDay's tier 1 economic data releases , and open markets back up to trade 2 minutes after these releases.
+We do not fail traders for accidental breaches of these guidelines, but traders found to be ignoring these guidelines and abusing the policy will lose their account.
+We consider tier 1 data to be the following:
+FOMC minutes - All products
+1:00 PM CT
+FOMC interest rate decision statement - All products
+1:00 PM CT
+US CPI - All products
+7:30 AM CT
+US employment report (Non-Farm Payrolls) - All products
+7:30 AM CT
+Crude Oil Inventories (EIA) - Oil contracts only
+9:30 AM CT / 10:00 AM CT*
+Natural Gas Inventories (EIA) - Gas contracts only
+9:30 AM CT
+Crop production reports - Ags contacts only
+11:00 AM CT
+*Pending Abbreviated Trading Hours. Times are subject to change without notice, traders are responsible for being aware of what economic releases are and when they occur.
+Times are subject to change without notice, and traders are responsible for being aware of what economic releases are and when they occur.
+Where can I view this data?
+We have created a page that lists the TradeDay tier 1 data release calendar dates. It can be found here .
+We have two economic data release calendars that can be accessed from the TradeDay Members area, from the Trading Room, an embedded calendar from Investing.com and also there is a link to the CME calendar, go here .
+Why do we ban trading Tier 1 data releases?
+We know from many years of trading experience and many years of managing trading teams that trading major economic data releases is a strategy that does not pay off in the long run.
+It is also incredibly high risk. We are looking to fund traders who can produce risk-adjusted returns, not gamblers looking to exploit the trading group's leverage and risk in order to make a gamble for a quick short-term windfall profit.
+If you would like to understand our view on why we see trading data releases as a losing strategy, please head over to our blog post here .
+Was this article helpful?
+No
+Yes
+That’s Great!
+Thank you for your feedback
+Sorry! We couldn't be helpful
+Thank you for your feedback
+Your e-mail address
+*
+Let us know how can we improve this article! *
+Need more information
+Difficult to understand
+Inaccurate/irrelevant content
+Missing/broken link
+Select at least one of the reasons
+Please give your comments
+CAPTCHA verification is required.
+Cancel
+Send
+Feedback sent
+We appreciate your effort and will try to fix the article
+X
+0 of 0

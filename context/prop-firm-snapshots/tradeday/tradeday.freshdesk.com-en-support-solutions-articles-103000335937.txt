@@ -1,0 +1,114 @@
+All
+Articles
+Recent Searches
+Clear all
+No recent searches
+Popular Articles
+Articles
+View all
+Topics
+View all
+Tickets
+View all
+Sorry! nothing found for
+Quick Pay Funded Sim Payout Policy
+Modified on Wed, 22 Jul at 2:21 PM
+At TradeDay, we prioritize transparency and your success. Our payout policy is designed to provide a fair balance between maximizing your earnings, maintaining account stability, and rewarding loyal, long-term traders of TradeDay.
+Profit splits are now calculated per individual account rather than lifetime withdrawals. Each account is evaluated independently.
+The minimum payout request is $250.
+We aim to process payout requests submitted before 5:30 pm ET by the next business day.
+The profit split and threshold amounts are calculated based on current profit.
+A full 80/20 payout profit split occurs if:
+There is more than $4000 profit in the Quick Pay account.
+And the payout leaves more than $4000 profit in the Quick Pay account.
+Example Payout Request Above the $4,000 Current Profit Level:
+A trader on a $50K Quick Pay Funded Sim account earns $5,000 in profit. Their account balance is now $55,000. The trader requests a $1,000 payout. Since the account’s current profit is above $4,000 and the payout will leave the current profit above $4,000 , the payout qualifies for the 80/20 profit split in full.
+This reduces the trading account balance from $55,000 to $54,000.
+The trader will receive 80% of $1000 = $800
+A 50/50 payout profit split occurs if:
+There is less than $4000 profit in the Quick Pay account.
+Example Payout Request Below the $4,000 Current Profit Level:
+A trader on a $50K Quick Pay Funded Sim account earns $3,000 in profit. Their account balance is now $53,000. T he trader requests a $1,000 payout. Since the account’s current profit is below $4,000, the payout falls under the 50/50 profit split.
+This reduces the trading account balance from $53,000 to $52,000.
+The trader will receive 50% of $1000 = $500
+A mixed 80/20 and 50/50 payout profit split occurs if:
+There is more than $4000 profit in the Quick Pay account.
+And the payout leaves less than $4000 profit in the Quick Pay account.
+Example Payout Request From Above the $4,000 Current Profit Level to Below the $4,000 Current Profit Level :
+A trader on a $50K Quick Pay Funded Sim account earns $6,000 in profit. Their account balance is now $56,000. The trader requests a $3,000 payout. Since the account’s current profit is above $4,000 but the payout will leave the current profit below $4,000 , the payout is calculated from the 80/20 and 50/50 profit splits.
+This reduces the trading account balance from $56,000 to $53,000.
+The trader will receive 80% of $2000 = $1600
+The trader will receive 50% of $1000 = $500
+The trader will receive $1600 + $500 = $2100
+Quick Pay payouts on gross profits
+The Trailing Maximum Drawdown (TMD) for all Funded Sim Quick Pay accounts are calculated intraday.
+Please note, Quick Pay account balances and TMDs are based on gross profits.
+Gross profits are current profits plus payouts.
+When a user requests a payout, the TMD is calculated off of gross profits, not the net profits.
+So the TMD will continue to trail, even if users take payouts.
+Example
+For a trader with a $50k Quick Pay account
+Profit/Loss
+Balance
+TMD
+Payout request (request and net at 50/50 split)
+Day 0
+$0
+$50,000
+$48,000
+$0
+Day 1
++$500
+$50,500
+$48,500
+$500 ($250)
+Day 1 (after payout)
+$0
+$50,000
+$48,500
+$0
+Day 2
++$300
+$50,300
+$48,800
+$250 ($125)
+Day 2 (after payout)
+$0
+$50,050
+$48,800
+$0
+--------
+Payout requests
+Requests received before 5:30 pm CT will be processed within 24 hours (business days only).
+Full details on how to withdraw can be found here.
+The fees to the trader are as follows:
+International bank wire withdrawals: $15/withdrawal
+US bank wire withdrawals: Free
+L1 Crypto Withdrawals: $2.5/withdrawal + Estimated Gas Fees.
+L2 Crypto Withdrawals: Free.
+Click here to see the payment methods for your trading profits.
+If you have any issues withdrawing your profits from your Riseworks account, please contact Riseworks by going to their website here and contacting them through the chat box in the bottom right corner.
+Profits that are moved from a Quick Pay Funded Sim account to a Funded Live account will be subject to the Quick Pay payout policy at the point of transition to Funded Live.
+Was this article helpful?
+No
+Yes
+That’s Great!
+Thank you for your feedback
+Sorry! We couldn't be helpful
+Thank you for your feedback
+Your e-mail address
+*
+Let us know how can we improve this article! *
+Need more information
+Difficult to understand
+Inaccurate/irrelevant content
+Missing/broken link
+Select at least one of the reasons
+Please give your comments
+CAPTCHA verification is required.
+Cancel
+Send
+Feedback sent
+We appreciate your effort and will try to fix the article
+X
+0 of 0

@@ -1,0 +1,87 @@
+Futures Prime Platforms & Conditions
+Platforms, market data, commissions and instruments for Futures Prime.
+Table of contents
+Which Platforms Can I Use For Futures Prime?
+Futures Prime is supported on ATAS, Quantower, Volsys and R/Trader, plus Tradovate, NinjaTrader and TradingView.
+Some platforms are compatible but unsupported and need your own licence (Sierra Charts, MotiveWave, Jigsaw and Volfix). Mobile trading is available.
+Can I use Replikanto with NinjaTrader?
+Yes, but only Replikanto FlowBots – Compliance Edition is permitted. Standard, modified, or any other non-compliance versions of Replikanto are not allowed.
+How Do I Set Up My Platform?
+All Futures Prime trading is on a demo account.
+To connect, log in to your chosen platform with the demo credentials The Trading Pit sends you — your login/username, password and the server (system) to connect to.
+Use the connection guide for your platform, and the vendor’s own help for using the platform itself:
+Platform
+How To Connect
+Platform Help
+Tradovate
+How To Connect
+Platform Help
+NinjaTrader
+How To Connect
+Platform Help
+Quantower
+How To Connect
+Platform Help
+ATAS
+How To Connect
+Platform Help
+R/Trader Pro (Rithmic)
+How To Connect
+Platform Help
+TradingView
+How To Connect
+Platform Help
+Choosing your connection — when a platform asks which system or server to connect to, choose The Trading Pit’s connection.
+For Rithmic, select The Trading Pit gateway specifically — not a generic Rithmic system — so you’re routed to the correct servers with your demo account.
+If login fails — first check you’re using the correct credentials and server for your account; if it still fails, contact our Trader Support team.
+What About Market Data?
+With futures, pricing comes directly from the exchange in real time. Level 1 (top of book) is included free on all accounts; deeper market depth (Level 2) is a paid monthly subscription:
+Level 1 (Top of Book) — the highest bid and lowest ask, either across multiple exchanges (NBBO) or on a single exchange.
+Level 2 (Depth of Book) — multiple price levels of bids and asks. Available as Market-by-Price (aggregated volume at each price) or Market-by-Order (every individual order at each level).
+Which Provider Your Account Uses
+You choose your trading platform at purchase — the market data provider is set automatically from that platform, not chosen separately.
+By default accounts use DxFeed, except R/Trader Pro (which uses Rithmic) and Tradovate/NinjaTrader (which use Tradovate).
+Once your account is created, the platform and data provider can’t be changed.
+Pricing
+Data Package
+Price
+Covers
+Level 1 (Top of Book)
+Free
+Included by default on all accounts
+Level 2 — CME
+$16/mo
+Market depth for CME instruments — E-mini S&P 500, E-mini Nasdaq, Eurodollar and other popular CME contracts
+Level 2 — Comprehensive
+$41/mo
+Market depth for CME, NYMEX, COMEX and CBOT — Gold, Crude Oil, agricultural products, Dow Jones and equity index futures
+EUREX
+€25/mo
+FDAX (DAX Index), Euro Stoxx 50, Bund Futures and other leading European contracts
+Subscriptions are valid for all active accounts and expire at the end of the month .
+Professional vs Non-Professional
+When you subscribe in your dashboard, select Non-Professional status.
+Professional status is charged significantly higher fees.
+This applies to DxFeed, Rithmic and Tradovate data.
+What Are The Commissions?
+Standard and mini contracts: $0.50 per contract.
+Micro contracts: $0.20 per contract, except Micro Bitcoin at $0.50.
+Which Instruments Can I Trade?
+Futures Prime covers a wide range of instruments across several exchanges, including
+Currency futures (e.g. 6E, 6B, 6J).
+Energy (CL, NG, RB).
+Equity indices (ES, NQ, YM, RTY and their micros).
+Metals (GC, SI, HG).
+Agriculture (ZC, ZS, LE), interest rates.
+Micro crypto (MBT, MET).
+European instruments (DAX/FDAX, EURO STOXX 50/FESX, Euro-Bund/FGBL).
+How Many Contracts Can I Trade?
+There is no minimum.
+The maximum depends on your account size
+$50K up to 5 standard / 50 micro
+$100K up to 10 / 100
+$150K up to 15 / 150
+The lower your current balance, the fewer contracts you can trade.
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

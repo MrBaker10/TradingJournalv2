@@ -1,0 +1,52 @@
+All
+Articles
+Recent Searches
+Clear all
+No recent searches
+Popular Articles
+Articles
+View all
+Topics
+View all
+Tickets
+View all
+Sorry! nothing found for
+What are the rules for funded Funded Sim and Funded Live traders?
+Modified on Sun, 31 May at 12:48 PM
+TradeDay tries its best to remain consistent across the Evaluation, Funded Sim, and Funded Live accounts.
+When you pass the evaluation, you are still required to trade within our permitted times, permitted products, and permitted position size guidelines, but accidental breaches are not considered a rule violation (only traders continually abusing these guidelines will lose their account).
+These rules apply to both the Quick Pay and Fast Pass funded Sim and funded live traders.
+Rule 1: Do not hit or exceed the maximum drawdown . This is the maximum amount you can lose (the limit is calculated according to the evaluation you have purchased, EOD, or Intra Day)
+Rule 2: Funded Traders are not permitted to trade within 2% of a price limit. Traders in breach of this policy will lose their funded account. For further details, click here .
+Important Notes:
+All Fast Pass Funded Sim accounts are set up with End of Day (EOD) Drawdowns.
+All Quick Pay Funded Sim accounts will have an intraday drawdown , regardless of the drawdown had on the evaluation.
+There is an additional policy funded live traders need to be aware of: Slippage risk management rule policy on reducing position limits
+If you lose your funded trading account with a positive balance, any profits you have will be returned to you (after the profit share with TradeDay), except for the following:
+All profits from trading tier 1 data releases, trading in breach of our permitted times.
+Traders found to be in breach of our prohibited trade practices.
+Traders found to be continuously abusing our permitted times, permitted products, or permitted position size guidelines.
+Profits earned in a simulated account.
+Was this article helpful?
+No
+Yes
+That’s Great!
+Thank you for your feedback
+Sorry! We couldn't be helpful
+Thank you for your feedback
+Your e-mail address
+*
+Let us know how can we improve this article! *
+Need more information
+Difficult to understand
+Inaccurate/irrelevant content
+Missing/broken link
+Select at least one of the reasons
+Please give your comments
+CAPTCHA verification is required.
+Cancel
+Send
+Feedback sent
+We appreciate your effort and will try to fix the article
+X
+0 of 0

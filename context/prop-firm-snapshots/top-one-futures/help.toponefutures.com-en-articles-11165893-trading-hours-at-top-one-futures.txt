@@ -1,0 +1,41 @@
+Trading Hours at Top One Futures
+The trading session schedule at Top One Futures, the daily break, and the automatic close-out of all trades at 4:10 PM EST.
+Table of contents
+At Top One Futures, it is essential to understand the trading hours and the automatic close-out policy to trade responsibly and within platform rules. These rules apply to all account types and instruments , including cryptocurrencies, ensuring uniform compliance across the platform.
+When can I trade futures?
+You can place trades between 6:00 PM EST and 4:10 PM EST the next day , Monday through Friday. Weekend trading is strictly prohibited, and all markets remain closed during this period. There is a daily 1-hour break from 5:00 PM to 6:00 PM EST , during which trading is paused. After the break, the next session opens.
+Session
+Opens
+Closes
+Monday session
+6:00 PM EST on Sunday
+4:10 PM EST on Monday
+Tuesday session
+6:00 PM EST on Monday
+4:10 PM EST on Tuesday (and so on through the week)
+Final session of the week
+6:00 PM EST on Thursday
+4:00 PM EST on Friday
+Weekend
+Markets closed
+Markets reopen Sunday at 6:00 PM EST
+Are trades automatically closed at 4:10 PM EST?
+Yes. All open trades are automatically closed by 4:10 PM EST every trading day. This is part of Top One Futures' strict risk management rules. If a trader does not manually close their positions before 4:10 PM EST, the system will forcibly liquidate all open positions at that time.
+Can I keep trading after 4:10 PM EST?
+No. From 4:10 PM to 6:00 PM EST, trading is paused. You can resume trading when the next session opens at 6:00 PM EST.
+Why does this rule exist?
+By enforcing the automatic close-out of trades at 4:10 PM EST, Top One Futures helps traders avoid overnight risk and maintain discipline. This rule supports safe, intraday trading practices and protects both the trader and the firm from unexpected market volatility.
+Related articles
+Can I Hold Trades Overnight?
+Can I Trade News?
+Minimum Trade Time Rule Explained
+Inactivity Rule Explained
+Related Articles
+Can I Hold Trades Overnight?
+Minimum Trade Time Rule Explained
+Prohibited Trading Practices
+X-Ultra – Other Trading Rules (Not available for new purchases)
+X-Daily Spark – Other Trading Rules
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

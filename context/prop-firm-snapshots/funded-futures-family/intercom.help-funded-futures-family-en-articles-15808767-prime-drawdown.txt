@@ -1,0 +1,54 @@
+Prime Drawdown
+September 8, 2026
+Table of contents
+End of Day Drawdown
+All Prime funded accounts utilize a End of Day Drawdown system to correctly calculate the Max Drawdown.
+Your highest end of day account balance is recorded after each trading day.
+The Maximum Loss Limit trails upward as your account grows.
+After exceeding the Initial Trail Balance, the Max Drawdown locks and no longer moves.
+Account Size
+Max Drawdown
+Initial Trailing Balance
+Locked Drawdown Balance
+$25,000
+$1,000
+$26,000
+$25,000
+$50,000
+$2,000
+$52,000
+$50,000
+$100,000
+$3,000
+$103,000
+$100,000
+$150,000
+$4,500
+$154,500
+$150,000
+How End-of-Day Drawdown Is Calculated
+The formula is:
+End-of-Day Drawdown = Highest End-of-Day Balance − Maximum Drawdown
+The highest end-of-day account balance is determined using your account's closing balance at the end of each trading session.
+This means intraday gains and losses do not affect your drawdown. The drawdown is only recalculated once the trading day has closed.
+If your account balance falls below the drawdown threshold, the account is considered breached.
+Understanding End-of-Day Drawdown
+The End-of-Day Drawdown is a risk management feature that adjusts your drawdown based on your highest closing account balance at the end of each trading day.
+Once the drawdown threshold increases after a higher closing balance, it never moves back down . After the drawdown reaches the account's starting balance (the static threshold), it locks permanently and no longer trails upward, regardless of future profits.
+What Happens After a Payout?
+One of the most common questions traders ask is:
+"What happens to my drawdown after I receive a payout?"
+The answer:
+Your Drawdown does not reset after a payout .
+Once your drawdown threshold has moved higher, it remains locked at that level.
+A payout reduces your account balance, but it does not reduce your drawdown threshold.
+This means your remaining drawdown cushion may become smaller after receiving a payout.
+Related Articles
+Premier+ Drawdown
+Velocity Drawdown
+Straight to Funded(S2F) Drawdown
+S2F Accelerate Plan Drawdown
+Base Plan Drawdown
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

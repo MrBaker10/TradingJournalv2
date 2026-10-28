@@ -1,0 +1,69 @@
+Elite Daily V2 – Daily Loss Limit (DLL) - Evaluation Phase
+In this article you can find more about the Daily Loss Limit during the Evaluation Phase of the Elite Daily V2 accounts
+Table of contents
+The Daily Loss Limit (DLL) is a daily risk protection rule designed to encourage responsible risk management and disciplined trading. The DLL applies during both the evaluation and funded phases of the Elite Daily plan. In this article you can find the exact Daily Loss Limit amounts per account size for the Evaluation Phase .
+💡 Prefer to trade without a Daily Loss Limit? You can select the No Daily Loss Limit add-on at checkout for about 30% more than the base account price. The add-on can only be chosen during the initial checkout, not afterwards or when paying for a reset. Learn more: No Daily Loss Limit Add-On .
+Important disclaimer: the Daily Loss Limit is a risk rule, not a stop loss . Due to market volatility, slippage, execution speed and market gaps it may trigger later or earlier than expected, or execute at a different price. Always use proper hard stop losses directly on your trades. Top One Futures is not responsible for losses exceeding the Daily Loss Limit.
+Daily Loss Limit on Evaluation Phase by Account Size
+Account size
+Daily Loss Limit
+$25,000
+$500
+$50,000
+$1,000
+$100,000
+$1,250
+$150,000
+$1,850
+How Is It Calculated?
+The Daily Loss Limit is calculated using your previous trading day's closing balance . Example for a $25K account:
+Step
+Amount
+Daily Loss Limit
+$500
+Previous day closing balance
+$26,000
+Breach level for the current trading day
+$26,000 - $500 = $25,500
+If your account equity or balance drops to $25,500 during the trading day, this is considered a DLL violation.
+What Counts Toward the DLL?
+The following are included in the calculation:
+Realized losses
+Unrealized/floating losses
+Commissions and fees
+Both balance and equity are monitored.
+Daily Reset
+The DLL resets once per trading day based on the previous trading day's closing balance. After the reset, a new DLL threshold is calculated and the account receives a new daily risk limit.
+What Happens If the DLL Is Violated?
+Account type
+Result
+Evaluation accounts
+Violating the DLL during evaluation results in a pause; your account will automatically unpause the next trading day.
+Funded accounts
+Violating the DLL on a funded account results in a soft breach: trading is paused for the remainder of the trading day and may resume the next trading day, provided the account has not violated the Max Trailing Drawdown.
+Key Notes
+DLL applies to both evaluation and funded accounts
+DLL resets daily using the previous day's closing balance
+Both realized and unrealized losses count
+DLL is separate from the End of Day Trailing Drawdown
+Summary
+Daily risk protection rule
+Based on previous day closing balance
+Includes floating losses
+Evaluation breach = paused until the next trading day
+Funded breach = daily trading pause
+Related articles
+Elite Daily V2 – Daily Loss Limit (DLL) - Funded Phase
+Elite Daily V2 – Max Loss Limit (MLL)
+Elite Daily V2 – Profit Target (Evaluation)
+Elite DAILY V2 - Overview
+Daily Drawdown: What You Need to Know
+Related Articles
+Elite Daily V2 – Daily Loss Limit (DLL) - Funded Phase
+Elite Daily V2 – Max Loss Limit (MLL)
+Elite Daily V2 – Profit Target (Evaluation)
+Elite ACCESS – Daily Loss Limit (DLL)
+Elite ACCESS Intraday - Daily Loss Limit (DLL)
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

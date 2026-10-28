@@ -1,0 +1,24 @@
+Futures Prime Rewards
+How and when you get paid on Futures Prime — reward share, eligibility and limits.
+Table of contents
+What Is The Futures Prime Reward Policy?
+On Futures Prime you can receive a reward of up to 80% of the notional profit you generate in the Earning Phase.
+Eligibility
+First reward: complete 5 profitable trading days, each with at least $150 profit, before your first reward request.
+Second and later rewards: generate positive net profit of at least $0.01 since your last payout, and complete 5 new trading days each with at least $150 profit.
+Note: the daily profit threshold was lowered from $200 to $150 per day on 27 July 2026; all other conditions are unchanged.
+How Much You Can Withdraw
+You can request up to 50% of your current profit buffer, capped by account size:
+Account size
+Maximum withdrawal
+$50,000
+$2,500
+$100,000
+$3,500
+$150,000
+$5,000
+How Are Rewards Paid?
+Withdrawal methods, currencies and reward fees follow The Trading Pit’s general reward policy — rewards are paid by bank wire or cryptocurrency. See our general Rewards information for currencies and any transaction fees.
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents
