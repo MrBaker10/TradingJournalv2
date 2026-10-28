@@ -1,6 +1,6 @@
 # Spec: Money scope in one module
 
-Status: ready-for-agent
+Status: done
 
 Origin: architecture review of 2026-10-22, candidates 1 and 2. Terms: `GLOSSARY.md`
 (Account scope, Real account, Practice account, Copy trade, Missed setup).

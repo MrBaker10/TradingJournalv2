@@ -50,7 +50,8 @@ Historical notes do not override current specifications. Decisions are append-on
 - **Currency:** price-derived P&L settles in `instruments.profit_currency`; convert
   with the trade-date ECB rate. The P&L override is already USD.
 - **Accounts:** multiply money by assigned real-account count exactly once, never
-  counts. Use `src/domain/accounts.ts` and `src/db/queries/scope.ts`.
+  counts. `src/db/queries/scope.ts` owns every money and visibility expression;
+  take them from there.
 - **Practice:** exclude from all combined figures, including progress. Practice data
   is visible through explicit single-account selection; do not infer practice by name.
 - **Missed setups:** `trades.taken = false`; feed streak/badges, never P&L, win rate or R.

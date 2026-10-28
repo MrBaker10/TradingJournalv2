@@ -48,9 +48,9 @@ export interface DateRange {
   to?: IsoDate;
 }
 
-// The money multiplier from src/domain/accounts.ts, in SQL because the
-// aggregation runs in the database: how many real accounts this trade was
-// copy-traded onto. is_practice = false is the first thing it filters.
+// The money multiplier: how many real accounts this trade was copy-traded
+// onto. In SQL because the aggregation runs in the database;
+// is_practice = false is the first thing it filters.
 export const realAccountCount = sql<number>`(
   select count(*)::int
   from ${tradeAccounts}
@@ -67,8 +67,7 @@ export const allAccountCount = sql<number>`(
 )`;
 
 // A trade "belongs" to a real (non-practice) account if at least one of its
-// assigned accounts has is_practice = false. Mirrors
-// contributesToMoneyAggregate in src/domain/accounts.ts, but as a set
+// assigned accounts has is_practice = false: `realAccountCount > 0` as a set
 // membership check rather than a money multiplier — this decides
 // visibility, not a P&L figure.
 export const hasRealAccount = sql<boolean>`exists (
