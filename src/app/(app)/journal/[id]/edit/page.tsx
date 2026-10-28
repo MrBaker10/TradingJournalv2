@@ -12,6 +12,7 @@ import {
   listConfluenceGroups,
   listMistakeTags,
 } from "@/db/queries/trades";
+import { isDemoUsername } from "@/domain/demo";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { strategyOptions } from "@/lib/trades/strategy-options";
 
@@ -77,6 +78,7 @@ export default async function EditTradePage({ params }: EditTradePageProps) {
         commissionRates={commissionRates}
         confluenceGroups={confluenceGroups}
         mistakeTags={mistakeTags}
+        screenshotUploads={!isDemoUsername(user.username)}
       />
     </div>
   );

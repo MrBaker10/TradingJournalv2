@@ -9,6 +9,7 @@ import { listChecklistItems } from "@/db/queries/checklist";
 import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
 import { listProgramOptions } from "@/db/queries/prop-firms";
+import { isDemoUsername } from "@/domain/demo";
 import { worstRuleState } from "@/domain/rule-status";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { loadRuleStatus } from "@/lib/prop-firms/rule-status";
@@ -87,6 +88,7 @@ export default async function SettingsPage() {
         <SecuritySection
           username={user.displayUsername ?? user.username}
           twoFactorEnabled={user.twoFactorEnabled}
+          demo={isDemoUsername(user.username)}
         />
       </SettingsSection>
     </SettingsAccounts>

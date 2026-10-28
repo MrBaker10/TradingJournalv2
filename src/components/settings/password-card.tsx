@@ -13,7 +13,12 @@ const SUCCESS_HOLD_MS = 800;
 
 type Field = "currentPassword" | "newPassword" | "confirmPassword";
 
-export function PasswordCard() {
+export function PasswordCard({
+  locked = false,
+}: {
+  /** The shared demo account: the row shows, its action does not. */
+  locked?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<Field, string>>({
     currentPassword: "",
@@ -76,7 +81,8 @@ export function PasswordCard() {
       title="Password"
       hint="Changing it signs out every other device."
       action={
-        !open && (
+        !open &&
+        !locked && (
           <Button
             type="button"
             variant="outline"

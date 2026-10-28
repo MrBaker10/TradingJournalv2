@@ -70,6 +70,8 @@ export interface TradeFormData {
   }[];
   confluenceGroups: ConfluenceTagGroup[];
   mistakeTags: { id: number; label: string }[];
+  /** False on the shared demo account, where visitors would see each other's images. */
+  screenshotUploads: boolean;
 }
 
 export interface StepProps {

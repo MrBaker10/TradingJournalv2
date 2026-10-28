@@ -132,7 +132,10 @@ export function TradeForm(props: TradeFormProps) {
   const echo = stepEcho(state, attached);
   const last = step === STEPS.length - 1;
 
-  usePasteImages(step === EVIDENCE_STEP && !saved, addScreenshots);
+  usePasteImages(
+    step === EVIDENCE_STEP && !saved && props.screenshotUploads,
+    addScreenshots,
+  );
 
   function update(patch: Partial<TradeFormState>) {
     setState((prev) => ({ ...prev, ...patch }));
@@ -480,6 +483,7 @@ export function TradeForm(props: TradeFormProps) {
                     screenshots={screenshots}
                     pending={attaching}
                     disabled={disabled}
+                    uploads={props.screenshotUploads}
                     error={screenshotError}
                     onAdd={addScreenshots}
                     onRemove={removeScreenshot}

@@ -1,8 +1,12 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import {
+  APIError,
+  createAuthMiddleware,
+  getSessionFromCtx,
+} from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
-import { twoFactor, username } from "better-auth/plugins";
+import { twoFactor, USERNAME_ERROR_CODES, username } from "better-auth/plugins";
 import { db } from "../../db/index.ts";
 import {
   authAccounts,
@@ -11,8 +15,14 @@ import {
   authVerifications,
 } from "../../db/schema/auth.ts";
 import { users } from "../../db/schema/users.ts";
+import { isDemoUsername } from "../../domain/demo.ts";
 import { env } from "../env.ts";
 import { deleteUserFiles, listUserStorageKeys } from "./delete-user-files.ts";
+import {
+  DEMO_REFUSED_MESSAGE,
+  refusedOnDemo,
+  signsUpAsDemo,
+} from "./demo-guard.ts";
 import { placeholderEmail } from "./placeholder-email.ts";
 import { deploymentOrigins } from "./trusted-origins.ts";
 
@@ -111,6 +121,22 @@ export const auth = betterAuth({
 
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
+      // The demo name is reserved: the same answer as any taken username, so
+      // the form does not tell that it is special.
+      if (signsUpAsDemo(ctx.path, ctx.body)) {
+        throw APIError.from(
+          "BAD_REQUEST",
+          USERNAME_ERROR_CODES.USERNAME_IS_ALREADY_TAKEN,
+        );
+      }
+      // The shared demo account keeps its password, two-factor, sessions and
+      // existence, whatever a visitor sends (./demo-guard.ts).
+      if (refusedOnDemo(ctx.path)) {
+        const session = await getSessionFromCtx(ctx);
+        if (session && isDemoUsername(String(session.user.username ?? ""))) {
+          throw new APIError("FORBIDDEN", { message: DEMO_REFUSED_MESSAGE });
+        }
+      }
       // Deleting an account always needs the password. Without one Better
       // Auth would accept any session younger than a day.
       if (ctx.path === "/delete-user" && !ctx.body?.password) {

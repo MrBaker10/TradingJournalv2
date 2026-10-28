@@ -12,7 +12,12 @@ import { ROW_ACTION, SettingsRow } from "./settings-row";
 // The danger zone of Design.md §3.8, set apart in `negative`: the first click
 // asks for the password, the second deletes. No window.confirm. The button is
 // outlined, never filled red: a red surface means a loss in this app.
-export function DeleteAccountCard() {
+export function DeleteAccountCard({
+  locked = false,
+}: {
+  /** The shared demo account: the row shows, its action does not. */
+  locked?: boolean;
+}) {
   const router = useRouter();
   const [armed, setArmed] = useState(false);
   const [password, setPassword] = useState("");
@@ -51,7 +56,8 @@ export function DeleteAccountCard() {
       title="Delete account"
       hint="Removes your account, every trade and missed setup, your accounts, ledger, notes, badges and screenshots. This cannot be undone — export your journal first if you want to keep it."
       action={
-        !armed && (
+        !armed &&
+        !locked && (
           <Button
             type="button"
             variant="outline"
