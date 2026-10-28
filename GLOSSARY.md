@@ -67,6 +67,10 @@ _Avoid_: Demo account, backtest account
 **Copy trade**:
 A single trade assigned to several accounts because the same execution ran on each.
 
+**Account scope**:
+The accounts a figure covers: all real accounts, or the one account selected in the switcher.
+_Avoid_: Filter, view
+
 **Default account**:
 The account preselected for new trades.
 

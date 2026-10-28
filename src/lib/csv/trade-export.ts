@@ -77,7 +77,7 @@ function quantity(value: string | null): string {
  * is no risk to divide by.
  *
  * This is the per-trade value, not a figure — the same distinction
- * `tradePnlCents` in src/db/queries/trades.ts draws. A trade copy-traded onto
+ * `tradePnlCents` in src/db/queries/scope.ts draws. A trade copy-traded onto
  * three accounts contributes three times to net P&L, but it is one row here
  * with one `pnl`. Summing this column is therefore not the journal's Net P&L;
  * the `accounts` column is what carries the multiplier.

@@ -222,7 +222,7 @@ Non-negotiable, because this is a P&L tool:
 - **Money aggregates multiply by assigned account count, count aggregates do not.** A
   trade on three accounts contributes three times to net P&L and once to trades logged.
   Getting this wrong misstates P&L silently, so every aggregate query states which of
-  the two it is, and `src/domain/accounts.ts` owns the multiplier.
+  the two it is, and `src/db/queries/scope.ts` owns the multiplier.
 - **Multiply exactly once.** The rule above says *that* money multiplies, not *what*
   does the multiplying. Two things can, and only one of them may:
   - the **expression**, when the query groups by something other than the account —

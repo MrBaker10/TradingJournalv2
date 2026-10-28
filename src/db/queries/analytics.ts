@@ -23,19 +23,16 @@ import {
   trades,
 } from "../schema/trades.ts";
 import {
+  assignmentInScope,
+  assignmentMoney,
   type DateRange,
   moneyContribution,
   type QueryScope,
   scopeWhere,
   toNumber,
-} from "./scope.ts";
-import {
-  commissionDisplayCents,
-  holdMinutes,
-  rMultipleSortKey,
-  tradeDisplayCents,
   tradePnlCents,
-} from "./trades.ts";
+} from "./scope.ts";
+import { holdMinutes, rMultipleSortKey } from "./trades.ts";
 
 // The eleven analytics dimensions of project-overview.md §F, each as one
 // GROUP BY, all eleven in a single UNION ALL statement. One round trip, no
@@ -166,29 +163,17 @@ export async function getDimensionBreakdowns(
   }
 
   // "By account" fans the trade out over its assigned accounts, so the
-  // grouping itself is the multiplier and the money must not be multiplied a
-  // second time. With no account selected only real accounts are joined; a
-  // selected account is the one path allowed to read a practice account, and
-  // it yields exactly one row.
-  // Net of what that one assignment paid, not of the whole copy-trade.
+  // grouping itself is the multiplier: assignment money, never multiplied a
+  // second time, over the assignments the scope covers (scope.ts).
   const accountKey = DIMENSION_KEYS.account;
-  const accountContribution = sql<number | null>`(
-    ${tradeDisplayCents(scope.currency)}
-      - ${commissionDisplayCents(sql`coalesce(${tradeAccounts.commission}, 0)`, scope.currency)}
-  )`;
   const accountBranch = executor
-    .select(dimensionFields("account", accountKey, accountContribution))
+    .select(dimensionFields("account", accountKey, assignmentMoney(scope)))
     .from(trades)
     .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
     .innerJoin(tradeAccounts, eq(tradeAccounts.tradeId, trades.id))
     .innerJoin(
       accounts,
-      and(
-        eq(accounts.id, tradeAccounts.accountId),
-        scope.selectedAccountId === null
-          ? eq(accounts.isPractice, false)
-          : eq(accounts.id, scope.selectedAccountId),
-      ),
+      and(eq(accounts.id, tradeAccounts.accountId), assignmentInScope(scope)),
     )
     .where(where)
     .groupBy(accountKey);

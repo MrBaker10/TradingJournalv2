@@ -17,7 +17,7 @@ import {
   centsToAmount,
   type StoredCommission,
 } from "../../domain/commission.ts";
-import type { AccountCurrency, RateCurrency } from "../../domain/fx.ts";
+import type { AccountCurrency } from "../../domain/fx.ts";
 import { calculateUsdPnl } from "../../domain/pnl.ts";
 import { dollarsToCents } from "../../lib/money.ts";
 import { createSignedUploadUrl } from "../../lib/uploads/signed-url.ts";
@@ -35,7 +35,16 @@ import {
   tradeScreenshots,
   trades,
 } from "../schema/trades.ts";
-import { rateOnSql } from "./fx.ts";
+import { profitRate, rateOnTradeDate } from "./fx.ts";
+import {
+  commissionDisplayCents,
+  hasRealAccount,
+  rowCommission,
+  rowMoney,
+  scopeConditions,
+  type TradeVisibility,
+  tradeDisplayCents,
+} from "./scope.ts";
 import type { StrategyContent } from "./strategies.ts";
 
 export const JOURNAL_PAGE_SIZE = 25;
@@ -156,8 +165,8 @@ export interface JournalTradeRow {
   /** The realised P&L in USD cents — the stored currency, which R is read from. */
   pnlCents: number | null;
   /**
-   * The trade's **net** P&L in the view's display currency, from the same SQL
-   * expression the money figures sum (`tradeNetDisplayCents`), so a row
+   * The trade's **net** P&L in the view's display currency: `rowMoney` in
+   * scope.ts, the same amount the money figures sum, so a row
    * matches its total: with an account selected, that account's gross minus
    * its commission; with all accounts, the sum over the real accounts it ran
    * on (decided 2026-09-28, commissions).
@@ -202,37 +211,6 @@ export interface JournalTradesResult {
   /** The trade dates of `rows`, oldest first. */
   days: JournalDayValues[];
   hiddenPracticeCounts: JournalHiddenPracticeCount[];
-}
-
-// A trade "belongs" to a real (non-practice) account if at least one of its
-// assigned accounts has is_practice = false. Mirrors
-// contributesToMoneyAggregate in src/domain/accounts.ts, but as a set
-// membership check rather than a money multiplier — this decides list
-// visibility, not a P&L figure.
-export const hasRealAccount = sql<boolean>`exists (
-  select 1 from ${tradeAccounts}
-  join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
-  where ${tradeAccounts.tradeId} = ${trades.id} and ${accounts.isPractice} = false
-)`;
-
-/**
- * Visibility of one trade while a single account is selected.
- *
- * A taken trade shows when it is assigned to that account. A **missed setup
- * always shows**: it carries no account at all — `src/domain/trades.ts` only
- * requires one when `taken = true` — so there is nothing to match it against,
- * and Design-v1.md §4.9 calls it an equal entry, not a lesser kind.
- *
- * This used to be an inner join on `trade_accounts`, which silently dropped
- * every missed setup the moment an account was selected. The "all accounts"
- * branch had the rule right; this one had forgotten it. Found in review.
- */
-export function isVisibleForAccount(accountId: number) {
-  return sql<boolean>`(${trades.taken} = false or exists (
-    select 1 from ${tradeAccounts}
-    where ${tradeAccounts.tradeId} = ${trades.id}
-      and ${tradeAccounts.accountId} = ${accountId}
-  ))`;
 }
 
 // One JSON array of the accounts a trade is assigned to, built with a
@@ -365,14 +343,6 @@ export const holdMinutes = sql<string | null>`(
   end
 )`;
 
-// 1 for an instrument that settles in USD, else the rate of its profit
-// currency on the trade date. Needs the instruments join in scope.
-const profitRate = sql`(
-  case when ${instruments.profitCurrency} = 'USD' then 1
-    else ${rateOn(sql`${instruments.profitCurrency}`)}
-  end
-)`;
-
 // Sort key for "R-Multiple": for a taken trade this mirrors calculatePnl in
 // src/domain/pnl.ts exactly (COALESCE the override, else derive from prices),
 // simplified to a plain dollar ratio since dividing by cents or by dollars
@@ -414,225 +384,9 @@ export const rMultipleSortKey = sql<number | null>`(
  */
 export const profitRateText = sql<string | null>`(
   case when ${instruments.profitCurrency} = 'USD' then null
-    else ${rateOn(sql`${instruments.profitCurrency}`)}::text
+    else ${rateOnTradeDate(sql`${instruments.profitCurrency}`)}::text
   end
 )`;
-
-// Realised P&L in integer cents, mirroring calculatePnl in
-// src/domain/pnl.ts: COALESCE the user's override (stored in dollars), else
-// derive it from the prices, the instrument's point value and the contract
-// count. `floor(x + 0.5)` is exactly what Math.round does inside
-// dollarsToCents, so the two agree cent for cent — the parity test in
-// __tests__/trades.test.ts pins that against real NUMERIC arithmetic.
-//
-// NULL wherever there is no realised P&L (a missed setup, a trade without an
-// exit): it then drops out of a SUM and out of the winner/loser split instead
-// of reading as a flat zero. Needs the instruments join in scope.
-//
-// Points × point value × quantity is in the instrument's profit currency
-// (ftmo-cfd-instruments): USDJPY settles in yen, GER40.cash in euro. It is
-// multiplied by that currency's rate on the trade date before the one
-// rounding, like `profitRateVsUsd` in calculatePnl. The override is USD and is
-// never converted. With no rate stored at all the derived value is NULL and
-// drops out rather than counting yen as dollars.
-//
-// This is the per-trade value, not a figure. Whether it multiplies by the
-// assigned real accounts is the caller's decision — see
-// src/db/queries/dashboard.ts.
-export const tradePnlCents = sql<number | null>`(
-  case
-    when ${trades.taken} = false then null
-    when ${trades.exitPrice} is null or ${trades.contracts} is null then null
-    else floor(
-      coalesce(
-        ${trades.pnlOverride},
-        case when ${trades.direction} = 'long'
-          then (${trades.exitPrice} - ${trades.entryPrice})
-          else (${trades.entryPrice} - ${trades.exitPrice})
-        end * ${instruments.pointValue} * ${trades.contracts}
-          * ${profitRate}
-      ) * 100 + 0.5
-    )
-  end
-)::bigint`;
-
-/**
- * The rate a conversion uses for this trade: `rateOnSql` on its trade date.
- * `job:fx` and saving a trade keep the table filled.
- */
-function rateOn(currency: RateCurrency | SQL): SQL {
-  return rateOnSql(currency, sql`${trades.tradeDate}`);
-}
-
-/**
- * One trade's realised P&L in the display currency, in integer cents — what
- * every money figure sums once a view is shown in an account currency
- * (decided 2026-09-24/25, display-currency). In USD it **is** `tradePnlCents`.
- *
- * In a foreign currency:
- * - a trade whose file reported its P&L in that currency — `pnl_source` set,
- *   and the account of its import batch kept in it — shows exactly that
- *   amount, the broker's own figure;
- * - anything else (logged by hand, P&L edited by hand, copy-traded from a USD
- *   account) is its USD P&L divided by the rate of its trade date.
- *
- * `round()` on `numeric` rounds half away from zero, the same rule as
- * `toAccountCents` in src/domain/fx.ts, which the parity test in
- * __tests__/display-currency.test.ts pins against real NUMERIC arithmetic.
- * The sign follows `tradePnlCents`, so a winner/loser filter on that stays
- * right in every currency.
- */
-export function tradeDisplayCents(
-  currency: AccountCurrency = "USD",
-): SQL<number | null> {
-  if (currency === "USD") return tradePnlCents;
-  return sql<number | null>`(
-    case
-      when ${tradePnlCents} is null then null
-      when ${trades.pnlSource} is not null and (
-        select a.currency from import_batches b
-        join accounts a on a.id = b.account_id
-        where b.id = ${trades.importBatchId}
-      ) = ${currency}
-        then round(${trades.pnlSource} * 100)
-      else round(${tradePnlCents} / ${rateOn(currency)})
-    end
-  )::bigint`;
-}
-
-// --- Commission (decided 2026-09-28, commissions) -------------------------
-// Stored per assignment in USD dollars (`trade_accounts.commission`). A money
-// figure is net of it; `tradePnlCents`, R and points stay gross. Null is
-// unknown and sums as nothing.
-//
-// Every sum below adds **per-assignment amounts already rounded** to display
-// cents, never rounds a sum. In a foreign currency the two differ by a cent
-// now and then, and only this way do the "By account" rows, a row's
-// breakdown and the combined figure add up to one another.
-
-/**
- * A USD dollar amount of commission as integer cents of the display currency.
- * Converted with the trade date's rate, like a P&L no file reported in that
- * currency. Commission is whole cents in USD, so USD needs no rounding rule.
- */
-export function commissionDisplayCents(
-  usdDollars: SQL,
-  currency: AccountCurrency = "USD",
-): SQL<number> {
-  if (currency === "USD") return sql<number>`round(${usdDollars} * 100)`;
-  return sql<number>`round(${usdDollars} * 100 / ${rateOn(currency)})`;
-}
-
-/** The commission of the assignment row in scope, display cents; 0 unknown. */
-function assignmentCommissionCents(currency: AccountCurrency): SQL<number> {
-  return commissionDisplayCents(
-    sql`coalesce(${tradeAccounts.commission}, 0)`,
-    currency,
-  );
-}
-
-/** Σ commission of the trade's real (non-practice) accounts, display cents. */
-export function realCommissionCents(
-  currency: AccountCurrency = "USD",
-): SQL<number> {
-  return sql<number>`(
-    select coalesce(sum(${assignmentCommissionCents(currency)}), 0)
-    from ${tradeAccounts}
-    join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
-    where ${accounts.isPractice} = false
-      and ${tradeAccounts.tradeId} = ${trades.id}
-  )`;
-}
-
-/** What one account paid for the trade, display cents; 0 when unknown. */
-export function accountCommissionCents(
-  accountId: number,
-  currency: AccountCurrency = "USD",
-): SQL<number> {
-  return sql<number>`coalesce((
-    select ${assignmentCommissionCents(currency)}
-    from ${tradeAccounts}
-    where ${tradeAccounts.tradeId} = ${trades.id}
-      and ${tradeAccounts.accountId} = ${accountId}
-  ), 0)`;
-}
-
-/** Σ commission of every account of the trade, practice ones included. */
-function allCommissionCents(currency: AccountCurrency): SQL<number> {
-  return sql<number>`(
-    select coalesce(sum(${assignmentCommissionCents(currency)}), 0)
-    from ${tradeAccounts}
-    where ${tradeAccounts.tradeId} = ${trades.id}
-  )`;
-}
-
-// How many accounts of each kind the trade ran on. Spelled out here rather
-// than taken from scope.ts, which imports this file.
-const realAssignmentCount = sql<number>`(
-  select count(*)::int
-  from ${tradeAccounts}
-  join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
-  where ${accounts.isPractice} = false
-    and ${tradeAccounts.tradeId} = ${trades.id}
-)`;
-
-const allAssignmentCount = sql<number>`(
-  select count(*)::int
-  from ${tradeAccounts}
-  where ${tradeAccounts.tradeId} = ${trades.id}
-)`;
-
-/**
- * The commission a row nets out, display cents: the selected account's, or
- * with all accounts the sum over the real ones — over every account of a
- * trade that ran on practice accounts only. `tradeNetDisplayCents` subtracts
- * exactly this, and the detail page shows it as the breakdown, so the two
- * cannot disagree by a rounding.
- */
-export function tradeCommissionDisplayCents(
-  selectedAccountId: number | null,
-  currency: AccountCurrency = "USD",
-): SQL<number> {
-  if (selectedAccountId !== null) {
-    return accountCommissionCents(selectedAccountId, currency);
-  }
-  return sql<number>`(
-    case when ${realAssignmentCount} > 0
-      then ${realCommissionCents(currency)}
-      else ${allCommissionCents(currency)}
-    end
-  )`;
-}
-
-/** How many executions a row's gross stands for: the same accounts as above. */
-function tradeAccountMultiplier(selectedAccountId: number | null): SQL<number> {
-  if (selectedAccountId !== null) return sql<number>`1`;
-  return sql<number>`(
-    case when ${realAssignmentCount} > 0
-      then ${realAssignmentCount}
-      else greatest(${allAssignmentCount}, 1)
-    end
-  )`;
-}
-
-/**
- * One trade's net P&L as a row shows it, display cents — the same number the
- * money figures add up for it, so a row matches its total.
- *
- * With an account selected: that account's gross minus its commission. With
- * all accounts: the sum over the real accounts it ran on. A trade on practice
- * accounts only (reachable by id, or through the reveal banner) has no real
- * account to sum over; it shows the sum over the accounts it does have.
- */
-export function tradeNetDisplayCents(
-  selectedAccountId: number | null,
-  currency: AccountCurrency = "USD",
-): SQL<number | null> {
-  return sql<number | null>`(
-    ${tradeDisplayCents(currency)} * ${tradeAccountMultiplier(selectedAccountId)}
-      - ${tradeCommissionDisplayCents(selectedAccountId, currency)}
-  )::bigint`;
-}
 
 // Ownership is not in here: queryTradeRows applies it to every caller, so it
 // can't be forgotten by a new one.
@@ -665,31 +419,6 @@ function buildOrderBy(filters: JournalFilters) {
   // stop price, no exit yet) sort to the bottom instead of jumping to the top
   // on a descending sort, which is Postgres's default for DESC.
   return [sql`${rMultipleSortKey} ${direction} nulls last`, desc(trades.id)];
-}
-
-/**
- * Which trades a query may see, on top of the ownership filter.
- *
- * `"scoped"` is the list view: the account switcher decides, and with "all
- * accounts" a trade that lives only on practice accounts drops out (it comes
- * back through the reveal banner).
- *
- * `"owner"` is one trade addressed by its own id. The switcher must not reach
- * it: a practice-only trade opened by URL has to render, or
- * project-overview.md's "Nothing disappears silently" would break on the one
- * page that is supposed to show everything.
- */
-type TradeVisibility = "scoped" | "owner";
-
-function visibilityCondition(
-  visibility: TradeVisibility,
-  selectedAccountId: number | null,
-): SQL | undefined {
-  if (visibility === "owner") return undefined;
-  if (selectedAccountId === null) {
-    return sql`(${trades.taken} = false or (${trades.taken} = true and ${hasRealAccount}))`;
-  }
-  return isVisibleForAccount(selectedAccountId);
 }
 
 interface TradeRowsQuery {
@@ -766,15 +495,9 @@ async function queryTradeRows(input: TradeRowsQuery): Promise<{
       pnlOverride: trades.pnlOverride,
       pnlFromFile: sql<boolean>`(${trades.pnlSource} is not null)`,
       fxRateDate: trades.fxRateDate,
-      displayPnlCents: tradeNetDisplayCents(
-        input.selectedAccountId,
-        input.currency,
-      ),
+      displayPnlCents: rowMoney(input),
       displayGrossPnlCents: tradeDisplayCents(input.currency),
-      displayCommissionCents: tradeCommissionDisplayCents(
-        input.selectedAccountId,
-        input.currency,
-      ),
+      displayCommissionCents: rowCommission(input),
       accounts: accountsJson(input.currency),
       confluences: confluencesJson,
       mistakes: mistakesJson,
@@ -794,13 +517,10 @@ async function queryTradeRows(input: TradeRowsQuery): Promise<{
       eq(strategyRevisions.strategyId, tradingStrategies.id),
     );
 
-  const ownership = eq(trades.userId, input.userId);
-
   const query = baseQuery.where(
     and(
-      ownership,
+      ...scopeConditions(input, undefined, input.visibility),
       ...input.conditions,
-      visibilityCondition(input.visibility, input.selectedAccountId),
     ),
   );
 
@@ -964,10 +684,9 @@ export async function listJournalTrades(
 //
 // The amount sums the rows' own net figure, so a heading is the sum of the
 // rows beneath it. Under the list's visibility that is the calendar's
-// `moneyContribution` (scope.ts) — the practice-only fallback in the row's
-// multiplier never applies, because those trades are not listed — and a DB
-// test pins the two equal. Imported from scope.ts it would close an import
-// cycle, since scope.ts builds on this module.
+// `moneyContribution` — the practice-only exception of `rowMoney` never
+// applies, because those trades are not listed — and journal-list.test.ts pins
+// the two equal against `getDayTotals`.
 async function listJournalDayValues(
   filters: JournalFilters,
   dates: string[],
@@ -985,20 +704,16 @@ async function listJournalDayValues(
       // is 0, as the calendar paints it.
       amountCents: sql<string | null>`case
         when count(*) filter (where ${trades.taken}) > 0
-          then coalesce(sum(${tradeNetDisplayCents(
-            filters.selectedAccountId,
-            filters.currency,
-          )}), 0)
+          then coalesce(sum(${rowMoney(filters)}), 0)
         end`,
     })
     .from(trades)
     .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
     .where(
       and(
-        eq(trades.userId, filters.userId),
+        ...scopeConditions(filters),
         inArray(trades.tradeDate, dates),
         ...buildFilterConditions(filters),
-        visibilityCondition("scoped", filters.selectedAccountId),
       ),
     )
     .groupBy(trades.tradeDate)

@@ -288,7 +288,7 @@ export function displayCurrencyFor(
  * USD cents back into the account currency, in integer minor units: the
  * inverse of `toUsdCents`, for display only. Rounds half away from zero like
  * `toUsdCents` and like `round()` on `numeric` in SQL, which is what the
- * display query does (`tradeDisplayCents`, src/db/queries/trades.ts).
+ * display query does (`tradeDisplayCents`, src/db/queries/scope.ts).
  */
 export function toAccountCents(usdCents: number, rateVsUsd: string): number {
   if (!Number.isInteger(usdCents)) {

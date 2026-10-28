@@ -49,7 +49,7 @@ src/
     prop-firms/  econ/  settings/    # econ/ is Phase 2
   domain/                     # pure, tested, no DB
     pnl.ts
-    accounts.ts               # assignment rules, per-account vs combined, multipliers
+    accounts.ts               # account switcher grouping (money rules: db/queries/scope.ts)
     streak.ts
     consistency.ts
     badges.ts

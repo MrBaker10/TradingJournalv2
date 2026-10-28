@@ -1,4 +1,4 @@
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { ScoreDay, ScoreEntry } from "../../domain/consistency.ts";
 import type { IsoDate } from "../../domain/streak.ts";
 import { monthRangeOf } from "../../lib/time.ts";
@@ -23,9 +23,11 @@ import {
   type QueryScope,
   ratioCents,
   scopeConditions,
+  scopeWhere,
   toNumber,
+  tradePnlCents,
 } from "./scope.ts";
-import { hasRealAccount, rMultipleSortKey, tradePnlCents } from "./trades.ts";
+import { rMultipleSortKey } from "./trades.ts";
 
 // Every figure on the dashboard comes from this file, and every exported
 // function says in its header whether it is a **money aggregate** (multiplies
@@ -280,12 +282,7 @@ export async function getStreakEntryDays(
       loggedAt: sql<Date>`min(${trades.createdAt})`,
     })
     .from(trades)
-    .where(
-      and(
-        eq(trades.userId, userId),
-        sql`(${trades.taken} = false or ${hasRealAccount})`,
-      ),
-    )
+    .where(scopeWhere({ userId, selectedAccountId: null }))
     .groupBy(trades.tradeDate)
     .orderBy(trades.tradeDate);
 
@@ -335,14 +332,7 @@ export async function getMonthScoreDays(
         )`,
       })
       .from(trades)
-      .where(
-        and(
-          eq(trades.userId, userId),
-          gte(trades.tradeDate, range.from),
-          lte(trades.tradeDate, range.to),
-          sql`(${trades.taken} = false or ${hasRealAccount})`,
-        ),
-      )
+      .where(scopeWhere({ userId, selectedAccountId: null }, range))
       .orderBy(trades.tradeDate),
     listMonthReviewDates(userId, month, executor),
   ]);
@@ -397,12 +387,7 @@ export async function getBadgeCounters(
         byTheBookTrades: sql<number>`count(*) filter (where ${trades.taken} and ${trades.byTheBook})::int`,
       })
       .from(trades)
-      .where(
-        and(
-          eq(trades.userId, userId),
-          sql`(${trades.taken} = false or ${hasRealAccount})`,
-        ),
-      ),
+      .where(scopeWhere({ userId, selectedAccountId: null })),
     executor
       .select({ reviewsWritten: sql<number>`count(*)::int` })
       .from(dailyNotes)

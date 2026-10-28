@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { IsoDate } from "../../domain/streak.ts";
 import { db } from "../index.ts";
 import { userBadges } from "../schema/badges.ts";
@@ -10,7 +10,7 @@ import {
   type ReadExecutor,
 } from "./dashboard.ts";
 import { getBestMonthlyScore } from "./monthly-scores.ts";
-import { hasRealAccount } from "./trades.ts";
+import { scopeWhere } from "./scope.ts";
 import { listReviewedWeekStarts } from "./weekly-reviews.ts";
 
 // What /progress reads beside the streak and the score. Every figure here is
@@ -74,12 +74,7 @@ export async function hasProgressMoment(
         due: sql<boolean>`coalesce(bool_or(${trades.createdAt} > ${progressSeenAt(userId)}), false)`,
       })
       .from(trades)
-      .where(
-        and(
-          eq(trades.userId, userId),
-          sql`(${trades.taken} = false or ${hasRealAccount})`,
-        ),
-      ),
+      .where(scopeWhere({ userId, selectedAccountId: null })),
     executor
       .select({
         due: sql<boolean>`coalesce(bool_or(${userBadges.earnedAt} > ${progressSeenAt(userId)}), false)`,
