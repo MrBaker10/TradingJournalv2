@@ -10,6 +10,7 @@ import {
   moneyContribution,
   moneyWeight,
   type QueryScope,
+  rowMoney,
   scopeWhere,
 } from "../scope.ts";
 
@@ -166,23 +167,36 @@ async function fixture(tx: Tx): Promise<Fixture> {
 interface FigureRow {
   money: number | null;
   weight: number;
+  row: number | null;
 }
 
-/** Figure money and its weight for every trade the scope sees, by trade name. */
+function scopeFor(f: Fixture, selected: AccountName | null): QueryScope {
+  return {
+    userId: f.userId,
+    selectedAccountId: selected === null ? null : f.accountIds[selected],
+  };
+}
+
+function cents(value: unknown): number | null {
+  return value === null ? null : Number(value);
+}
+
+/**
+ * Figure money, its weight and row money for every trade the scope sees, by
+ * trade name.
+ */
 async function figures(
   selected: AccountName | null,
 ): Promise<Partial<Record<TradeName, FigureRow>>> {
   return inRollback(async (tx) => {
     const f = await fixture(tx);
-    const scope: QueryScope = {
-      userId: f.userId,
-      selectedAccountId: selected === null ? null : f.accountIds[selected],
-    };
+    const scope = scopeFor(f, selected);
     const rows = await tx
       .select({
         id: trades.id,
         money: moneyContribution(scope),
         weight: moneyWeight(scope),
+        row: rowMoney(scope),
       })
       .from(trades)
       .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
@@ -193,27 +207,50 @@ async function figures(
       const name = f.tradeNames.get(row.id);
       if (name === undefined) throw new Error(`Unknown trade ${row.id}`);
       byName[name] = {
-        money: row.money === null ? null : Number(row.money),
+        money: cents(row.money),
         weight: Number(row.weight),
+        row: cents(row.row),
       };
     }
     return byName;
   });
 }
 
-describe("figure money and its weight per account scope", () => {
+/** Row money of one trade by name, read by its id outside any scope filter. */
+async function rowMoneyOf(
+  selected: AccountName | null,
+  name: TradeName,
+): Promise<number | null> {
+  return inRollback(async (tx) => {
+    const f = await fixture(tx);
+    const id = [...f.tradeNames].find(([, n]) => n === name)?.[0];
+    if (id === undefined) throw new Error(`No fixture trade "${name}"`);
+    const [row] = await tx
+      .select({ row: rowMoney(scopeFor(f, selected)) })
+      .from(trades)
+      .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
+      .where(eq(trades.id, id));
+    return cents(row.row);
+  });
+}
+
+function sum(values: (number | null)[]): number {
+  return values.reduce<number>((total, value) => total + (value ?? 0), 0);
+}
+
+describe("figure money, its weight and row money per account scope", () => {
   it("counts a copy trade once per real account, net of the real accounts' commission, with all accounts", async (ctx) => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 
     expect(await figures(null)).toEqual({
       // +$10 on Live and Eval: 2 × 1000 − (200 + 300).
-      copy: { money: 1500, weight: 2 },
+      copy: { money: 1500, weight: 2, row: 1500 },
       // −$10, one real account: −1000 − Live's 150; Demo's 400 is not paid by a real account.
-      shared: { money: -1150, weight: 1 },
+      shared: { money: -1150, weight: 1, row: -1150 },
       // 20 GBP at 1.25 = $25.00, less Eval's 50.
-      foreign: { money: 2450, weight: 1 },
+      foreign: { money: 2450, weight: 1, row: 2450 },
       // In scope, but no P&L and no real account to weigh.
-      missed: { money: null, weight: 0 },
+      missed: { money: null, weight: 0, row: null },
       // practiceOnly is not in a combined figure at all.
     });
   });
@@ -222,9 +259,9 @@ describe("figure money and its weight per account scope", () => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 
     expect(await figures("Live")).toEqual({
-      copy: { money: 800, weight: 1 },
-      shared: { money: -1150, weight: 1 },
-      missed: { money: null, weight: 1 },
+      copy: { money: 800, weight: 1, row: 800 },
+      shared: { money: -1150, weight: 1, row: -1150 },
+      missed: { money: null, weight: 1, row: null },
     });
   });
 
@@ -232,9 +269,36 @@ describe("figure money and its weight per account scope", () => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 
     expect(await figures("Demo")).toEqual({
-      practiceOnly: { money: 400, weight: 1 },
-      shared: { money: -1400, weight: 1 },
-      missed: { money: null, weight: 1 },
+      practiceOnly: { money: 400, weight: 1, row: 400 },
+      shared: { money: -1400, weight: 1, row: -1400 },
+      missed: { money: null, weight: 1, row: null },
     });
+  });
+});
+
+describe("row money against figure money", () => {
+  it.for([
+    ["all accounts", null],
+    ["one real account", "Live"],
+    ["the practice account", "Demo"],
+  ] as const)(
+    "adds up to the figure over the rows %s sees",
+    async ([, selected], ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      const rows = Object.values(await figures(selected));
+      expect(sum(rows.map((row) => row.row))).toBe(
+        sum(rows.map((row) => row.money)),
+      );
+    },
+  );
+
+  it("gives a practice-only trade the sum over its own accounts, outside every combined figure", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    // Reached by its own link with all accounts: +$5 on Demo, less Demo's 100.
+    expect(await rowMoneyOf(null, "practiceOnly")).toBe(400);
+    expect(await figures(null)).not.toHaveProperty("practiceOnly");
+    expect(await figures("Live")).not.toHaveProperty("practiceOnly");
   });
 });

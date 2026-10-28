@@ -243,7 +243,9 @@ export function accountCommissionCents(
 }
 
 /** Σ commission of every account of the trade, practice ones included. */
-export function allCommissionCents(currency: AccountCurrency): SQL<number> {
+export function allCommissionCents(
+  currency: AccountCurrency = "USD",
+): SQL<number> {
   return sql<number>`(
     select coalesce(sum(${assignmentCommissionCents(currency)}), 0)
     from ${tradeAccounts}
@@ -292,6 +294,52 @@ export function moneyWeight(scope: QueryScope): SQL<number> {
   return scope.selectedAccountId === null
     ? sql<number>`${realAccountCount}`
     : sql<number>`1`;
+}
+
+/**
+ * Row money: one trade's net P&L as a journal row, a day heading and the
+ * detail page show it, display cents. Inside an account scope it is exactly
+ * `moneyContribution`, so a row matches the figures it adds up to.
+ *
+ * The one exception: a trade on practice accounts only, reached with all
+ * accounts by its own link or through the reveal banner, has no real account
+ * to sum over. It shows the sum over the accounts it does have, rather than
+ * nothing, while every figure leaves it out.
+ */
+export function rowMoney(scope: QueryScope): SQL<number | null> {
+  return sql<number | null>`(
+    ${tradeDisplayCents(scope.currency)} * ${rowMultiplier(scope)}
+      - ${rowCommission(scope)}
+  )::bigint`;
+}
+
+/**
+ * The commission `rowMoney` nets out, display cents: the selected account's,
+ * or with all accounts the sum over the real ones — over every account of a
+ * practice-only trade. The detail page shows it as the breakdown, so gross,
+ * commission and net cannot disagree by a rounding.
+ */
+export function rowCommission(scope: QueryScope): SQL<number> {
+  if (scope.selectedAccountId !== null) {
+    return accountCommissionCents(scope.selectedAccountId, scope.currency);
+  }
+  return sql<number>`(
+    case when ${realAccountCount} > 0
+      then ${realCommissionCents(scope.currency)}
+      else ${allCommissionCents(scope.currency)}
+    end
+  )`;
+}
+
+/** How many executions a row's gross stands for: the same accounts as above. */
+function rowMultiplier(scope: QueryScope): SQL<number> {
+  if (scope.selectedAccountId !== null) return sql<number>`1`;
+  return sql<number>`(
+    case when ${realAccountCount} > 0
+      then ${realAccountCount}
+      else greatest(${allAccountCount}, 1)
+    end
+  )`;
 }
 
 export function toNumber(value: unknown): number {

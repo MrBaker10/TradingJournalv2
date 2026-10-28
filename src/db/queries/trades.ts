@@ -37,13 +37,10 @@ import {
 } from "../schema/trades.ts";
 import { profitRate, rateOnTradeDate } from "./fx.ts";
 import {
-  accountCommissionCents,
-  allAccountCount,
-  allCommissionCents,
   commissionDisplayCents,
   hasRealAccount,
-  realAccountCount,
-  realCommissionCents,
+  rowCommission,
+  rowMoney,
   tradeDisplayCents,
 } from "./scope.ts";
 import type { StrategyContent } from "./strategies.ts";
@@ -166,8 +163,8 @@ export interface JournalTradeRow {
   /** The realised P&L in USD cents — the stored currency, which R is read from. */
   pnlCents: number | null;
   /**
-   * The trade's **net** P&L in the view's display currency, from the same SQL
-   * expression the money figures sum (`tradeNetDisplayCents`), so a row
+   * The trade's **net** P&L in the view's display currency: `rowMoney` in
+   * scope.ts, the same amount the money figures sum, so a row
    * matches its total: with an account selected, that account's gross minus
    * its commission; with all accounts, the sum over the real accounts it ran
    * on (decided 2026-09-28, commissions).
@@ -409,58 +406,6 @@ export const profitRateText = sql<string | null>`(
   end
 )`;
 
-/**
- * The commission a row nets out, display cents: the selected account's, or
- * with all accounts the sum over the real ones — over every account of a
- * trade that ran on practice accounts only. `tradeNetDisplayCents` subtracts
- * exactly this, and the detail page shows it as the breakdown, so the two
- * cannot disagree by a rounding.
- */
-export function tradeCommissionDisplayCents(
-  selectedAccountId: number | null,
-  currency: AccountCurrency = "USD",
-): SQL<number> {
-  if (selectedAccountId !== null) {
-    return accountCommissionCents(selectedAccountId, currency);
-  }
-  return sql<number>`(
-    case when ${realAccountCount} > 0
-      then ${realCommissionCents(currency)}
-      else ${allCommissionCents(currency)}
-    end
-  )`;
-}
-
-/** How many executions a row's gross stands for: the same accounts as above. */
-function tradeAccountMultiplier(selectedAccountId: number | null): SQL<number> {
-  if (selectedAccountId !== null) return sql<number>`1`;
-  return sql<number>`(
-    case when ${realAccountCount} > 0
-      then ${realAccountCount}
-      else greatest(${allAccountCount}, 1)
-    end
-  )`;
-}
-
-/**
- * One trade's net P&L as a row shows it, display cents — the same number the
- * money figures add up for it, so a row matches its total.
- *
- * With an account selected: that account's gross minus its commission. With
- * all accounts: the sum over the real accounts it ran on. A trade on practice
- * accounts only (reachable by id, or through the reveal banner) has no real
- * account to sum over; it shows the sum over the accounts it does have.
- */
-export function tradeNetDisplayCents(
-  selectedAccountId: number | null,
-  currency: AccountCurrency = "USD",
-): SQL<number | null> {
-  return sql<number | null>`(
-    ${tradeDisplayCents(currency)} * ${tradeAccountMultiplier(selectedAccountId)}
-      - ${tradeCommissionDisplayCents(selectedAccountId, currency)}
-  )::bigint`;
-}
-
 // Ownership is not in here: queryTradeRows applies it to every caller, so it
 // can't be forgotten by a new one.
 function buildFilterConditions(filters: JournalFilters): SQL[] {
@@ -593,15 +538,9 @@ async function queryTradeRows(input: TradeRowsQuery): Promise<{
       pnlOverride: trades.pnlOverride,
       pnlFromFile: sql<boolean>`(${trades.pnlSource} is not null)`,
       fxRateDate: trades.fxRateDate,
-      displayPnlCents: tradeNetDisplayCents(
-        input.selectedAccountId,
-        input.currency,
-      ),
+      displayPnlCents: rowMoney(input),
       displayGrossPnlCents: tradeDisplayCents(input.currency),
-      displayCommissionCents: tradeCommissionDisplayCents(
-        input.selectedAccountId,
-        input.currency,
-      ),
+      displayCommissionCents: rowCommission(input),
       accounts: accountsJson(input.currency),
       confluences: confluencesJson,
       mistakes: mistakesJson,
@@ -791,10 +730,9 @@ export async function listJournalTrades(
 //
 // The amount sums the rows' own net figure, so a heading is the sum of the
 // rows beneath it. Under the list's visibility that is the calendar's
-// `moneyContribution` (scope.ts) — the practice-only fallback in the row's
-// multiplier never applies, because those trades are not listed — and a DB
-// test pins the two equal. Imported from scope.ts it would close an import
-// cycle, since scope.ts builds on this module.
+// `moneyContribution` — the practice-only exception of `rowMoney` never
+// applies, because those trades are not listed — and journal-list.test.ts pins
+// the two equal against `getDayTotals`.
 async function listJournalDayValues(
   filters: JournalFilters,
   dates: string[],
@@ -812,10 +750,7 @@ async function listJournalDayValues(
       // is 0, as the calendar paints it.
       amountCents: sql<string | null>`case
         when count(*) filter (where ${trades.taken}) > 0
-          then coalesce(sum(${tradeNetDisplayCents(
-            filters.selectedAccountId,
-            filters.currency,
-          )}), 0)
+          then coalesce(sum(${rowMoney(filters)}), 0)
         end`,
     })
     .from(trades)
