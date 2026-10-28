@@ -31,7 +31,7 @@ unchanged text already available in the conversation.
 | Product behaviour, scope, open decisions | Relevant sections of `context/project-overview.md` |
 | Locate modules or understand boundaries | `context/project-structure.md` |
 | Code changes | Relevant sections of `context/coding-standards.md` and nearby code/tests |
-| UI | `context/Design.md`: principles, tokens, the page's pattern, motion and accessibility; the winning view on the ticket's `prototype/*` branch for detail |
+| UI | `context/Design.md`: principles, tokens, the page's pattern, motion and accessibility |
 | Money, accounts, time, SQL | Product rules + coding standards for money/time/database + affected domain/query tests |
 | Prop firm rules or seeder | `context/PropFirmsData.md` |
 | Migrations, seeds, deployment, cron operations | `context/operations.md` |

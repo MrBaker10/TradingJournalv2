@@ -11,12 +11,6 @@ code comment, in `decisions.md`, `history.md`, the dated Decisions of
 `project-overview.md` or a ticket before the redesign points at v1 until the ticket that
 touches that file updates it.
 
-**Source for detail.** This document states the shape, states and motion of every
-pattern. For pixel detail a page ticket may look at the winning view on its
-`prototype/redesign-*` branch (listed in `.scratch/redesign/spec.md` → Further Notes);
-it rewrites, never copies. A difference between this document and the branch is
-reported, not silently resolved.
-
 ---
 
 ## 1. Principles
@@ -43,11 +37,9 @@ reported, not silently resolved.
 
 ## 2. Tokens
 
-Defined once in `src/app/globals.css` on the global theme, with the values set on
-`prototype/redesign-prop-firms` in `src/app/globals.css` (the block scoped to
-`.redesign`). The shell-and-tokens ticket (`.scratch/redesign/issues/02-*`) moves them
-out of that scope; this document names roles, not values. No hex and no `rgba()` literal in a component; SVG colours come
-from a class, never a presentation attribute.
+Defined once in `src/app/globals.css` on the global theme; this document names roles,
+not values. No hex and no `rgba()` literal in a component; SVG colours come from a class,
+never a presentation attribute.
 
 ### Surfaces and text (shadcn set)
 
