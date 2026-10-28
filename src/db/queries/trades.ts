@@ -17,7 +17,7 @@ import {
   centsToAmount,
   type StoredCommission,
 } from "../../domain/commission.ts";
-import type { AccountCurrency, RateCurrency } from "../../domain/fx.ts";
+import type { AccountCurrency } from "../../domain/fx.ts";
 import { calculateUsdPnl } from "../../domain/pnl.ts";
 import { dollarsToCents } from "../../lib/money.ts";
 import { createSignedUploadUrl } from "../../lib/uploads/signed-url.ts";
@@ -35,7 +35,17 @@ import {
   tradeScreenshots,
   trades,
 } from "../schema/trades.ts";
-import { rateOnSql } from "./fx.ts";
+import { profitRate, rateOnTradeDate } from "./fx.ts";
+import {
+  accountCommissionCents,
+  allAccountCount,
+  allCommissionCents,
+  commissionDisplayCents,
+  hasRealAccount,
+  realAccountCount,
+  realCommissionCents,
+  tradeDisplayCents,
+} from "./scope.ts";
 import type { StrategyContent } from "./strategies.ts";
 
 export const JOURNAL_PAGE_SIZE = 25;
@@ -204,17 +214,6 @@ export interface JournalTradesResult {
   hiddenPracticeCounts: JournalHiddenPracticeCount[];
 }
 
-// A trade "belongs" to a real (non-practice) account if at least one of its
-// assigned accounts has is_practice = false. Mirrors
-// contributesToMoneyAggregate in src/domain/accounts.ts, but as a set
-// membership check rather than a money multiplier — this decides list
-// visibility, not a P&L figure.
-export const hasRealAccount = sql<boolean>`exists (
-  select 1 from ${tradeAccounts}
-  join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
-  where ${tradeAccounts.tradeId} = ${trades.id} and ${accounts.isPractice} = false
-)`;
-
 /**
  * Visibility of one trade while a single account is selected.
  *
@@ -365,14 +364,6 @@ export const holdMinutes = sql<string | null>`(
   end
 )`;
 
-// 1 for an instrument that settles in USD, else the rate of its profit
-// currency on the trade date. Needs the instruments join in scope.
-const profitRate = sql`(
-  case when ${instruments.profitCurrency} = 'USD' then 1
-    else ${rateOn(sql`${instruments.profitCurrency}`)}
-  end
-)`;
-
 // Sort key for "R-Multiple": for a taken trade this mirrors calculatePnl in
 // src/domain/pnl.ts exactly (COALESCE the override, else derive from prices),
 // simplified to a plain dollar ratio since dividing by cents or by dollars
@@ -414,172 +405,8 @@ export const rMultipleSortKey = sql<number | null>`(
  */
 export const profitRateText = sql<string | null>`(
   case when ${instruments.profitCurrency} = 'USD' then null
-    else ${rateOn(sql`${instruments.profitCurrency}`)}::text
+    else ${rateOnTradeDate(sql`${instruments.profitCurrency}`)}::text
   end
-)`;
-
-// Realised P&L in integer cents, mirroring calculatePnl in
-// src/domain/pnl.ts: COALESCE the user's override (stored in dollars), else
-// derive it from the prices, the instrument's point value and the contract
-// count. `floor(x + 0.5)` is exactly what Math.round does inside
-// dollarsToCents, so the two agree cent for cent — the parity test in
-// __tests__/trades.test.ts pins that against real NUMERIC arithmetic.
-//
-// NULL wherever there is no realised P&L (a missed setup, a trade without an
-// exit): it then drops out of a SUM and out of the winner/loser split instead
-// of reading as a flat zero. Needs the instruments join in scope.
-//
-// Points × point value × quantity is in the instrument's profit currency
-// (ftmo-cfd-instruments): USDJPY settles in yen, GER40.cash in euro. It is
-// multiplied by that currency's rate on the trade date before the one
-// rounding, like `profitRateVsUsd` in calculatePnl. The override is USD and is
-// never converted. With no rate stored at all the derived value is NULL and
-// drops out rather than counting yen as dollars.
-//
-// This is the per-trade value, not a figure. Whether it multiplies by the
-// assigned real accounts is the caller's decision — see
-// src/db/queries/dashboard.ts.
-export const tradePnlCents = sql<number | null>`(
-  case
-    when ${trades.taken} = false then null
-    when ${trades.exitPrice} is null or ${trades.contracts} is null then null
-    else floor(
-      coalesce(
-        ${trades.pnlOverride},
-        case when ${trades.direction} = 'long'
-          then (${trades.exitPrice} - ${trades.entryPrice})
-          else (${trades.entryPrice} - ${trades.exitPrice})
-        end * ${instruments.pointValue} * ${trades.contracts}
-          * ${profitRate}
-      ) * 100 + 0.5
-    )
-  end
-)::bigint`;
-
-/**
- * The rate a conversion uses for this trade: `rateOnSql` on its trade date.
- * `job:fx` and saving a trade keep the table filled.
- */
-function rateOn(currency: RateCurrency | SQL): SQL {
-  return rateOnSql(currency, sql`${trades.tradeDate}`);
-}
-
-/**
- * One trade's realised P&L in the display currency, in integer cents — what
- * every money figure sums once a view is shown in an account currency
- * (decided 2026-09-24/25, display-currency). In USD it **is** `tradePnlCents`.
- *
- * In a foreign currency:
- * - a trade whose file reported its P&L in that currency — `pnl_source` set,
- *   and the account of its import batch kept in it — shows exactly that
- *   amount, the broker's own figure;
- * - anything else (logged by hand, P&L edited by hand, copy-traded from a USD
- *   account) is its USD P&L divided by the rate of its trade date.
- *
- * `round()` on `numeric` rounds half away from zero, the same rule as
- * `toAccountCents` in src/domain/fx.ts, which the parity test in
- * __tests__/display-currency.test.ts pins against real NUMERIC arithmetic.
- * The sign follows `tradePnlCents`, so a winner/loser filter on that stays
- * right in every currency.
- */
-export function tradeDisplayCents(
-  currency: AccountCurrency = "USD",
-): SQL<number | null> {
-  if (currency === "USD") return tradePnlCents;
-  return sql<number | null>`(
-    case
-      when ${tradePnlCents} is null then null
-      when ${trades.pnlSource} is not null and (
-        select a.currency from import_batches b
-        join accounts a on a.id = b.account_id
-        where b.id = ${trades.importBatchId}
-      ) = ${currency}
-        then round(${trades.pnlSource} * 100)
-      else round(${tradePnlCents} / ${rateOn(currency)})
-    end
-  )::bigint`;
-}
-
-// --- Commission (decided 2026-09-28, commissions) -------------------------
-// Stored per assignment in USD dollars (`trade_accounts.commission`). A money
-// figure is net of it; `tradePnlCents`, R and points stay gross. Null is
-// unknown and sums as nothing.
-//
-// Every sum below adds **per-assignment amounts already rounded** to display
-// cents, never rounds a sum. In a foreign currency the two differ by a cent
-// now and then, and only this way do the "By account" rows, a row's
-// breakdown and the combined figure add up to one another.
-
-/**
- * A USD dollar amount of commission as integer cents of the display currency.
- * Converted with the trade date's rate, like a P&L no file reported in that
- * currency. Commission is whole cents in USD, so USD needs no rounding rule.
- */
-export function commissionDisplayCents(
-  usdDollars: SQL,
-  currency: AccountCurrency = "USD",
-): SQL<number> {
-  if (currency === "USD") return sql<number>`round(${usdDollars} * 100)`;
-  return sql<number>`round(${usdDollars} * 100 / ${rateOn(currency)})`;
-}
-
-/** The commission of the assignment row in scope, display cents; 0 unknown. */
-function assignmentCommissionCents(currency: AccountCurrency): SQL<number> {
-  return commissionDisplayCents(
-    sql`coalesce(${tradeAccounts.commission}, 0)`,
-    currency,
-  );
-}
-
-/** Σ commission of the trade's real (non-practice) accounts, display cents. */
-export function realCommissionCents(
-  currency: AccountCurrency = "USD",
-): SQL<number> {
-  return sql<number>`(
-    select coalesce(sum(${assignmentCommissionCents(currency)}), 0)
-    from ${tradeAccounts}
-    join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
-    where ${accounts.isPractice} = false
-      and ${tradeAccounts.tradeId} = ${trades.id}
-  )`;
-}
-
-/** What one account paid for the trade, display cents; 0 when unknown. */
-export function accountCommissionCents(
-  accountId: number,
-  currency: AccountCurrency = "USD",
-): SQL<number> {
-  return sql<number>`coalesce((
-    select ${assignmentCommissionCents(currency)}
-    from ${tradeAccounts}
-    where ${tradeAccounts.tradeId} = ${trades.id}
-      and ${tradeAccounts.accountId} = ${accountId}
-  ), 0)`;
-}
-
-/** Σ commission of every account of the trade, practice ones included. */
-function allCommissionCents(currency: AccountCurrency): SQL<number> {
-  return sql<number>`(
-    select coalesce(sum(${assignmentCommissionCents(currency)}), 0)
-    from ${tradeAccounts}
-    where ${tradeAccounts.tradeId} = ${trades.id}
-  )`;
-}
-
-// How many accounts of each kind the trade ran on. Spelled out here rather
-// than taken from scope.ts, which imports this file.
-const realAssignmentCount = sql<number>`(
-  select count(*)::int
-  from ${tradeAccounts}
-  join ${accounts} on ${accounts.id} = ${tradeAccounts.accountId}
-  where ${accounts.isPractice} = false
-    and ${tradeAccounts.tradeId} = ${trades.id}
-)`;
-
-const allAssignmentCount = sql<number>`(
-  select count(*)::int
-  from ${tradeAccounts}
-  where ${tradeAccounts.tradeId} = ${trades.id}
 )`;
 
 /**
@@ -597,7 +424,7 @@ export function tradeCommissionDisplayCents(
     return accountCommissionCents(selectedAccountId, currency);
   }
   return sql<number>`(
-    case when ${realAssignmentCount} > 0
+    case when ${realAccountCount} > 0
       then ${realCommissionCents(currency)}
       else ${allCommissionCents(currency)}
     end
@@ -608,9 +435,9 @@ export function tradeCommissionDisplayCents(
 function tradeAccountMultiplier(selectedAccountId: number | null): SQL<number> {
   if (selectedAccountId !== null) return sql<number>`1`;
   return sql<number>`(
-    case when ${realAssignmentCount} > 0
-      then ${realAssignmentCount}
-      else greatest(${allAssignmentCount}, 1)
+    case when ${realAccountCount} > 0
+      then ${realAccountCount}
+      else greatest(${allAccountCount}, 1)
     end
   )`;
 }

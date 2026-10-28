@@ -16,6 +16,7 @@ import { users } from "../schema/users.ts";
 import { hasEodReview, listMonthReviewDates } from "./daily-notes.ts";
 import {
   type DateRange,
+  hasRealAccount,
   moneyContribution,
   moneyWeight,
   netLoser,
@@ -24,8 +25,9 @@ import {
   ratioCents,
   scopeConditions,
   toNumber,
+  tradePnlCents,
 } from "./scope.ts";
-import { hasRealAccount, rMultipleSortKey, tradePnlCents } from "./trades.ts";
+import { rMultipleSortKey } from "./trades.ts";
 
 // Every figure on the dashboard comes from this file, and every exported
 // function says in its header whether it is a **money aggregate** (multiplies

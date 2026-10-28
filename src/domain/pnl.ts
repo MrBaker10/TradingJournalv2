@@ -81,7 +81,7 @@ function scaledToCents(scaledDollars: bigint): number {
 /**
  * Profit-currency units at PRICE_SCALE^3 as USD cents: multiplied by the rate
  * first and rounded once, so a converted P&L is rounded exactly like a USD one.
- * Mirrors `tradePnlCents` in src/db/queries/trades.ts.
+ * Mirrors `tradePnlCents` in src/db/queries/scope.ts.
  */
 function convertedToCents(scaled: bigint, rateVsUsd?: string): number {
   if (rateVsUsd === undefined) return scaledToCents(scaled);

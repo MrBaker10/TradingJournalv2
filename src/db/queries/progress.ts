@@ -10,7 +10,7 @@ import {
   type ReadExecutor,
 } from "./dashboard.ts";
 import { getBestMonthlyScore } from "./monthly-scores.ts";
-import { hasRealAccount } from "./trades.ts";
+import { hasRealAccount } from "./scope.ts";
 import { listReviewedWeekStarts } from "./weekly-reviews.ts";
 
 // What /progress reads beside the streak and the score. Every figure here is

@@ -23,19 +23,16 @@ import {
   trades,
 } from "../schema/trades.ts";
 import {
+  commissionDisplayCents,
   type DateRange,
   moneyContribution,
   type QueryScope,
   scopeWhere,
   toNumber,
-} from "./scope.ts";
-import {
-  commissionDisplayCents,
-  holdMinutes,
-  rMultipleSortKey,
   tradeDisplayCents,
   tradePnlCents,
-} from "./trades.ts";
+} from "./scope.ts";
+import { holdMinutes, rMultipleSortKey } from "./trades.ts";
 
 // The eleven analytics dimensions of project-overview.md §F, each as one
 // GROUP BY, all eleven in a single UNION ALL statement. One round trip, no

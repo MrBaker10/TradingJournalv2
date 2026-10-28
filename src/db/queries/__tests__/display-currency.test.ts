@@ -15,8 +15,8 @@ import { users } from "../../schema/users.ts";
 import { getDimensionBreakdowns } from "../analytics.ts";
 import { getDayTotals, getStartingBalanceCents } from "../dashboard.ts";
 import { listForeignCurrencies } from "../fx.ts";
-import { listScopeCurrencies } from "../scope.ts";
-import { getJournalTradeById, tradeDisplayCents } from "../trades.ts";
+import { listScopeCurrencies, tradeDisplayCents } from "../scope.ts";
+import { getJournalTradeById } from "../trades.ts";
 
 // display-currency (decided 2026-09-24/25): figures in the accounts' own
 // currency. Rates sit in 2001 and the fixtures on a user of their own, so no

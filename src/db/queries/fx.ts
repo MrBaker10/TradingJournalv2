@@ -25,7 +25,8 @@ import { formatCentsPlain } from "../../lib/money.ts";
 import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
 import { fxFetchRanges, fxRates } from "../schema/fx-rates.ts";
-import { toNumber } from "./scope.ts";
+import { instruments } from "../schema/instruments.ts";
+import { trades } from "../schema/trades.ts";
 
 /** Anything that can read and upsert: `db`, or a transaction in a test. */
 export type FxExecutor = Pick<typeof db, "select" | "insert">;
@@ -198,7 +199,7 @@ export async function listConvertedTrades(
   `);
 
   return [...rows].map((row) => ({
-    id: toNumber(row.id),
+    id: Number(row.id),
     tradeDate: row.trade_date,
     fxRateDate: row.fx_rate_date,
     pnlSource: row.pnl_source,
@@ -383,6 +384,22 @@ export function rateOnSql(
      order by r.rate_date asc limit 1)
   )`;
 }
+
+/**
+ * `rateOnSql` on the trade's own date, for an expression evaluated per trade.
+ * `job:fx` and saving a trade keep the table filled.
+ */
+export function rateOnTradeDate(currency: RateCurrency | SQL): SQL {
+  return rateOnSql(currency, sql`${trades.tradeDate}`);
+}
+
+// 1 for an instrument that settles in USD, else the rate of its profit
+// currency on the trade date. Needs the instruments join in scope.
+export const profitRate = sql`(
+  case when ${instruments.profitCurrency} = 'USD' then 1
+    else ${rateOnTradeDate(sql`${instruments.profitCurrency}`)}
+  end
+)`;
 
 /**
  * `rateOnSql` for several dates of one currency in one query, keyed by date.

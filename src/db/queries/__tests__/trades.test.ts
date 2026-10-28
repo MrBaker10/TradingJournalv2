@@ -8,11 +8,11 @@ import { fxRates } from "../../schema/fx-rates.ts";
 import { instruments } from "../../schema/instruments.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
+import { tradePnlCents } from "../scope.ts";
 import {
   isVisibleForAccount,
   profitRateText,
   rMultipleSortKey,
-  tradePnlCents,
 } from "../trades.ts";
 
 // Test-only symbol, never committed (every fixture runs inside a rolled-back
