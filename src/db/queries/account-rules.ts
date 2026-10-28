@@ -33,6 +33,11 @@ export interface AccountRulesRow extends AccountRulesWrite {
   accountId: number;
   firmName: string;
   programName: string;
+  /**
+   * The firm no longer sells the program (docs/adr/0005). Only a note in
+   * settings: the link, the account rules and the rule status stay as they are.
+   */
+  programDiscontinued: boolean;
   /** `accounts.starting_balance_usd`: the attempt's starting balance. */
   startingBalanceUsdCents: number;
 }
@@ -50,6 +55,7 @@ async function selectAccountRules(
       programId: accountRules.programId,
       firmName: propFirms.name,
       programName: propFirmPrograms.name,
+      programDiscontinued: sql<boolean>`${propFirmPrograms.discontinuedAt} is not null`,
       evaluationStart: accountRules.evaluationStart,
       profitTarget: accountRules.profitTarget,
       drawdownAmount: accountRules.drawdownAmount,

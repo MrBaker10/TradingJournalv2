@@ -292,3 +292,26 @@ describe("discontinued programs", () => {
     expect(chips.sizes).not.toContain(GONE_SIZE_USD);
   });
 });
+
+describe("program options for the link form", () => {
+  it("keep a discontinued program and say which it is", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const options = await inRollback(async (tx) => {
+      await firmsWithDiscontinued(tx);
+      const all = await listProgramOptions(tx);
+      return all
+        .filter((option) => option.firmName.endsWith(SEARCH))
+        .map((option) => [
+          `${option.firmName} · ${option.name}`,
+          option.discontinued,
+        ]);
+    });
+
+    expect(options).toEqual([
+      [`${EARLIER_FIRM} · Rapid 150k`, true],
+      [`${FIRM} · Select 25k`, false],
+      [`${FIRM} · Select 50k`, true],
+    ]);
+  });
+});

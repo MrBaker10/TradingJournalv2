@@ -195,6 +195,8 @@ export interface ProgramOption {
   id: number;
   firmName: string;
   name: string;
+  /** No longer sold; still linkable, its rule text as last seeded. */
+  discontinued: boolean;
   /** The program's rule text, verbatim, shown beside each rule field. */
   reference: Pick<
     ProgramFields,
@@ -209,7 +211,9 @@ export interface ProgramOption {
 
 // Every program for the link form in the account editor, grouped by firm in
 // the select, sizes in file order. Reference text only: nothing here becomes a
-// rule value (docs/adr/0001).
+// rule value (docs/adr/0001). Discontinued programs stay in, marked, so an
+// account bought before the firm stopped selling one can still link it
+// (docs/adr/0005).
 export async function listProgramOptions(
   executor: Pick<typeof db, "select"> = db,
 ): Promise<ProgramOption[]> {
@@ -218,6 +222,7 @@ export async function listProgramOptions(
       id: propFirmPrograms.id,
       firmName: propFirms.name,
       name: propFirmPrograms.name,
+      discontinued: sql<boolean>`${propFirmPrograms.discontinuedAt} is not null`,
       accountSize: propFirmPrograms.accountSize,
       profitTarget: propFirmPrograms.profitTarget,
       maxDrawdown: propFirmPrograms.maxDrawdown,
@@ -228,10 +233,11 @@ export async function listProgramOptions(
     .from(propFirmPrograms)
     .innerJoin(propFirms, eq(propFirms.id, propFirmPrograms.firmId))
     .orderBy(asc(propFirms.name), asc(propFirmPrograms.position));
-  return rows.map(({ id, firmName, name, ...reference }) => ({
+  return rows.map(({ id, firmName, name, discontinued, ...reference }) => ({
     id,
     firmName,
     name,
+    discontinued,
     reference,
   }));
 }

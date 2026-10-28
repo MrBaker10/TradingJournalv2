@@ -199,7 +199,9 @@ export function AccountProgramLink({
                 .filter((option) => option.firmName === firm)
                 .map((option) => (
                   <option key={option.id} value={option.id}>
-                    {option.name}
+                    {option.discontinued
+                      ? `${option.name} — no longer sold`
+                      : option.name}
                   </option>
                 ))}
             </optgroup>
@@ -215,6 +217,9 @@ export function AccountProgramLink({
             : program?.reference.accountSize
               ? `Program: account size ${program.reference.accountSize}. The account's starting balance is the attempt's starting balance.`
               : "The account's starting balance is the attempt's starting balance."}
+          {!isPractice &&
+            program?.discontinued &&
+            " No longer sold: the program text is as last updated."}
         </p>
       </div>
       {program && !isPractice && (
