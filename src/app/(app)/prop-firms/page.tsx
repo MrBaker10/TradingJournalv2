@@ -1,67 +1,80 @@
-import { PropFirmCard } from "@/components/prop-firms/prop-firm-card";
+import { PropFirmCatalogue } from "@/components/prop-firms/prop-firm-catalogue";
 import { PropFirmCompare } from "@/components/prop-firms/prop-firm-compare";
 import { PropFirmFilters } from "@/components/prop-firms/prop-firm-filters";
+import { listProgramLinks } from "@/db/queries/account-rules";
 import {
   listAccountSizes,
-  listPropFirmProgramsByIds,
   listPropFirms,
   listSummaryTags,
 } from "@/db/queries/prop-firms";
-import { groupFirmCards } from "@/lib/prop-firms/cards";
-import { parsePropFirmsState } from "@/lib/prop-firms/href";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { orderCatalogue } from "@/lib/prop-firms/cards";
+import { effectiveSizes, parsePropFirmsState } from "@/lib/prop-firms/href";
 
 interface PropFirmsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+// The reference catalogue (Design.md §3.9). The rows are filtered in SQL; the
+// unfiltered list feeds the firm sheet's program switcher and the compare
+// panel, so a compared program survives filters that hide it.
 export default async function PropFirmsPage({
   searchParams,
 }: PropFirmsPageProps) {
+  const user = await getCurrentUser();
   const state = parsePropFirmsState(await searchParams);
+  const links = await listProgramLinks(user.id);
+  const sizes = effectiveSizes(
+    state,
+    links.flatMap((link) =>
+      link.accountSizeUsd === null ? [] : [link.accountSizeUsd],
+    ),
+  );
 
-  const [rows, tags, sizes, compareRows] = await Promise.all([
+  const [rows, allRows, tags, sizeChips] = await Promise.all([
     listPropFirms({
       search: state.search === "" ? undefined : state.search,
       tags: state.tags,
-      sizes: state.sizes,
+      sizes,
     }),
+    listPropFirms({}),
     listSummaryTags(),
     listAccountSizes(),
-    listPropFirmProgramsByIds(state.compare),
   ]);
 
-  // The compare columns follow the order they were picked in, not the order the
-  // database happened to return them in.
+  // The compare columns follow the order they were picked in.
   const compared = state.compare.flatMap((id) => {
-    const row = compareRows.find((candidate) => candidate.program.id === id);
+    const row = allRows.find((candidate) => candidate.program.id === id);
     return row ? [row] : [];
   });
-  const cards = groupFirmCards(rows, state.compare);
+  const cards = orderCatalogue(rows, links);
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="page-title">Prop Firm Rules</h1>
-      <p className="text-fg-subtle text-xs">
-        Recorded by hand in context/PropFirmsData.md. Where a firm's own pages
-        contradict each other, both readings are carried through as written.
-      </p>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <header className="flex flex-col gap-1">
+        <h1 className="page-title">Prop Firm Rules</h1>
+        <p className="text-muted-foreground text-xs">
+          Recorded by hand in context/PropFirmsData.md. Where a firm's own pages
+          contradict each other, both readings are carried through as written.
+        </p>
+      </header>
 
-      <PropFirmFilters state={state} tags={tags} sizes={sizes} />
+      <PropFirmFilters
+        state={state}
+        sizes={sizes}
+        sizeChips={sizeChips}
+        tags={tags}
+        count={rows.length}
+      />
 
       <PropFirmCompare rows={compared} state={state} />
 
-      {cards.length === 0 ? (
-        <p className="py-10 text-center text-fg-subtle text-sm">
-          No firm matches. Filters narrow together, so two chips describing the
-          same thing never match at once.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-[10px]">
-          {cards.map((card) => (
-            <PropFirmCard key={card.firm.id} card={card} state={state} />
-          ))}
-        </div>
-      )}
+      <PropFirmCatalogue
+        cards={cards}
+        allRows={allRows}
+        links={links}
+        state={state}
+      />
     </div>
   );
 }

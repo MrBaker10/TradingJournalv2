@@ -9,7 +9,11 @@ import { ledgerEntries } from "../../schema/ledger.ts";
 import { propFirmPrograms, propFirms } from "../../schema/prop-firms.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
-import { getAccountRules, getAttempt } from "../account-rules.ts";
+import {
+  getAccountRules,
+  getAttempt,
+  listProgramLinks,
+} from "../account-rules.ts";
 
 // The attempt's day series for the rule status (prop-firm-link, ticket 02).
 // Every case runs in a rolled-back transaction on users of its own.
@@ -522,5 +526,55 @@ describe("getAccountRules", () => {
     // Archiving keeps `users.selected_account_id`, while the switcher already
     // reads "All accounts": the card must not show for it.
     expect(result.archived).toBeNull();
+  });
+});
+
+describe("listProgramLinks", () => {
+  it("lists the owner's real, active accounts with their program's size, in account order", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const f = await fixture(tx);
+      await tx
+        .update(propFirmPrograms)
+        .set({ accountSizeUsd: "50000.00" })
+        .where(eq(propFirmPrograms.id, f.programId));
+      const owner = await newUser(f, "links-owner");
+      const other = await newUser(f, "links-other");
+      const second = await linkedAccount(f, owner, "Eval B", "2026-10-01");
+      await tx
+        .update(accounts)
+        .set({ sortOrder: 2 })
+        .where(eq(accounts.id, second));
+      await linkedAccount(f, owner, "Eval A", "2026-10-01");
+      const practice = await linkedAccount(f, owner, "Sim", "2026-10-01");
+      await tx
+        .update(accounts)
+        .set({ isPractice: true, sortOrder: 1 })
+        .where(eq(accounts.id, practice));
+      const archived = await linkedAccount(f, owner, "Old", "2026-09-01");
+      await tx
+        .update(accounts)
+        .set({ archivedAt: new Date("2026-10-15T00:00:00Z") })
+        .where(eq(accounts.id, archived));
+      await linkedAccount(f, other, "Foreign", "2026-10-01");
+      return {
+        programId: f.programId,
+        owner: await listProgramLinks(owner, tx),
+      };
+    });
+
+    expect(result.owner).toEqual([
+      {
+        programId: result.programId,
+        accountName: "Eval A",
+        accountSizeUsd: 50_000,
+      },
+      {
+        programId: result.programId,
+        accountName: "Eval B",
+        accountSizeUsd: 50_000,
+      },
+    ]);
   });
 });

@@ -221,7 +221,7 @@ export const hasRealAccount = sql<boolean>`exists (
  * A taken trade shows when it is assigned to that account. A **missed setup
  * always shows**: it carries no account at all — `src/domain/trades.ts` only
  * requires one when `taken = true` — so there is nothing to match it against,
- * and Design.md §4.9 calls it an equal entry, not a lesser kind.
+ * and Design-v1.md §4.9 calls it an equal entry, not a lesser kind.
  *
  * This used to be an inner join on `trade_accounts`, which silently dropped
  * every missed setup the moment an account was selected. The "all accounts"
@@ -378,7 +378,7 @@ const profitRate = sql`(
 // simplified to a plain dollar ratio since dividing by cents or by dollars
 // gives the same R — no cents scaling needed for a sort key. For a missed
 // setup there is no exit, so it sorts by the same "would-be" mfe_r value the
-// row displays (Design.md §4.9). Both sides are in USD: the override is, and
+// row displays (Design-v1.md §4.9). Both sides are in USD: the override is, and
 // the prices and the risk are converted from the profit currency — an FTMO
 // import always carries a USD override, so a yen risk would make R a ratio of
 // two currencies. Rendering itself never uses this expression;
@@ -654,7 +654,7 @@ function buildOrderBy(filters: JournalFilters) {
   const direction = filters.sortDir === "asc" ? sql`asc` : sql`desc`;
   if (filters.sortBy === "date") {
     // Within a trade date the day reads as it happened: by entry time, in the
-    // same direction as the dates (Design.md §4.27).
+    // same direction as the dates (Design-v1.md §4.27).
     return [
       sql`${trades.tradeDate} ${direction}`,
       sql`${trades.entryTime} ${direction}`,
@@ -712,7 +712,7 @@ interface TradeRowsQuery {
   offset?: number;
 }
 
-// The one place that reads a trade row and shapes it for §4.9 rendering.
+// The one place that reads a trade row and shapes it for Design-v1.md §4.9 rendering.
 // Both the journal list and the dashboard's "Recent trades" go through it,
 // so the two can't drift apart.
 //
@@ -1010,7 +1010,7 @@ async function listJournalDayValues(
   }));
 }
 
-// Design.md §4.8/§4.9: the dashboard's "Recent trades" is the same row as the
+// Design-v1.md §4.8/§4.9: the dashboard's "Recent trades" is the same row as the
 // journal list, newest first, so it reuses both the query and the component.
 // Missed setups belong here too — they are equal entries, not a lesser kind.
 export async function listRecentTrades(

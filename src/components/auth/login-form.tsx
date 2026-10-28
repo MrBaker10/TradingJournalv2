@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { authClient } from "@/lib/auth/auth-client";
 import { backupCodeSchema, signInSchema, totpCodeSchema } from "@/schemas/auth";
-import { AuthField } from "./auth-field";
-import { SubmitButton } from "./submit-button";
+import { AUTH_LINK } from "./auth-card";
+import { AuthSubmit } from "./auth-submit";
+import { AuthTextField } from "./auth-text-field";
 
 // One sentence for a wrong username and a wrong password alike: splitting it
-// by field would tell a stranger which usernames exist (Design.md §4.19).
+// by field would tell a stranger which usernames exist.
 const SIGN_IN_FAILED = "Username or password is wrong.";
 
 interface LoginFormProps {
@@ -24,6 +25,8 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Only an empty username lands here; the server's answer stays one sentence.
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function enterJournal() {
@@ -35,7 +38,9 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
     event.preventDefault();
     const parsed = signInSchema.safeParse({ username, password });
     if (!parsed.success) {
-      setError(parsed.error.issues[0].message);
+      const issue = parsed.error.issues[0];
+      if (issue.path[0] === "username") setUsernameError(issue.message);
+      else setError(issue.message);
       return;
     }
 
@@ -92,12 +97,12 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
   if (step === "code") {
     return (
       <form onSubmit={handleCode} className="flex flex-col gap-4" noValidate>
-        <p className="text-fg-muted text-sm">
+        <p className="text-muted-foreground text-sm">
           {codeKind === "totp"
             ? "Enter the six-digit code from your authenticator app."
             : "Enter one of the backup codes you wrote down. Each works once."}
         </p>
-        <AuthField
+        <AuthTextField
           key={codeKind}
           label={codeKind === "totp" ? "Authentication code" : "Backup code"}
           name="code"
@@ -110,12 +115,12 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
             setCode(event.target.value);
             if (error) setError(null);
           }}
-          message={error}
+          error={error}
           disabled={isPending}
         />
-        <SubmitButton loading={isPending} pendingLabel="Checking…" fullWidth>
+        <AuthSubmit pending={isPending} pendingLabel="Checking…">
           Verify
-        </SubmitButton>
+        </AuthSubmit>
         <button
           type="button"
           onClick={() => {
@@ -123,7 +128,7 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
             setCode("");
             setError(null);
           }}
-          className="self-start text-cyan text-xs hover:underline"
+          className={`self-start text-xs ${AUTH_LINK}`}
         >
           {codeKind === "totp"
             ? "Use a backup code instead"
@@ -134,17 +139,21 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
   }
 
   return (
-    <form onSubmit={handleSignIn} className="flex flex-col gap-2" noValidate>
-      <AuthField
+    <form onSubmit={handleSignIn} className="flex flex-col gap-4" noValidate>
+      <AuthTextField
         label="Username"
         name="username"
         autoComplete="username"
         autoFocus
         value={username}
-        onChange={(event) => setUsername(event.target.value)}
+        onChange={(event) => {
+          setUsername(event.target.value);
+          if (usernameError) setUsernameError(null);
+        }}
+        error={usernameError}
         disabled={isPending}
       />
-      <AuthField
+      <AuthTextField
         label="Password"
         name="password"
         type="password"
@@ -154,16 +163,16 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
           setPassword(event.target.value);
           if (error) setError(null);
         }}
-        message={error}
+        error={error}
         disabled={isPending}
       />
-      <SubmitButton loading={isPending} pendingLabel="Signing in…" fullWidth>
+      <AuthSubmit pending={isPending} pendingLabel="Signing in…">
         Sign in
-      </SubmitButton>
+      </AuthSubmit>
       {registrationOpen && (
-        <p className="pt-2 text-fg-subtle text-xs">
+        <p className="pt-2 text-muted-foreground text-xs">
           No account yet?{" "}
-          <Link href="/register" className="text-cyan hover:underline">
+          <Link href="/register" className={AUTH_LINK}>
             Create account
           </Link>
         </p>

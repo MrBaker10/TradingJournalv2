@@ -170,7 +170,7 @@ export interface DayTotals {
 /**
  * **Money aggregate** for the amount, **count aggregate** for the number
  * beside it. One row per calendar day with at least one entry, which is what
- * Design.md §4.8 paints, plus Best day, Worst day, Today and Max drawdown.
+ * Design-v1.md §4.8 paints, plus Best day, Worst day, Today and Max drawdown.
  *
  * A day with nothing but missed setups is a real row with a zero amount: it
  * was journaled, and the calendar shows journaling.
@@ -386,9 +386,12 @@ export interface BadgeCounters {
  * **Count aggregate**, over the whole history and over real accounts only.
  * Backfills count here, unlike in the streak: a late entry still happened.
  */
-export async function getBadgeCounters(userId: number): Promise<BadgeCounters> {
+export async function getBadgeCounters(
+  userId: number,
+  executor: ReadExecutor = db,
+): Promise<BadgeCounters> {
   const [entries, reviews] = await Promise.all([
-    db
+    executor
       .select({
         entriesLogged: sql<number>`count(*)::int`,
         byTheBookTrades: sql<number>`count(*) filter (where ${trades.taken} and ${trades.byTheBook})::int`,
@@ -400,7 +403,7 @@ export async function getBadgeCounters(userId: number): Promise<BadgeCounters> {
           sql`(${trades.taken} = false or ${hasRealAccount})`,
         ),
       ),
-    db
+    executor
       .select({ reviewsWritten: sql<number>`count(*)::int` })
       .from(dailyNotes)
       .where(and(eq(dailyNotes.userId, userId), hasEodReview)),
@@ -413,7 +416,7 @@ export async function getBadgeCounters(userId: number): Promise<BadgeCounters> {
   };
 }
 
-// --- Micro-rewards (Design.md §4.3 and §6) -------------------------------
+// --- Micro-rewards (Design-v1.md §4.3 and §6) -------------------------------
 // Neither of these is an aggregate. They read and write the two "already
 // shown" markers on `users`, the same way badgesSeenAt works for the badge
 // card on /progress.

@@ -55,6 +55,78 @@ export const DIMENSION_TITLES: Record<DimensionId, string> = {
   mistake: "By mistake",
 };
 
+export type QuestionId =
+  | "results"
+  | "when"
+  | "what"
+  | "execution"
+  | "way"
+  | "hesitate";
+
+export interface AnalyticsQuestion {
+  id: QuestionId;
+  title: string;
+  /** One line under the title: what the answer is made of. */
+  hint: string;
+  /** The dimensions answered inside this question. */
+  dimensions: readonly DimensionId[];
+}
+
+/** Trades with an R a bucket needs before its avg R is ranked. */
+export const MIN_RANKED_R_TRADES = 3;
+
+/**
+ * The six questions Analytics is read by (Design.md §3.7), in page order.
+ * Every one of the eleven dimensions belongs to exactly one. The first is
+ * answered by the ranking across all of them, execution by the execution
+ * figures and the last by the missed setups, so those hold no dimension;
+ * weekday and hour are drawn as columns inside "When".
+ */
+export const ANALYTICS_QUESTIONS: readonly AnalyticsQuestion[] = [
+  {
+    id: "results",
+    title: "What holds my results up, what drags them down?",
+    hint: `Every dimension except account, by avg R, where at least ${MIN_RANKED_R_TRADES} trades had a stop to measure R against.`,
+    dimensions: [],
+  },
+  {
+    id: "when",
+    title: "When do I trade well?",
+    hint: "Net P&L per weekday and per hour of the chart clock; trades under each column.",
+    dimensions: ["weekday", "hour", "session"],
+  },
+  {
+    id: "what",
+    title: "What am I trading, and how?",
+    hint: "Net P&L with avg R beside it.",
+    dimensions: [
+      "setupType",
+      "entryModel",
+      "instrument",
+      "confluence",
+      "account",
+    ],
+  },
+  {
+    id: "execution",
+    title: "How do I execute?",
+    hint: "Winners against losers. Post-exit moves are hypothetical.",
+    dimensions: [],
+  },
+  {
+    id: "way",
+    title: "What gets in my way?",
+    hint: "Mistakes, how you felt, how you graded yourself.",
+    dimensions: ["mistake", "felt", "grade"],
+  },
+  {
+    id: "hesitate",
+    title: "Where do I hesitate?",
+    hint: "Missed setups: counts and share of all entries, never P&L.",
+    dimensions: [],
+  },
+];
+
 /**
  * Dimensions that come from a join table, where one trade contributes a row
  * per tag. Their "Trades" column deliberately does not sum to the total, and
@@ -98,8 +170,13 @@ export interface DimensionRow {
   netPnlCents: number;
   /** null when no trade in the bucket had a stop price to measure R against. */
   avgR: number | null;
-  /** 0–1 against the largest absolute net P&L of this dimension. */
-  barRatio: number;
+  /** How many trades carried an R: the weight behind `avgR`. */
+  rCount: number;
+  /**
+   * 0–1 against the largest absolute net P&L of the set buckets of this
+   * dimension. null for Not set, which shows its figures without a bar.
+   */
+  barRatio: number | null;
 }
 
 /** Postgres `extract(dow …)`: 0 is Sunday, 6 is Saturday. */
@@ -154,10 +231,11 @@ export function formatBucketLabel(
  * "Not set" always sorts last regardless of its P&L: it is the absence of a
  * value, not a value that beat the others.
  *
- * The bar is scaled against the largest **absolute** net P&L of the dimension,
- * so the worst bucket and the best one are drawn at comparable weight. A
- * dimension whose buckets all net exactly zero gets no bars at all rather than
- * a division by zero.
+ * The bar is scaled against the largest **absolute** net P&L of the set
+ * buckets, so the worst bucket and the best one are drawn at comparable
+ * weight. Not set stays out of the scale and gets no bar: it often holds most
+ * trades and would dwarf the real buckets. A dimension whose buckets all net
+ * exactly zero gets no bars at all rather than a division by zero.
  */
 export function buildDimensionRows(
   dimension: DimensionId,
@@ -165,6 +243,7 @@ export function buildDimensionRows(
 ): DimensionRow[] {
   let largestAbs = 0;
   for (const row of rows) {
+    if (row.bucket === null) continue;
     const magnitude = Math.abs(row.netPnlCents);
     if (magnitude > largestAbs) largestAbs = magnitude;
   }
@@ -177,7 +256,13 @@ export function buildDimensionRows(
       winRate: row.trades > 0 ? row.wins / row.trades : null,
       netPnlCents: row.netPnlCents,
       avgR: row.rCount > 0 && row.rSum !== null ? row.rSum / row.rCount : null,
-      barRatio: largestAbs > 0 ? Math.abs(row.netPnlCents) / largestAbs : 0,
+      rCount: row.rCount,
+      barRatio:
+        row.bucket === null
+          ? null
+          : largestAbs > 0
+            ? Math.abs(row.netPnlCents) / largestAbs
+            : 0,
     }))
     .sort(compareDimensionRows);
 }
@@ -240,6 +325,212 @@ export function shouldExplainMissingAvgR(
   const { recorded } = splitRecordedDimensions(byDimension);
   const rows = DIMENSION_IDS.flatMap((dimension) => byDimension[dimension]);
   return recorded.length > 0 && rows.every((row) => row.avgR === null);
+}
+
+// --- Metric switch ---------------------------------------------------------
+// Only the detail sheet switches the metric (Design.md §3.7); the overview
+// reads net P&L with avg R beside it.
+
+export type AnalyticsMetric = "pnl" | "winRate" | "avgR" | "trades";
+
+export const ANALYTICS_METRICS: { id: AnalyticsMetric; label: string }[] = [
+  { id: "pnl", label: "Net P&L" },
+  { id: "winRate", label: "Win rate" },
+  { id: "avgR", label: "Avg R" },
+  { id: "trades", label: "Trades" },
+];
+
+/** A row's figure for the metric; null where the bucket has none. */
+export function metricValue(
+  row: DimensionRow,
+  metric: AnalyticsMetric,
+): number | null {
+  switch (metric) {
+    case "pnl":
+      return row.netPnlCents;
+    case "winRate":
+      return row.winRate;
+    case "avgR":
+      return row.avgR;
+    case "trades":
+      return row.trades;
+  }
+}
+
+/**
+ * The rows by the switched metric, highest first; a bucket without a value
+ * for it after the rest, and Not set last as everywhere else. Ties fall back
+ * to the label so the order is stable.
+ */
+export function sortByMetric(
+  rows: DimensionRow[],
+  metric: AnalyticsMetric,
+): DimensionRow[] {
+  return [...rows].sort((a, b) => {
+    if (a.isNotSet !== b.isNotSet) return a.isNotSet ? 1 : -1;
+    const left = metricValue(a, metric);
+    const right = metricValue(b, metric);
+    if (left === null || right === null) {
+      if (left !== right) return left === null ? 1 : -1;
+    } else if (left !== right) {
+      return right - left;
+    }
+    return a.label.localeCompare(b.label);
+  });
+}
+
+/**
+ * The order of a dimension's rows in the detail sheet: by the switched
+ * metric, except for accounts. Ranking accounts against each other is not
+ * built (spec, Do not build), so they keep the net P&L order of
+ * `buildDimensionRows` whatever the switch shows.
+ */
+export function detailOrder(
+  dimension: DimensionId,
+  rows: DimensionRow[],
+  metric: AnalyticsMetric,
+): DimensionRow[] {
+  return dimension === "account" ? rows : sortByMetric(rows, metric);
+}
+
+// --- Columns ---------------------------------------------------------------
+// Weekday and hour are drawn as columns from a zero line (Design.md §3.7).
+
+/** Monday first: the trading week, with Sunday's Globex open at its end. */
+const WEEKDAY_COLUMN_ORDER = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+/**
+ * The rows of weekday or hour in the order their columns stand: the days of
+ * the week from Monday, the hours through the day. Not set has no place on
+ * either axis and is left out. Hour labels are zero-padded ("09:00"), so they
+ * sort as text.
+ */
+export function columnOrder(
+  dimension: "weekday" | "hour",
+  rows: DimensionRow[],
+): DimensionRow[] {
+  const position = (row: DimensionRow) =>
+    dimension === "weekday" ? WEEKDAY_COLUMN_ORDER.indexOf(row.label) : 0;
+  return rows
+    .filter((row) => !row.isNotSet)
+    .sort(
+      (a, b) => position(a) - position(b) || a.label.localeCompare(b.label),
+    );
+}
+
+export interface ZeroLineBar {
+  /** Where the bar starts on the axis, in percent. */
+  start: number;
+  /** How long it is, in percent of the axis. */
+  length: number;
+}
+
+export interface ZeroLineLayout {
+  /** The zero line, in percent of the axis. */
+  zero: number;
+  /** One per value, in order; null where the value has no bar. */
+  bars: (ZeroLineBar | null)[];
+}
+
+/** Two decimals, so server and browser print the same attributes. */
+function roundPercent(value: number): number {
+  return Math.round(value * 100) / 100 || 0;
+}
+
+/**
+ * Bars from a zero line on one axis that runs from the largest loss (0) to
+ * the largest gain (100). The zero line sits where the ratio of those two puts
+ * it, so a page of only gains uses the whole axis instead of leaving half of
+ * it empty, and gains and losses share one scale. A null value (Not set) has
+ * no bar and does not move the scale. Used for the weekday and hour columns
+ * and for the bars of the detail sheet; a metric without a sign simply never
+ * has a loss, and its zero line sits at 0.
+ */
+export function zeroLineLayout(values: (number | null)[]): ZeroLineLayout {
+  let largestGain = 0;
+  let largestLoss = 0;
+  for (const value of values) {
+    if (value === null) continue;
+    largestGain = Math.max(largestGain, value);
+    largestLoss = Math.max(largestLoss, -value);
+  }
+  const span = largestGain + largestLoss;
+  const zero = span === 0 ? 0 : (largestLoss / span) * 100;
+
+  return {
+    zero: roundPercent(zero),
+    bars: values.map((value) => {
+      if (value === null) return null;
+      const length = span === 0 ? 0 : (Math.abs(value) / span) * 100;
+      const start = value < 0 ? zero - length : zero;
+      return { start: roundPercent(start), length: roundPercent(length) };
+    }),
+  };
+}
+
+// --- Ranking ---------------------------------------------------------------
+// "What holds my results up, what drags them down?" (Design.md §3.7): every
+// bucket of every dimension on one scale, avg R.
+
+/** How many buckets each side of the ranking shows. */
+export const RANKED_BUCKET_COUNT = 5;
+
+export interface RankedBucket {
+  dimension: DimensionId;
+  row: DimensionRow;
+}
+
+export interface BucketRanking {
+  /** Positive avg R, strongest first. */
+  holdingUp: RankedBucket[];
+  /** Negative avg R, weakest first. */
+  dragging: RankedBucket[];
+}
+
+/**
+ * The buckets ranked by avg R across every dimension except account, only
+ * where at least three trades carried an R, so a bucket never looks strong on
+ * one trade. Account is left out because ranking accounts against each other
+ * is not built (spec, Do not build). Not set is the absence of a value, and an
+ * avg R of exactly zero belongs on neither side. Ties keep the more trades
+ * with an R first, then the label, so the order is stable.
+ */
+export function rankBuckets(
+  byDimension: Record<DimensionId, DimensionRow[]>,
+): BucketRanking {
+  const candidates = DIMENSION_IDS.filter(
+    (dimension) => dimension !== "account",
+  ).flatMap((dimension) =>
+    byDimension[dimension]
+      .filter(
+        (row) =>
+          !row.isNotSet &&
+          row.avgR !== null &&
+          row.rCount >= MIN_RANKED_R_TRADES,
+      )
+      .map((row) => ({ dimension, row })),
+  );
+  // `direction` 1 puts the highest avg R first, -1 the lowest.
+  const side = (direction: 1 | -1) =>
+    candidates
+      .filter((bucket) => Math.sign(bucket.row.avgR ?? 0) === direction)
+      .sort(
+        (a, b) =>
+          direction * ((b.row.avgR ?? 0) - (a.row.avgR ?? 0)) ||
+          b.row.rCount - a.row.rCount ||
+          a.row.label.localeCompare(b.row.label),
+      )
+      .slice(0, RANKED_BUCKET_COUNT);
+
+  return { holdingUp: side(1), dragging: side(-1) };
 }
 
 // --- Missed setups -------------------------------------------------------

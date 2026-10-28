@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Toggle } from "@/components/ui/toggle";
 import type { EconTab } from "@/domain/econ";
 import { buildEconHref, type EconState, toggleCurrency } from "@/lib/econ/href";
 
@@ -26,83 +27,58 @@ export function EconFilters({ state, currencies }: EconFiltersProps) {
   // never be deselected.
   const chips = [...new Set([...currencies, ...state.currencies])].sort();
 
-  return (
-    <div className="card-surface edge flex flex-col gap-3 p-4">
-      <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-        <div className="flex flex-col gap-1.5">
-          <span className="cap">Show</span>
-          <div className="flex flex-wrap gap-1.5">
-            {TABS.map((tab) => (
-              <Chip
-                key={tab.value}
-                label={tab.label}
-                active={state.tab === tab.value}
-                onSelect={() =>
-                  router.push(buildEconHref(state, { tab: tab.value }))
-                }
-              />
-            ))}
-          </div>
-        </div>
+  function go(overrides: Partial<EconState>) {
+    router.push(buildEconHref(state, overrides), { scroll: false });
+  }
 
-        <div className="flex flex-col gap-1.5">
-          <span className="cap">Impact</span>
-          <Chip
-            label="High impact only"
-            active={state.highOnly}
-            onSelect={() =>
-              router.push(buildEconHref(state, { highOnly: !state.highOnly }))
-            }
-          />
-        </div>
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <fieldset
+          aria-label="Show"
+          className="flex flex-wrap rounded-lg border p-0.5"
+        >
+          {TABS.map((tab) => (
+            <Toggle
+              key={tab.value}
+              pressed={state.tab === tab.value}
+              onPressedChange={() => go({ tab: tab.value })}
+              className="h-10 text-muted-foreground aria-pressed:text-foreground lg:h-8"
+            >
+              {tab.label}
+            </Toggle>
+          ))}
+        </fieldset>
+        <Toggle
+          variant="outline"
+          pressed={state.highOnly}
+          onPressedChange={() => go({ highOnly: !state.highOnly })}
+          className="h-10 font-normal text-muted-foreground aria-pressed:text-foreground lg:h-8"
+        >
+          High impact only
+        </Toggle>
       </div>
 
-      {chips.length > 0 ? (
-        <div className="flex flex-col gap-1.5">
-          <span className="cap">Currency</span>
-          <div className="flex flex-wrap gap-1.5">
-            {chips.map((currency) => (
-              <Chip
-                key={currency}
-                label={currency}
-                active={state.currencies.includes(currency)}
-                onSelect={() =>
-                  router.push(
-                    buildEconHref(state, {
-                      currencies: toggleCurrency(state.currencies, currency),
-                    }),
-                  )
-                }
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
+      {chips.length > 0 && (
+        <fieldset aria-label="Currency" className="flex flex-wrap gap-1.5">
+          {chips.map((currency) => (
+            <Toggle
+              key={currency}
+              variant="outline"
+              size="sm"
+              pressed={state.currencies.includes(currency)}
+              onPressedChange={() =>
+                go({
+                  currencies: toggleCurrency(state.currencies, currency),
+                })
+              }
+              className="h-10 font-mono font-normal text-muted-foreground aria-pressed:text-foreground lg:h-7"
+            >
+              {currency}
+            </Toggle>
+          ))}
+        </fieldset>
+      )}
     </div>
-  );
-}
-
-function Chip({
-  label,
-  active,
-  onSelect,
-}: {
-  label: string;
-  active: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={active}
-      className={`rounded-xs border px-2.5 py-1.5 text-sm transition-colors duration-150 ${
-        active
-          ? "border-cyan/50 bg-cyan-dim text-cyan"
-          : "border-white/12 bg-well text-fg-muted hover:border-cyan/35"
-      }`}
-    >
-      {label}
-    </button>
   );
 }

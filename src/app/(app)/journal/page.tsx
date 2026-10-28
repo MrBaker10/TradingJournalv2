@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { EntryCard } from "@/components/journal/entry-card";
 import { HiddenPracticeBanner } from "@/components/journal/hidden-practice-banner";
 import { JournalDay } from "@/components/journal/journal-day";
+import { JournalDetailSheet } from "@/components/journal/journal-detail-sheet";
 import { JournalEmpty } from "@/components/journal/journal-empty";
-import { JournalFilters } from "@/components/journal/journal-filters";
+import { JournalFilterMenu } from "@/components/journal/journal-filter-menu";
 import { PaginationControls } from "@/components/journal/pagination-controls";
-import { TradeRow } from "@/components/journal/trade-row";
+import { buttonVariants } from "@/components/ui/button";
 import { listInstruments } from "@/db/queries/instruments";
 import { withDisplayCurrency } from "@/db/queries/scope";
 import {
@@ -91,59 +93,64 @@ export default async function JournalPage({ searchParams }: JournalPageProps) {
   }
   const layout = journalLayout(rows, days, sortBy);
 
+  // Design.md §3.3: the day log, or a flat list sorted by R, with the wide
+  // detail sheet over it. The page head holds counts for every page of these
+  // filters and never a money total — a range's total belongs to the
+  // dashboard and Analytics. "Log trade" lives in
+  // the shell.
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="page-title">Trade Journal</h1>
-        <div className="flex items-center gap-2">
-          {/* The quiet process surface of Design.md §4.14: a secondary action
-              that stands next to the primary one without competing with it. */}
+    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <h1 className="font-semibold text-xl tracking-tight">Trade Journal</h1>
+        <p className="text-muted-foreground text-sm tabular-nums">
+          {totalCount} {totalCount === 1 ? "entry" : "entries"} · {takenCount}{" "}
+          taken · {missedCount} missed
+        </p>
+        <div className="ml-auto flex items-center gap-2">
           <Link
             href="/journal/import"
-            className="flex h-10 items-center whitespace-nowrap rounded-ctl bg-[image:var(--gradient-info-soft)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-info-soft)]"
+            className={buttonVariants({
+              variant: "outline",
+              className: "h-10 lg:h-8",
+            })}
           >
             Import
           </Link>
-          <Link
-            href="/journal/new"
-            className="flex h-10 items-center whitespace-nowrap rounded-ctl bg-[image:var(--gradient-info)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-button-primary)]"
-          >
-            New trade
-          </Link>
+          <JournalFilterMenu
+            instruments={instruments.map((instrument) => ({
+              id: instrument.id,
+              symbol: instrument.symbol,
+              assetClass: instrument.assetClass,
+            }))}
+          />
         </div>
       </div>
-
-      <JournalFilters
-        instruments={instruments.map((instrument) => ({
-          id: instrument.id,
-          symbol: instrument.symbol,
-          assetClass: instrument.assetClass,
-        }))}
-      />
-
-      {/* Design.md §4.27: counts for every page of these filters, no money —
-          a range's total belongs to the dashboard and Analytics. */}
-      <p className="text-fg-muted text-sm">
-        {totalCount} {totalCount === 1 ? "entry" : "entries"} · {takenCount}{" "}
-        taken · {missedCount} missed
-      </p>
 
       <HiddenPracticeBanner hiddenCounts={hiddenPracticeCounts} />
 
       {rows.length === 0 ? (
         <JournalEmpty searchParams={current} />
-      ) : layout.kind === "days" ? (
-        <div className="flex flex-col gap-[10px]">
-          {layout.days.map((day) => (
-            <JournalDay key={day.date} day={day} currency={currency} />
-          ))}
-        </div>
       ) : (
-        <div className="flex flex-col gap-[10px]">
-          {layout.rows.map((trade) => (
-            <TradeRow key={trade.id} trade={trade} currency={currency} />
-          ))}
-        </div>
+        <JournalDetailSheet currency={currency}>
+          {layout.kind === "days" ? (
+            <div className="flex flex-col gap-10">
+              {layout.days.map((day) => (
+                <JournalDay key={day.date} day={day} currency={currency} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {layout.rows.map((trade) => (
+                <EntryCard
+                  key={trade.id}
+                  trade={trade}
+                  currency={currency}
+                  lead="date"
+                />
+              ))}
+            </div>
+          )}
+        </JournalDetailSheet>
       )}
 
       <PaginationControls

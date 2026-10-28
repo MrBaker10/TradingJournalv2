@@ -1,5 +1,11 @@
 import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
 import { buildJournalHref, type JournalSearchParams } from "@/lib/journal/href";
+
+const LINK_CLASS = buttonVariants({
+  variant: "ghost",
+  className: "h-10 min-w-10 lg:h-8 lg:min-w-8",
+});
 
 interface PaginationControlsProps {
   page: number;
@@ -43,7 +49,10 @@ function PageLink({
 }) {
   if (disabled) {
     return (
-      <span className="rounded-xs px-2.5 py-1.5 text-fg-subtle text-sm opacity-40">
+      <span
+        aria-disabled="true"
+        className={`${LINK_CLASS} pointer-events-none opacity-50`}
+      >
         {label}
       </span>
     );
@@ -53,7 +62,7 @@ function PageLink({
       href={buildJournalHref(searchParams, {
         page: page === 1 ? undefined : String(page),
       })}
-      className="rounded-xs px-2.5 py-1.5 text-fg-muted text-sm transition-colors hover:text-fg"
+      className={LINK_CLASS}
     >
       {label}
     </Link>
@@ -70,7 +79,10 @@ export function PaginationControls({
   if (totalPages <= 1) return null;
 
   return (
-    <nav className="flex items-center justify-center gap-1.5 pt-2">
+    <nav
+      aria-label="Journal pages"
+      className="flex flex-wrap items-center justify-center gap-1 pt-2"
+    >
       <PageLink
         label="Prev"
         page={page - 1}
@@ -84,7 +96,7 @@ export function PaginationControls({
               // biome-ignore lint/suspicious/noArrayIndexKey: static list, position is the identity
               index
             }`}
-            className="px-1 text-fg-subtle text-sm"
+            className="px-1 text-muted-foreground text-sm"
           >
             …
           </span>
@@ -95,10 +107,8 @@ export function PaginationControls({
               page: entry === 1 ? undefined : String(entry),
             })}
             aria-current={entry === page ? "page" : undefined}
-            className={`flex h-8 w-8 items-center justify-center rounded-xs text-sm transition-colors ${
-              entry === page
-                ? "bg-cyan-dim text-cyan"
-                : "text-fg-muted hover:text-fg"
+            className={`${LINK_CLASS} font-mono tabular-nums ${
+              entry === page ? "bg-muted" : ""
             }`}
           >
             {entry}

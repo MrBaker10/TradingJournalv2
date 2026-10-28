@@ -32,7 +32,7 @@ function at(iso: string): Date {
   return new Date(iso);
 }
 
-// Design.md §4.3: bump when a trade was logged since the dashboard was last
+// Design-v1.md §4.3: bump when a trade was logged since the dashboard was last
 // opened. The comparison this exercises used to live in TypeScript, where it
 // compared a string against a Date and was therefore always false — which the
 // NULL case hid, because it short-circuits before the comparison. Every case

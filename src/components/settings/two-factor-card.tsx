@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { AuthField } from "@/components/auth/auth-field";
-import { SubmitButton } from "@/components/auth/submit-button";
+import { AuthSubmit } from "@/components/auth/auth-submit";
+import { AuthTextField } from "@/components/auth/auth-text-field";
+import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/auth-client";
 import { withAccountLabel } from "@/lib/auth/totp-label";
 import { totpCodeSchema } from "@/schemas/auth";
+import { ROW_ACTION, SettingsRow } from "./settings-row";
 import { TotpQr } from "./totp-qr";
 
 interface TwoFactorCardProps {
@@ -15,7 +17,7 @@ interface TwoFactorCardProps {
   username: string;
 }
 
-// The steps of Design.md §4.19, in one card:
+// The two-factor steps (Design-v1.md §4.19), opening below their row:
 //   idle → password → scan (QR + key + first code) → codes (backup codes, once)
 // Turning it off is idle → password-off. Better Auth only sets
 // `twoFactorEnabled` after the first code verifies, so a setup abandoned
@@ -25,9 +27,6 @@ type Step =
   | { kind: "password"; turningOff: boolean }
   | { kind: "scan"; totpURI: string; backupCodes: string[] }
   | { kind: "codes"; backupCodes: string[] };
-
-const GHOST_BUTTON =
-  "flex h-10 shrink-0 items-center justify-center rounded-ctl border border-white/12 bg-white/5 px-4 font-medium text-fg text-sm transition duration-200 hover:-translate-y-px hover:border-cyan/35 hover:brightness-110 active:scale-[.978]";
 
 /** The shared secret from an otpauth:// URI, for typing it in by hand. */
 function secretOf(totpURI: string): string {
@@ -117,42 +116,44 @@ export function TwoFactorCard({ enabled, username }: TwoFactorCardProps) {
   }
 
   return (
-    <div className="card-surface edge flex flex-col gap-4 p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="flex items-center gap-2 font-medium text-fg text-sm">
-            Two-factor authentication
-            <span className="cap">{enabled ? "On" : "Off"}</span>
+    <SettingsRow
+      title={
+        <span className="flex items-center gap-2">
+          Two-factor authentication
+          <span className="rounded-full border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+            {enabled ? "On" : "Off"}
           </span>
-          <span className="text-fg-subtle text-xs">
-            A six-digit code from an authenticator app after your password.
-          </span>
-        </div>
-        {step.kind === "idle" && (
-          <button
+        </span>
+      }
+      hint="A six-digit code from an authenticator app after your password."
+      action={
+        step.kind === "idle" && (
+          <Button
             type="button"
+            variant="outline"
+            size="lg"
             onClick={() => setStep({ kind: "password", turningOff: enabled })}
-            className={GHOST_BUTTON}
+            className={ROW_ACTION}
           >
             {enabled ? "Turn off" : "Set up"}
-          </button>
-        )}
-      </div>
-
+          </Button>
+        )
+      }
+    >
       {step.kind === "password" && (
         <form
           onSubmit={handlePassword}
-          className="flex max-w-sm flex-col gap-2"
+          className="flex max-w-sm flex-col gap-4"
           noValidate
         >
           {/* Without this line the step reads as the whole setup: a lone
               password field gives no hint that the QR code comes next. */}
-          <p className="text-fg-muted text-sm">
+          <p className="text-muted-foreground text-sm">
             {step.turningOff
               ? "Confirm with your password to turn two-factor off."
               : "Step 1 of 2: confirm with your password. The QR code for your authenticator app comes next."}
           </p>
-          <AuthField
+          <AuthTextField
             label="Confirm with your password"
             name="password"
             type="password"
@@ -163,18 +164,22 @@ export function TwoFactorCard({ enabled, username }: TwoFactorCardProps) {
               setPassword(event.target.value);
               if (error) setError(null);
             }}
-            message={error}
+            error={error}
             disabled={isPending}
           />
           <div className="flex items-center gap-3">
-            <SubmitButton loading={isPending} pendingLabel="Checking…">
+            <AuthSubmit
+              pending={isPending}
+              pendingLabel="Checking…"
+              fullWidth={false}
+            >
               {step.turningOff ? "Turn off two-factor" : "Show QR code"}
-            </SubmitButton>
+            </AuthSubmit>
             <button
               type="button"
               onClick={reset}
               disabled={isPending}
-              className="text-fg-muted text-sm hover:text-fg"
+              className="text-muted-foreground text-sm hover:text-foreground"
             >
               Cancel
             </button>
@@ -190,17 +195,17 @@ export function TwoFactorCard({ enabled, username }: TwoFactorCardProps) {
         >
           <TotpQr uri={step.totpURI} />
           <div className="flex max-w-sm flex-1 flex-col gap-3">
-            <p className="text-fg-muted text-sm">
+            <p className="text-muted-foreground text-sm">
               Step 2 of 2: scan the code with your authenticator app, or type
               the key in by hand. Then enter the six digits it shows.
             </p>
             <div className="flex flex-col gap-1">
-              <span className="cap">Key</span>
-              <code className="break-all font-mono text-fg text-xs tabular-nums tracking-wider">
+              <span className="text-muted-foreground text-xs">Key</span>
+              <code className="break-all font-mono text-xs tabular-nums tracking-wider">
                 {secretOf(step.totpURI)}
               </code>
             </div>
-            <AuthField
+            <AuthTextField
               label="Authentication code"
               name="code"
               mono
@@ -211,18 +216,22 @@ export function TwoFactorCard({ enabled, username }: TwoFactorCardProps) {
                 setCode(event.target.value);
                 if (error) setError(null);
               }}
-              message={error}
+              error={error}
               disabled={isPending}
             />
             <div className="flex items-center gap-3">
-              <SubmitButton loading={isPending} pendingLabel="Checking…">
+              <AuthSubmit
+                pending={isPending}
+                pendingLabel="Checking…"
+                fullWidth={false}
+              >
                 Turn on
-              </SubmitButton>
+              </AuthSubmit>
               <button
                 type="button"
                 onClick={reset}
                 disabled={isPending}
-                className="text-fg-muted text-sm hover:text-fg"
+                className="text-muted-foreground text-sm hover:text-foreground"
               >
                 Cancel
               </button>
@@ -233,27 +242,29 @@ export function TwoFactorCard({ enabled, username }: TwoFactorCardProps) {
 
       {step.kind === "codes" && (
         <div className="flex flex-col gap-3">
-          <p className="text-fg-muted text-sm">
+          <p className="text-muted-foreground text-sm">
             Two-factor is on. Write these backup codes down now — each signs you
             in once if your phone is gone, and they are not shown again.
           </p>
-          <ul className="grid max-w-md grid-cols-2 gap-2 rounded-ctl bg-well p-4 font-mono text-fg text-sm tabular-nums sm:grid-cols-3">
+          <ul className="grid max-w-md grid-cols-2 gap-2 rounded-lg border bg-muted/30 p-4 font-mono text-sm tabular-nums sm:grid-cols-3">
             {step.backupCodes.map((backupCode) => (
               <li key={backupCode}>{backupCode}</li>
             ))}
           </ul>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="lg"
             onClick={() => {
               reset();
               router.refresh();
             }}
-            className={`${GHOST_BUTTON} self-start`}
+            className={`${ROW_ACTION} self-start`}
           >
             I wrote them down
-          </button>
+          </Button>
         </div>
       )}
-    </div>
+    </SettingsRow>
   );
 }

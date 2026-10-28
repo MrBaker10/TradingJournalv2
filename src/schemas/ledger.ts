@@ -11,7 +11,7 @@ import { exactCents } from "../lib/money.ts";
 export const LEDGER_SAVE_FAILED =
   "Couldn't add the entry. Your input is still here — try again.";
 
-/** The same for an edit, and for a delete (Design.md §4.25, Microcopy). */
+/** The same for an edit, and for a delete (Design-v1.md §4.25, Microcopy). */
 export const LEDGER_UPDATE_FAILED =
   "Couldn't save the changes. Your input is still here — try again.";
 export const LEDGER_DELETE_FAILED = "Couldn't delete the entry — try again.";

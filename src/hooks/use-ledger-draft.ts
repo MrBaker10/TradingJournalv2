@@ -7,7 +7,7 @@ import {
   createLedgerEntrySchema,
 } from "@/schemas/ledger";
 
-// The draft the ledger's add and edit forms share (Design.md §4.25) and its
+// The draft the ledger's add and edit forms share (Design-v1.md §4.25) and its
 // check before anything is sent.
 
 export interface LedgerDraft {

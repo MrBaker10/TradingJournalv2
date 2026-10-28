@@ -1,11 +1,12 @@
 "use client";
 
 import type { ImportPreview, RowVerdict } from "@/actions/import";
-import { InlineMessage } from "@/components/ui/inline-message";
+import { Button } from "@/components/ui/button";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import type { InstrumentRef } from "@/domain/import/normalize";
 import { formatCentsPlain } from "@/lib/money";
 import type { ParsedFile } from "./import-wizard";
+import { StepError } from "./step-error";
 
 interface PreviewStepProps {
   parsed: ParsedFile;
@@ -19,12 +20,12 @@ interface PreviewStepProps {
   onConfirm: () => void;
 }
 
-// Process outcomes, not money. Design.md §1 keeps the neon for these and
-// leaves the semantic green and red to figures that were actually earned.
+// Process outcomes, not money: a new row is marked in `process`, and the
+// semantic green and red stay with figures that were actually earned.
 const VERDICT_CLASS: Record<RowVerdict, string> = {
-  new: "text-cyan",
-  update: "text-fg",
-  skip: "text-fg-subtle",
+  new: "text-process",
+  update: "text-foreground",
+  skip: "text-muted-foreground",
 };
 
 /** An amount with its currency, plain: the preview compares, it does not rate. */
@@ -64,141 +65,156 @@ export function PreviewStep({
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <section className="card-surface edge flex flex-col gap-3 p-5">
+    <div className="flex flex-col gap-6">
+      <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <h2 className="cap cap-neon">Preview</h2>
-          <p className="text-[11.5px] text-fg-subtle">
+          <h2 className="font-semibold text-lg">Preview</h2>
+          <p className="text-muted-foreground text-xs">
             {parsed.filename} into {accountName}
             {isPractice ? " — a practice account" : ""}. Nothing has been
             written yet.
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-6">
+        <dl className="flex flex-wrap gap-x-8 gap-y-2">
           {counters.map((counter) => (
             <div key={counter.label} className="flex flex-col gap-0.5">
-              <span className="cap">{counter.label}</span>
-              <span className="font-mono text-[19px] text-fg tabular-nums">
+              <dt className="text-muted-foreground text-xs">{counter.label}</dt>
+              <dd className="font-mono text-lg tabular-nums">
                 {counter.value}
-              </span>
+              </dd>
             </div>
           ))}
-        </div>
+        </dl>
       </section>
 
-      <section className="card-surface edge flex flex-col gap-3 p-5">
-        <div className="flex items-baseline justify-between gap-3 border-white/8 border-b pb-1.5">
-          <span className="cap">Row</span>
-          <span className="flex shrink-0 gap-3">
-            <span className="cap w-20 text-right">Date</span>
-            <span className="cap w-16 text-right">Entry</span>
-            <span className="cap w-24 text-right">File P&amp;L</span>
-            <span className="cap w-24 text-right">From prices</span>
-            <span className="cap w-16 text-right">Verdict</span>
-          </span>
-        </div>
+      {/* The dense table of Design.md §3.4, without a detail: every row's
+          reason sits under its trade. Below `lg` it scrolls in its box. */}
+      <div className="overflow-x-auto rounded-xl border">
+        <table className="w-full text-sm [&_th]:whitespace-nowrap">
+          <thead>
+            <tr className="border-b bg-muted/30 text-left text-muted-foreground text-xs">
+              <th className="px-4 py-2 font-normal">Trade</th>
+              <th className="px-4 py-2 font-normal">Date</th>
+              <th className="px-4 py-2 text-right font-normal">Entry</th>
+              <th className="px-4 py-2 text-right font-normal">File P&amp;L</th>
+              <th className="px-4 py-2 text-right font-normal">From prices</th>
+              <th className="px-4 py-2 text-right font-normal">Verdict</th>
+            </tr>
+          </thead>
+          <tbody>
+            {preview.rows.map((row) => {
+              const trade = rowBySource.get(row.sourceRow);
+              return (
+                <tr
+                  key={row.sourceRow}
+                  className="border-b align-top transition-colors duration-150 last:border-b-0 hover:bg-accent"
+                >
+                  <td className="min-w-64 px-4 py-2.5">
+                    <span className="font-mono">
+                      {symbolById.get(trade?.instrumentId ?? -1) ?? "—"}
+                    </span>{" "}
+                    <span className="text-muted-foreground">
+                      {trade?.direction}{" "}
+                      <span className="font-mono tabular-nums">
+                        {trade?.contracts}
+                      </span>
+                    </span>
+                    <p className="text-muted-foreground text-xs">
+                      line {row.sourceRow} — {row.reason}
+                      {row.pnlUsdCents !== null && row.fxRateDate !== null
+                        ? ` · stored as ${amount(row.pnlUsdCents, "USD")} at the ECB rate of ${row.fxRateDate}`
+                        : ""}
+                      {row.provisional
+                        ? " · provisional rate, corrected overnight"
+                        : ""}
+                      {trade?.stopPrice != null
+                        ? ` · stop ${trade.stopPrice}`
+                        : ""}
+                      {trade?.stopNotice ? ` · ${trade.stopNotice}` : ""}
+                    </p>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-2.5 font-mono text-muted-foreground tabular-nums">
+                    {trade?.tradeDate ?? "—"}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-right font-mono text-muted-foreground tabular-nums">
+                    {trade?.entryTime.slice(0, 5) ?? "—"}
+                  </td>
+                  {/* Never coloured: nothing here is written yet, and an
+                      unrealised number must not look like an earned one. The
+                      file's amount is in the account's currency, the
+                      price-derived one in USD. */}
+                  <td className="whitespace-nowrap px-4 py-2.5 text-right font-mono tabular-nums">
+                    {amount(row.filePnlCents, preview.currency)}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-right font-mono tabular-nums">
+                    {amount(row.computedPnlCents, "USD")}
+                  </td>
+                  <td
+                    className={`whitespace-nowrap px-4 py-2.5 text-right ${VERDICT_CLASS[row.verdict]}`}
+                  >
+                    {row.verdict}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
-        <ul className="flex flex-col divide-y divide-white/6">
-          {preview.rows.map((row) => {
-            const trade = rowBySource.get(row.sourceRow);
-            return (
-              <li key={row.sourceRow} className="flex flex-col gap-1.5 py-2">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="truncate text-fg text-sm">
-                    {symbolById.get(trade?.instrumentId ?? -1) ?? "—"}{" "}
-                    <span className="text-fg-muted">
-                      {trade?.direction} {trade?.contracts}
-                    </span>
-                  </span>
-                  <span className="flex shrink-0 items-baseline gap-3 font-mono text-[13px] tabular-nums">
-                    <span className="w-20 text-right text-fg-muted">
-                      {trade?.tradeDate ?? "—"}
-                    </span>
-                    <span className="w-16 text-right text-fg-muted">
-                      {trade?.entryTime.slice(0, 5) ?? "—"}
-                    </span>
-                    {/* Never coloured: nothing here is written yet, and
-                        Design.md §4.17 does not let an unrealised number look
-                        like an earned one. The file's amount is in the
-                        account's currency, the price-derived one in USD. */}
-                    <span className="w-24 text-right text-fg-subtle">
-                      {amount(row.filePnlCents, preview.currency)}
-                    </span>
-                    <span className="w-24 text-right text-fg-subtle">
-                      {amount(row.computedPnlCents, "USD")}
-                    </span>
-                    <span
-                      className={`w-16 text-right ${VERDICT_CLASS[row.verdict]}`}
-                    >
-                      {row.verdict}
-                    </span>
-                  </span>
-                </div>
-                <span className="text-[11.5px] text-fg-subtle">
-                  line {row.sourceRow} — {row.reason}
-                  {row.pnlUsdCents !== null && row.fxRateDate !== null
-                    ? ` · stored as ${amount(row.pnlUsdCents, "USD")} at the ECB rate of ${row.fxRateDate}`
-                    : ""}
-                  {row.provisional
-                    ? " · provisional rate, corrected overnight"
-                    : ""}
-                  {trade?.stopPrice != null ? ` · stop ${trade.stopPrice}` : ""}
-                  {trade?.stopNotice ? ` · ${trade.stopNotice}` : ""}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      {parsed.invalid.length > 0 ? (
-        <section className="card-surface edge flex flex-col gap-3 p-5">
+      {parsed.invalid.length > 0 && (
+        <section className="flex flex-col gap-2">
           <div className="flex flex-col gap-1">
-            <h2 className="cap">Rows that could not be read</h2>
-            <p className="text-[11.5px] text-fg-subtle">
+            <h3 className="font-medium text-sm">Rows that could not be read</h3>
+            <p className="text-muted-foreground text-xs">
               These are skipped. They do not stop the rest of the file.
             </p>
           </div>
-          <ul className="flex flex-col divide-y divide-white/6">
+          <ul className="flex flex-col rounded-xl border">
             {parsed.invalid.map((row) => (
               <li
                 key={`${row.sourceRow}-${row.reason}`}
-                className="flex items-baseline justify-between gap-3 py-2"
+                className="flex items-baseline justify-between gap-3 border-b px-4 py-2 last:border-b-0"
               >
-                <span className="truncate text-danger-fg text-sm">
+                <span className="min-w-0 text-negative text-sm">
                   {row.reason}
                 </span>
-                <span className="shrink-0 font-mono text-[13px] text-fg-subtle tabular-nums">
+                <span className="shrink-0 font-mono text-muted-foreground text-xs tabular-nums">
                   line {row.sourceRow}
                 </span>
               </li>
             ))}
           </ul>
         </section>
-      ) : null}
+      )}
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-3">
-          <button
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
             type="button"
-            onClick={onBack}
-            disabled={pending}
-            className="rounded-ctl border border-white/12 px-4 py-2 text-fg-muted text-sm transition-colors duration-150 hover:border-cyan/35 disabled:opacity-60"
-          >
-            Back
-          </button>
-          <button
-            type="button"
+            size="lg"
+            className="h-10 min-w-36 px-4"
             onClick={onConfirm}
             disabled={pending}
-            className="flex h-10 items-center gap-2 rounded-ctl bg-[image:var(--gradient-info)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-button-primary)] disabled:opacity-60"
           >
-            {pending ? <PendingIndicator label="Importing…" /> : null}
-            Import {preview.counters.new + preview.counters.update} trades
-          </button>
+            {pending ? (
+              <PendingIndicator label="Importing…" />
+            ) : (
+              `Import ${preview.counters.new + preview.counters.update} trades`
+            )}
+          </Button>
+          <Button
+            type="button"
+            size="lg"
+            variant="ghost"
+            className="h-10 px-4"
+            onClick={onBack}
+            disabled={pending}
+          >
+            Back
+          </Button>
         </div>
-        <InlineMessage message={error} />
+        <StepError message={error} />
       </div>
     </div>
   );

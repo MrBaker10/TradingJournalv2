@@ -9,7 +9,7 @@ export const DRAWDOWN_TYPES = [
 ] as const;
 export type DrawdownType = (typeof DRAWDOWN_TYPES)[number];
 
-/** What the user reads when the rules break a rule (Design.md §4.12). */
+/** What the user reads when the rules break a rule (Design-v1.md §4.12). */
 export const ACCOUNT_RULES_MESSAGES = {
   lockLevelType: "A lock level only applies to an EOD trailing drawdown.",
   practice: "Practice accounts can't be linked to a prop firm program.",

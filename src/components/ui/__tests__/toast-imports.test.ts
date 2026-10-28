@@ -24,7 +24,7 @@ function sourceFiles(directory: string): string[] {
   });
 }
 
-describe("toasts, Design.md §4.11", () => {
+describe("toasts, Design.md §3.11", () => {
   it("are raised only through src/components/ui/toast.tsx", () => {
     const importers = sourceFiles(SRC)
       .filter((path) => /from ["']sonner["']/.test(readFileSync(path, "utf8")))

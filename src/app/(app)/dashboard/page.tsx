@@ -1,12 +1,12 @@
 import { DailyChecklistCard } from "@/components/dashboard/daily-checklist-card";
 import { EquityCurve } from "@/components/dashboard/equity-curve";
-import { MetricPanel } from "@/components/dashboard/metric-panel";
-import { MilestoneCard } from "@/components/dashboard/milestone-card";
+import { MoneyMetrics } from "@/components/dashboard/money-metrics";
+import { MonthCalendar } from "@/components/dashboard/month-calendar";
 import { PlanCard } from "@/components/dashboard/plan-card";
-import { PnlCalendar } from "@/components/dashboard/pnl-calendar";
-import { ProgressTiles } from "@/components/dashboard/progress-tiles";
+import { ProcessMetrics } from "@/components/dashboard/process-metrics";
+import { RecentEntries } from "@/components/dashboard/recent-entries";
 import { RuleStatusCard } from "@/components/dashboard/rule-status-card";
-import { TradeRow } from "@/components/journal/trade-row";
+import { StreakPanel } from "@/components/dashboard/streak-panel";
 import { listUserBadges } from "@/db/queries/badges";
 import { getDailyChecklist } from "@/db/queries/checklist";
 import { getDailyNote } from "@/db/queries/daily-notes";
@@ -174,80 +174,70 @@ export default async function DashboardPage({
   const firstTradeMonth =
     equity.points.length === 0 ? null : monthKeyOf(equity.points[0].date);
 
+  // Design.md §3.2: the month fills the main area and the page reads from
+  // month to detail; the process sits in the right column beside it.
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="page-title ml-2">Welcome back, {user.displayName}</h1>
+    <div className="grid xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="flex min-w-0 flex-col gap-6 xl:border-r xl:pr-6">
+        <MonthCalendar
+          month={calendarMonth}
+          today={today}
+          days={calendarDays}
+          currentMonth={month}
+          firstTradeMonth={firstTradeMonth}
+          currency={scope.currency}
+        />
 
-      {/* badgesEarned comes from `user_badges`, the same source /progress
-          reads. Computing it live here instead would disagree with that page
-          whenever the numbers are ahead of the write paths — score_90, for
-          one, arrives with the first write after a month is frozen. */}
-      <ProgressTiles
-        currentStreak={streak.current}
-        longestStreak={streak.longest}
-        score={score.score}
-        loggedDays={loggedDays}
-        elapsedTradingDays={elapsedTradingDays}
-        badgesEarned={userBadges.length}
-        badgesTotal={BADGE_DEFINITIONS.length}
-        hasEntriesThisMonth={scoreDays.length > 0}
-        bumpStreak={rewards.bumpStreak}
-      />
+        {ruleStatus && <RuleStatusCard ruleStatus={ruleStatus} />}
 
-      <MilestoneCard milestone={milestone} />
+        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <MoneyMetrics
+            money={money}
+            counts={counts}
+            bestDay={extremeDay(allTotals.days, (a, b) => a > b)}
+            worstDay={extremeDay(allTotals.days, (a, b) => a < b)}
+            todayAmountCents={todayTotal?.amountCents ?? 0}
+            maxDrawdownCents={allTotals.maxDrawdownCents}
+            today={today}
+            currency={scope.currency}
+          />
+          <EquityCurve series={equity} currency={scope.currency} />
+        </div>
 
-      <MetricPanel
-        money={money}
-        counts={counts}
-        bestDay={extremeDay(allTotals.days, (a, b) => a > b)}
-        worstDay={extremeDay(allTotals.days, (a, b) => a < b)}
-        todayAmountCents={todayTotal?.amountCents ?? 0}
-        maxDrawdownCents={allTotals.maxDrawdownCents}
-        currentStreak={streak.current}
-        longestStreak={streak.longest}
-        today={today}
-        currency={scope.currency}
-      />
+        <RecentEntries trades={recentTrades} currency={scope.currency} />
+      </div>
 
-      {ruleStatus && <RuleStatusCard ruleStatus={ruleStatus} />}
-
-      <EquityCurve series={equity} currency={scope.currency} />
-
-      <PnlCalendar
-        month={calendarMonth}
-        today={today}
-        days={calendarDays}
-        currentMonth={month}
-        firstTradeMonth={firstTradeMonth}
-        currency={scope.currency}
-      />
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <aside
+        aria-label="Process"
+        className="mt-8 flex flex-col gap-6 border-t pt-6 xl:mt-0 xl:border-t-0 xl:pt-0 xl:pl-6 [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:pb-6"
+      >
+        <StreakPanel
+          currentStreak={streak.current}
+          longestStreak={streak.longest}
+          bumpStreak={rewards.bumpStreak}
+          milestone={milestone}
+        />
+        {/* badgesEarned comes from `user_badges`, the same source /progress
+            reads. Computing it live here instead would disagree with that
+            page whenever the numbers are ahead of the write paths — score_90,
+            for one, arrives with the first write after a month is frozen. */}
+        <ProcessMetrics
+          score={score.score}
+          loggedDays={loggedDays}
+          elapsedTradingDays={elapsedTradingDays}
+          hasEntriesThisMonth={scoreDays.length > 0}
+          badgesEarned={userBadges.length}
+          badgesTotal={BADGE_DEFINITIONS.length}
+          byTheBook={counts.byTheBook}
+          tradesLogged={counts.tradesLogged}
+          missedSetups={counts.missedSetups}
+        />
         <PlanCard
           premarketPlan={note?.premarketPlan ?? null}
           eodReview={note?.eodReview ?? null}
         />
         <DailyChecklistCard items={checklist} />
-      </div>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="cap cap-neon">Recent trades</h2>
-        {recentTrades.length === 0 ? (
-          <p className="py-6 text-center text-fg-subtle text-sm">
-            Nothing logged yet. A missed setup counts the same as a trade.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-[10px]">
-            {recentTrades.map((trade) => (
-              <TradeRow
-                key={trade.id}
-                trade={trade}
-                currency={scope.currency}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      </aside>
     </div>
   );
 }

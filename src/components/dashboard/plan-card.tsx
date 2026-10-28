@@ -4,11 +4,13 @@ import { Check, ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState } from "react";
 import { saveDailyNote } from "@/actions/daily-notes";
+import { Button } from "@/components/ui/button";
 import {
   InlineMessage,
   type InlineMessageTone,
 } from "@/components/ui/inline-message";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
+import { Textarea } from "@/components/ui/textarea";
 import { notifyProcess } from "@/components/ui/toast";
 import { PLAN_HINT_LENGTH } from "@/schemas/daily-notes";
 
@@ -18,11 +20,13 @@ interface PlanCardProps {
 }
 
 const SUCCESS_HOLD_MS = 1400;
+/** Room for the review field as it grows with its text; it scrolls beyond. */
+const REVIEW_MAX_HEIGHT = 480;
 
 const EMPTY_PLAN_MESSAGE =
   "Write your levels first — this is what plan adherence checks against.";
 
-// Design.md §4.6 and §7: live feedback while typing, with an intermediate
+// Live feedback while typing, with an intermediate
 // step. Too short is a neutral hint, not an error — it still saves.
 function planFeedback(
   plan: string,
@@ -42,12 +46,9 @@ function planFeedback(
   };
 }
 
-const FIELD_CLASS =
-  "w-full resize-none rounded-ctl border border-white/12 bg-well px-3 py-2 text-sm text-fg transition-colors duration-200 placeholder:text-fg-placeholder hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60";
-
-// Design.md §4.6: the card is process, so it carries the neon edge. The
-// review is a disclosure inside the same card, never a second screen, and an
-// error appears at the field it belongs to — no modal, no toast.
+// The plan card in the dashboard's right column (Design.md §3.2). The review
+// is a disclosure inside the same card, never a second screen, and an error
+// appears at the field it belongs to — no modal.
 export function PlanCard({ premarketPlan, eodReview }: PlanCardProps) {
   const [plan, setPlan] = useState(premarketPlan ?? "");
   const [review, setReview] = useState(eodReview ?? "");
@@ -84,8 +85,8 @@ export function PlanCard({ premarketPlan, eodReview }: PlanCardProps) {
     setSuccess(true);
     setTimeout(() => setSuccess(false), SUCCESS_HOLD_MS);
 
-    // Design.md §6 lists "plan saved" and "day reviewed" as two triggers; this
-    // card writes both in one go, so it raises one toast that says which of
+    // "Plan saved" and "day reviewed" are two triggers; this card writes both
+    // in one go, so it raises one toast that says which of
     // them happened. The text names the process consequence, never money.
     notifyProcess(
       review.trim().length > 0
@@ -97,21 +98,20 @@ export function PlanCard({ premarketPlan, eodReview }: PlanCardProps) {
   const feedback = planFeedback(plan, planError);
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="card-surface edge-neon flex flex-col gap-3 p-5"
-    >
-      <h2 className="cap cap-neon">Plan today&apos;s session</h2>
-      <p className="text-fg-muted text-sm">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <h2 className="text-[11px] text-muted-foreground uppercase tracking-wider">
+        Plan today&apos;s session
+      </h2>
+      <p className="text-muted-foreground text-xs">
         Write the plan before the session, review it after. Both count towards
         this month&apos;s consistency score — never towards P&amp;L.
       </p>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="premarket-plan" className="cap">
+        <label htmlFor="premarket-plan" className="text-sm">
           Pre-market plan
         </label>
-        <textarea
+        <Textarea
           id="premarket-plan"
           ref={planRef}
           rows={4}
@@ -121,8 +121,9 @@ export function PlanCard({ premarketPlan, eodReview }: PlanCardProps) {
             if (planError) setPlanError(null);
           }}
           disabled={loading || success}
+          aria-invalid={planError !== null}
           placeholder="Levels, bias, what you'll take and what you'll leave alone."
-          className={FIELD_CLASS}
+          className="resize-none"
         />
         <InlineMessage message={feedback.message} tone={feedback.tone} />
       </div>
@@ -133,10 +134,10 @@ export function PlanCard({ premarketPlan, eodReview }: PlanCardProps) {
           onClick={() => setReviewOpen((open) => !open)}
           aria-expanded={reviewOpen}
           aria-controls="eod-review-panel"
-          className="flex h-10 items-center gap-1.5 self-start text-fg-muted text-sm transition-colors hover:text-fg"
+          className="flex h-10 items-center gap-1.5 self-start rounded-md text-foreground/80 text-sm outline-none transition-colors duration-150 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 lg:h-8"
         >
           <ChevronDown
-            className={`h-4 w-4 transition-transform duration-300 ${
+            className={`size-4 transition-[rotate] duration-150 ${
               reviewOpen ? "rotate-180" : ""
             }`}
             aria-hidden="true"
@@ -149,24 +150,26 @@ export function PlanCard({ premarketPlan, eodReview }: PlanCardProps) {
             <motion.div
               id="eod-review-panel"
               key="review"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: [0.2, 0.7, 0.3, 1] }}
+              // max-height, not height: only opacity, translate, scale,
+              // shadow, max-height and colour move (coding-standards Motion).
+              initial={{ maxHeight: 0, opacity: 0 }}
+              animate={{ maxHeight: REVIEW_MAX_HEIGHT, opacity: 1 }}
+              exit={{ maxHeight: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               className="overflow-hidden"
             >
               <div className="flex flex-col gap-1 pt-1">
-                <label htmlFor="eod-review" className="cap">
+                <label htmlFor="eod-review" className="text-sm">
                   End-of-day review
                 </label>
-                <textarea
+                <Textarea
                   id="eod-review"
                   rows={4}
                   value={review}
                   onChange={(event) => setReview(event.target.value)}
                   disabled={loading || success}
                   placeholder="What you followed, what you broke, what you'd repeat."
-                  className={FIELD_CLASS}
+                  className="resize-none"
                 />
               </div>
             </motion.div>
@@ -175,43 +178,24 @@ export function PlanCard({ premarketPlan, eodReview }: PlanCardProps) {
       </div>
 
       <div className="flex flex-col gap-1">
-        <button
+        <Button
           type="submit"
+          variant="secondary"
+          size="lg"
           disabled={loading || success}
-          // Idle uses the calm surface from Design.md §4.14 — full width, 44px
-          // and the only action on the card carry it without a halo. Success
-          // keeps the loud gradient on purpose: §4.2 calls it the one place
-          // green may glow, because it confirms an action, and against the
-          // quieter idle state it now reads more clearly, not less.
-          className={`relative h-11 w-full rounded-ctl text-sm font-medium text-fg ${
-            success
-              ? "bg-[image:var(--gradient-success)] shadow-[var(--shadow-button-primary)]"
-              : "bg-[image:var(--gradient-info-soft)] shadow-[var(--shadow-info-soft)]"
-          }`}
+          className="w-full disabled:opacity-100"
         >
-          <span
-            className={`inline-flex items-center justify-center transition-opacity duration-200 ease-linear ${
-              loading || success ? "opacity-0" : "opacity-100"
-            }`}
-          >
-            Save plan
-          </span>
-          <span
-            className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ease-linear ${
-              loading ? "opacity-100" : "opacity-0"
-            }`}
-          >
+          {loading ? (
             <PendingIndicator label="Saving…" />
-          </span>
-          <span
-            className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200 ease-linear ${
-              success ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <Check className="h-4 w-4" aria-hidden="true" />
-            Saved
-          </span>
-        </button>
+          ) : success ? (
+            <>
+              <Check aria-hidden="true" />
+              Saved
+            </>
+          ) : (
+            "Save plan"
+          )}
+        </Button>
         <InlineMessage message={formError} />
       </div>
     </form>

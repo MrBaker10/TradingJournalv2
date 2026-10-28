@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowDown, ArrowUp, Pencil, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import {
   addChecklistStep,
@@ -8,10 +8,13 @@ import {
   moveChecklistStep,
   renameChecklistStep,
 } from "@/actions/checklist";
-import { FIELD_CLASS } from "@/components/ui/field-class";
+import { FieldError } from "@/components/trades/form-blocks";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
-import { notifyError } from "@/components/ui/toast";
+import { notifyError, notifyProcess } from "@/components/ui/toast";
 import type { ChecklistItem } from "@/db/queries/checklist";
+import { useTwoClickConfirm } from "@/hooks/use-two-click-confirm";
 import {
   CHECKLIST_MOVE_FAILED,
   CHECKLIST_PHASE_FULL,
@@ -24,34 +27,26 @@ import {
   MAX_CHECKLIST_ITEMS_PER_PHASE,
 } from "@/schemas/checklist";
 
-const BUTTON_CLASS =
-  "h-11 shrink-0 rounded-ctl border border-white/12 bg-white/5 px-3 text-sm text-fg transition-colors hover:border-cyan/35 focus-visible:outline-cyan disabled:opacity-40";
-
 type Phase = ChecklistItemInput["phase"];
 
+// A step's tools show on hover and on keyboard focus; on a touch screen,
+// which has no hover, they are always there (Design.md §3.8). A disabled
+// arrow hides at rest too, or the button's own disabled opacity shows it.
+const ROW_TOOL =
+  "size-10 text-muted-foreground lg:size-7 lg:opacity-0 lg:disabled:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100 lg:group-focus-within:disabled:opacity-40 lg:group-hover:disabled:opacity-40 [@media(hover:none)]:opacity-100";
+
+/** The checklist template of Design.md §3.8: three phases side by side. */
 export function ChecklistTemplate({ items }: { items: ChecklistItem[] }) {
   return (
-    <section
-      aria-labelledby="checklist-template-heading"
-      className="flex max-w-4xl flex-col gap-3"
-    >
-      <h2 id="checklist-template-heading" className="cap">
-        Checklist template
-      </h2>
-      <div className="card-surface edge divide-y divide-white/8">
-        <p className="p-5 text-sm text-fg-muted">
-          Your routine, in three phases. Up to 20 steps per phase, 120
-          characters per step.
-        </p>
-        {CHECKLIST_PHASES.map((phase) => (
-          <ChecklistPhase
-            key={phase}
-            phase={phase}
-            items={items.filter((item) => item.phase === phase)}
-          />
-        ))}
-      </div>
-    </section>
+    <div className="grid gap-6 md:grid-cols-3">
+      {CHECKLIST_PHASES.map((phase) => (
+        <ChecklistPhase
+          key={phase}
+          phase={phase}
+          items={items.filter((item) => item.phase === phase)}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -64,21 +59,20 @@ function ChecklistPhase({
 }) {
   const addInput = useRef<HTMLInputElement>(null);
   return (
-    <section aria-labelledby={`checklist-${phase}`} className="p-5 sm:p-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h3 id={`checklist-${phase}`} className="text-sm font-medium text-fg">
+    <section
+      aria-labelledby={`checklist-${phase}`}
+      className="flex min-w-0 flex-col gap-2"
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 id={`checklist-${phase}`} className="text-muted-foreground text-xs">
           {CHECKLIST_PHASE_LABELS[phase]}
         </h3>
-        <span className="font-mono text-xs tabular-nums text-fg-muted">
-          {items.length}/20
+        <span className="font-mono text-muted-foreground text-xs tabular-nums">
+          {items.length}/{MAX_CHECKLIST_ITEMS_PER_PHASE}
         </span>
       </div>
-      {items.length === 0 ? (
-        <p className="mb-4 text-sm text-fg-subtle">
-          No steps yet. Add your first step below.
-        </p>
-      ) : (
-        <ol className="mb-4 space-y-3">
+      {items.length > 0 && (
+        <ol className="flex flex-col gap-1.5">
           {items.map((item, index) => (
             <ChecklistRow
               key={item.id}
@@ -111,10 +105,9 @@ function ChecklistRow({
   onDeleted: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
+  const removeConfirm = useTwoClickConfirm();
   const renameButton = useRef<HTMLButtonElement>(null);
-  const deleteButton = useRef<HTMLButtonElement>(null);
 
   function closeEdit() {
     setEditing(false);
@@ -129,6 +122,7 @@ function ChecklistRow({
           notifyError(result.error);
           return;
         }
+        notifyProcess("Step removed");
         onDeleted();
       } catch {
         notifyError("Couldn't delete the step. Try again.");
@@ -136,86 +130,60 @@ function ChecklistRow({
     });
   }
 
-  return (
-    <li className="rounded-ctl border border-white/8 bg-well/50 p-3">
-      {editing ? (
+  if (editing)
+    return (
+      <li>
         <StepForm phase={item.phase} item={item} onClose={closeEdit} />
+      </li>
+    );
+
+  return (
+    <li className="group flex items-center gap-1 rounded-lg border py-1 pr-1 pl-3 text-sm transition-colors duration-150 hover:bg-accent">
+      <span className="min-w-0 flex-1 break-words py-1">{item.text}</span>
+      {removeConfirm.armed ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={pending}
+          onClick={() => removeConfirm.press(remove)}
+          className="h-10 border-negative/50 text-negative hover:text-negative lg:h-7"
+        >
+          {pending ? <PendingIndicator label="Removing…" /> : "Remove?"}
+        </Button>
       ) : (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <span className="min-w-0 break-words text-sm text-fg">
-            {item.text}
-          </span>
-          <div className="flex shrink-0 flex-wrap gap-2">
-            {confirming ? (
-              <>
-                <span className="flex items-center text-xs text-fg-muted">
-                  Delete this step?
-                </span>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={remove}
-                  className={BUTTON_CLASS}
-                >
-                  <span className="grid">
-                    <span
-                      className={`col-start-1 row-start-1 ${pending ? "invisible" : ""}`}
-                    >
-                      Confirm delete
-                    </span>
-                    <span
-                      aria-hidden={!pending}
-                      className={`col-start-1 row-start-1 ${pending ? "" : "invisible"}`}
-                    >
-                      Deleting…
-                    </span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => {
-                    setConfirming(false);
-                    requestAnimationFrame(() => deleteButton.current?.focus());
-                  }}
-                  className={BUTTON_CLASS}
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <>
-                <MoveControls item={item} isFirst={isFirst} isLast={isLast} />
-                <button
-                  ref={renameButton}
-                  type="button"
-                  onClick={() => setEditing(true)}
-                  aria-label={`Rename ${item.text}`}
-                  className={BUTTON_CLASS}
-                >
-                  Rename
-                </button>
-                <button
-                  ref={deleteButton}
-                  type="button"
-                  onClick={() => setConfirming(true)}
-                  aria-label={`Delete ${item.text}`}
-                  className={BUTTON_CLASS}
-                >
-                  Delete
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+        <>
+          <MoveControls item={item} isFirst={isFirst} isLast={isLast} />
+          <Button
+            ref={renameButton}
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setEditing(true)}
+            aria-label={`Rename ${item.text}`}
+            className={ROW_TOOL}
+          >
+            <Pencil aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => removeConfirm.press(remove)}
+            aria-label={`Remove ${item.text}`}
+            className={`${ROW_TOOL} hover:text-negative`}
+          >
+            <X aria-hidden="true" />
+          </Button>
+        </>
       )}
     </li>
   );
 }
 
 const MOVE_DIRECTIONS = [
-  { direction: "up", Icon: ChevronUp },
-  { direction: "down", Icon: ChevronDown },
+  { direction: "up", Icon: ArrowUp },
+  { direction: "down", Icon: ArrowDown },
 ] as const;
 
 function MoveControls({
@@ -272,27 +240,33 @@ function MoveControls({
   }
 
   return MOVE_DIRECTIONS.map(({ direction, Icon }) => (
-    <button
+    <Button
       key={direction}
-      ref={(button) => {
+      ref={(button: HTMLButtonElement | null) => {
         buttons.current[direction] = button;
       }}
       type="button"
+      variant="ghost"
+      size="icon-sm"
       disabled={direction === "up" ? isFirst : isLast}
       aria-busy={moving && pressed === direction}
       onClick={() => move(direction)}
       aria-label={`Move ${item.text} ${direction}`}
-      className={BUTTON_CLASS}
+      className={ROW_TOOL}
     >
       {moving && pressed === direction ? (
         <PendingIndicator label="Moving…" />
       ) : (
-        <Icon className="h-4 w-4" aria-hidden="true" />
+        <Icon aria-hidden="true" />
       )}
-    </button>
+    </Button>
   ));
 }
 
+/**
+ * Adds a step on Enter, or renames one (Enter saves, Esc cancels). The
+ * error line belongs to the field.
+ */
 function StepForm({
   phase,
   item,
@@ -343,6 +317,7 @@ function StepForm({
           return;
         }
         setError("");
+        notifyProcess(item ? "Step renamed" : "Step added");
         if (item) onClose?.();
         else {
           setText("");
@@ -354,6 +329,11 @@ function StepForm({
     });
   }
 
+  const label = item
+    ? `Rename ${item.text}`
+    : `New ${CHECKLIST_PHASE_LABELS[phase].toLowerCase()} step`;
+  const message = error || (full ? CHECKLIST_PHASE_FULL : "");
+
   return (
     <form
       noValidate
@@ -361,63 +341,40 @@ function StepForm({
         event.preventDefault();
         save();
       }}
+      className="flex flex-col gap-1"
     >
-      <label htmlFor={id} className="mb-2 block text-xs text-fg-muted">
-        {item
-          ? "Step text"
-          : `New ${CHECKLIST_PHASE_LABELS[phase].toLowerCase()} step`}
+      <label htmlFor={id} className="sr-only">
+        {label}
       </label>
-      <div className="flex flex-wrap gap-2">
-        <input
-          ref={ref}
-          id={id}
-          value={text}
-          readOnly={pending}
-          autoComplete="off"
-          aria-invalid={!!error}
-          aria-describedby={`${id}-error`}
-          onChange={(event) => {
-            setText(event.target.value);
-            const parsed = checklistItemSchema.shape.text.safeParse(
-              event.target.value,
-            );
-            setError(parsed.success ? "" : parsed.error.issues[0].message);
-          }}
-          className={`${FIELD_CLASS} flex-1 basis-48`}
-        />
-        <button type="submit" disabled={pending} className={BUTTON_CLASS}>
-          <span className="grid">
-            <span
-              className={`col-start-1 row-start-1 ${pending ? "invisible" : ""}`}
-            >
-              {item ? "Save step" : "Add step"}
-            </span>
-            <span
-              aria-hidden={!pending}
-              className={`col-start-1 row-start-1 ${pending ? "" : "invisible"}`}
-            >
-              Saving…
-            </span>
-          </span>
-        </button>
-        {item && (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={onClose}
-            className={BUTTON_CLASS}
-          >
-            Cancel
-          </button>
-        )}
-      </div>
-      <p
-        id={`${id}-error`}
-        aria-live="polite"
-        className="mt-1 min-h-[18px] text-xs text-danger-fg"
-      >
-        {error || (full ? CHECKLIST_PHASE_FULL : "")}
-      </p>
+      <Input
+        ref={ref}
+        id={id}
+        value={text}
+        readOnly={pending}
+        autoComplete="off"
+        enterKeyHint={item ? "done" : "enter"}
+        placeholder={item ? undefined : "+ Add a step, press Enter"}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={message ? `${id}-error` : undefined}
+        onKeyDown={(event) => {
+          if (item && event.key === "Escape") {
+            event.preventDefault();
+            onClose?.();
+          }
+        }}
+        onBlur={() => {
+          if (item && !pending && text === item.text) onClose?.();
+        }}
+        onChange={(event) => {
+          setText(event.target.value);
+          const parsed = checklistItemSchema.shape.text.safeParse(
+            event.target.value,
+          );
+          setError(parsed.success ? "" : parsed.error.issues[0].message);
+        }}
+        className={`h-10 lg:h-9 ${item ? "" : "border-dashed"}`}
+      />
+      <FieldError id={`${id}-error`} message={message} />
     </form>
   );
 }

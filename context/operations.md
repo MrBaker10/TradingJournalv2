@@ -12,11 +12,20 @@ The `db:*` and `job:*` scripts load `.env.local`. Vitest loads the same file thr
 required by their fixtures. Check prerequisites in the affected tests. Do not treat
 skipped DB tests as passing coverage.
 
-Local Postgres runs in DBngin on `localhost:5432`; start it before `pnpm test` or a
-commit, since the pre-commit hook runs the DB tests.
+Local Postgres: the port and version in `.env.local` (currently 18.6 in the Docker
+container `pg-tradingjournal` on `localhost:5433`); start it before `pnpm test` or a
+commit, since the pre-commit hook runs the DB tests. After restoring a dump, run
+`vacuumdb --analyze-only`: `pg_restore` leaves no planner statistics and the DB tests
+time out without them.
 
 Generate schema migrations with `pnpm db:generate`, apply with `pnpm db:migrate`;
 never use `push`. Keep schema and generated migration in the same commit.
+
+Demo data: `pnpm db:seed:demo` deletes and recreates the user `demo` with about four
+months of made-up journal data (accounts incl. practice and archived, trades, missed
+setups, notes, checklist, weekly reviews, ledger, closed months, badges). It refuses
+any host but localhost and needs `DEMO_USER_PASSWORD` plus the instrument, trade-tag,
+prop-firm and badge seeds. Test data never goes into a migration.
 
 ## Neon and Vercel
 

@@ -1,9 +1,10 @@
 "use client";
 
-import { Check, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Loader2, Trash2 } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { type ComponentType, useRef, useState, useTransition } from "react";
 import {
   addTradeLink,
   createTrade,
@@ -12,41 +13,45 @@ import {
   deleteTradeScreenshot,
   updateTrade,
 } from "@/actions/trades";
-import { PriceBandChart } from "@/components/journal/price-band";
-import { AccountMultiSelect } from "@/components/trades/account-multi-select";
-import { ScreenshotSlots } from "@/components/trades/screenshot-slots";
-import type { TagGroup } from "@/components/trades/tag-multi-select";
-import { TagMultiSelect } from "@/components/trades/tag-multi-select";
-import type { TradeLinkItem } from "@/components/trades/trade-links-input";
-import { TradeLinksInput } from "@/components/trades/trade-links-input";
-import { InlineMessage } from "@/components/ui/inline-message";
-import { PendingIndicator } from "@/components/ui/pending-indicator";
-import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import {
+  ScreenshotTiles,
+  type TradeLinkItem,
+  TradeLinks,
+} from "@/components/trades/evidence-fields";
+import { DrawnCheck, PICK_SPRING } from "@/components/trades/form-blocks";
+import {
+  StepExecution,
+  type StepProps,
+  StepReflect,
+  StepWhat,
+  StepWhy,
+  type TradeFormData,
+} from "@/components/trades/trade-form-steps";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
+import { Progress } from "@/components/ui/progress";
+import { notifyError } from "@/components/ui/toast";
 import type { JournalTradeRow } from "@/db/queries/trades";
-import {
-  type CommissionSource,
-  commissionOnSave,
-  type StoredCommission,
-} from "@/domain/commission";
-import { isRateCurrency } from "@/domain/fx";
-import { groupByAssetClass } from "@/domain/instruments";
-import { calculatePnl, type TradeDirection } from "@/domain/pnl";
-import type { PriceBandInput } from "@/domain/price-band";
 import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
+import { usePasteImages } from "@/hooks/use-paste-images";
 import { useTwoClickConfirm } from "@/hooks/use-two-click-confirm";
-import { formatCents, formatCentsPlain, type MoneyCurrency } from "@/lib/money";
-import type { StrategyOption } from "@/lib/trades/strategy-options";
-import { resizeAndCompressImage } from "@/lib/uploads/resize-image";
 import {
-  createTradeSchema,
-  directionEnum,
-  entryModelEnum,
-  feltEnum,
-  gradeEnum,
-  resultEnum,
-  sessionEnum,
-  setupTypeEnum,
-} from "@/schemas/trades";
+  EMPTY_TRADE_FORM,
+  EVIDENCE_STEP,
+  firstBlockedStep,
+  formStateFromTrade,
+  isStepDone,
+  LOG_NOW_FROM_STEP,
+  missingInStep,
+  REQUIRED_STEPS,
+  stepEcho,
+  stepOfField,
+  type TradeFormState,
+  tradePayload,
+} from "@/lib/trades/form-steps";
+import { resizeAndCompressImage } from "@/lib/uploads/resize-image";
+import { cn } from "@/lib/utils";
+import { createTradeSchema } from "@/schemas/trades";
 
 interface StagedScreenshot {
   id: string;
@@ -54,279 +59,51 @@ interface StagedScreenshot {
   url: string;
 }
 
-const SUCCESS_HOLD_MS = 1400;
+const STEPS: { title: string; question: string }[] = [
+  { title: "What", question: "What did you trade?" },
+  { title: "Execution", question: "How did it run?" },
+  { title: "Why", question: "Why did you take it?" },
+  { title: "Reflect", question: "How did you handle it?" },
+  { title: "Evidence", question: "Anything to look back at?" },
+];
 
-type FieldState = "default" | "valid" | "invalid";
-
-// Design.md §4.5: every field needs default/hover/focus/valid/invalid/disabled.
-// "Valid" is a lightweight heuristic (has a value, no active error) rather than
-// a full per-field Zod check — matches the threshold-based example in §4.6.
-function getFieldClass(state: FieldState): string {
-  const border =
-    state === "invalid"
-      ? "border-danger-fg/60 focus:border-danger-fg"
-      : state === "valid"
-        ? "border-success-fg/45 hover:border-cyan/35 focus:border-cyan"
-        : "border-white/12 hover:border-cyan/35 focus:border-cyan";
-  return `h-10 w-full rounded-ctl border ${border} bg-well px-3 text-sm text-fg transition-colors duration-200 placeholder:text-fg-placeholder focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60`;
-}
-
-// Design.md §4.22: a required field says so in its label. The control carries
-// required itself; this only draws the mark.
-function RequiredMark() {
-  return (
-    <span className="ml-0.5 text-cyan" aria-hidden="true">
-      *
-    </span>
-  );
-}
-
-// Design.md §4.22: the form reads in named sections, in the order the detail
-// page shows the trade.
-function FormSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="card-surface edge flex flex-col gap-4 p-5">
-      <h2 className="cap cap-neon">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function FormField({
-  label,
-  htmlFor,
-  error,
-  required = false,
-  className = "",
-  children,
-}: {
-  label: string;
-  htmlFor: string;
-  error?: string;
-  required?: boolean;
-  className?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className={`flex flex-col gap-1 ${className}`}>
-      <label htmlFor={htmlFor} className="cap">
-        {label}
-        {required && <RequiredMark />}
-      </label>
-      {children}
-      <InlineMessage message={error ?? null} />
-    </div>
-  );
-}
-
-// What the button says while it holds its success state (Design.md §4.2).
-// A missed setup has no realised figure, so it says what happened instead;
-// neither has a taken trade whose profit currency has no rate stored yet.
-function summaryOf(
-  taken: boolean,
-  result: { pnlCents: number | null; rMultiple: number | null },
-): string {
-  if (!taken) return "Missed setup saved";
-  if (result.pnlCents === null) return "Trade saved";
-  const amount = formatCents(result.pnlCents, { signed: true });
-  if (result.rMultiple === null) return amount;
-  return `${amount}, ${result.rMultiple >= 0 ? "+" : ""}${result.rMultiple.toFixed(2)}R`;
-}
-
-function parseNumber(value: string): number | undefined {
-  if (value.trim() === "") return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-interface InstrumentOption {
-  id: number;
-  symbol: string;
-  name: string;
-  pointValue: string;
-  assetClass: string;
-  profitCurrency: string;
-}
-
-interface AccountOption {
-  id: number;
-  name: string;
-  isPractice?: boolean;
-  isArchived?: boolean;
-}
-
-/** An account's per-side rate for one instrument, USD cents (commissions). */
-interface CommissionRateOption {
-  accountId: number;
-  instrumentId: number;
-  perSideCents: number;
-}
-
-/** Where the amount in an account's commission field comes from. */
-const COMMISSION_HINTS: Record<CommissionSource, string> = {
-  file: "From the import file",
-  rate: "From the account's rate",
-  manual: "Typed",
-};
-
-interface TradeFormBaseProps {
-  instruments: InstrumentOption[];
-  strategies: StrategyOption[];
-  accounts: AccountOption[];
-  commissionRates: CommissionRateOption[];
-  confluenceGroups: TagGroup[];
-  mistakeTags: { id: number; label: string }[];
-}
+const STEP_BODIES: ComponentType<StepProps>[] = [
+  StepWhat,
+  StepExecution,
+  StepWhy,
+  StepReflect,
+];
 
 /**
- * One form for both jobs. The fields, their validation and the live P&L are
- * identical whether a trade is being written for the first time or corrected
- * later — duplicating them would guarantee the two drift.
+ * One form for both jobs, walked in five steps (Design.md §3.5). The fields,
+ * their validation and the live P&L are the same whether a trade is written
+ * for the first time or corrected later.
  *
- * What genuinely differs is attachments. A new trade has no id yet, so
- * screenshots are staged as blobs and uploaded after the insert, and links
- * ride along in the payload. An existing trade already has an id, so both go
- * to the server the moment they are added — the same live path the journal row
- * used before this form took the job over.
+ * What differs is attachments. A new trade has no id yet, so screenshots are
+ * staged as blobs and uploaded after the insert, and links ride along in the
+ * payload. An existing trade already has an id, so both go to the server the
+ * moment they are added.
  */
-type TradeFormProps = TradeFormBaseProps &
+type TradeFormProps = TradeFormData &
   ({ mode: "create" } | { mode: "edit"; trade: JournalTradeRow });
 
-type FormState = {
-  taken: boolean;
-  tradeDate: string;
-  instrumentId: string;
-  direction: "" | TradeDirection;
-  entryTime: string;
-  exitTime: string;
-  entryPrice: string;
-  exitPrice: string;
-  stopPrice: string;
-  contracts: string;
-  session: string;
-  /** A strategy id as the select holds it; "" is no strategy. */
-  strategyId: string;
-  /** Replace the trade's stored revision with the strategy's current rules. */
-  adoptCurrentStrategyRules: boolean;
-  setupType: string;
-  entryModel: string;
-  confluenceTagIds: number[];
-  mistakeTagIds: number[];
-  mfeR: string;
-  maeR: string;
-  postExitMfeR: string;
-  pnlOverride: string;
-  result: string;
-  grade: string;
-  felt: string;
-  byTheBook: boolean | undefined;
-  notes: string;
-  accountIds: number[];
-  /**
-   * Commission fields the user typed into, by account id. An account left out
-   * shows — and saves — what `commissionOnSave` gives it.
-   */
-  commissions: Record<number, string>;
-};
-
-const emptyState: FormState = {
-  taken: true,
-  tradeDate: "",
-  instrumentId: "",
-  direction: "",
-  entryTime: "",
-  exitTime: "",
-  entryPrice: "",
-  exitPrice: "",
-  stopPrice: "",
-  contracts: "",
-  session: "",
-  strategyId: "",
-  adoptCurrentStrategyRules: false,
-  setupType: "",
-  entryModel: "",
-  confluenceTagIds: [],
-  mistakeTagIds: [],
-  mfeR: "",
-  maeR: "",
-  postExitMfeR: "",
-  pnlOverride: "",
-  result: "",
-  grade: "",
-  felt: "",
-  byTheBook: undefined,
-  notes: "",
-  accountIds: [],
-  commissions: {},
-};
-
-// Every field is a controlled string, so a stored value has to come back as
-// the string the input would have held. `null` means "not filled in" and maps
-// to "" rather than "null" — the same empty the create path starts from, which
-// is what lets both modes share buildPayload unchanged.
-function stateFromTrade(trade: JournalTradeRow): FormState {
-  const numberField = (value: number | null) =>
-    value !== null ? String(value) : "";
-
-  return {
-    taken: trade.taken,
-    tradeDate: trade.tradeDate,
-    instrumentId: String(trade.instrumentId),
-    direction: trade.direction,
-    entryTime: trade.entryTime,
-    exitTime: trade.exitTime ?? "",
-    entryPrice: String(trade.entryPrice),
-    exitPrice: numberField(trade.exitPrice),
-    stopPrice: numberField(trade.stopPrice),
-    contracts: numberField(trade.contracts),
-    session: trade.session ?? "",
-    strategyId:
-      trade.strategy === null ? "" : String(trade.strategy.strategyId),
-    adoptCurrentStrategyRules: false,
-    setupType: trade.setupType ?? "",
-    entryModel: trade.entryModel ?? "",
-    confluenceTagIds: trade.confluences.map((confluence) => confluence.id),
-    mistakeTagIds: trade.mistakes.map((mistake) => mistake.id),
-    mfeR: numberField(trade.mfeR),
-    maeR: numberField(trade.maeR),
-    postExitMfeR: numberField(trade.postExitMfeR),
-    pnlOverride: numberField(trade.pnlOverride),
-    result: trade.result ?? "",
-    grade: trade.grade ?? "",
-    felt: trade.felt ?? "",
-    byTheBook: trade.byTheBook ?? undefined,
-    notes: trade.notes ?? "",
-    accountIds: trade.accounts.map((account) => account.id),
-    commissions: {},
-  };
-}
-
 export function TradeForm(props: TradeFormProps) {
-  const {
-    instruments,
-    strategies,
-    accounts,
-    commissionRates,
-    confluenceGroups,
-    mistakeTags,
-  } = props;
-  // Narrowed once so the callbacks below can read it without re-checking
-  // props.mode inside every closure.
+  // Narrowed once so the callbacks below can read it without re-checking.
   const edit = props.mode === "edit" ? props : null;
-
   const router = useRouter();
-  const [state, setState] = useState<FormState>(
-    edit ? stateFromTrade(edit.trade) : emptyState,
+
+  const [state, setState] = useState<TradeFormState>(
+    edit ? formStateFromTrade(edit.trade) : EMPTY_TRADE_FORM,
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [successSummary, setSuccessSummary] = useState<string | null>(null);
+  const [[step, travel], setStepState] = useState<[number, number]>([0, 1]);
+  // Steps the trader tried to leave with a required field empty: only those
+  // name what is missing, so an untouched step is not red from the start.
+  const [tried, setTried] = useState<ReadonlySet<number>>(new Set());
+  const [shake, setShake] = useState(0);
+  const [saved, setSaved] = useState<{ taken: boolean; note: string | null }>();
   const [isPending, startTransition] = useTransition();
+  const [attaching, setAttaching] = useState(false);
   const [stagedLinks, setStagedLinks] = useState<TradeLinkItem[]>([]);
   const [stagedScreenshots, setStagedScreenshots] = useState<
     StagedScreenshot[]
@@ -334,375 +111,76 @@ export function TradeForm(props: TradeFormProps) {
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
   const deleteConfirm = useTwoClickConfirm();
+  // Focus moves to the new step's question, but not on first load.
+  const focusQuestion = useRef(false);
+  // Reduced motion: the step fades in place instead of sliding 28 px.
+  const slide = useReducedMotion() ? 0 : 28;
 
-  // In edit mode the server is the source of truth for both lists; in create
-  // mode nothing exists on the server yet, so the staged arrays are.
+  // In edit mode the server holds both lists; in create mode the staged ones.
   const screenshots = edit ? edit.trade.screenshots : stagedScreenshots;
-  const links: TradeLinkItem[] = edit ? edit.trade.links : stagedLinks;
+  const links = edit ? edit.trade.links : stagedLinks;
+  const disabled = isPending;
 
-  const loading = isPending;
-  const success = successSummary !== null;
-
-  const instrument = instruments.find(
+  const instrument = props.instruments.find(
     (candidate) => candidate.id === Number(state.instrumentId),
   );
-  const instrumentGroups = useMemo(
-    () => groupByAssetClass(instruments),
-    [instruments],
-  );
-  // Before saving, the rate of the trade date is not known in the browser:
-  // the live P&L of an instrument that settles in another currency is shown
-  // in that currency, and the saved trade in USD (ftmo-cfd-instruments).
-  const liveCurrency: MoneyCurrency =
-    instrument !== undefined && isRateCurrency(instrument.profitCurrency)
-      ? instrument.profitCurrency
-      : "USD";
-
-  const livePreview = useMemo(() => {
-    if (!state.taken || !instrument) return null;
-    if (state.direction !== "long" && state.direction !== "short") return null;
-    const entryPrice = parseNumber(state.entryPrice);
-    const exitPrice = parseNumber(state.exitPrice);
-    const contracts = parseNumber(state.contracts);
-    if (
-      entryPrice === undefined ||
-      exitPrice === undefined ||
-      contracts === undefined
-    ) {
-      return null;
-    }
-    try {
-      return calculatePnl({
-        direction: state.direction,
-        entryPrice,
-        exitPrice,
-        contracts,
-        pointValue: Number(instrument.pointValue),
-        stopPrice: parseNumber(state.stopPrice),
-      });
-    } catch {
-      return null;
-    }
-  }, [
-    state.taken,
-    state.direction,
-    state.entryPrice,
-    state.exitPrice,
-    state.contracts,
-    state.stopPrice,
-    instrument,
-  ]);
-
-  // Design.md §4.22: the live band. Built from what is typed so far; the
-  // realised R comes from the same calculatePnl call the bar shows.
-  const entryNumber = parseNumber(state.entryPrice);
-  const stopNumber = parseNumber(state.stopPrice);
-  const exitNumber = state.taken ? parseNumber(state.exitPrice) : undefined;
-  const bandInput: PriceBandInput | null =
-    entryNumber !== undefined &&
-    stopNumber !== undefined &&
-    entryNumber !== stopNumber
-      ? {
-          taken: state.taken,
-          entryPrice: entryNumber,
-          stopPrice: stopNumber,
-          rMultiple: state.taken ? (livePreview?.rMultiple ?? null) : null,
-          mfeR: parseNumber(state.mfeR) ?? null,
-          maeR: parseNumber(state.maeR) ?? null,
-          postExitMfeR: state.taken
-            ? (parseNumber(state.postExitMfeR) ?? null)
-            : null,
-        }
-      : null;
-  const bandPrices = {
-    stop: stopNumber ?? null,
-    entry: entryNumber ?? null,
-    exit: exitNumber ?? null,
+  const attached = {
+    instrumentSymbol: instrument?.symbol,
+    screenshots: screenshots.length,
+    links: links.length,
   };
+  const echo = stepEcho(state, attached);
+  const last = step === STEPS.length - 1;
 
-  const showPostExitMfe =
-    state.taken && parseNumber(state.stopPrice) !== undefined;
+  usePasteImages(step === EVIDENCE_STEP && !saved, addScreenshots);
 
-  function fieldState(key: string, filled: boolean): FieldState {
-    if (errors[key]) return "invalid";
-    return filled ? "valid" : "default";
-  }
-
-  /**
-   * What an account's commission field shows while nothing is typed into it:
-   * the same `commissionOnSave` the server runs, so the prefilled amount is
-   * the one that gets stored. The edit page loads the trade in USD, so the
-   * stored amounts compare as they are.
-   */
-  function commissionShown(accountId: number): StoredCommission | null {
-    const stored = edit?.trade.accounts.find(
-      (account) => account.id === accountId,
-    );
-    const existing: StoredCommission | null =
-      stored?.commissionCents != null && stored.commissionSource != null
-        ? { cents: stored.commissionCents, source: stored.commissionSource }
-        : null;
-    const contracts = parseNumber(state.contracts);
-    if (contracts === undefined || contracts <= 0) return existing;
-
-    const instrumentId = Number(state.instrumentId);
-    const rate = commissionRates.find(
-      (candidate) =>
-        candidate.accountId === accountId &&
-        candidate.instrumentId === instrumentId,
-    );
-    return commissionOnSave({
-      typedCents: undefined,
-      existing,
-      perSideCents: rate?.perSideCents ?? null,
-      contracts,
-      basisChanged:
-        edit !== null &&
-        (instrumentId !== edit.trade.instrumentId ||
-          contracts !== edit.trade.contracts),
-      // Mirrors importMarksAfterEdit: a hand-changed P&L is no longer the
-      // file's, so from then on the rate may fill in.
-      pnlFromFile:
-        edit?.trade.pnlFromFile === true &&
-        parseNumber(state.pnlOverride) ===
-          (edit.trade.pnlOverride ?? undefined),
-    });
-  }
-
-  function setCommission(accountId: number, value: string) {
-    setState((prev) => ({
-      ...prev,
-      commissions: { ...prev.commissions, [accountId]: value },
-    }));
-    if (errors.commissions) setErrors((prev) => ({ ...prev, commissions: "" }));
-  }
-
-  function set<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setState((prev) => ({ ...prev, [key]: value }));
-    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: "" }));
-  }
-
-  // A different strategy means the by-the-book answer was given against other
-  // rules, so the server clears it: the form clears it too and shows that.
-  const savedStrategyId =
-    edit?.trade.strategy == null ? "" : String(edit.trade.strategy.strategyId);
-  const strategyChanged = edit !== null && state.strategyId !== savedStrategyId;
-
-  // The newer rules the trade can explicitly adopt: the same, active strategy
-  // has a revision other than the one the trade stores.
-  const adoptableStrategy = (() => {
-    const assigned = edit?.trade.strategy;
-    if (!assigned || state.strategyId !== String(assigned.strategyId)) {
-      return null;
-    }
-    const option = strategies.find(
-      (candidate) => candidate.id === assigned.strategyId,
-    );
-    return option &&
-      !option.archived &&
-      option.currentRevisionId !== assigned.revisionId
-      ? option
-      : null;
-  })();
-
-  function changeStrategy(strategyId: string) {
-    setState((prev) => ({
-      ...prev,
-      strategyId,
-      adoptCurrentStrategyRules: false,
-      byTheBook: strategyId === prev.strategyId ? prev.byTheBook : undefined,
-    }));
-    if (errors.strategyId) setErrors((prev) => ({ ...prev, strategyId: "" }));
-  }
-
-  // Adopting resets the by-the-book answer on the server; the form shows that
-  // and restores the answer it held when the choice is taken back.
-  const answerBeforeAdopting = useRef<boolean | undefined>(undefined);
-  function toggleAdoptCurrentStrategyRules(adopt: boolean) {
-    if (adopt) answerBeforeAdopting.current = state.byTheBook;
-    setState((prev) => ({
-      ...prev,
-      adoptCurrentStrategyRules: adopt,
-      byTheBook: adopt ? undefined : answerBeforeAdopting.current,
-    }));
-  }
-
-  // The upload endpoint is a route handler, not a Server Action, so it does
-  // not trigger Next's own revalidation — router.refresh() re-runs the page's
-  // Server Component tree to pick the new screenshot up.
-  async function uploadScreenshot(tradeId: number, blob: Blob) {
-    const formData = new FormData();
-    formData.append("tradeId", String(tradeId));
-    formData.append("file", blob, "screenshot.jpg");
-    const response = await fetch("/api/uploads", {
-      method: "POST",
-      body: formData,
-    });
-    if (response.ok) return null;
-    const body: { error?: string } | null = await response
-      .json()
-      .catch(() => null);
-    return body?.error ?? "Could not upload that screenshot.";
-  }
-
-  async function handleAddScreenshot(file: File) {
-    if (screenshots.length >= MAX_SCREENSHOTS_PER_TRADE) {
-      setScreenshotError(
-        `A trade can have at most ${MAX_SCREENSHOTS_PER_TRADE} screenshots.`,
-      );
-      return;
-    }
-
-    let blob: Blob;
-    try {
-      blob = await resizeAndCompressImage(file);
-    } catch {
-      setScreenshotError("Could not process that image.");
-      return;
-    }
-
-    if (edit) {
-      const error = await uploadScreenshot(edit.trade.id, blob);
-      setScreenshotError(error);
-      if (!error) router.refresh();
-      return;
-    }
-
-    setStagedScreenshots((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), blob, url: URL.createObjectURL(blob) },
-    ]);
-    setScreenshotError(null);
-  }
-
-  async function handleRemoveScreenshot(id: string | number) {
-    if (edit) {
-      const result = await deleteTradeScreenshot({
-        tradeId: edit.trade.id,
-        screenshotId: Number(id),
+  function update(patch: Partial<TradeFormState>) {
+    setState((prev) => ({ ...prev, ...patch }));
+    const cleared = Object.keys(patch).filter((key) => errors[key]);
+    if (cleared.length > 0) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        for (const key of cleared) delete next[key];
+        return next;
       });
-      setScreenshotError(result.success ? null : result.error);
-      if (result.success) router.refresh();
-      return;
     }
-
-    setStagedScreenshots((prev) => {
-      const removed = prev.find((screenshot) => screenshot.id === id);
-      if (removed) URL.revokeObjectURL(removed.url);
-      return prev.filter((screenshot) => screenshot.id !== id);
-    });
   }
 
-  async function handleAddLink(input: { url: string; label?: string }) {
-    if (edit) {
-      const result = await addTradeLink({ tradeId: edit.trade.id, ...input });
-      setLinkError(result.success ? null : result.error);
-      if (result.success) router.refresh();
-      return;
-    }
-
-    setStagedLinks((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        url: input.url,
-        label: input.label ?? null,
-      },
-    ]);
+  function go(next: number) {
+    focusQuestion.current = true;
+    setStepState([next, next >= step ? 1 : -1]);
   }
 
-  async function handleRemoveLink(id: string | number) {
-    if (edit) {
-      const result = await deleteTradeLink({
-        tradeId: edit.trade.id,
-        linkId: Number(id),
-      });
-      setLinkError(result.success ? null : result.error);
-      if (result.success) router.refresh();
-      return;
-    }
-
-    setStagedLinks((prev) => prev.filter((link) => link.id !== id));
+  function block(index: number) {
+    setTried((prev) => new Set(prev).add(index));
+    setShake((value) => value + 1);
   }
 
-  // Two clicks, no modal — the same confirm shape the screenshot tiles use,
-  // and Design.md §4.6's rule that a decision belongs where it is made.
-  function handleDeleteClick() {
-    if (!edit) return;
+  function next() {
+    if (missingInStep(state, step).length > 0) return block(step);
+    if (last) save();
+    else go(step + 1);
+  }
 
-    deleteConfirm.press(() =>
-      startTransition(async () => {
-        const result = await deleteTrade({ tradeId: edit.trade.id });
-        if (!result.success) {
-          setErrors({ form: result.error });
-          return;
-        }
-        router.push("/journal");
-        router.refresh();
-      }),
+  /** "Log now" and ⌘↵: save from any step once steps one and two hold. */
+  function save() {
+    const blocked = firstBlockedStep(state);
+    if (blocked !== undefined) {
+      if (blocked !== step) go(blocked);
+      return block(blocked);
+    }
+
+    const parsed = createTradeSchema.safeParse(
+      tradePayload(
+        state,
+        edit
+          ? []
+          : stagedLinks.map((link) => ({
+              url: link.url,
+              label: link.label ?? undefined,
+            })),
+      ),
     );
-  }
-
-  function buildPayload() {
-    const shared = {
-      tradeDate: state.tradeDate,
-      instrumentId:
-        state.instrumentId === "" ? undefined : Number(state.instrumentId),
-      direction: state.direction === "" ? undefined : state.direction,
-      entryTime: state.entryTime,
-      entryPrice: parseNumber(state.entryPrice),
-      stopPrice: parseNumber(state.stopPrice),
-      session: state.session === "" ? undefined : state.session,
-      strategyId: state.strategyId === "" ? null : Number(state.strategyId),
-      adoptCurrentStrategyRules: state.adoptCurrentStrategyRules,
-      setupType: state.setupType === "" ? undefined : state.setupType,
-      entryModel: state.entryModel === "" ? undefined : state.entryModel,
-      confluenceTagIds: state.confluenceTagIds,
-      mistakeTagIds: state.mistakeTagIds,
-      mfeR: parseNumber(state.mfeR),
-      maeR: parseNumber(state.maeR),
-      notes: state.notes.trim() === "" ? undefined : state.notes,
-      felt: state.felt === "" ? undefined : state.felt,
-      grade: state.grade === "" ? undefined : state.grade,
-      // Only the create path carries links in the payload. On an existing
-      // trade they are already rows of their own, added and removed live, and
-      // updateTrade ignores this field for exactly that reason.
-      links: edit
-        ? []
-        : stagedLinks.map((link) => ({
-            url: link.url,
-            label: link.label ?? undefined,
-          })),
-    };
-
-    if (!state.taken) {
-      return { ...shared, taken: false as const };
-    }
-
-    return {
-      ...shared,
-      taken: true as const,
-      exitTime: state.exitTime,
-      exitPrice: parseNumber(state.exitPrice),
-      contracts: parseNumber(state.contracts),
-      pnlOverride: parseNumber(state.pnlOverride),
-      result: state.result === "" ? undefined : state.result,
-      byTheBook: state.byTheBook,
-      postExitMfeR: parseNumber(state.postExitMfeR),
-      accountIds: state.accountIds,
-      // Only the fields typed into, and only for accounts still selected.
-      commissions: state.accountIds.flatMap((accountId) => {
-        const typed = state.commissions[accountId];
-        if (typed === undefined || typed.trim() === "") return [];
-        return [{ accountId, amount: parseNumber(typed) }];
-      }),
-    };
-  }
-
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-
-    const parsed = createTradeSchema.safeParse(buildPayload());
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
@@ -710,6 +188,15 @@ export function TradeForm(props: TradeFormProps) {
         if (!fieldErrors[key]) fieldErrors[key] = issue.message;
       }
       setErrors(fieldErrors);
+      // The error lands at its field, so open the first step that holds one.
+      const steps = Object.keys(fieldErrors)
+        .map(stepOfField)
+        .filter((index) => index !== undefined);
+      if (steps.length > 0) {
+        const target = Math.min(...steps);
+        if (target !== step) go(target);
+      }
+      setShake((value) => value + 1);
       return;
     }
 
@@ -719,813 +206,523 @@ export function TradeForm(props: TradeFormProps) {
           tradeId: edit.trade.id,
           trade: parsed.data,
         });
-        if (!result.success) {
-          setErrors({ form: result.error });
-          return;
-        }
-
-        setSuccessSummary(summaryOf(state.taken, result.data));
+        if (!result.success) return notifyError(result.error);
         setErrors({});
-        setTimeout(() => {
-          router.push(`/journal/${edit.trade.id}`);
-          router.refresh();
-        }, SUCCESS_HOLD_MS);
+        setSaved({ taken: state.taken, note: null });
         return;
       }
 
       const result = await createTrade(parsed.data);
-      if (!result.success) {
-        setErrors({ form: result.error });
-        return;
-      }
+      if (!result.success) return notifyError(result.error);
 
-      // Screenshots can only be uploaded once the trade exists (trade_id is
-      // NOT NULL) — same /api/uploads endpoint the edit mode uses, just called
-      // right after creation instead of later.
-      let screenshotUploadError: string | null = null;
+      // Screenshots can only be uploaded once the trade exists.
+      let note: string | null = null;
       for (const screenshot of stagedScreenshots) {
-        const uploadError = await uploadScreenshot(
-          result.data.id,
-          screenshot.blob,
-        );
-        if (uploadError) {
-          screenshotUploadError =
-            "Trade saved, but a screenshot failed to upload.";
-        }
+        const error = await uploadScreenshot(result.data.id, screenshot.blob);
+        if (error) note = "A screenshot failed to upload; add it on the trade.";
       }
-
-      setSuccessSummary(summaryOf(state.taken, result.data));
-      setErrors(screenshotUploadError ? { form: screenshotUploadError } : {});
-      setTimeout(() => {
-        setState(emptyState);
-        setSuccessSummary(null);
-        for (const screenshot of stagedScreenshots) {
-          URL.revokeObjectURL(screenshot.url);
-        }
-        setStagedScreenshots([]);
-        setStagedLinks([]);
-      }, SUCCESS_HOLD_MS);
+      setErrors({});
+      setSaved({ taken: state.taken, note });
     });
   }
 
+  function logAnother() {
+    for (const screenshot of stagedScreenshots) {
+      URL.revokeObjectURL(screenshot.url);
+    }
+    setStagedScreenshots([]);
+    setStagedLinks([]);
+    setState(EMPTY_TRADE_FORM);
+    setTried(new Set());
+    setErrors({});
+    setSaved(undefined);
+    focusQuestion.current = true;
+    setStepState([0, -1]);
+  }
+
+  // The upload endpoint is a route handler, not a Server Action, so
+  // router.refresh() re-runs the page to pick the new screenshot up.
+  async function uploadScreenshot(tradeId: number, blob: Blob) {
+    const formData = new FormData();
+    formData.append("tradeId", String(tradeId));
+    formData.append("file", blob, "screenshot.jpg");
+    let response: Response;
+    try {
+      response = await fetch("/api/uploads", {
+        method: "POST",
+        body: formData,
+      });
+    } catch {
+      return "Could not upload that screenshot. Check the connection.";
+    }
+    if (response.ok) return null;
+    const body: { error?: string } | null = await response
+      .json()
+      .catch(() => null);
+    return body?.error ?? "Could not upload that screenshot.";
+  }
+
+  /** Dropped, picked or pasted images go into the next free slots. */
+  async function addScreenshots(files: File[]) {
+    const free = MAX_SCREENSHOTS_PER_TRADE - screenshots.length;
+    if (free <= 0) {
+      setScreenshotError(
+        `A trade can have at most ${MAX_SCREENSHOTS_PER_TRADE} screenshots.`,
+      );
+      return;
+    }
+    const images = files.filter((file) => file.type.startsWith("image/"));
+    setAttaching(true);
+    let error: string | null =
+      images.length > free
+        ? `Only ${free} more screenshot${free === 1 ? "" : "s"} fit.`
+        : null;
+    for (const file of images.slice(0, free)) {
+      let blob: Blob;
+      try {
+        blob = await resizeAndCompressImage(file);
+      } catch {
+        error = "Could not process that image.";
+        continue;
+      }
+      if (edit) {
+        error = (await uploadScreenshot(edit.trade.id, blob)) ?? error;
+      } else {
+        setStagedScreenshots((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), blob, url: URL.createObjectURL(blob) },
+        ]);
+      }
+    }
+    setAttaching(false);
+    setScreenshotError(error);
+    if (edit) router.refresh();
+  }
+
+  async function removeScreenshot(id: string | number) {
+    if (edit) {
+      const result = await deleteTradeScreenshot({
+        tradeId: edit.trade.id,
+        screenshotId: Number(id),
+      });
+      setScreenshotError(result.success ? null : result.error);
+      if (result.success) router.refresh();
+      return;
+    }
+    setStagedScreenshots((prev) => {
+      const removed = prev.find((screenshot) => screenshot.id === id);
+      if (removed) URL.revokeObjectURL(removed.url);
+      return prev.filter((screenshot) => screenshot.id !== id);
+    });
+  }
+
+  async function addLink(input: { url: string; label?: string }) {
+    if (edit) {
+      const result = await addTradeLink({ tradeId: edit.trade.id, ...input });
+      setLinkError(result.success ? null : result.error);
+      if (result.success) router.refresh();
+      return;
+    }
+    setStagedLinks((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), url: input.url, label: input.label ?? null },
+    ]);
+  }
+
+  async function removeLink(id: string | number) {
+    if (edit) {
+      const result = await deleteTradeLink({
+        tradeId: edit.trade.id,
+        linkId: Number(id),
+      });
+      setLinkError(result.success ? null : result.error);
+      if (result.success) router.refresh();
+      return;
+    }
+    setStagedLinks((prev) => prev.filter((link) => link.id !== id));
+  }
+
+  function handleDelete() {
+    if (!edit) return;
+    deleteConfirm.press(() =>
+      startTransition(async () => {
+        const result = await deleteTrade({ tradeId: edit.trade.id });
+        if (!result.success) return notifyError(result.error);
+        router.push("/journal");
+        router.refresh();
+      }),
+    );
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLFormElement>) {
+    if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+    // A field that handles Enter itself (the link input) has said so.
+    if (event.defaultPrevented) return;
+    if (event.metaKey || event.ctrlKey) {
+      event.preventDefault();
+      save();
+      return;
+    }
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    // Enter is a newline in a textarea and a click on a button or link.
+    if (target.closest("textarea, button, a, select, summary")) return;
+    event.preventDefault();
+    next();
+  }
+
+  if (saved) {
+    return (
+      <SavedState
+        title={
+          edit
+            ? "Trade saved"
+            : saved.taken
+              ? "Trade logged"
+              : "Missed setup logged"
+        }
+        subtitle={[state.tradeDate, instrument?.symbol]
+          .filter(Boolean)
+          .join(" · ")}
+        note={saved.note}
+        tradeId={edit?.trade.id}
+        onLogAnother={edit ? undefined : logAnother}
+      />
+    );
+  }
+
+  const Body = STEP_BODIES[step];
+  const stillNeeded = tried.has(step) ? missingInStep(state, step) : [];
+  // A save the schema refused names nothing missing, but its errors sit at
+  // fields of this step: the same line says so and shakes.
+  const stepErrors = Object.keys(errors).filter(
+    (key) => errors[key] && stepOfField(key) === step,
+  ).length;
+  const blockedMessage =
+    stillNeeded.length > 0
+      ? `Still needed: ${stillNeeded.join(", ")}`
+      : stepErrors > 0
+        ? `Check the marked field${stepErrors === 1 ? "" : "s"}.`
+        : null;
+  const stepProps: StepProps = {
+    data: props,
+    state,
+    update,
+    errors,
+    isMissing: (name) => stillNeeded.includes(name),
+    editTrade: edit?.trade ?? null,
+    disabled,
+  };
+  const showLogNow = step >= LOG_NOW_FROM_STEP && !last;
+  const submitLabel = edit
+    ? "Save changes"
+    : state.taken
+      ? "Log trade"
+      : "Log missed setup";
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* noValidate: `required` marks the fields for assistive tech, the
-          Zod schema stays the one validator (Design.md §4.5 — live, inline,
-          no browser bubbles). */}
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
-        <FormSection title="Trade">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm text-fg">Missed setup</span>
-              <span className="text-xs text-fg-subtle">
-                Nothing was executed — only the setup itself is logged.
-              </span>
-            </div>
-            <ToggleSwitch
-              checked={!state.taken}
-              onCheckedChange={(missed) => set("taken", !missed)}
-              disabled={loading || success}
-              ariaLabel="Missed setup"
-            />
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
-            <FormField
-              label="Date"
-              htmlFor="tradeDate"
-              error={errors.tradeDate}
-              required
-              className="sm:col-span-3"
-            >
-              <input
-                id="tradeDate"
-                required
-                type="date"
-                value={state.tradeDate}
-                onChange={(event) => set("tradeDate", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("tradeDate", state.tradeDate !== ""),
-                )}
-              />
-            </FormField>
+    <div className="flex flex-col gap-10">
+      <div className="grid gap-6 md:grid-cols-[200px_minmax(0,1fr)] md:gap-10">
+        <StepRail
+          step={step}
+          echo={echo}
+          done={(index) => index !== step && isStepDone(state, index, attached)}
+          onGo={go}
+        />
 
-            <FormField
-              label="Instrument"
-              htmlFor="instrumentId"
-              required
-              className="sm:col-span-5"
-              error={errors.instrumentId}
-            >
-              <select
-                id="instrumentId"
-                required
-                value={state.instrumentId}
-                onChange={(event) => set("instrumentId", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("instrumentId", state.instrumentId !== ""),
-                )}
-              >
-                <option value="">Select…</option>
-                {instrumentGroups.map((group) => (
-                  <optgroup key={group.assetClass} label={group.label}>
-                    {group.instruments.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.symbol} — {option.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </FormField>
-
-            <FormField
-              label="Direction"
-              htmlFor="direction"
-              required
-              className="sm:col-span-4"
-              error={errors.direction}
-            >
-              <select
-                id="direction"
-                required
-                value={state.direction}
-                onChange={(event) =>
-                  set("direction", event.target.value as "" | TradeDirection)
-                }
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("direction", state.direction !== ""),
-                )}
-              >
-                <option value="">Select…</option>
-                {directionEnum.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option === "long" ? "Long" : "Short"}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-          </div>
-          {state.taken && (
-            <div className="flex flex-col gap-1.5">
-              <span className="cap">
-                Accounts
-                <RequiredMark />
-              </span>
-              <AccountMultiSelect
-                accounts={accounts}
-                selectedIds={state.accountIds}
-                onChange={(ids) => set("accountIds", ids)}
-                disabled={loading || success}
-              />
-              <InlineMessage message={errors.accountIds ?? null} />
-            </div>
-          )}
-        </FormSection>
-
-        <FormSection title="Execution">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <FormField
-              label="Entry time"
-              htmlFor="entryTime"
-              required
-              error={errors.entryTime}
-            >
-              <input
-                id="entryTime"
-                required
-                type="time"
-                step={1}
-                value={state.entryTime}
-                onChange={(event) => set("entryTime", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("entryTime", state.entryTime !== ""),
-                )}
-              />
-            </FormField>
-
-            {state.taken && (
-              <FormField
-                label="Exit time"
-                htmlFor="exitTime"
-                required
-                error={errors.exitTime}
-              >
-                <input
-                  id="exitTime"
-                  required
-                  type="time"
-                  step={1}
-                  value={state.exitTime}
-                  onChange={(event) => set("exitTime", event.target.value)}
-                  disabled={loading || success}
-                  className={getFieldClass(
-                    fieldState("exitTime", state.exitTime !== ""),
-                  )}
-                />
-              </FormField>
-            )}
-
-            {state.taken && (
-              <FormField
-                label="Contracts"
-                htmlFor="contracts"
-                required
-                error={errors.contracts}
-              >
-                <input
-                  id="contracts"
-                  required
-                  type="number"
-                  // Lots for a CFD come in fractions like 1.88; the schema
-                  // allows up to four decimals (schemas/trades.ts).
-                  min={0.0001}
-                  step="any"
-                  value={state.contracts}
-                  onChange={(event) => set("contracts", event.target.value)}
-                  disabled={loading || success}
-                  className={getFieldClass(
-                    fieldState("contracts", state.contracts.trim() !== ""),
-                  )}
-                />
-              </FormField>
-            )}
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <FormField
-              label="Entry price"
-              htmlFor="entryPrice"
-              required
-              error={errors.entryPrice}
-            >
-              <input
-                id="entryPrice"
-                required
-                type="number"
-                step="0.00001"
-                value={state.entryPrice}
-                onChange={(event) => set("entryPrice", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("entryPrice", state.entryPrice.trim() !== ""),
-                )}
-              />
-            </FormField>
-
-            {state.taken && (
-              <FormField
-                label="Exit price"
-                htmlFor="exitPrice"
-                required
-                error={errors.exitPrice}
-              >
-                <input
-                  id="exitPrice"
-                  required
-                  type="number"
-                  step="0.00001"
-                  value={state.exitPrice}
-                  onChange={(event) => set("exitPrice", event.target.value)}
-                  disabled={loading || success}
-                  className={getFieldClass(
-                    fieldState("exitPrice", state.exitPrice.trim() !== ""),
-                  )}
-                />
-              </FormField>
-            )}
-
-            <FormField
-              label="Stop price"
-              htmlFor="stopPrice"
-              error={errors.stopPrice}
-            >
-              <input
-                id="stopPrice"
-                type="number"
-                step="0.00001"
-                value={state.stopPrice}
-                onChange={(event) => set("stopPrice", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("stopPrice", state.stopPrice.trim() !== ""),
-                )}
-              />
-            </FormField>
-          </div>
-          {/* Design.md §4.22: the band from the detail page, live. It needs a
-            stop, because R is undefined without one (§4.21). */}
-          {bandInput ? (
-            <PriceBandChart input={bandInput} prices={bandPrices} />
-          ) : (
-            <p className="text-fg-subtle text-xs">
-              Add a stop price to see the trade in R.
-            </p>
-          )}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <FormField label="MFE (R)" htmlFor="mfeR" error={errors.mfeR}>
-              <input
-                id="mfeR"
-                type="number"
-                step="0.01"
-                value={state.mfeR}
-                onChange={(event) => set("mfeR", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("mfeR", state.mfeR.trim() !== ""),
-                )}
-              />
-            </FormField>
-
-            <FormField label="MAE (R)" htmlFor="maeR" error={errors.maeR}>
-              <input
-                id="maeR"
-                type="number"
-                step="0.01"
-                value={state.maeR}
-                onChange={(event) => set("maeR", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("maeR", state.maeR.trim() !== ""),
-                )}
-              />
-            </FormField>
-
-            {showPostExitMfe && (
-              <FormField
-                label="Post-exit MFE (R)"
-                htmlFor="postExitMfeR"
-                error={errors.postExitMfeR}
-              >
-                <input
-                  id="postExitMfeR"
-                  type="number"
-                  step="0.01"
-                  value={state.postExitMfeR}
-                  onChange={(event) => set("postExitMfeR", event.target.value)}
-                  disabled={loading || success}
-                  className={getFieldClass(
-                    fieldState(
-                      "postExitMfeR",
-                      state.postExitMfeR.trim() !== "",
-                    ),
-                  )}
-                />
-              </FormField>
-            )}
-          </div>
-          {state.taken && (
-            <FormField
-              label="P&amp;L override (USD)"
-              htmlFor="pnlOverride"
-              error={errors.pnlOverride}
-            >
-              <input
-                id="pnlOverride"
-                type="number"
-                step="0.01"
-                placeholder="Leave empty to use the derived P&L"
-                value={state.pnlOverride}
-                onChange={(event) => set("pnlOverride", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("pnlOverride", state.pnlOverride.trim() !== ""),
-                )}
-              />
-            </FormField>
-          )}
-          {state.taken && state.accountIds.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <span className="cap">Commission (USD)</span>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {state.accountIds.map((accountId) => {
-                  const account = accounts.find(
-                    (candidate) => candidate.id === accountId,
-                  );
-                  const shown = commissionShown(accountId);
-                  const typed = state.commissions[accountId];
-                  const isTyped = typed !== undefined && typed.trim() !== "";
-                  const inputId = `commission-${accountId}`;
-                  return (
-                    <div key={accountId} className="flex flex-col gap-1">
-                      <label
-                        htmlFor={inputId}
-                        className="truncate text-fg-muted text-xs"
-                      >
-                        {account?.name ?? "Account"}
-                      </label>
-                      <input
-                        id={inputId}
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        step="0.01"
-                        placeholder="—"
-                        value={
-                          typed ??
-                          (shown === null ? "" : formatCentsPlain(shown.cents))
-                        }
-                        onChange={(event) =>
-                          setCommission(accountId, event.target.value)
-                        }
-                        disabled={loading || success}
-                        className={getFieldClass(
-                          fieldState("commissions", isTyped || shown !== null),
-                        )}
-                      />
-                      <span className="text-fg-subtle text-xs">
-                        {isTyped
-                          ? COMMISSION_HINTS.manual
-                          : shown === null
-                            ? "No rate set for this account"
-                            : COMMISSION_HINTS[shown.source]}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <InlineMessage message={errors.commissions ?? null} />
-            </div>
-          )}
-        </FormSection>
-
-        <FormSection title="Setup">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <FormField label="Session" htmlFor="session" error={errors.session}>
-              <select
-                id="session"
-                value={state.session}
-                onChange={(event) => set("session", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("session", state.session !== ""),
-                )}
-              >
-                <option value="">—</option>
-                {sessionEnum.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-
-            <FormField
-              label="Setup type"
-              htmlFor="setupType"
-              error={errors.setupType}
-            >
-              <select
-                id="setupType"
-                value={state.setupType}
-                onChange={(event) => set("setupType", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("setupType", state.setupType !== ""),
-                )}
-              >
-                <option value="">—</option>
-                {setupTypeEnum.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-
-            <FormField
-              label="Entry model"
-              htmlFor="entryModel"
-              error={errors.entryModel}
-            >
-              <select
-                id="entryModel"
-                value={state.entryModel}
-                onChange={(event) => set("entryModel", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("entryModel", state.entryModel !== ""),
-                )}
-              >
-                <option value="">—</option>
-                {entryModelEnum.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-          </div>
-          <FormField
-            label="Strategy"
-            htmlFor="strategyId"
-            error={errors.strategyId}
+        {/* noValidate: the Zod schema is the one validator; `required` only
+            marks the fields for assistive tech. */}
+        <form
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            next();
+          }}
+          onKeyDown={handleKeyDown}
+          className="flex min-w-0 flex-col gap-8"
+        >
+          <Progress
+            value={((step + 1) / STEPS.length) * 100}
+            aria-label={`Step ${step + 1} of ${STEPS.length}`}
+            className="flex-col gap-2 [&_[data-slot=progress-indicator]]:bg-process [&_[data-slot=progress-indicator]]:duration-200 [&_[data-slot=progress-indicator]]:ease-out"
           >
-            <select
-              id="strategyId"
-              value={state.strategyId}
-              onChange={(event) => changeStrategy(event.target.value)}
-              disabled={loading || success}
-              className={getFieldClass(
-                fieldState("strategyId", state.strategyId !== ""),
-              )}
+            <span className="text-muted-foreground text-xs">
+              Step {step + 1} of {STEPS.length}
+            </span>
+          </Progress>
+
+          <AnimatePresence mode="wait" custom={travel} initial={false}>
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: travel * slide }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: travel * -slide }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="flex flex-col gap-7"
             >
-              <option value="">No strategy</option>
-              {strategies.map((strategy) => (
-                <option key={strategy.id} value={strategy.id}>
-                  {strategy.archived
-                    ? `${strategy.name} · Archived`
-                    : strategy.name}
-                </option>
-              ))}
-            </select>
-            {strategyChanged && (
-              <p className="text-fg-subtle text-xs">
-                A different strategy clears your by-the-book answer.
-              </p>
-            )}
-            {adoptableStrategy && (
-              <label className="flex cursor-pointer items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={state.adoptCurrentStrategyRules}
-                  onChange={(event) =>
-                    toggleAdoptCurrentStrategyRules(event.target.checked)
+              <h2
+                tabIndex={-1}
+                ref={(heading) => {
+                  if (heading && focusQuestion.current) {
+                    focusQuestion.current = false;
+                    heading.focus({ preventScroll: true });
                   }
-                  disabled={loading || success}
-                  className="mt-0.5 h-4 w-4 accent-cyan"
-                />
-                <span>
-                  Adopt the current rules of this strategy
-                  <span className="block text-fg-subtle text-xs">
-                    This trade keeps its older rules until you do. Adopting
-                    clears your by-the-book answer.
-                  </span>
-                </span>
-              </label>
-            )}
-          </FormField>
-          <div className="flex flex-col gap-1.5">
-            <span className="cap">Confluences</span>
-            <TagMultiSelect
-              groups={confluenceGroups}
-              selectedIds={state.confluenceTagIds}
-              onChange={(ids) => set("confluenceTagIds", ids)}
-              disabled={loading || success}
-            />
-          </div>
-        </FormSection>
-
-        <FormSection title="Review">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <FormField label="Grade" htmlFor="grade" error={errors.grade}>
-              <select
-                id="grade"
-                value={state.grade}
-                onChange={(event) => set("grade", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(
-                  fieldState("grade", state.grade !== ""),
-                )}
+                }}
+                className="font-semibold text-2xl tracking-tight outline-none"
               >
-                <option value="">—</option>
-                {gradeEnum.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-
-            <FormField label="Felt" htmlFor="felt" error={errors.felt}>
-              <select
-                id="felt"
-                value={state.felt}
-                onChange={(event) => set("felt", event.target.value)}
-                disabled={loading || success}
-                className={getFieldClass(fieldState("felt", state.felt !== ""))}
-              >
-                <option value="">—</option>
-                {feltEnum.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-
-            {state.taken && (
-              <FormField label="Result" htmlFor="result" error={errors.result}>
-                <select
-                  id="result"
-                  value={state.result}
-                  onChange={(event) => set("result", event.target.value)}
-                  disabled={loading || success}
-                  className={getFieldClass(
-                    fieldState("result", state.result !== ""),
-                  )}
-                >
-                  <option value="">—</option>
-                  {resultEnum.options.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-            )}
-            {state.taken && (
-              <FormField
-                label="By the book"
-                htmlFor="byTheBook"
-                error={errors.byTheBook}
-              >
-                <select
-                  id="byTheBook"
-                  value={
-                    state.byTheBook === undefined ? "" : String(state.byTheBook)
-                  }
-                  onChange={(event) =>
-                    set(
-                      "byTheBook",
-                      event.target.value === ""
-                        ? undefined
-                        : event.target.value === "true",
-                    )
-                  }
-                  disabled={
-                    loading || success || state.adoptCurrentStrategyRules
-                  }
-                  className={getFieldClass(
-                    fieldState("byTheBook", state.byTheBook !== undefined),
-                  )}
-                >
-                  <option value="">—</option>
-                  <option value="true">Yes</option>
-                  <option value="false">No</option>
-                </select>
-                <p className="text-fg-subtle text-xs">
-                  Against the strategy's rules, or your own when none is set.
-                </p>
-              </FormField>
-            )}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="cap">Mistakes</span>
-            <TagMultiSelect
-              groups={[{ group: "", tags: mistakeTags }]}
-              selectedIds={state.mistakeTagIds}
-              onChange={(ids) => set("mistakeTagIds", ids)}
-              tone="neutral"
-              disabled={loading || success}
-            />
-          </div>
-          <FormField label="Notes" htmlFor="notes" error={errors.notes}>
-            <textarea
-              id="notes"
-              rows={3}
-              value={state.notes}
-              onChange={(event) => set("notes", event.target.value)}
-              disabled={loading || success}
-              className={`${getFieldClass(
-                fieldState("notes", state.notes.trim() !== ""),
-              )} h-auto resize-none py-2`}
-            />
-          </FormField>
-        </FormSection>
-
-        <FormSection title="Attachments">
-          <div className="flex flex-col gap-1.5">
-            <span className="cap">Screenshots</span>
-            <ScreenshotSlots
-              screenshots={screenshots}
-              disabled={loading || success}
-              error={screenshotError}
-              onAdd={handleAddScreenshot}
-              onRemove={handleRemoveScreenshot}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="cap">Links</span>
-            <TradeLinksInput
-              links={links}
-              disabled={loading || success}
-              onAdd={handleAddLink}
-              onRemove={handleRemoveLink}
-            />
-            <InlineMessage message={linkError ?? errors.links ?? null} />
-          </div>
-
-          {edit && (
-            <p className="text-fg-subtle text-xs">
-              Screenshots and links are saved the moment you add or remove them.
-            </p>
-          )}
-        </FormSection>
-
-        {/* Design.md §4.22: live P&L and the save button stay in reach while the
-          form scrolls. The wrapper is opaque, the card on it keeps its look. */}
-        <div className="sticky bottom-0 z-10 flex flex-col gap-1 rounded-card bg-bg">
-          <div className="card-surface edge flex flex-wrap items-center justify-between gap-4 px-5 py-4">
-            <div className="flex items-baseline gap-2 font-mono tabular-nums">
-              {!state.taken ? (
-                <span className="font-sans text-fg-subtle text-sm">
-                  Missed setup — no P&amp;L
-                </span>
-              ) : livePreview ? (
-                <>
-                  {/* §1: money gets a semantic colour and nothing else. */}
-                  <span
-                    className={`font-bold text-[21px] ${
-                      livePreview.pnlCents >= 0
-                        ? "text-success-fg"
-                        : "text-danger-fg"
-                    }`}
-                  >
-                    {formatCents(livePreview.pnlCents, {
-                      signed: true,
-                      currency: liveCurrency,
-                    })}
-                  </span>
-                  {livePreview.rMultiple !== null && (
-                    <span className="text-fg-muted text-sm">
-                      {livePreview.rMultiple >= 0 ? "+" : ""}
-                      {livePreview.rMultiple.toFixed(2)}R
-                    </span>
-                  )}
-                </>
+                {STEPS[step].question}
+              </h2>
+              {Body ? (
+                <Body {...stepProps} />
               ) : (
-                <span className="font-bold text-[21px] text-fg-subtle">—</span>
+                <div className="flex flex-col gap-6">
+                  <ScreenshotTiles
+                    screenshots={screenshots}
+                    pending={attaching}
+                    disabled={disabled}
+                    error={screenshotError}
+                    onAdd={addScreenshots}
+                    onRemove={removeScreenshot}
+                  />
+                  <TradeLinks
+                    links={links}
+                    disabled={disabled}
+                    error={linkError ?? errors.links ?? null}
+                    onAdd={addLink}
+                    onRemove={removeLink}
+                  />
+                  {edit && (
+                    <p className="text-muted-foreground text-xs">
+                      Screenshots and links are saved the moment you add or
+                      remove them.
+                    </p>
+                  )}
+                </div>
               )}
-            </div>
-            <button
-              type="submit"
-              disabled={loading || success}
-              className={`relative h-11 min-w-[11rem] rounded-ctl px-5 text-sm font-medium text-fg shadow-[var(--shadow-button-primary)] ${
-                success
-                  ? "bg-[image:var(--gradient-success)]"
-                  : "bg-[image:var(--gradient-info)]"
-              }`}
+            </motion.div>
+          </AnimatePresence>
+
+          {blockedMessage && (
+            <motion.p
+              key={shake}
+              role="alert"
+              initial={{ x: 0 }}
+              animate={{ x: [0, -7, 7, -4, 4, 0] }}
+              transition={{ duration: 0.35 }}
+              className="text-negative text-sm"
             >
-              <span
-                className={`inline-flex items-center justify-center transition-opacity duration-200 ease-linear ${
-                  loading || success ? "opacity-0" : "opacity-100"
-                }`}
+              {blockedMessage}
+            </motion.p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2 border-border border-t pt-5">
+            {step > 0 && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-10"
+                disabled={disabled}
+                onClick={() => go(step - 1)}
               >
-                {edit
-                  ? "Save changes"
-                  : state.taken
-                    ? "Log trade"
-                    : "Log missed setup"}
-              </span>
-              <span
-                className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ease-linear ${
-                  loading ? "opacity-100" : "opacity-0"
-                }`}
+                <ArrowLeft aria-hidden="true" />
+                Back
+              </Button>
+            )}
+            {showLogNow && (
+              <Button
+                variant="ghost"
+                size="lg"
+                className="ml-auto h-10 text-muted-foreground"
+                disabled={disabled}
+                onClick={save}
               >
-                <PendingIndicator label="Saving…" />
-              </span>
-              <span
-                className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200 ease-linear ${
-                  success ? "opacity-100" : "opacity-0"
-                }`}
-              >
-                <Check className="h-4 w-4" aria-hidden="true" />
-                {successSummary}
-              </span>
-            </button>
+                {edit ? "Save now" : "Log now"}
+                <Kbd>⌘↵</Kbd>
+              </Button>
+            )}
+            <Button
+              type="submit"
+              size="lg"
+              disabled={disabled}
+              className={cn("group h-10 px-4", !showLogNow && "ml-auto")}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="animate-spin" aria-hidden="true" />
+                  Saving…
+                </>
+              ) : last ? (
+                submitLabel
+              ) : (
+                <>
+                  Next
+                  <ArrowRight
+                    className="transition-[translate] duration-150 group-hover:translate-x-0.5"
+                    aria-hidden="true"
+                  />
+                </>
+              )}
+            </Button>
           </div>
-          <InlineMessage message={errors.form ?? null} />
-        </div>
-      </form>
+        </form>
+      </div>
 
       {edit && (
-        <div className="card-surface edge flex flex-col gap-3 p-5">
+        <section className="flex flex-col gap-3 border-border border-t pt-6 md:ml-[240px]">
           <div className="flex flex-col gap-0.5">
-            <span className="text-fg text-sm">Delete this trade</span>
-            <span className="text-fg-subtle text-xs">
+            <span className="text-sm">Delete this trade</span>
+            <span className="text-muted-foreground text-xs">
               Removes the entry with its accounts, tags, links and screenshots.
               This cannot be undone.
             </span>
           </div>
-          <button
-            type="button"
-            disabled={loading || success}
-            onClick={handleDeleteClick}
-            className={`flex h-10 w-full items-center justify-center gap-1.5 rounded-ctl border text-sm transition-colors duration-200 disabled:opacity-60 ${
-              deleteConfirm.armed
-                ? "border-danger-fg/60 bg-danger/15 text-danger-fg"
-                : "border-white/12 text-fg-muted hover:border-danger-fg/45 hover:text-danger-fg"
-            }`}
+          <Button
+            variant="destructive"
+            size="lg"
+            className="h-10 w-fit"
+            disabled={disabled}
+            onClick={handleDelete}
           >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            <Trash2 aria-hidden="true" />
             {deleteConfirm.armed ? "Click again to confirm" : "Delete trade"}
-          </button>
-        </div>
+          </Button>
+        </section>
       )}
+    </div>
+  );
+}
+
+/** The rail beside the steps: each step's answers so far, a check when done. */
+function StepRail({
+  step,
+  echo,
+  done,
+  onGo,
+}: {
+  step: number;
+  echo: string[];
+  done: (index: number) => boolean;
+  onGo: (index: number) => void;
+}) {
+  return (
+    <nav
+      aria-label="Steps"
+      className="grid grid-cols-5 gap-1 md:sticky md:top-6 md:flex md:flex-col md:gap-0.5 md:self-start"
+    >
+      {STEPS.map((item, index) => {
+        const current = index === step;
+        const finished = done(index);
+        return (
+          <button
+            key={item.title}
+            type="button"
+            aria-current={current ? "step" : undefined}
+            onClick={() => onGo(index)}
+            className="relative flex min-h-10 flex-col items-center gap-1 rounded-lg px-1 py-2 text-center outline-none transition-colors duration-150 hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 md:flex-row md:items-start md:gap-3 md:px-2 md:text-left"
+          >
+            {current && (
+              <motion.span
+                layoutId="trade-form-rail"
+                transition={PICK_SPRING}
+                className="absolute inset-0 rounded-lg bg-muted"
+              />
+            )}
+            <span
+              className={cn(
+                "relative flex size-5 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] transition-colors duration-150 md:mt-0.5",
+                finished
+                  ? "border-process bg-process text-background"
+                  : current
+                    ? "border-foreground text-foreground"
+                    : "border-input text-muted-foreground",
+              )}
+            >
+              {finished ? (
+                <Check className="size-3" strokeWidth={3} aria-hidden="true" />
+              ) : (
+                index + 1
+              )}
+            </span>
+            <span className="relative flex min-w-0 max-w-full flex-col">
+              <span
+                className={cn(
+                  "truncate text-xs md:text-sm",
+                  current ? "text-foreground" : "text-muted-foreground",
+                )}
+              >
+                {item.title}
+                {/* Required fields live in steps one and two only. */}
+                {REQUIRED_STEPS.some((required) => required === index) && (
+                  <span className="ml-0.5 text-process" aria-hidden="true">
+                    *
+                  </span>
+                )}
+              </span>
+              {echo[index] && (
+                <span className="hidden truncate text-[11px] text-muted-foreground md:block">
+                  {echo[index]}
+                </span>
+              )}
+              {finished && <span className="sr-only">, done</span>}
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+/** Confirms the action, never the result: no P&L, no R (Design.md §3.11). */
+function SavedState({
+  title,
+  subtitle,
+  note,
+  tradeId,
+  onLogAnother,
+}: {
+  title: string;
+  subtitle: string;
+  note: string | null;
+  tradeId: number | undefined;
+  onLogAnother: (() => void) | undefined;
+}) {
+  return (
+    <div
+      role="status"
+      className="mx-auto flex max-w-xl flex-col items-center gap-4 py-16 text-center md:py-24"
+    >
+      <DrawnCheck />
+      <h2 className="font-semibold text-xl tracking-tight">{title}</h2>
+      {subtitle && (
+        <p className="font-mono text-muted-foreground text-sm tabular-nums">
+          {subtitle}
+        </p>
+      )}
+      {note && <p className="text-negative text-sm">{note}</p>}
+      <div className="mt-2 flex flex-wrap justify-center gap-2">
+        {onLogAnother && (
+          <Button size="lg" className="h-10 px-4" onClick={onLogAnother}>
+            Log another
+          </Button>
+        )}
+        {tradeId !== undefined && (
+          <Link
+            href={`/journal/${tradeId}`}
+            className={cn(buttonVariants({ size: "lg" }), "h-10 px-4")}
+          >
+            Back to trade
+          </Link>
+        )}
+        <Link
+          href="/journal"
+          className={cn(
+            buttonVariants({ variant: "outline", size: "lg" }),
+            "h-10 px-4",
+          )}
+        >
+          View in journal
+        </Link>
+      </div>
     </div>
   );
 }

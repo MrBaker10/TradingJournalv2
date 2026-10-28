@@ -71,6 +71,10 @@ export function useUnsavedAccount(dirty: boolean, pending: boolean) {
         approvedDestination = null;
         return;
       }
+      // Settings changes its own `account` parameter in place and asks before
+      // it does; asking here as well would ask twice.
+      if (new URL(transition.destination.url).pathname === location.pathname)
+        return;
       if (!canLeave()) event.preventDefault();
     }
     window.addEventListener("beforeunload", beforeUnload);

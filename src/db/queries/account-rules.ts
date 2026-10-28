@@ -98,6 +98,48 @@ export async function listAccountRules(
   return selectAccountRules(userId, undefined, executor);
 }
 
+export interface ProgramLink {
+  programId: number;
+  accountName: string;
+  /** The program's `account_size_usd` in whole USD; null when not stated. */
+  accountSizeUsd: number | null;
+}
+
+/**
+ * The programs the user's real, active accounts are linked to, in the
+ * accounts' order, for the Prop Firm Rules catalogue. Practice accounts stay
+ * out like everywhere combined; archived ones are out of the selector too.
+ */
+export async function listProgramLinks(
+  userId: number,
+  executor: Pick<typeof db, "select"> = db,
+): Promise<ProgramLink[]> {
+  return executor
+    .select({
+      programId: accountRules.programId,
+      accountName: accounts.name,
+      // Whole dollars by construction (listAccountSizes), so the cast never
+      // rounds.
+      accountSizeUsd: sql<
+        number | null
+      >`${propFirmPrograms.accountSizeUsd}::int`,
+    })
+    .from(accountRules)
+    .innerJoin(accounts, eq(accounts.id, accountRules.accountId))
+    .innerJoin(
+      propFirmPrograms,
+      eq(propFirmPrograms.id, accountRules.programId),
+    )
+    .where(
+      and(
+        eq(accounts.userId, userId),
+        eq(accounts.isPractice, false),
+        isNull(accounts.archivedAt),
+      ),
+    )
+    .orderBy(asc(accounts.sortOrder));
+}
+
 /**
  * One active account's link, or null when it is not linked, archived or not
  * the user's. Archiving keeps `users.selected_account_id`, so an archived

@@ -8,8 +8,8 @@ type ActionResult<T> =
   | { success: false; error: string };
 
 /**
- * Called by the unlock card once it has been rendered, so the card shows
- * exactly once. It takes no arguments at all: which user and which moment is
+ * Called by /progress once its process moment has rendered, so the moment
+ * plays exactly once. It takes no arguments at all: which user and which moment is
  * the server's business, and there is nothing here a client could get wrong.
  */
 export async function markBadgesSeen(): Promise<ActionResult<null>> {

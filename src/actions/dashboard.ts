@@ -36,7 +36,7 @@ export async function markDashboardSeen(): Promise<ActionResult<null>> {
  * Called by the milestone card once it has been rendered.
  *
  * It takes no arguments on purpose. An earlier version accepted the milestone
- * from the client and only checked that it was one of the three §6 names —
+ * from the client and only checked that it was one of the three Design-v1.md §6 names —
  * which let a hand-made call store 100 and silence every future card. The
  * server already knows the streak, so it works the number out itself and the
  * client has nothing to get wrong.

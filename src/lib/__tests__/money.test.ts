@@ -4,6 +4,7 @@ import {
   dollarsToCents,
   exactCents,
   formatCents,
+  formatCentsCompact,
   formatCentsPlain,
   formatCentsThousands,
 } from "../money.ts";
@@ -169,5 +170,27 @@ describe("formatCents — currency", () => {
     expect(formatCents(5676, { currency: "EUR", signed: true })).toBe(
       "+€56.76",
     );
+  });
+});
+
+describe("formatCentsCompact", () => {
+  it("writes whole units with an explicit sign below a thousand", () => {
+    expect(formatCentsCompact(14_256)).toBe("+142");
+    expect(formatCentsCompact(-12_496)).toBe("-124");
+  });
+
+  it("writes thousands with one truncated decimal", () => {
+    expect(formatCentsCompact(104_100)).toBe("+1.0k");
+    expect(formatCentsCompact(-169_548)).toBe("-1.6k");
+    expect(formatCentsCompact(1_234_567)).toBe("+12.3k");
+  });
+
+  it("writes zero without a sign", () => {
+    expect(formatCentsCompact(0)).toBe("0");
+    expect(formatCentsCompact(40)).toBe("0");
+  });
+
+  it("rejects a non-integer cents value", () => {
+    expect(() => formatCentsCompact(12.5)).toThrow(RangeError);
   });
 });

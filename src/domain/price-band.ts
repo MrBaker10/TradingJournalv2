@@ -1,6 +1,6 @@
 // The price band on the trade detail page: one trade drawn on an R axis —
 // stop at -1R, entry at 0, exit at the realised R — with the MAE and MFE
-// spans and the post-exit run beside it. Design.md §4.21.
+// spans and the post-exit run beside it. Design-v1.md §4.21.
 //
 // Contract:
 //
@@ -16,8 +16,8 @@
 //   without a stop (or with the stop on the entry) gets `null`.
 // - MFE and MAE count by **magnitude**, as in analytics (decisions.md, S12b):
 //   the form does not say which sign to type.
-// - A missed setup has no exit. Its `rMultiple` is the would-be R (Design.md
-//   §4.9); it never becomes an exit marker or a realised stretch.
+// - A missed setup has no exit. Its `rMultiple` is the would-be R
+//   (Design-v1.md §4.9); it never becomes an exit marker or a realised stretch.
 
 export interface PriceBandInput {
   taken: boolean;

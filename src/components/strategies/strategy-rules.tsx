@@ -8,7 +8,7 @@ export function StrategyRules({ strategy }: { strategy: StrategyContent }) {
   );
   if (written.length === 0) {
     return (
-      <p className="text-fg-subtle text-sm">
+      <p className="text-muted-foreground text-sm">
         No chapters yet — add them when your rules are ready.
       </p>
     );
@@ -17,8 +17,10 @@ export function StrategyRules({ strategy }: { strategy: StrategyContent }) {
     <dl className="flex flex-col gap-3">
       {written.map((chapter) => (
         <div key={chapter.key}>
-          <dt className="cap">{chapter.label}</dt>
-          <dd className="mt-1 whitespace-pre-wrap text-fg-muted text-sm">
+          <dt className="font-medium text-muted-foreground text-xs">
+            {chapter.label}
+          </dt>
+          <dd className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">
             {strategy[chapter.key]}
           </dd>
         </div>

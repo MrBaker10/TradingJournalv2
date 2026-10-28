@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ledgerNetCents,
+  signedLedgerCents,
   validateLedgerCategory,
   validateLedgerEntry,
 } from "../ledger.ts";
@@ -107,5 +108,22 @@ describe("ledgerNetCents", () => {
 
   it("is zero with nothing recorded", () => {
     expect(ledgerNetCents({ payoutsCents: 0, expensesCents: 0 })).toBe(0);
+  });
+});
+
+describe("signedLedgerCents", () => {
+  it("lets a payout come in and an expense go out", () => {
+    expect(signedLedgerCents({ kind: "payout", amountCents: 150_000 })).toBe(
+      150_000,
+    );
+    expect(signedLedgerCents({ kind: "expense", amountCents: 3_900 })).toBe(
+      -3_900,
+    );
+  });
+
+  it("keeps a free expense at 0, never -0", () => {
+    expect(
+      Object.is(signedLedgerCents({ kind: "expense", amountCents: 0 }), 0),
+    ).toBe(true);
   });
 });

@@ -1,21 +1,26 @@
 import type { ReactNode } from "react";
 
+/** A text link inside the card: sign in, create account, switch code kind. */
+export const AUTH_LINK =
+  "font-medium text-primary underline-offset-4 hover:underline";
+
 interface AuthCardProps {
   title: string;
   children: ReactNode;
 }
 
-// Design.md §4.19: one card, centred, with the brand from §4.1 on top. No
-// sidebar — nothing it would link to is reachable before signing in.
+// Design.md §3.13: one calm card, centred, outside the app shell. No sidebar —
+// nothing it would link to is reachable before signing in.
 export function AuthCard({ title, children }: AuthCardProps) {
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-12">
-      <section className="card-surface edge flex w-full max-w-[400px] flex-col gap-6 p-7">
-        <div className="flex items-center gap-3">
-          <div className="h-7 w-7 shrink-0 rounded-xs bg-[image:var(--gradient-info)] shadow-[var(--shadow-neon)]" />
-          <span className="cap">Trading Journal</span>
+      <section className="flex w-full max-w-sm flex-col gap-6 rounded-xl border bg-card p-6 text-card-foreground">
+        <div className="flex flex-col gap-1">
+          <span className="font-medium text-muted-foreground text-xs">
+            Trading Journal
+          </span>
+          <h1 className="font-semibold text-xl">{title}</h1>
         </div>
-        <h1 className="page-title">{title}</h1>
         {children}
       </section>
     </main>

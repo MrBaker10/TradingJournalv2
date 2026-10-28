@@ -52,6 +52,8 @@ export interface StreakResult {
   graceDayUsed: boolean;
   /** The missed weekday the grace day was spent on, this month. */
   graceDayDate: IsoDate | null;
+  /** Every grace day spent so far, one per month at most, oldest first. */
+  graceDays: IsoDate[];
 }
 
 export const STREAK_WINDOW_HOURS = 48;
@@ -127,7 +129,13 @@ export function calculateStreak(
 ): StreakResult {
   const logged = streakDaysOf(entries, timeZone);
   if (logged.size === 0) {
-    return { current: 0, longest: 0, graceDayUsed: false, graceDayDate: null };
+    return {
+      current: 0,
+      longest: 0,
+      graceDayUsed: false,
+      graceDayDate: null,
+      graceDays: [],
+    };
   }
 
   const sorted = [...logged].sort();
@@ -174,11 +182,12 @@ export function calculateStreak(
     longest,
     graceDayUsed: graceByMonth.has(thisMonth),
     graceDayDate: graceByMonth.get(thisMonth) ?? null,
+    graceDays: [...graceByMonth.values()],
   };
 }
 
 /**
- * The streak milestones that earn the card from Design.md §6. Nothing else
+ * The streak milestones that earn the card from Design-v1.md §6. Nothing else
  * does — a profitable day and a green month deliberately earn nothing.
  */
 export const STREAK_MILESTONES = [7, 30, 100] as const;

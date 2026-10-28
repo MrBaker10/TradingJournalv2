@@ -140,21 +140,6 @@ export async function listPropFirms(
     .orderBy(asc(propFirms.name), asc(propFirmPrograms.position));
 }
 
-// The compare selection lives in the URL and has to survive a reload even when
-// the current filters hide one of the picked programs, so it is looked up by id
-// rather than taken out of the filtered list.
-export async function listPropFirmProgramsByIds(
-  ids: number[],
-): Promise<PropFirmRow[]> {
-  if (ids.length === 0) return [];
-
-  return db
-    .select(SELECTION)
-    .from(propFirms)
-    .innerJoin(propFirmPrograms, eq(propFirmPrograms.firmId, propFirms.id))
-    .where(inArray(propFirmPrograms.id, ids));
-}
-
 // Every tag that occurs, once, alphabetically — the chip bar. Grouping them by
 // facet would mean deciding which facet a tag belongs to, and that decision is
 // not in the file.

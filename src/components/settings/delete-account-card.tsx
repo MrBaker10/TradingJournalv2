@@ -2,14 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { AuthField } from "@/components/auth/auth-field";
+import { AuthTextField } from "@/components/auth/auth-text-field";
+import { Button } from "@/components/ui/button";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
+import { notifyError } from "@/components/ui/toast";
 import { authClient } from "@/lib/auth/auth-client";
+import { ROW_ACTION, SettingsRow } from "./settings-row";
 
-// Design.md §4.19: two steps inside the card, like "Remove" in the import
-// batch list — the first click asks for the password, the second deletes.
-// No window.confirm. The edge turns red, the button is never filled red:
-// a red surface means a loss in this app, not a warning.
+// The danger zone of Design.md §3.8, set apart in `negative`: the first click
+// asks for the password, the second deletes. No window.confirm. The button is
+// outlined, never filled red: a red surface means a loss in this app.
 export function DeleteAccountCard() {
   const router = useRouter();
   const [armed, setArmed] = useState(false);
@@ -27,11 +29,15 @@ export function DeleteAccountCard() {
     startTransition(async () => {
       const { error: deleteError } = await authClient.deleteUser({ password });
       if (deleteError) {
-        setError(
-          deleteError.code === "INVALID_PASSWORD"
-            ? "That password is wrong."
-            : "Couldn't delete the account. Nothing was removed — try again.",
-        );
+        // A wrong password belongs to the field; any other failure is a toast
+        // and the field keeps its input (Design.md §3.11).
+        if (deleteError.code === "INVALID_PASSWORD") {
+          setError("That password is wrong.");
+        } else {
+          notifyError(
+            "Couldn't delete the account. Nothing was removed — try again.",
+          );
+        }
         return;
       }
       router.replace("/login");
@@ -40,35 +46,31 @@ export function DeleteAccountCard() {
   }
 
   return (
-    <div
-      className={`card-surface edge flex flex-col gap-4 border p-5 transition-colors duration-200 ${
-        armed ? "border-danger-fg/60" : "border-transparent"
-      }`}
+    <SettingsRow
+      className="rounded-xl border border-negative/40 px-4"
+      title="Delete account"
+      hint="Removes your account, every trade and missed setup, your accounts, ledger, notes, badges and screenshots. This cannot be undone — export your journal first if you want to keep it."
+      action={
+        !armed && (
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={() => setArmed(true)}
+            className={`${ROW_ACTION} border-negative/50 text-negative hover:bg-negative/10 hover:text-negative`}
+          >
+            Delete account…
+          </Button>
+        )
+      }
     >
-      <div className="flex flex-col gap-1">
-        <span className="font-medium text-fg text-sm">Delete account</span>
-        <span className="text-fg-subtle text-xs">
-          Removes your account, every trade and missed setup, your accounts,
-          ledger, notes, badges and screenshots. This cannot be undone — export
-          your journal first if you want to keep it.
-        </span>
-      </div>
-
-      {!armed ? (
-        <button
-          type="button"
-          onClick={() => setArmed(true)}
-          className="flex h-10 w-fit items-center justify-center rounded-ctl border border-white/12 bg-white/5 px-4 font-medium text-danger-fg text-sm transition duration-200 hover:border-danger-fg/60"
-        >
-          Delete account
-        </button>
-      ) : (
+      {armed && (
         <form
           onSubmit={handleSubmit}
-          className="flex max-w-sm flex-col gap-2"
+          className="flex max-w-sm flex-col gap-4"
           noValidate
         >
-          <AuthField
+          <AuthTextField
             label="Your password"
             name="password"
             type="password"
@@ -79,14 +81,16 @@ export function DeleteAccountCard() {
               setPassword(event.target.value);
               if (error) setError(null);
             }}
-            message={error}
+            error={error}
             disabled={isPending}
           />
           <div className="flex items-center gap-3">
-            <button
+            <Button
               type="submit"
+              variant="outline"
+              size="lg"
               disabled={isPending}
-              className="relative flex h-10 items-center justify-center rounded-ctl border border-danger-fg/60 bg-white/5 px-4 font-medium text-danger-fg text-sm transition duration-200 hover:brightness-110"
+              className={`${ROW_ACTION} relative border-negative/60 text-negative hover:bg-negative/10 hover:text-negative`}
             >
               <span className={isPending ? "opacity-0" : "opacity-100"}>
                 Delete account and all data
@@ -96,7 +100,7 @@ export function DeleteAccountCard() {
                   <PendingIndicator label="Deleting…" />
                 </span>
               )}
-            </button>
+            </Button>
             <button
               type="button"
               onClick={() => {
@@ -105,13 +109,13 @@ export function DeleteAccountCard() {
                 setError(null);
               }}
               disabled={isPending}
-              className="text-fg-muted text-sm hover:text-fg"
+              className="text-muted-foreground text-sm hover:text-foreground"
             >
               Cancel
             </button>
           </div>
         </form>
       )}
-    </div>
+    </SettingsRow>
   );
 }

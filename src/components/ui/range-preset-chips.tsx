@@ -1,6 +1,7 @@
+import { Toggle } from "@/components/ui/toggle";
 import type { RangePreset } from "@/lib/time";
 
-const PRESETS: { value: RangePreset; label: string }[] = [
+export const RANGE_PRESETS: { value: RangePreset; label: string }[] = [
   { value: "30d", label: "30 days" },
   { value: "90d", label: "90 days" },
   { value: "month", label: "This month" },
@@ -18,22 +19,20 @@ interface RangePresetChipsProps {
 // "today" (`rangeForPreset` in lib/time); this only shows and picks one.
 export function RangePresetChips({ active, onSelect }: RangePresetChipsProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {PRESETS.map((preset) => (
-        <button
+    <fieldset
+      aria-label="Range"
+      className="flex flex-wrap rounded-lg border p-0.5"
+    >
+      {RANGE_PRESETS.map((preset) => (
+        <Toggle
           key={preset.value}
-          type="button"
-          onClick={() => onSelect(preset.value)}
-          aria-pressed={active === preset.value}
-          className={`h-10 rounded-xs border px-2.5 text-sm transition-colors duration-150 ${
-            active === preset.value
-              ? "border-cyan/50 bg-cyan-dim text-cyan"
-              : "border-white/12 bg-well text-fg-muted hover:border-cyan/35"
-          }`}
+          pressed={active === preset.value}
+          onPressedChange={() => onSelect(preset.value)}
+          className="h-10 text-muted-foreground aria-pressed:text-foreground lg:h-8"
         >
           {preset.label}
-        </button>
+        </Toggle>
       ))}
-    </div>
+    </fieldset>
   );
 }

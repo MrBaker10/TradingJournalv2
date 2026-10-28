@@ -5,7 +5,7 @@ interface PendingIndicatorProps {
   label: string;
 }
 
-// Design.md §5: under prefers-reduced-motion every animation is off and each
+// Design.md §4: under prefers-reduced-motion every animation is off and each
 // state still has to be recognisable without movement — "the spinner becomes
 // the static text 'Saving…'". The block in globals.css stops the rotation but
 // on its own would leave a frozen icon, which reads as a stuck button rather

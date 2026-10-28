@@ -1,7 +1,10 @@
 import { eq, TransactionRollbackError } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "../../index.ts";
+import { accounts } from "../../schema/accounts.ts";
+import { instruments } from "../../schema/instruments.ts";
 import { strategyRevisions } from "../../schema/strategies.ts";
+import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
 import {
   archiveStrategy,
@@ -9,6 +12,7 @@ import {
   getStrategy,
   getStrategyRevision,
   listStrategies,
+  listStrategyTrades,
   reactivateStrategy,
   type StrategyContent,
   StrategyError,
@@ -270,6 +274,165 @@ describe("ownership of reads", () => {
 
       expect(await getStrategy(userId, id, tx)).toBeNull();
       expect(await getStrategyRevision(userId, revisionId, tx)).toBeNull();
+    });
+  });
+});
+
+describe("listStrategyTrades", () => {
+  /** A throwaway instrument and one real and one practice account. */
+  async function tradeFixture(tx: Tx, userId: number) {
+    const [instrument] = await tx
+      .insert(instruments)
+      .values({
+        symbol: "TEST-STRATEGY-TRADES",
+        name: "Throwaway test instrument",
+        pointValue: "2",
+        tickSize: "0.25",
+      })
+      .returning({ id: instruments.id });
+    const [real, practice] = await tx
+      .insert(accounts)
+      .values([
+        { userId, name: "Eval", sortOrder: 0 },
+        { userId, name: "Sim", sortOrder: 1, isPractice: true },
+      ])
+      .returning({ id: accounts.id });
+
+    async function addTrade(
+      owner: number,
+      revisionId: number,
+      tradeDate: string,
+      options: { taken?: boolean; accountId?: number } = {},
+    ): Promise<number> {
+      const taken = options.taken ?? true;
+      const [row] = await tx
+        .insert(trades)
+        .values({
+          userId: owner,
+          tradeDate,
+          instrumentId: instrument.id,
+          taken,
+          entryTime: "09:31:00",
+          direction: "long",
+          entryPrice: "100.0000",
+          strategyRevisionId: revisionId,
+        })
+        .returning({ id: trades.id });
+      if (taken) {
+        await tx
+          .insert(tradeAccounts)
+          .values({ tradeId: row.id, accountId: options.accountId ?? real.id });
+      }
+      return row.id;
+    }
+
+    return { addTrade, realId: real.id, practiceId: practice.id };
+  }
+
+  it("lists each strategy's trades newest first, marking those on earlier rules", async () => {
+    await fixture(async (tx, userId) => {
+      const { addTrade } = await tradeFixture(tx, userId);
+      const first = await createStrategy(userId, nameOnly("Reversal"), tx);
+      const older = await addTrade(userId, first.revisionId, "2026-03-02");
+      const { revisionId: current } = await updateStrategy(
+        userId,
+        first.id,
+        fullRules,
+        tx,
+      );
+      const newer = await addTrade(userId, current, "2026-03-05");
+      const missed = await addTrade(userId, current, "2026-03-04", {
+        taken: false,
+      });
+
+      expect(await listStrategyTrades(userId, tx)).toEqual([
+        {
+          id: newer,
+          strategyId: first.id,
+          tradeDate: "2026-03-05",
+          taken: true,
+          instrumentSymbol: "TEST-STRATEGY-TRADES",
+          onCurrentRules: true,
+          total: 3,
+        },
+        {
+          id: missed,
+          strategyId: first.id,
+          tradeDate: "2026-03-04",
+          taken: false,
+          instrumentSymbol: "TEST-STRATEGY-TRADES",
+          onCurrentRules: true,
+          total: 3,
+        },
+        {
+          id: older,
+          strategyId: first.id,
+          tradeDate: "2026-03-02",
+          taken: true,
+          instrumentSymbol: "TEST-STRATEGY-TRADES",
+          onCurrentRules: false,
+          total: 3,
+        },
+      ]);
+    });
+  });
+
+  it("judges current rules per strategy, not across strategies", async () => {
+    await fixture(async (tx, userId) => {
+      const { addTrade } = await tradeFixture(tx, userId);
+      const first = await createStrategy(userId, nameOnly("Reversal"), tx);
+      const onFirst = await addTrade(userId, first.revisionId, "2026-03-02");
+      // The second strategy's revision has the higher id of the two.
+      const second = await createStrategy(userId, fullRules, tx);
+      const onSecond = await addTrade(userId, second.revisionId, "2026-03-03");
+
+      const rows = await listStrategyTrades(userId, tx);
+
+      expect(
+        rows.map((row) => [row.id, row.strategyId, row.onCurrentRules]),
+      ).toEqual([
+        [onFirst, first.id, true],
+        [onSecond, second.id, true],
+      ]);
+    });
+  });
+
+  it("sees trades as All accounts does and never another user's", async () => {
+    await fixture(async (tx, userId, otherUserId) => {
+      const { addTrade, practiceId } = await tradeFixture(tx, userId);
+      const mine = await createStrategy(userId, nameOnly("Reversal"), tx);
+      const shown = await addTrade(userId, mine.revisionId, "2026-03-02");
+      await addTrade(userId, mine.revisionId, "2026-03-03", {
+        accountId: practiceId,
+      });
+      const theirs = await createStrategy(otherUserId, fullRules, tx);
+      await addTrade(otherUserId, theirs.revisionId, "2026-03-04", {
+        taken: false,
+      });
+
+      const rows = await listStrategyTrades(userId, tx);
+
+      expect(rows.map((row) => [row.id, row.total])).toEqual([[shown, 1]]);
+    });
+  });
+
+  it("lists the latest twenty of a strategy and counts all of them", async () => {
+    await fixture(async (tx, userId) => {
+      const { addTrade } = await tradeFixture(tx, userId);
+      const strategy = await createStrategy(userId, nameOnly("Reversal"), tx);
+      for (let day = 1; day <= 22; day++) {
+        await addTrade(
+          userId,
+          strategy.revisionId,
+          `2026-03-${String(day).padStart(2, "0")}`,
+        );
+      }
+
+      const rows = await listStrategyTrades(userId, tx);
+
+      expect(rows).toHaveLength(20);
+      expect(rows[0]).toMatchObject({ tradeDate: "2026-03-22", total: 22 });
+      expect(rows.at(-1)).toMatchObject({ tradeDate: "2026-03-03" });
     });
   });
 });

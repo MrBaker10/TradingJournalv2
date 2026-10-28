@@ -1,8 +1,12 @@
 "use client";
 
-import { InlineMessage } from "@/components/ui/inline-message";
+import { useEffect, useState } from "react";
+import { Choice } from "@/components/trades/form-blocks";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import type { ImportAccount, ParsedFile } from "./import-wizard";
+import { StepError } from "./step-error";
 
 interface AccountStepProps {
   accounts: ImportAccount[];
@@ -19,7 +23,9 @@ interface AccountStepProps {
  * One account per import, and every row goes to it. The duplicate check runs
  * against this account alone and never across accounts, so choosing the wrong
  * one here would not corrupt another account's trades — it would just put
- * them in the wrong place.
+ * them in the wrong place. A pick is the trade form's loose choice; picking
+ * runs the preview at once, as before. The practice account is never
+ * preselected and carries the amber stripe.
  */
 export function AccountStep({
   accounts,
@@ -29,82 +35,83 @@ export function AccountStep({
   onBack,
   onChoose,
 }: AccountStepProps) {
-  const real = accounts.filter((account) => !account.isPractice);
-  const practice = accounts.filter((account) => account.isPractice);
+  // Real accounts first, practice after them, as before.
+  const ordered = [
+    ...accounts.filter((account) => !account.isPractice),
+    ...accounts.filter((account) => account.isPractice),
+  ];
+  const byId = new Map(ordered.map((account) => [String(account.id), account]));
+  // Shows the pick while its preview runs; never preselected. A failed
+  // preview clears it, so the same account can be picked again.
+  const [picked, setPicked] = useState("");
+  useEffect(() => {
+    if (error !== null) setPicked("");
+  }, [error]);
+  const hasPractice = accounts.some((account) => account.isPractice);
 
   return (
-    <section className="card-surface edge flex flex-col gap-4 p-5">
+    <section className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h2 className="cap cap-neon">Import into</h2>
-        <p className="text-[11.5px] text-fg-subtle">
+        <h2 className="font-semibold text-lg">Import into</h2>
+        <p className="font-mono text-muted-foreground text-xs tabular-nums">
           {parsed.rows.length} round trips from {parsed.sourceRows} rows in{" "}
-          {parsed.filename}.
+          {parsed.filename}
         </p>
       </div>
 
-      <AccountChips accounts={real} pending={pending} onChoose={onChoose} />
-
-      {practice.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          <span className="cap">Practice</span>
-          <AccountChips
-            accounts={practice}
-            pending={pending}
-            onChoose={onChoose}
-          />
-          <p className="text-[11.5px] text-practice">
-            Trades on a practice account are left out of every combined figure.
-          </p>
-        </div>
-      ) : null}
+      <Choice
+        label="Account"
+        options={[...byId.keys()]}
+        value={picked}
+        clearable={false}
+        disabled={pending}
+        onChange={(id) => {
+          if (id === "") return;
+          setPicked(id);
+          onChoose(Number(id));
+        }}
+        render={(id) => {
+          const account = byId.get(id);
+          if (account === undefined) return id;
+          return account.isPractice ? (
+            <>
+              <span
+                aria-hidden="true"
+                className="h-4 w-0.5 rounded-full bg-amber-400"
+              />
+              {account.name}
+              <Badge variant="outline">Practice</Badge>
+            </>
+          ) : (
+            account.name
+          );
+        }}
+      />
+      {hasPractice && (
+        <p className="text-muted-foreground text-xs">
+          Trades on a practice account are left out of every combined figure.
+        </p>
+      )}
 
       <div className="flex items-center gap-3">
-        <button
+        <Button
           type="button"
+          size="lg"
+          variant="ghost"
+          className="h-10 px-4"
           onClick={onBack}
           disabled={pending}
-          className="rounded-ctl border border-white/12 px-4 py-2 text-fg-muted text-sm transition-colors duration-150 hover:border-cyan/35 disabled:opacity-60"
         >
           Back
-        </button>
-        {pending ? (
-          <span className="flex items-center gap-2 text-fg-muted text-sm">
+        </Button>
+        {pending && (
+          <span className="text-muted-foreground text-sm">
             <PendingIndicator label="Checking…" />
           </span>
-        ) : null}
+        )}
       </div>
 
-      <InlineMessage message={error} />
+      <StepError message={error} />
     </section>
-  );
-}
-
-function AccountChips({
-  accounts,
-  pending,
-  onChoose,
-}: {
-  accounts: ImportAccount[];
-  pending: boolean;
-  onChoose: (accountId: number) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {accounts.map((account) => (
-        <button
-          key={account.id}
-          type="button"
-          disabled={pending}
-          onClick={() => onChoose(account.id)}
-          className={`rounded-xs border px-2.5 py-1.5 text-sm transition-colors duration-150 disabled:opacity-60 ${
-            account.isPractice
-              ? "border-practice/40 bg-well text-practice hover:bg-practice-dim"
-              : "border-white/12 bg-well text-fg-muted hover:border-cyan/35"
-          }`}
-        >
-          {account.name}
-        </button>
-      ))}
-    </div>
   );
 }

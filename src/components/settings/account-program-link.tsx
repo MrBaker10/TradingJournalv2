@@ -1,10 +1,12 @@
 "use client";
 
-import { FIELD_CLASS } from "@/components/ui/field-class";
+import { FieldError, FieldLabel } from "@/components/trades/form-blocks";
+import { Input } from "@/components/ui/input";
 import type { AccountRulesRow } from "@/db/queries/account-rules";
 import type { ProgramOption } from "@/db/queries/prop-firms";
 import { DRAWDOWN_TYPES, type DrawdownType } from "@/domain/account-rules";
 import { formatCentsPlain } from "@/lib/money";
+import { HELP_TEXT, PART_HEADING, SELECT_CLASS } from "./fields";
 
 /** The link as the editor holds it; `programId` "" means not linked. */
 export interface ProgramLinkDraft {
@@ -109,11 +111,9 @@ function RuleField({
     .filter(Boolean)
     .join(" ");
   return (
-    <div>
-      <label htmlFor={inputId} className="mb-2 block text-sm text-fg">
-        {label}
-      </label>
-      <input
+    <div className="flex flex-col gap-1.5">
+      <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
+      <Input
         id={inputId}
         type={type === "date" ? "date" : "text"}
         inputMode={
@@ -127,26 +127,18 @@ function RuleField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={type === "amount" ? "0.00" : undefined}
-        className={`${FIELD_CLASS} ${type === "date" ? "" : "font-mono tabular-nums"}`}
-        aria-invalid={!!error}
+        className={`h-10 ${type === "date" ? "" : "font-mono tabular-nums"}`}
+        aria-invalid={error ? true : undefined}
         aria-describedby={described}
       />
-      <p id={`${inputId}-error`} className="mt-1 text-xs text-danger-fg">
-        {error}
-      </p>
+      <FieldError id={`${inputId}-error`} message={error} />
       {help && (
-        <p
-          id={`${inputId}-help`}
-          className="mt-2 text-xs leading-relaxed text-fg-subtle"
-        >
+        <p id={`${inputId}-help`} className={HELP_TEXT}>
           {help}
         </p>
       )}
       {reference && (
-        <p
-          id={`${inputId}-reference`}
-          className="mt-2 text-xs leading-relaxed text-fg-subtle"
-        >
+        <p id={`${inputId}-reference`} className={HELP_TEXT}>
           Program: {reference}
         </p>
       )}
@@ -178,31 +170,26 @@ export function AccountProgramLink({
   return (
     <section
       aria-labelledby="account-rules-heading"
-      className="flex flex-col gap-5 border-t border-white/8 pt-5"
+      className="flex flex-col gap-4 border-t pt-6"
     >
-      <div>
-        <h4 id="account-rules-heading" className="text-sm font-medium text-fg">
+      <div className="flex flex-col gap-1">
+        <h3 id="account-rules-heading" className={PART_HEADING}>
           Prop firm program
-        </h4>
-        <p className="mt-1 max-w-lg text-xs leading-relaxed text-fg-muted">
+        </h3>
+        <p className={HELP_TEXT}>
           Link the program you bought and enter its rules as your firm states
           them for this account.
         </p>
       </div>
-      <div>
-        <label
-          htmlFor="account-rules-program"
-          className="mb-2 block text-sm text-fg"
-        >
-          Program
-        </label>
+      <div className="flex flex-col gap-1.5">
+        <FieldLabel htmlFor="account-rules-program">Program</FieldLabel>
         <select
           id="account-rules-program"
           value={link.programId}
           onChange={(event) => set("programId")(event.target.value)}
           disabled={isPractice}
-          className={FIELD_CLASS}
-          aria-invalid={!!error("programId")}
+          className={SELECT_CLASS}
+          aria-invalid={error("programId") ? true : undefined}
           aria-describedby="account-rules-program-error account-rules-program-help"
         >
           <option value="">Not linked</option>
@@ -218,16 +205,11 @@ export function AccountProgramLink({
             </optgroup>
           ))}
         </select>
-        <p
+        <FieldError
           id="account-rules-program-error"
-          className="mt-1 text-xs text-danger-fg"
-        >
-          {error("programId")}
-        </p>
-        <p
-          id="account-rules-program-help"
-          className="mt-2 text-xs leading-relaxed text-fg-subtle"
-        >
+          message={error("programId")}
+        />
+        <p id="account-rules-program-help" className={HELP_TEXT}>
           {isPractice
             ? "Practice accounts can't be linked."
             : program?.reference.accountSize
@@ -236,7 +218,7 @@ export function AccountProgramLink({
         </p>
       </div>
       {program && !isPractice && (
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           <RuleField
             id="evaluationStart"
             label="Evaluation start"
@@ -262,13 +244,10 @@ export function AccountProgramLink({
             error={error("drawdownAmount")}
             reference={program.reference.maxDrawdown}
           />
-          <div>
-            <label
-              htmlFor="account-rules-drawdownType"
-              className="mb-2 block text-sm text-fg"
-            >
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel htmlFor="account-rules-drawdownType">
               Drawdown type
-            </label>
+            </FieldLabel>
             <select
               id="account-rules-drawdownType"
               value={link.drawdownType}
@@ -278,7 +257,7 @@ export function AccountProgramLink({
                   drawdownType: event.target.value as DrawdownType,
                 })
               }
-              className={FIELD_CLASS}
+              className={SELECT_CLASS}
               aria-describedby="account-rules-drawdownType-help"
             >
               {DRAWDOWN_TYPES.map((type) => (
@@ -287,10 +266,7 @@ export function AccountProgramLink({
                 </option>
               ))}
             </select>
-            <p
-              id="account-rules-drawdownType-help"
-              className="mt-2 text-xs leading-relaxed text-fg-subtle"
-            >
+            <p id="account-rules-drawdownType-help" className={HELP_TEXT}>
               {DRAWDOWN_HELP[link.drawdownType]}
             </p>
           </div>

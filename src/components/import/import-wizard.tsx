@@ -138,7 +138,7 @@ export function ImportWizard({
   const account = accounts.find((candidate) => candidate.id === accountId);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <Stepper current={step} />
 
       {step === 0 ? (
@@ -184,22 +184,30 @@ export function ImportWizard({
 }
 
 /**
- * Where in the four steps this is. Plain text and a rule, not a progress bar:
- * nothing here is a process value that Design.md §1 would let glow.
+ * Where in the four steps this is. Plain text and a rule, not the trade
+ * form's step rail: the import keeps its own flow.
  */
 function Stepper({ current }: { current: number }) {
   return (
-    <ol className="flex items-center gap-2">
+    <ol className="flex flex-wrap items-center gap-2 text-xs">
       {STEPS.map((label, index) => (
-        <li key={label} className="flex items-center gap-2">
+        <li
+          key={label}
+          aria-current={index === current ? "step" : undefined}
+          className="flex items-center gap-2"
+        >
           <span
-            className={`cap ${index === current ? "cap-neon" : index < current ? "text-fg-muted" : "text-fg-subtle"}`}
+            className={
+              index === current
+                ? "font-medium text-foreground"
+                : "text-muted-foreground"
+            }
           >
-            {index + 1}. {label}
+            <span className="font-mono tabular-nums">{index + 1}</span> {label}
           </span>
-          {index < STEPS.length - 1 ? (
-            <span aria-hidden="true" className="h-px w-6 bg-white/12" />
-          ) : null}
+          {index < STEPS.length - 1 && (
+            <span aria-hidden="true" className="h-px w-6 bg-border" />
+          )}
         </li>
       ))}
     </ol>

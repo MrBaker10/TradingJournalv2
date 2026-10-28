@@ -9,7 +9,7 @@ import {
   type PriceBandInput,
 } from "@/domain/price-band";
 
-// Design.md §4.21. Hand-built SVG rather than Recharts: the band has no hover,
+// Design.md §3.3 (detail, Prices). Hand-built SVG rather than Recharts: the band has no hover,
 // no tooltip and no axis interaction, and every position arrives finished from
 // buildPriceBand. The SVG has no viewBox, so text keeps its size and the x
 // values are percentages of the real width. Colours come from classes, never
@@ -90,9 +90,9 @@ export function PriceBandChart({ input, prices }: PriceBandProps) {
 
   // §1: only the realised stretch and the exit carry gain or loss.
   const toneStroke =
-    band.realised?.tone === "loss" ? "stroke-danger-fg" : "stroke-success-fg";
+    band.realised?.tone === "loss" ? "stroke-negative" : "stroke-positive";
   const toneFill =
-    band.realised?.tone === "loss" ? "fill-danger-fg" : "fill-success-fg";
+    band.realised?.tone === "loss" ? "fill-negative" : "fill-positive";
 
   const summary = band.markers
     .map(
@@ -117,10 +117,10 @@ export function PriceBandChart({ input, prices }: PriceBandProps) {
           y1={trackY}
           y2={trackY}
           strokeWidth={1}
-          className="stroke-fg-subtle/40"
+          className="stroke-border"
         />
 
-        {/* Hypothetical spans stay neutral (§4.17). */}
+        {/* Hypothetical spans stay neutral (Design-v1.md §4.17). */}
         {band.mae && (
           <rect
             x={pct(band.mae.from)}
@@ -128,7 +128,7 @@ export function PriceBandChart({ input, prices }: PriceBandProps) {
             y={trackY - 5}
             height={10}
             rx={2}
-            className="fill-fg-subtle/25"
+            className="fill-muted-foreground/25"
           />
         )}
         {band.mfe && (
@@ -138,7 +138,7 @@ export function PriceBandChart({ input, prices }: PriceBandProps) {
             y={trackY - 5}
             height={10}
             rx={2}
-            className="fill-fg-muted/25"
+            className="fill-muted-foreground/40"
           />
         )}
         {band.postExit && (
@@ -149,7 +149,7 @@ export function PriceBandChart({ input, prices }: PriceBandProps) {
             y2={trackY}
             strokeWidth={2}
             strokeDasharray="3 4"
-            className="stroke-fg-muted"
+            className="stroke-muted-foreground"
           />
         )}
         {band.realised && (
@@ -171,13 +171,13 @@ export function PriceBandChart({ input, prices }: PriceBandProps) {
               y1={trackY + 6}
               y2={trackY + 9}
               strokeWidth={1}
-              className="stroke-fg-subtle"
+              className="stroke-muted-foreground"
             />
             <text
               x={pct(tick.position)}
               y={trackY + 21}
               textAnchor="middle"
-              className="fill-fg-subtle text-[10px] tabular-nums"
+              className="fill-muted-foreground text-[10px] tabular-nums"
             >
               {formatAxisR(tick.r)}
             </text>
@@ -191,8 +191,8 @@ export function PriceBandChart({ input, prices }: PriceBandProps) {
             marker.kind === "exit"
               ? toneStroke
               : marker.kind === "entry"
-                ? "stroke-fg"
-                : "stroke-fg-muted";
+                ? "stroke-foreground"
+                : "stroke-muted-foreground";
           return (
             <g key={marker.kind}>
               <line
@@ -209,11 +209,11 @@ export function PriceBandChart({ input, prices }: PriceBandProps) {
                 textAnchor={marker.anchor}
                 className="text-[11px] tabular-nums"
               >
-                <tspan className="fill-fg-subtle font-sans">
+                <tspan className="fill-muted-foreground font-sans">
                   {MARKER_NAMES[marker.kind]}
                 </tspan>
                 {prices[marker.kind] !== null && (
-                  <tspan className="fill-fg font-semibold" dx={4}>
+                  <tspan className="fill-foreground font-semibold" dx={4}>
                     {prices[marker.kind]}
                   </tspan>
                 )}

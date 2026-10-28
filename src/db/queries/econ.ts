@@ -92,3 +92,18 @@ export async function listEconCurrencies(
     .orderBy(asc(econEvents.currency));
   return rows.map((row) => row.currency);
 }
+
+/**
+ * Whether the calendar was ever synced. The job replaces the table with the
+ * feed's weeks and refuses a missing current week, so an empty table means
+ * no sync has run yet — not a quiet day.
+ */
+export async function hasEconEvents(
+  executor: Pick<typeof db, "select"> = db,
+): Promise<boolean> {
+  const [row] = await executor
+    .select({ id: econEvents.id })
+    .from(econEvents)
+    .limit(1);
+  return row !== undefined;
+}

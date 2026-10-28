@@ -1,5 +1,6 @@
 import { DeleteAccountCard } from "./delete-account-card";
 import { PasswordCard } from "./password-card";
+import { SettingsRow } from "./settings-row";
 import { TwoFactorCard } from "./two-factor-card";
 
 interface SecuritySectionProps {
@@ -7,25 +8,28 @@ interface SecuritySectionProps {
   twoFactorEnabled: boolean;
 }
 
-// Design.md §4.19: profile, password, two-factor and deletion, in the card
-// pattern of the export card. The username is text, not a disabled field —
-// it cannot be changed, and a field would suggest it could.
+// Username, password and two-factor as rows, then the danger zone set apart
+// (Design.md §3.8). The username is text, not a disabled field — it cannot be
+// changed, and a field would suggest it could.
 export function SecuritySection({
   username,
   twoFactorEnabled,
 }: SecuritySectionProps) {
   return (
-    <div className="flex flex-col gap-3">
-      <span className="cap">Security</span>
-      <div className="card-surface edge flex flex-col gap-1 p-5">
-        <span className="font-medium text-fg text-sm">Username</span>
-        <span className="font-mono text-fg text-sm">{username}</span>
-        <span className="text-fg-subtle text-xs">
-          How you sign in. It can't be changed.
-        </span>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col divide-y">
+        <SettingsRow
+          title="Username"
+          hint={
+            <>
+              <span className="font-mono text-foreground">{username}</span> ·
+              How you sign in. It can't be changed.
+            </>
+          }
+        />
+        <PasswordCard />
+        <TwoFactorCard enabled={twoFactorEnabled} username={username} />
       </div>
-      <PasswordCard />
-      <TwoFactorCard enabled={twoFactorEnabled} username={username} />
       <DeleteAccountCard />
     </div>
   );

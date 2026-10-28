@@ -9,7 +9,7 @@
 //   duration or a count. There is no cents value in this file and none in the
 //   three components that read it.
 // - MFE, post-exit MFE and "left on the table" are **hypothetical** — money
-//   that was never realised. Design.md §4.9 forbids showing such a value in
+//   that was never realised. Design-v1.md §4.9 forbids showing such a value in
 //   green, so nothing here hands out a gain/loss tone.
 // - The caller owns scope. The rows come from queries that already applied the
 //   date range, the account selection and the practice filter.

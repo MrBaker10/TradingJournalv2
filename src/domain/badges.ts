@@ -143,19 +143,40 @@ export function hasFullLoggedWeek(loggedTradingDays: IsoDate[]): boolean {
   return false;
 }
 
+type CountedProgress = Exclude<keyof BadgeProgress, "loggedTradingDays">;
+
+/**
+ * The badges earned by reaching a number. One table for awarding and for the
+ * progress shown on /progress, so the two can never name different targets.
+ */
+const THRESHOLDS: Record<string, { counter: CountedProgress; target: number }> =
+  {
+    first_entry: { counter: "entriesLogged", target: 1 },
+    first_review: { counter: "reviewsWritten", target: 1 },
+    logged_10: { counter: "entriesLogged", target: 10 },
+    logged_50: { counter: "entriesLogged", target: 50 },
+    logged_250: { counter: "entriesLogged", target: 250 },
+    logged_1000: { counter: "entriesLogged", target: 1000 },
+    streak_7: { counter: "longestStreak", target: 7 },
+    streak_30: { counter: "longestStreak", target: 30 },
+    streak_100: { counter: "longestStreak", target: 100 },
+    by_the_book_20: { counter: "byTheBookTrades", target: 20 },
+    score_90: { counter: "bestMonthlyScore", target: 90 },
+  };
+
+function meetsThreshold(key: string, progress: BadgeProgress): boolean {
+  const threshold = THRESHOLDS[key];
+  return progress[threshold.counter] >= threshold.target;
+}
+
 const CRITERIA: Record<string, (progress: BadgeProgress) => boolean> = {
-  first_entry: (progress) => progress.entriesLogged >= 1,
-  first_review: (progress) => progress.reviewsWritten >= 1,
+  ...Object.fromEntries(
+    Object.keys(THRESHOLDS).map((key) => [
+      key,
+      (progress: BadgeProgress) => meetsThreshold(key, progress),
+    ]),
+  ),
   full_week: (progress) => hasFullLoggedWeek(progress.loggedTradingDays),
-  logged_10: (progress) => progress.entriesLogged >= 10,
-  logged_50: (progress) => progress.entriesLogged >= 50,
-  logged_250: (progress) => progress.entriesLogged >= 250,
-  logged_1000: (progress) => progress.entriesLogged >= 1000,
-  streak_7: (progress) => progress.longestStreak >= 7,
-  streak_30: (progress) => progress.longestStreak >= 30,
-  streak_100: (progress) => progress.longestStreak >= 100,
-  by_the_book_20: (progress) => progress.byTheBookTrades >= 20,
-  score_90: (progress) => progress.bestMonthlyScore >= 90,
 };
 
 /** The badges these numbers satisfy, in definition order. */
@@ -190,4 +211,42 @@ export function badgesToAward(
   return earnedBadges(progress)
     .map((badge) => badge.key)
     .filter((key) => !already.has(key));
+}
+
+/**
+ * How far the numbers are towards a badge's threshold, capped at the target.
+ * Null for a badge that is not a count (the full week).
+ */
+export function badgeProgressOf(
+  key: string,
+  progress: BadgeProgress,
+): { value: number; target: number } | null {
+  const threshold = THRESHOLDS[key];
+  if (threshold === undefined) return null;
+  return {
+    value: Math.min(progress[threshold.counter], threshold.target),
+    target: threshold.target,
+  };
+}
+
+const NEXT_UP_COUNT = 3;
+
+/**
+ * The keys of the unearned badges closest to their threshold, closest first;
+ * equally close ones keep definition order. "Closest" is the share of the
+ * target reached, so 19/20 comes before 132/250.
+ */
+export function nextUpBadges(
+  progress: BadgeProgress,
+  earnedKeys: readonly string[],
+): string[] {
+  const earned = new Set(earnedKeys);
+  return BADGE_DEFINITIONS.flatMap((badge) => {
+    const reached = badgeProgressOf(badge.key, progress);
+    if (earned.has(badge.key) || reached === null) return [];
+    return [{ key: badge.key, share: reached.value / reached.target }];
+  })
+    .sort((a, b) => b.share - a.share)
+    .slice(0, NEXT_UP_COUNT)
+    .map((badge) => badge.key);
 }

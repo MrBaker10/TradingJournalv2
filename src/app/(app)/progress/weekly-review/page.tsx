@@ -55,21 +55,26 @@ export default async function WeeklyReviewPage({
   ]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <header className="flex flex-col gap-1">
         <Link
           href="/progress"
-          className="flex w-fit items-center gap-1.5 text-fg-subtle text-sm transition-colors duration-150 hover:text-fg"
+          className="group flex w-fit items-center gap-1.5 rounded-sm text-muted-foreground text-sm outline-none transition-colors duration-150 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          <ArrowLeft
+            className="size-4 transition-[translate] duration-150 group-hover:-translate-x-0.5"
+            aria-hidden="true"
+          />
           Progress
         </Link>
         <h1 className="page-title">Weekly Review</h1>
-        <p className="text-fg-muted text-sm">
-          {formatDateWithYear(range.from)} – {formatDateWithYear(range.to)} ·
-          Sunday to Friday. Counts towards nothing but the habit itself.
+        <p className="text-muted-foreground text-xs">
+          <span className="font-mono tabular-nums">
+            {formatDateWithYear(range.from)} – {formatDateWithYear(range.to)}
+          </span>{" "}
+          · Sunday to Friday. Counts towards nothing but the habit itself.
         </p>
-      </div>
+      </header>
 
       <ReviewWeekNav
         weekStart={weekStart}
@@ -79,7 +84,7 @@ export default async function WeeklyReviewPage({
       />
 
       {/* items-start so the summary keeps its own height beside the form. */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
         {/* Keyed by week so a different week starts from its own text. */}
         <WeeklyReviewForm
           key={weekStart}

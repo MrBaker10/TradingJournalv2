@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { TradeForm } from "@/components/trades/trade-form";
+import { buttonVariants } from "@/components/ui/button";
 import { listActiveAccountsForSwitcher } from "@/db/queries/accounts";
 import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
@@ -25,17 +26,18 @@ export default async function NewTradePage() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <Link
-          href="/journal"
-          className="flex w-fit items-center gap-1.5 text-fg-subtle text-sm transition-colors duration-150 hover:text-fg"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Trade Journal
-        </Link>
-        <h1 className="page-title">New Trade</h1>
-      </div>
+    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      <Link
+        href="/journal"
+        className={buttonVariants({
+          variant: "ghost",
+          className: "-ml-2.5 h-10 w-fit lg:h-8",
+        })}
+      >
+        <ArrowLeft aria-hidden="true" />
+        Trade Journal
+      </Link>
+      <h1 className="sr-only">Log trade</h1>
       <TradeForm
         mode="create"
         instruments={instruments}

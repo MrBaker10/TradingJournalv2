@@ -14,7 +14,7 @@ export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   other: "Other",
 };
 
-/** "Expense · Reset" or "Payout" (Design.md §4.25). */
+/** "Expense · Reset" or "Payout". */
 export function ledgerEntryLabel(
   kind: LedgerKind,
   category: ExpenseCategory | null,

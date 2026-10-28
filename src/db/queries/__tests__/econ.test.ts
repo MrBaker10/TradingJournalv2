@@ -5,6 +5,7 @@ import { runEconJob } from "../../../lib/econ/job.ts";
 import { db } from "../../index.ts";
 import { econEvents } from "../../schema/econ-events.ts";
 import {
+  hasEconEvents,
   listEconCurrencies,
   listEconEvents,
   replaceEconEvents,
@@ -165,6 +166,23 @@ describe("listEconCurrencies", () => {
       return listEconCurrencies(week, tx);
     });
     expect(currencies).toEqual(["AUD", "CAD", "EUR", "JPY", "USD"]);
+  });
+});
+
+describe("hasEconEvents", () => {
+  it("tells a synced calendar from one never fetched", async () => {
+    if (!dbReachable) return;
+    const [empty, synced] = await inRollback(async (tx) => {
+      await replaceEconEvents([], tx);
+      const before = await hasEconEvents(tx);
+      // Only last week's rows: nothing in today's range, but synced.
+      await replaceEconEvents(
+        [event("2001-01-01T00:00:00Z", "USD", "Stale")],
+        tx,
+      );
+      return [before, await hasEconEvents(tx)];
+    });
+    expect([empty, synced]).toEqual([false, true]);
   });
 });
 
