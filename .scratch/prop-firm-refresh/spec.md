@@ -1,6 +1,6 @@
 # Spec: Prop firm data refresh
 
-Status: ready-for-agent
+Status: done
 
 Origin: question of 2026-10-28 whether prop firm rules could prefill linked accounts; it
 turned into how the prop firm data stays correct at all. Decision: `docs/adr/0005`.

@@ -71,13 +71,9 @@ production. `.githooks/pre-push` blocks a push to `main` that adds a migration; 
 with `MIGRATIONS_APPLIED=1` once both branches are migrated. Never run `vercel env pull`
 — it writes into `.env.local`.
 
-**Renamed prop firm programs.** The prop firm seeder keys programs on firm and name and
-never deletes, so a renamed program would come back as a second row. Rename the existing
-row in place before seeding; its id, and every account linked to it, stays. Before
-running `seed-propfirms.ts` against a Neon branch, check that no rename from this section
-is still pending there; a seed run first leaves the old row beside the new one, and only
-a manual delete removes it. Production is run by Sascha, not by an agent. The renames of
-2026-10-22 (rationale in `decisions.md`) are applied on both Neon branches:
+**Renamed prop firm programs.** Renames are decided and applied during the data refresh
+(below, steps 4 and 6–8). Applied so far: the renames of 2026-10-22 (rationale in
+`decisions.md`), on both Neon branches:
 
 ```sql
 update prop_firm_programs p
@@ -91,6 +87,92 @@ from prop_firms f,
   ) as v(firm, old_name, new_name)
 where f.id = p.firm_id and f.name = v.firm and p.name = v.old_name;
 ```
+
+## Prop firm data refresh
+
+Monthly, by hand, without any AI subscription: AI may speed up reading the changed
+pages, never replace a step (`docs/adr/0005`). It keeps `PropFirmsData.md` and every
+database in step with the firms' own pages. A program
+missing from the file becomes a discontinued program at the next seed: hidden in the
+catalogue, still linkable. Production is run by Sascha, not by an agent.
+
+Work on a branch `chore/prop-firm-refresh-<yyyy-mm>` from `main`, with local Postgres
+running and seeded from the current file.
+
+1. **Detect.** `pnpm check:prop-firm-sources` fetches every page in
+   `context/prop-firm-sources.md`, saves its text under `context/prop-firm-snapshots/`
+   and prints per firm what is `changed`, `new`, `unchanged` or `failed`.
+   - Always `failed` (HTTP 403 to non-browser clients, 68 pages): the Tradeify help
+     center, the Apex help center API (`apextraderfunding.com/wp-json/…`), the Legends
+     knowledge base, the E8 help center and `e8markets.com/futures`, Take Profit
+     Trader's Zendesk, `lucidtrading.com`. Open these pages in the browser and read them
+     by hand.
+   - Stop on any other `failed` source (a 404 or a new error): open it in the browser.
+     Moved → put the new official URL in the source list; gone → remove the line. Run
+     the step again.
+   - Known false change: `myfundedfutures.com/plans/rapid` (live payout ticker). Check
+     its diff for anything else.
+2. **Read what changed.** `git diff context/prop-firm-snapshots/` shows each changed
+   text; `git status` lists the new ones. Read the firm's page itself where the text is
+   unclear.
+3. **Update `PropFirmsData.md`.** Change only what the firm's own pages say, keep
+   conflicts between them as text. Set "Last verified" to today for each firm whose
+   pages were all read this month (fetched or by hand); leave it for the others.
+4. **Decide renames.** A program the firm sells on under a new name is a program
+   rename: note old and new name. A program the firm stopped selling just leaves the
+   file and becomes discontinued. Change the name in the file now; the database row is
+   renamed in steps 6–8 before each seed, so its links stay.
+5. **Check the files.** `pnpm test` (among others it checks that the source list and
+   the data file name the same firms) and `git diff --check`. Commit the data file, the
+   source list and the snapshots on the branch. Back here after any later change to
+   the file, so every database is seeded from the committed state.
+6. **Local database.**
+   - Apply each rename with a SQL client:
+
+     ```sql
+     update prop_firm_programs p
+     set name = v.new_name
+     from prop_firms f,
+       (values ('<firm>', '<old name>', '<new name>')) as v(firm, old_name, new_name)
+     where f.id = p.firm_id and f.name = v.firm and p.name = v.old_name;
+     ```
+
+   - `pnpm db:compare:propfirms` before seeding: it lists what the seed will change.
+     Stop on a program "not in the file: the next seed marks it discontinued" that the
+     firm still sells: that is a missing rename, back to step 4.
+   - A rename found only after a seed: the old row is now discontinued, a new row
+     carries the new name, and linked accounts still point at the old one. Delete the
+     new row (`delete from prop_firm_programs where id = <new row id>`; it fails if an
+     account is already linked to it, then stop and ask), apply the rename to the old
+     row and seed again: it puts the old row back on sale with its links.
+   - `pnpm db:seed:propfirms`, then `pnpm db:compare:propfirms` again: it must print
+     `Match`. Stop on any difference.
+   - `pnpm dev`, open `/prop-firms`: changed programs show their new rules, discontinued
+     ones are gone. In Settings → an account → Program, a discontinued program reads
+     "— no longer sold".
+7. **Neon preview.** Pending migrations first (`pnpm db:migrate:preview`, see Neon and
+   Vercel). Apply the renames in the Neon console's SQL editor on branch `preview`.
+   Then compare, seed and compare; check the host the first compare prints before
+   seeding:
+
+   ```bash
+   node --env-file=.env.local --env-file=.env.neon.preview src/db/compare-propfirms.ts
+   node --env-file=.env.local --env-file=.env.neon.preview src/db/seed-propfirms.ts
+   node --env-file=.env.local --env-file=.env.neon.preview src/db/compare-propfirms.ts
+   ```
+
+   Same stops as step 6; the last run must print `Match`.
+8. **Merge and production** (Sascha). Migrate production if a migration is pending
+   (Neon and Vercel), merge the branch into `main` and push. Apply the renames on the
+   production branch, then:
+
+   ```bash
+   node --env-file=.env.local --env-file=.env.neon.production src/db/compare-propfirms.ts
+   node --env-file=.env.local --env-file=.env.neon.production src/db/seed-propfirms.ts
+   node --env-file=.env.local --env-file=.env.neon.production src/db/compare-propfirms.ts
+   ```
+
+   Same stops as step 6; done when the last run prints `Match`.
 
 ## Scheduled jobs
 

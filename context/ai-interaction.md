@@ -10,7 +10,8 @@ product and implementation rules belong to their topic documents.
    changes) and Open questions live there. User approval of a concrete proposal
    authorizes that scope; do not ask again.
 2. Work on `feature/<name>` or `fix/<name>`, one branch per spec. Preserve unrelated
-   working-tree changes.
+   working-tree changes. A monthly prop firm data refresh works on
+   `chore/prop-firm-refresh-<yyyy-mm>` (operations.md → Prop firm data refresh).
 3. Implement the agreed scope using existing patterns. Avoid unrelated refactors.
 4. Verify using the policy below; fix failures caused by the change. Explain existing
    failures or missing prerequisites rather than claiming a passing gate.
