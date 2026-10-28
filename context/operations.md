@@ -77,6 +77,13 @@ production. `.githooks/pre-push` blocks a push to `main` that adds a migration; 
 with `MIGRATIONS_APPLIED=1` once both branches are migrated. Never run `vercel env pull`
 — it writes into `.env.local`.
 
+**Backups.** The Neon Free plan restores `main` to any point of the last 6 hours, keeps
+one manual snapshot and has no backup schedule. Before anything writes to production (a
+migration, a seed, a data refresh, a rename), replace that snapshot: Neon console →
+Backup & restore → delete the old snapshot, then create one on `main` named
+`pre-<yyyy-mm-dd>-<what>`. A mistake found later than 6 hours is restored from it on the
+same page.
+
 **Renamed prop firm programs.** Renames are decided and applied during the data refresh
 (below, steps 4 and 6–8). Applied so far: the renames of 2026-10-22 (rationale in
 `decisions.md`), on both Neon branches:
@@ -168,7 +175,8 @@ running and seeded from the current file.
    ```
 
    Same stops as step 6; the last run must print `Match`.
-8. **Merge and production** (Sascha). Migrate production if a migration is pending
+8. **Merge and production** (Sascha). Replace the production snapshot first (Neon and
+   Vercel → Backups). Migrate production if a migration is pending
    (Neon and Vercel), merge the branch into `main` and push. Apply the renames on the
    production branch, then:
 
