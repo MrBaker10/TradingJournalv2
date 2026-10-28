@@ -66,6 +66,12 @@ pnpm db:migrate:production   # Neon production — run by Sascha, not by an agen
 node --env-file=.env.local --env-file=.env.neon.production src/db/seed-propfirms.ts
 ```
 
+`preview` is a rehearsal of production, not a second database to keep in sync (ADR 0006).
+Before a migration or a data refresh touches it, reset it to production: Neon console
+→ Branches → `preview` → Reset from parent. Schema and data then match `main`, the
+connection URLs stay the same, and whatever `preview` held before is gone, including
+the demo user `local`; log in to a preview with a production account.
+
 A new migration goes to both Neon branches before `main` is pushed: the push deploys
 production. `.githooks/pre-push` blocks a push to `main` that adds a migration; push
 with `MIGRATIONS_APPLIED=1` once both branches are migrated. Never run `vercel env pull`
@@ -150,8 +156,8 @@ running and seeded from the current file.
    - `pnpm dev`, open `/prop-firms`: changed programs show their new rules, discontinued
      ones are gone. In Settings → an account → Program, a discontinued program reads
      "— no longer sold".
-7. **Neon preview.** Pending migrations first (`pnpm db:migrate:preview`, see Neon and
-   Vercel). Apply the renames in the Neon console's SQL editor on branch `preview`.
+7. **Neon preview.** Reset `preview` from its parent first, then pending migrations
+   (`pnpm db:migrate:preview`, both in Neon and Vercel). Apply the renames in the Neon console's SQL editor on branch `preview`.
    Then compare, seed and compare; check the host the first compare prints before
    seeding:
 
