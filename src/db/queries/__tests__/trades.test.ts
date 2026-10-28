@@ -615,7 +615,7 @@ describe("tradePnlCents vs calculatePnl — five decimals and profit currency", 
   });
 });
 
-// Design.md §4.9 and project-structure.md: a missed setup carries no account
+// Design-v1.md §4.9 and project-structure.md: a missed setup carries no account
 // at all, so selecting one must not make it disappear. It used to: the
 // single-account branch of queryTradeRows inner-joined trade_accounts, and a
 // row with no join partner is a row that is gone.

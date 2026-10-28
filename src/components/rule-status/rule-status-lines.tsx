@@ -1,14 +1,14 @@
 import type { RuleState, RuleStatus } from "@/domain/rule-status";
 import { formatCents } from "@/lib/money";
 
-// The rule status of a linked account's current attempt (Design.md §4.12,
-// "Rule status"). Figures in USD whatever the display currency; the state word
+// The rule status of a linked account's current attempt (Design.md §2,
+// semantic tokens). Figures in USD whatever the display currency; the state word
 // carries the meaning, colour only repeats it. No glow, nothing celebrates.
 
 const STATE_TONE: Record<RuleState, string> = {
-  ok: "text-fg",
-  close: "text-warning",
-  breached: "text-danger-fg",
+  ok: "text-foreground",
+  close: "text-amber-400",
+  breached: "text-negative",
 };
 
 const STATE_WORD: Record<RuleState, string | null> = {
@@ -26,19 +26,19 @@ function RuleLine({
 }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
-      <dt className="text-fg-muted">{label}</dt>
+      <dt className="text-muted-foreground">{label}</dt>
       <dd className="font-mono tabular-nums">{children}</dd>
     </div>
   );
 }
 
 function SubtleText({ children }: { children: React.ReactNode }) {
-  return <span className="font-sans text-fg-subtle">{children}</span>;
+  return <span className="font-sans text-muted-foreground">{children}</span>;
 }
 
 /**
  * A checked rule's line: the figure the state is about in its tone, the text
- * around it in `--color-fg`, then the state word in the same tone.
+ * around it in `foreground`, then the state word in the same tone.
  */
 function JudgedFigure({
   state,
@@ -53,7 +53,7 @@ function JudgedFigure({
 }) {
   const word = STATE_WORD[state];
   return (
-    <span className="text-fg">
+    <span className="text-foreground">
       {before}
       <span className={STATE_TONE[state]}>{figure}</span>
       {after}
@@ -89,7 +89,7 @@ export function RuleStatusLines({ status }: { status: RuleStatus }) {
   return (
     <dl className="flex flex-col gap-1.5">
       <RuleLine label="Profit target">
-        <span className="text-fg">
+        <span className="text-foreground">
           {formatCents(profitTarget.progressCents, { signed: true })} of{" "}
           {formatCents(profitTarget.targetCents)}
         </span>
@@ -124,7 +124,7 @@ export function RuleStatusLines({ status }: { status: RuleStatus }) {
         {minTradingDays.status === "not_set" ? (
           <SubtleText>Not set</SubtleText>
         ) : (
-          <span className="text-fg">
+          <span className="text-foreground">
             {minTradingDays.doneDays} of {minTradingDays.requiredDays} days
           </span>
         )}

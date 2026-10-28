@@ -1,6 +1,6 @@
 # Spec: Redesign
 
-Status: ready-for-agent
+Status: done
 
 Roadmap: replaces the visual language of `context/Design.md` (ADR 0004). Terms:
 `GLOSSARY.md`. Decided in seven prototype rounds on 2026-10-26 and 2026-10-27; every

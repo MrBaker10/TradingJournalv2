@@ -170,7 +170,7 @@ export interface DayTotals {
 /**
  * **Money aggregate** for the amount, **count aggregate** for the number
  * beside it. One row per calendar day with at least one entry, which is what
- * Design.md §4.8 paints, plus Best day, Worst day, Today and Max drawdown.
+ * Design-v1.md §4.8 paints, plus Best day, Worst day, Today and Max drawdown.
  *
  * A day with nothing but missed setups is a real row with a zero amount: it
  * was journaled, and the calendar shows journaling.
@@ -416,7 +416,7 @@ export async function getBadgeCounters(
   };
 }
 
-// --- Micro-rewards (Design.md §4.3 and §6) -------------------------------
+// --- Micro-rewards (Design-v1.md §4.3 and §6) -------------------------------
 // Neither of these is an aggregate. They read and write the two "already
 // shown" markers on `users`, the same way badgesSeenAt works for the badge
 // card on /progress.

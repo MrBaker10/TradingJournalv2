@@ -52,7 +52,7 @@ export function shiftReviewWeek(weekStart: IsoDate, delta: number): IsoDate {
 /** How many weeks the review page's strip shows, the current one included. */
 export const RECENT_REVIEW_WEEK_COUNT = 8;
 
-/** The current week and the ones before it, oldest first (Design.md §4.26). */
+/** The current week and the ones before it, oldest first (Design-v1.md §4.26). */
 export function recentReviewWeeks(currentWeek: IsoDate): IsoDate[] {
   return Array.from({ length: RECENT_REVIEW_WEEK_COUNT }, (_, index) =>
     shiftReviewWeek(currentWeek, index - (RECENT_REVIEW_WEEK_COUNT - 1)),

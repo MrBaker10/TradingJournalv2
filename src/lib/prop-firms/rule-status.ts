@@ -8,7 +8,7 @@ import type { IsoDate } from "@/domain/streak";
 
 // Where the attempt query meets the pure rule evaluation, once for every
 // screen that shows a rule status: the account's settings and the dashboard
-// card (Design.md §4.12, "Rule status").
+// card (Design-v1.md §4.12, "Rule status").
 
 export interface AttemptStatus {
   /** The evaluation start, or the latest reset when that is later. */

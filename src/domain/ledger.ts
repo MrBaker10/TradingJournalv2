@@ -15,7 +15,7 @@ export const EXPENSE_CATEGORIES = [
 ] as const;
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
-/** What the user reads when an entry breaks a rule (Design.md §4.25). */
+/** What the user reads when an entry breaks a rule (Design-v1.md §4.25). */
 export const LEDGER_MESSAGES = {
   categoryMissing: "Pick a category for this expense.",
   categoryOnPayout: "A payout has no category.",

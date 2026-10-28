@@ -9,7 +9,7 @@ export type JournalLayout<Row> =
   | { kind: "days"; days: JournalDayGroup<Row>[] };
 
 /**
- * How the journal list lays out one page (Design.md §4.27).
+ * How the journal list lays out one page (Design-v1.md §4.27).
  *
  * Sorted by R the list stays flat: day headings would tear the best and worst
  * trades apart. Sorted by date, rows are grouped by trade date in the order

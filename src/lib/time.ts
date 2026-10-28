@@ -47,7 +47,7 @@ export function monthKeyOf(date: IsoDate): MonthKey {
 }
 
 /**
- * A date as "Sep 3", the context line Design.md §4.7 puts under Best day and
+ * A date as "Sep 3", the context line Design-v1.md §4.7 puts under Best day and
  * Worst day. UTC-anchored for the same reason as monthRangeOf: the string is
  * a calendar date, and reading it in the machine's zone would shift the day.
  */
@@ -153,7 +153,7 @@ export function formatEventTime(instant: Date, timeZone: string): string {
 
 /**
  * A date as "Mon 28 Sep", the heading over one day of the econ calendar and
- * of the journal list (Design.md §4.27).
+ * of the journal list (Design-v1.md §4.27).
  * UTC-anchored like the other formatters here: the zone was already applied
  * when the event was grouped under this date.
  */

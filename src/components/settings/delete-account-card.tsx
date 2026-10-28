@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { AuthField } from "@/components/auth/auth-field";
+import { AuthTextField } from "@/components/auth/auth-text-field";
 import { Button } from "@/components/ui/button";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
+import { notifyError } from "@/components/ui/toast";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROW_ACTION, SettingsRow } from "./settings-row";
 
@@ -28,11 +29,15 @@ export function DeleteAccountCard() {
     startTransition(async () => {
       const { error: deleteError } = await authClient.deleteUser({ password });
       if (deleteError) {
-        setError(
-          deleteError.code === "INVALID_PASSWORD"
-            ? "That password is wrong."
-            : "Couldn't delete the account. Nothing was removed — try again.",
-        );
+        // A wrong password belongs to the field; any other failure is a toast
+        // and the field keeps its input (Design.md §3.11).
+        if (deleteError.code === "INVALID_PASSWORD") {
+          setError("That password is wrong.");
+        } else {
+          notifyError(
+            "Couldn't delete the account. Nothing was removed — try again.",
+          );
+        }
         return;
       }
       router.replace("/login");
@@ -62,10 +67,10 @@ export function DeleteAccountCard() {
       {armed && (
         <form
           onSubmit={handleSubmit}
-          className="flex max-w-sm flex-col gap-2"
+          className="flex max-w-sm flex-col gap-4"
           noValidate
         >
-          <AuthField
+          <AuthTextField
             label="Your password"
             name="password"
             type="password"
@@ -76,7 +81,7 @@ export function DeleteAccountCard() {
               setPassword(event.target.value);
               if (error) setError(null);
             }}
-            message={error}
+            error={error}
             disabled={isPending}
           />
           <div className="flex items-center gap-3">

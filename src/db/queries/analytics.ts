@@ -301,7 +301,7 @@ export async function getMissedSetupBreakdowns(
 // no figure in this section is a money value at all.
 //
 // Taken trades only. A missed setup has no exit and no hold time, and its
-// mfe_r is the "would-be R" of Design.md §4.9 — not an excursion.
+// mfe_r is the "would-be R" of Design-v1.md §4.9 — not an excursion.
 
 /**
  * The share of the available move the trade kept: `r / (r + post-exit MFE)`.

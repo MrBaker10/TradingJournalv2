@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { AuthField } from "@/components/auth/auth-field";
-import { SubmitButton } from "@/components/auth/submit-button";
+import { AuthSubmit } from "@/components/auth/auth-submit";
+import { AuthTextField } from "@/components/auth/auth-text-field";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/auth-client";
 import { withAccountLabel } from "@/lib/auth/totp-label";
@@ -143,7 +143,7 @@ export function TwoFactorCard({ enabled, username }: TwoFactorCardProps) {
       {step.kind === "password" && (
         <form
           onSubmit={handlePassword}
-          className="flex max-w-sm flex-col gap-2"
+          className="flex max-w-sm flex-col gap-4"
           noValidate
         >
           {/* Without this line the step reads as the whole setup: a lone
@@ -153,7 +153,7 @@ export function TwoFactorCard({ enabled, username }: TwoFactorCardProps) {
               ? "Confirm with your password to turn two-factor off."
               : "Step 1 of 2: confirm with your password. The QR code for your authenticator app comes next."}
           </p>
-          <AuthField
+          <AuthTextField
             label="Confirm with your password"
             name="password"
             type="password"
@@ -164,13 +164,17 @@ export function TwoFactorCard({ enabled, username }: TwoFactorCardProps) {
               setPassword(event.target.value);
               if (error) setError(null);
             }}
-            message={error}
+            error={error}
             disabled={isPending}
           />
           <div className="flex items-center gap-3">
-            <SubmitButton loading={isPending} pendingLabel="Checking…">
+            <AuthSubmit
+              pending={isPending}
+              pendingLabel="Checking…"
+              fullWidth={false}
+            >
               {step.turningOff ? "Turn off two-factor" : "Show QR code"}
-            </SubmitButton>
+            </AuthSubmit>
             <button
               type="button"
               onClick={reset}
@@ -201,7 +205,7 @@ export function TwoFactorCard({ enabled, username }: TwoFactorCardProps) {
                 {secretOf(step.totpURI)}
               </code>
             </div>
-            <AuthField
+            <AuthTextField
               label="Authentication code"
               name="code"
               mono
@@ -212,13 +216,17 @@ export function TwoFactorCard({ enabled, username }: TwoFactorCardProps) {
                 setCode(event.target.value);
                 if (error) setError(null);
               }}
-              message={error}
+              error={error}
               disabled={isPending}
             />
             <div className="flex items-center gap-3">
-              <SubmitButton loading={isPending} pendingLabel="Checking…">
+              <AuthSubmit
+                pending={isPending}
+                pendingLabel="Checking…"
+                fullWidth={false}
+              >
                 Turn on
-              </SubmitButton>
+              </AuthSubmit>
               <button
                 type="button"
                 onClick={reset}

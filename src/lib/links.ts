@@ -1,4 +1,4 @@
-// Design.md §4.13: a link chip's label falls back to the domain when no
+// Design-v1.md §4.13: a link chip's label falls back to the domain when no
 // label was given.
 export function domainLabel(url: string): string {
   try {
@@ -22,7 +22,7 @@ const SNAPSHOT_PATH = /^\/x\/([A-Za-z0-9]+)\/?$/;
  * sees the address.
  *
  * That is the whole point. `coding-standards.md` (External links on trades)
- * forbids fetching a user-supplied URL server-side, and Design.md §4.13
+ * forbids fetching a user-supplied URL server-side, and Design-v1.md §4.13
  * forbids a thumbnail *because* it would be such a fetch. Neither applies to
  * a string transform, so both rules stay intact. Any other host returns null
  * and the caller renders the plain chip.

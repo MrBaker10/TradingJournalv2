@@ -42,12 +42,12 @@ export const users = pgTable("users", {
   // badge earned after it is marked "New". NULL means they have never looked,
   // so everything earned counts as new.
   badgesSeenAt: timestamp("badges_seen_at", { withTimezone: true }),
-  // Same idea as badgesSeenAt, for the streak bump (Design.md §4.3): a trade
+  // Same idea as badgesSeenAt, for the streak bump (Design-v1.md §4.3): a trade
   // logged after this timestamp means the tile bumps once on the next visit.
   // NULL means they have never opened the dashboard, so any trade counts.
   dashboardSeenAt: timestamp("dashboard_seen_at", { withTimezone: true }),
   // The highest streak milestone (7, 30, 100) whose card has been shown.
-  // §6 words this as "once per session"; it is stored per user instead, the
+  // Design-v1.md §6 words this as "once per session"; it is stored per user instead, the
   // way the badge card already works — see decisions.md.
   streakMilestoneSeen: integer("streak_milestone_seen"),
   createdAt: timestamp("created_at", { withTimezone: true })

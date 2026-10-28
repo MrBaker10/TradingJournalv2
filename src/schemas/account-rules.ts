@@ -15,7 +15,7 @@ export const MAX_RULE_AMOUNT = 100_000_000;
 /**
  * A USD amount above zero; the action turns it into cents with `exactCents`.
  * An empty field arrives as `undefined` and is named by `label`; typed text
- * arrives as NaN and hears the number format (Design.md §4.12).
+ * arrives as NaN and hears the number format (Design-v1.md §4.12).
  */
 function ruleAmount(label: string) {
   return z
@@ -31,7 +31,7 @@ function ruleAmount(label: string) {
 }
 
 /**
- * The account rules as the link form sends them (Design.md §4.12). Optional
+ * The account rules as the link form sends them (Design-v1.md §4.12). Optional
  * rules are null when the program has none. Whether the account may carry a
  * link at all — real, with a starting balance — is the server's check
  * (src/db/queries/account-editor.ts).

@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/** Design.md §4.20: how long the armed state waits for the second click. */
+/** Design-v1.md §4.20: how long the armed state waits for the second click. */
 export const CONFIRM_TIMEOUT_MS = 3000;
 
 /**
  * The two-click confirm every destructive button in the app uses instead of
- * `window.confirm` or a modal (Design.md §4.18, §4.20): the first press arms
+ * `window.confirm` or a modal (Design-v1.md §4.18, §4.20): the first press arms
  * the button, a second press on the same one runs the action, and after
  * `CONFIRM_TIMEOUT_MS` without it the button falls back.
  *

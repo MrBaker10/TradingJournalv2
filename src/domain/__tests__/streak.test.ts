@@ -395,7 +395,7 @@ describe("pendingStreakMilestone", () => {
     expect(pendingStreakMilestone(3, 30)).toBeNull();
   });
 
-  it("keeps the three milestones Design.md §6 names", () => {
+  it("keeps the three milestones Design-v1.md §6 names", () => {
     expect(STREAK_MILESTONES).toEqual([7, 30, 100]);
   });
 });

@@ -187,7 +187,7 @@ export function calculateStreak(
 }
 
 /**
- * The streak milestones that earn the card from Design.md §6. Nothing else
+ * The streak milestones that earn the card from Design-v1.md §6. Nothing else
  * does — a profitable day and a green month deliberately earn nothing.
  */
 export const STREAK_MILESTONES = [7, 30, 100] as const;

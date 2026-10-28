@@ -7,8 +7,8 @@ import { FieldError, FieldLabel } from "@/components/trades/form-blocks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
+import { Switch } from "@/components/ui/switch";
 import { notifyError, notifyProcess } from "@/components/ui/toast";
-import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import type { ProgramOption } from "@/db/queries/prop-firms";
 import { ACCOUNT_RULES_MESSAGES } from "@/domain/account-rules";
 import { ACCOUNT_CURRENCIES, type AccountCurrency } from "@/domain/fx";
@@ -276,16 +276,19 @@ export function AccountForm({
                 </p>
               )}
             </div>
-            <ToggleSwitch
+            {/* "On" is the practice amber; the taller hit area keeps the
+                40 px touch target (Design.md §5). */}
+            <Switch
               checked={draft.isPractice}
               onCheckedChange={(isPractice) => change({ isPractice })}
               disabled={practiceLocked || isPending}
-              ariaLabel="Practice account"
-              ariaDescribedBy={
+              aria-label="Practice account"
+              aria-describedby={
                 practiceLocked
                   ? "account-practice-help account-practice-lock"
                   : "account-practice-help"
               }
+              className="mt-0.5 after:-inset-y-3 data-checked:bg-amber-400"
             />
           </div>
         </section>

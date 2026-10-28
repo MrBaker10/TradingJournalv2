@@ -3,7 +3,7 @@ import * as z from "zod";
 const MAX_NOTE_LENGTH = 4000;
 
 /**
- * Design.md §4.6 and §7: an empty plan is the one error this card has, and it
+ * Design-v1.md §4.6 and §7: an empty plan is the one error this card has, and it
  * says what the field is for instead of that it is required. The 20-character
  * mark is live feedback while typing, not a rule — a short plan still saves.
  */

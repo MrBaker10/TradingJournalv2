@@ -59,7 +59,7 @@ export interface GroupedAccounts {
   practice: AccountForSwitcher[];
 }
 
-// Design.md §4.12: archived accounts never appear, real accounts come first
+// Design-v1.md §4.12: archived accounts never appear, real accounts come first
 // in sort order, practice accounts follow in their own sort order below a
 // divider.
 export function groupAccountsForSwitcher(

@@ -55,7 +55,7 @@ from a class, never a presentation attribute.
 |---|---|
 | `background` / `foreground` | Page surface and body text |
 | `card` / `card-foreground` | Raised surface: entry cards, catalogue cards, the review card, auth card |
-| `popover` / `popover-foreground` | Menus, the command palette, sheets, tooltips |
+| `popover` / `popover-foreground` | Menus, the command palette, sheets, tooltips, toasts |
 | `primary` / `primary-foreground` | The one filled button per view ("Log trade", "Save") |
 | `secondary` / `secondary-foreground` | Secondary buttons |
 | `muted` / `muted-foreground` | Quiet fills (selected option, table header) and secondary text |
@@ -75,6 +75,7 @@ from a class, never a presentation attribute.
 | `negative` | Money with a negative sign; a validation message |
 | `process` | Process metrics, selected process chips, the drawn save check, the orb, heatmap cells, process moments |
 | practice amber | The practice stripe and the practice fog: Tailwind `amber-400` as on the prototype |
+| `impact-low` / `impact-medium` / `impact-high` | The econ calendar's impact folder only. Its red is not `negative` and its orange not the practice amber |
 | `practice-fog` (shadow) | Two inset shadows in the practice amber over the content area: one wide and faint, one narrow and slightly stronger (values confirmed on the dashboard prototype, recorded in `handoffs/HANDOFF-2026-10-26-redesign-prototype.md`) |
 
 Amber also marks a rule limit that is close ("calm warning"). A breached rule uses

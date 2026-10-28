@@ -120,7 +120,7 @@ export function PriceBandChart({ input, prices }: PriceBandProps) {
           className="stroke-border"
         />
 
-        {/* Hypothetical spans stay neutral (§4.17). */}
+        {/* Hypothetical spans stay neutral (Design-v1.md §4.17). */}
         {band.mae && (
           <rect
             x={pct(band.mae.from)}

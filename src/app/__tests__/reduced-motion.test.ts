@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-// Design.md §5 makes a promise that nothing else in this repo checks: under
+// Design.md §4 makes a promise that nothing else in this repo checks: under
 // `prefers-reduced-motion: reduce`, **every** transition and animation is off,
 // and each state stays recognisable without movement.
 //
@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 //   1. The CSS block in globals.css. It shipped without
 //      `animation-iteration-count` until 2026-09-13 — and a duration of
 //      0.01ms does not stop an `infinite` animation, it spins it a hundred
-//      thousand times a second. §5 spells that out; this test enforces it.
+//      thousand times a second. The block has to cap it; this test enforces it.
 //   2. `<MotionConfig reducedMotion="user">` at the app root. `motion`
 //      animates through JS-set inline styles and ignores the CSS block
 //      entirely, so without this the promise is simply false for the
@@ -26,7 +26,7 @@ function read(relativePath: string): string {
   return readFileSync(join(process.cwd(), relativePath), "utf8");
 }
 
-describe("reduced motion, Design.md §5", () => {
+describe("reduced motion, Design.md §4", () => {
   const css = read("src/app/globals.css");
   const block =
     css.match(
