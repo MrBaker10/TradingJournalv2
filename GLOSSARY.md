@@ -131,6 +131,22 @@ _Avoid_: Plan, challenge, variant
 The name under which a prop firm sells a family of programs that differ by account size.
 _Avoid_: Program type, plan, tier
 
+**Discontinued program**:
+A prop firm program the firm no longer sells; it stays linkable and keeps its links, but leaves the catalogue until the firm sells it again.
+_Avoid_: Deleted program, archived program, inactive program
+
+**Program rename**:
+A firm selling the same program, same rules and size, under a new name; the program keeps its identity and its links, unlike a discontinued program with a new one beside it.
+_Avoid_: Replacement, successor program
+
+**Source list**:
+The prop firm's own pages that the app's rule texts are taken from and checked against, recorded per firm.
+_Avoid_: Links, references, bookmarks
+
+**Data refresh**:
+Re-checking every prop firm against its source list and bringing the app's prop firm data in line with it.
+_Avoid_: Sync, update run, scrape
+
 **Linked account**:
 A real account tied to one prop firm program, carrying the rule values the user entered for it.
 _Avoid_: Prop account, challenge account
