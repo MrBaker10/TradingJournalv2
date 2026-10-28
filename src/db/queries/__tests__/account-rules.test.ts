@@ -12,6 +12,7 @@ import { users } from "../../schema/users.ts";
 import {
   getAccountRules,
   getAttempt,
+  listAccountRules,
   listProgramLinks,
 } from "../account-rules.ts";
 
@@ -526,6 +527,42 @@ describe("getAccountRules", () => {
     // Archiving keeps `users.selected_account_id`, while the switcher already
     // reads "All accounts": the card must not show for it.
     expect(result.archived).toBeNull();
+  });
+});
+
+describe("a discontinued program", () => {
+  it("keeps the account's link, rules and attempt, and says it is no longer sold", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    const result = await inRollback(async (tx) => {
+      const f = await fixture(tx);
+      const owner = await newUser(f, "rules-discontinued");
+      const eval1 = await linkedAccount(f, owner, "Eval", "2026-10-01");
+      await trade(f, owner, { date: "2026-10-05", points: 100, on: [eval1] });
+      const before = {
+        rules: await getAccountRules(owner, eval1, tx),
+        attempt: await getAttempt(owner, eval1, TODAY, tx),
+      };
+      await tx
+        .update(propFirmPrograms)
+        .set({ discontinuedAt: new Date("2026-10-10T00:00:00Z") })
+        .where(eq(propFirmPrograms.id, f.programId));
+      return {
+        before,
+        rules: await getAccountRules(owner, eval1, tx),
+        attempt: await getAttempt(owner, eval1, TODAY, tx),
+        list: await listAccountRules(owner, tx),
+      };
+    });
+
+    expect(result.before.rules?.programDiscontinued).toBe(false);
+    expect(result.before.attempt?.days).toHaveLength(1);
+    expect(result.rules).toEqual({
+      ...result.before.rules,
+      programDiscontinued: true,
+    });
+    expect(result.attempt).toEqual(result.before.attempt);
+    expect(result.list.map((row) => row.programDiscontinued)).toEqual([true]);
   });
 });
 

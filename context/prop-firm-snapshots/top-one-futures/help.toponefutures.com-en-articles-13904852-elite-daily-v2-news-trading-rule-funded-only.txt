@@ -1,0 +1,63 @@
+Elite Daily V2 – News Trading Rule (funded only)
+This article explains about the News Trading Rule on the Elite Daily V2 Funded Phase
+Table of contents
+Trading around major economic news events carries increased risk due to volatility, slippage, and rapid price movement. For Elite Daily accounts, specific restrictions apply to funded accounts only .
+The rule: on funded Elite Daily accounts you may not execute trades 2 minutes before and 2 minutes after a major high-impact news event (a 4-minute restricted window). During the evaluation phase, traders may trade news freely.
+Where the News Rule Applies
+Stage
+News restriction
+Evaluation
+No restrictions
+Funded
+2-minute restricted window before and after
+Funded News Restriction Window
+On funded Elite Daily accounts, you may not execute trades 2 minutes before a major news event and 2 minutes after a major news event. The total restricted window is 4 minutes .
+What Counts as Executing a Trade?
+The following actions are considered execution and are not allowed within the restricted window:
+Opening a trade
+Closing a trade
+Opening a pending order
+Modifying a stop loss
+Modifying a take profit
+Placing stop or limit orders
+Any of these actions during the restricted window will be considered a violation.
+Holding Trades During News
+Situation
+Result
+Position opened before the 2-minute pre-news window and held through the event
+Allowed
+Trade closed inside the restricted window
+Violation
+Stops or targets modified inside the window
+Violation
+Your trade must not be closed by any means during the restricted news window.
+What Happens If the Rule Is Violated?
+If a funded trader violates the news rule:
+Profits generated from the violating trade may be removed
+The payout request may be denied
+The account may be flagged for review
+Repeated violations may lead to stricter action. News violations do not automatically result in a hard breach unless abuse is detected.
+What News Events Are Restricted?
+Only major high-impact economic events are restricted. This includes, but is not limited to:
+FOMC announcements
+Federal Reserve rate decisions
+Non-Farm Payrolls
+CPI releases
+Major central bank statements
+If an event is classified as high impact on the official economic calendar used by Top One Futures, it falls under this rule. You can monitor high-impact events using the FXStreet Economic Calendar . Low and medium impact events are not restricted.
+Important Disclaimer
+Trading during news events carries significant risks, including slippage, delayed execution and market gaps. Top One Futures is not responsible for losses resulting from volatility during news events. Traders are responsible for managing their own risk.
+Related articles
+Elite DAILY V2 - Overview
+Elite Daily V2 – Daily Payout Rules
+Can I Trade News?
+Elite ACCESS Intraday - News Trading Rule
+Related Articles
+Elite Daily V2 – Daily Loss Limit (DLL) - Funded Phase
+Elite Daily V2 – Contract Scaling Plan
+Elite ACCESS – News Trading Rule
+Elite Daily V2 – Daily Loss Limit (DLL) - Evaluation Phase
+Elite ACCESS Intraday - News Trading Rule
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

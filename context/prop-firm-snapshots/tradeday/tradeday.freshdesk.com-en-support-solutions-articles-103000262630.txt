@@ -1,0 +1,61 @@
+All
+Articles
+Recent Searches
+Clear all
+No recent searches
+Popular Articles
+Articles
+View all
+Topics
+View all
+Tickets
+View all
+Sorry! nothing found for
+How do I request a payout / withdrawal, and how long does it take?
+Modified on Wed, 11 Jun, 2025 at 7:19 PM
+Funded Sim trader request payouts through the dashboard inside the member's area
+Funded Live traders email fundedtrader@tradeday.com to submit your payout request
+Requests received before 5:30 pm CT will be processed within 24 hours (business days only).
+Funded traders must be set up with Riseworks before they can make a payout request (If you are a funded trader and have not been invited to onboard with Riseworks, please email support@tradeday.com to request an invite).
+Funded Sim traders: If you want to request a payout, you can do so directly from your TradeDay dashboard. Log into your TradeDay account and make your request using the button ‘Request Withdrawal’, which is located in the top right corner of the dashboard.
+If you are not eligible for a payout, the button will not appear.
+Payout Process for Funded Sim accounts only:
+Go to the Dashboard and click on Request Withdrawal
+Enter the amount you wish to withdraw.
+After you hit 'submit', you will see a confirmation message that the request has been received.
+Payout requests received before 5:30 pm CT are processed within 24 hours (business days only).
+After the process is complete, you will receive a confirmation email instructing you to log into your Riseworks account to withdraw the funds.
+Note: If you have a pending payout request and you submit another one, the new request will override the previous one.
+Please note traders must have cleared the Buffer Zone before requesting a payout, the minimum payout request is $250. Please see our payout policy here .
+For Funded Live traders: Please request your payout via email at fundedtrader@tradeday.com
+We will submit a request to Tradovate to transfer the funds from your account. When the funds have been moved from your live account, we will authorize the payout at Riseworks.
+Payout requests received before 5:30pm CT will be processed within 24 hours (business days only).
+Here are some additional Riseworks FAQs that you might find helpful:
+How to add a bank account, see Riseworks FAQ
+How to withdraw via bank transfer, see Riseworks FAQ
+How to add a Crypto account, see Riseworks FAQ
+Best practices for Crypto withdrawals, see Riseworks FAQ
+Centralized Exchanges that support native USDC on Arbitrum, see Rise FAQ
+Was this article helpful?
+No
+Yes
+That’s Great!
+Thank you for your feedback
+Sorry! We couldn't be helpful
+Thank you for your feedback
+Your e-mail address
+*
+Let us know how can we improve this article! *
+Need more information
+Difficult to understand
+Inaccurate/irrelevant content
+Missing/broken link
+Select at least one of the reasons
+Please give your comments
+CAPTCHA verification is required.
+Cancel
+Send
+Feedback sent
+We appreciate your effort and will try to fix the article
+X
+0 of 0

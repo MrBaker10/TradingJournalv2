@@ -1,0 +1,27 @@
+What Are the Trading Hours in FundedNext Futures?
+Table of contents
+TL;DR: FundedNext Futures does not allow overnight or weekend trade holding . You must close all positions by 3:10 PM Central Time (CT) each trading day — any positions left open are automatically closed at that time. Trading resumes daily at 5:00 PM CT , and after the weekend it resumes on Sunday at 5:00 PM CT . These hours apply to both your Challenge Account during the Challenge Phase and your FundedNext Account.
+What are the permitted trading hours at FundedNext Futures?
+You can trade each day from 5:00 PM CT , when the new session opens, up until 3:10 PM CT the following day, when all positions must be closed. After the weekend break, trading resumes on Sunday at 5:00 PM CT .
+FundedNext Futures does not permit overnight or weekend trade holding, so every position must be closed within the daily trading window.
+What happens if I don't close my trade?
+Any positions still open at 3:10 PM CT will be automatically closed . This means you don't need to worry about unintentionally breaching your account by leaving a trade open past the daily close.
+Note: Avoid repeatedly forcing a trade after the market has closed. In some cases the order may still go through, which can lead to a breach of your account.
+Can I trade right at the 5:00 PM CT open, and will I get filled?
+Yes — you can trade as soon as the session opens at 5:00 PM CT . However, please note that even during the Challenge Phase or on a funded FundedNext Account, we don't recommend trading when the market is illiquid, as this can cause issues with your position, such as slippage or partial fills.
+Illiquid hours are open for trading, but entirely at the trader's own discretion. The same applies to holiday trading hours.
+Trading during holiday hours
+Holiday trading hours — including any early market closes and the handling of open positions — will be communicated to traders in advance.
+Always check the permitted trading times ahead of holidays.
+During holiday sessions, be sure to close your own positions before the market closes, as automatic closure may not apply at an early (half-day) close unless you are notified otherwise.
+Failure to close positions before the market closes may result in a breach of your account.
+🔗 For more on account breaches, information— Daily Loss Limit and Maximum Loss Limit at FundedNext Futures
+Related Articles
+What are the prohibited trading strategies of FundedNext Futures?
+FundedNext Futures — Most Frequently Asked Questions
+Is there any inactivity period in FundedNext Futures?
+How often will my FundedNext Dashboard be updated for futures?
+What Happens If My Account Is Breached, and Can I Get It Back?
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

@@ -1,0 +1,60 @@
+FundedNext Futures — Most Frequently Asked Questions
+Table of contents
+TL;DR: Quick answers to the questions traders ask most. FundedNext Futures charges a one-time fee only (no subscription or activation fee), does not allow overnight or weekend holding , and allows VPN/VPS, news trading, and EAs/bots. There's no daily profit limit , no refunds , no account merging , and no account pause option.
+Do I have to pay a monthly subscription fee or activation fee?
+At FundedNext Futures , the payment structure is transparent and simple, ensuring traders can focus on trading without an activation fee after completing the challenge.
+No Monthly Subscription Fees: You are not required to pay recurring fees for maintaining a Challenge or FundedNext Account.
+One-Time Fee Only: A single fee is paid at the start when you purchase a Challenge.
+Free Transition: Moving from a Challenge to a FundedNext Account involves no additional cost.
+At FundedNext Futures, your only cost is the initial Challenge fee. Once paid, there are no surprise charges or hidden fees—just trading opportunities and rewards.
+🔗 See: How to pay for your FundedNext Futures Challenge?
+Does FundedNext Futures allow overnight and weekend trade holding?
+No. Overnight and weekend holding is not permitted . All positions must be closed by 3:10 PM CT each trading day, and any open positions are closed automatically at that time. Trading resumes at 5:00 PM CT (and Sunday at 5:00 PM CT after the weekend).
+Why is this policy in place for FundedNext Futures?
+Risk Management: Overnight holding or weekend holding exposes traders to potential gap risks when the market reopens.
+Account Protection: Automatic liquidation prevents traders from incurring unintended losses due to price fluctuations outside trading hours.
+Stable Trading Environment: Ensures all traders operate under the same risk-controlled conditions.
+Trader's Responsibility: It is the trader’s responsibility to monitor their positions and ensure they are closed before the designated market closes each day.
+🔗 See: What are the trading hours in FundedNext Futures?
+Can I use a VPN/VPS to trade?
+Yes. You may use a VPS (Virtual Private Server) or VPN (Virtual Private Network) while trading on both your Challenge Account and your FundedNext Account .
+Please note that if inconsistent IP activity is detected in your trading multiple times, our team may reach out to you to request additional documents.
+Is there a maximum profit limit per day?
+No. There is no limit to how much profit you can make in a day. However, where the Consistency Rule applies, you'll need to keep track of your daily profit to ensure a single day doesn't exceed the allowed percentage of your overall total — this is about maintaining consistency, not capping your earnings.
+🔗 See: Is there any consistency rule to be followed in the FundedNext Futures Challenge & FundedNext Account?
+Are there any news trading rules?
+No — FundedNext Futures does not restrict news trading. That said, trading during news can be risky: the market can move very rapidly, and your Stop Loss may not be respected at your intended price due to sudden price movement.
+Is there any margin requirement?
+In FundedNext Futures , the margin mechanism does not apply in either the Challenge or FundedNext Account. Instead of margin requirements, trading is managed through contract limits.
+Traders are not required to deposit their own funds or maintain an initial margin to trade with FundedNext. By paying a small fee, they can trade up to the allocated contract limits based on the account size. It is essential to trade within the allowed contracts and adhere to the loss limits.
+For more details, please visit the following article on the FundedNext Futures contract policy.
+🔗 What is the contract limit policy at FundedNext Futures?
+Is the use of Automated Trading Systems (EAs and Bots) allowed?
+At FundedNext Futures, you are allowed to use automated trading systems such as Expert Advisors (EAs) and trading bots during both the Challenge and on FundedNext Accounts.
+However, we do not offer any support for setting up, configuring, or troubleshooting these systems. Any issues—such as technical errors, execution delays, or system malfunctions—must be managed on your own. FundedNext will not be held responsible for any impact these may have on your trading account.
+Please remember that while the use of EAs and bots is permitted, strategies that aim to exploit system vulnerabilities are strictly prohibited. To ensure a fair and transparent trading environment, the following guidelines apply for eligible accounts:
+Traders are required to customize their EA or bot settings to align with their unique trading styles.
+Each EA or bot is required to employ a distinct strategy, avoiding identical trades across any accounts within FundedNext.
+Using an EA that incorporates third-party applications such as Telegram or WhatsApp is strictly prohibited.
+Using an EA for latency abuse or order flooding is strictly prohibited.
+What is the Refund Policy?
+At FundedNext Futures , payments are final. Whether you purchase or reset a Challenge, the fees are non-refundable under all circumstances.
+Why are refunds not possible at FundedNext Futures?
+Immediate Costs : As soon as a payment is made, FundedNext incurs costs by paying platforms such as Tradovate or NinjaTrader for account setup.
+Irreversible Processing: Due to these upfront expenses, transactions cannot be reversed or refunded.
+We strongly recommend that traders carefully review their Challenge selection, account type, and size before completing a purchase.
+Does FundedNext allow account merging?
+Due to the nature of Futures trading, account merging is not supported in FundedNext Futures . Each account operates independently and must be managed separately by the trader.
+Can I pause my Futures Challenge or FundedNext Accounts?
+No. There is no account pause option at FundedNext Futures — accounts cannot be paused during either the Challenge Phase or the FundedNext Account stage.
+Is there any Age Restriction to joining FundedNext Futures?
+There is an age restriction for joining FundedNext Futures. Traders must be at least 18 years old to open a FundedNext Futures simulated trading account, as futures trading involves financial risk and requires meeting legal and contractual requirements.
+Related Articles
+What is FundedNext Futures Legacy Challenge?
+FundedNext Futures Legacy Challenge All Rules
+FundedNext Futures Legacy FundedNext Account: All Rules
+FundedNext Futures Rapid Pro FundedNext Account: All Rules
+FundedNext Futures Flex FundedNext Account All Rules
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

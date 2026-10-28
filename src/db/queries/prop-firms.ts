@@ -5,6 +5,7 @@ import {
   eq,
   inArray,
   isNotNull,
+  isNull,
   sql,
 } from "drizzle-orm";
 import { formatCentsThousands } from "../../lib/money.ts";
@@ -102,6 +103,11 @@ function escapeLike(term: string): string {
   return term.replace(/[\\%_]/g, (character) => `\\${character}`);
 }
 
+// The catalogue shows what the firms sell today. A discontinued program keeps
+// its row for linked accounts but leaves every catalogue list, and a firm
+// with nothing on sale drops out of the inner join (docs/adr/0005).
+const ON_SALE = isNull(propFirmPrograms.discontinuedAt);
+
 export async function listPropFirms(
   filters: {
     search?: string;
@@ -111,7 +117,7 @@ export async function listPropFirms(
   },
   executor: Pick<typeof db, "select"> = db,
 ): Promise<PropFirmRow[]> {
-  const conditions = [];
+  const conditions = [ON_SALE];
 
   if (filters.search) {
     conditions.push(
@@ -136,19 +142,22 @@ export async function listPropFirms(
     .select(SELECTION)
     .from(propFirms)
     .innerJoin(propFirmPrograms, eq(propFirmPrograms.firmId, propFirms.id))
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(and(...conditions))
     .orderBy(asc(propFirms.name), asc(propFirmPrograms.position));
 }
 
 // Every tag that occurs, once, alphabetically — the chip bar. Grouping them by
 // facet would mean deciding which facet a tag belongs to, and that decision is
 // not in the file.
-export async function listSummaryTags(): Promise<string[]> {
-  const rows = await db
+export async function listSummaryTags(
+  executor: Pick<typeof db, "selectDistinct"> = db,
+): Promise<string[]> {
+  const rows = await executor
     .selectDistinct({
       tag: sql<string>`unnest(${propFirmPrograms.summaryTags})`,
     })
     .from(propFirmPrograms)
+    .where(ON_SALE)
     .orderBy(sql`1`);
 
   return rows.map((row) => row.tag);
@@ -173,7 +182,7 @@ export async function listAccountSizes(
       cents: sql<number>`${ACCOUNT_SIZE_CENTS}`,
     })
     .from(propFirmPrograms)
-    .where(isNotNull(propFirmPrograms.accountSizeUsd))
+    .where(and(ON_SALE, isNotNull(propFirmPrograms.accountSizeUsd)))
     .orderBy(ACCOUNT_SIZE_CENTS);
 
   return rows.map((row) => ({
@@ -186,6 +195,8 @@ export interface ProgramOption {
   id: number;
   firmName: string;
   name: string;
+  /** No longer sold; still linkable, its rule text as last seeded. */
+  discontinued: boolean;
   /** The program's rule text, verbatim, shown beside each rule field. */
   reference: Pick<
     ProgramFields,
@@ -200,7 +211,9 @@ export interface ProgramOption {
 
 // Every program for the link form in the account editor, grouped by firm in
 // the select, sizes in file order. Reference text only: nothing here becomes a
-// rule value (docs/adr/0001).
+// rule value (docs/adr/0001). Discontinued programs stay in, marked, so an
+// account bought before the firm stopped selling one can still link it
+// (docs/adr/0005).
 export async function listProgramOptions(
   executor: Pick<typeof db, "select"> = db,
 ): Promise<ProgramOption[]> {
@@ -209,6 +222,7 @@ export async function listProgramOptions(
       id: propFirmPrograms.id,
       firmName: propFirms.name,
       name: propFirmPrograms.name,
+      discontinued: sql<boolean>`${propFirmPrograms.discontinuedAt} is not null`,
       accountSize: propFirmPrograms.accountSize,
       profitTarget: propFirmPrograms.profitTarget,
       maxDrawdown: propFirmPrograms.maxDrawdown,
@@ -219,10 +233,11 @@ export async function listProgramOptions(
     .from(propFirmPrograms)
     .innerJoin(propFirms, eq(propFirms.id, propFirmPrograms.firmId))
     .orderBy(asc(propFirms.name), asc(propFirmPrograms.position));
-  return rows.map(({ id, firmName, name, ...reference }) => ({
+  return rows.map(({ id, firmName, name, discontinued, ...reference }) => ({
     id,
     firmName,
     name,
+    discontinued,
     reference,
   }));
 }

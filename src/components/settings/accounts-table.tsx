@@ -121,6 +121,11 @@ export function AccountsTable({
                   <span className="flex items-center gap-2">
                     <RuleDot state={account.ruleState} />
                     {account.rules.firmName}
+                    {account.rules.programDiscontinued && (
+                      <span className="text-muted-foreground text-xs">
+                        No longer sold
+                      </span>
+                    )}
                   </span>
                 ) : (
                   <span className="text-muted-foreground">—</span>

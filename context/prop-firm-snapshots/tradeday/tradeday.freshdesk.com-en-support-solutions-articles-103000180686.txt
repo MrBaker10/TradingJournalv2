@@ -1,0 +1,63 @@
+All
+Articles
+Recent Searches
+Clear all
+No recent searches
+Popular Articles
+Articles
+View all
+Topics
+View all
+Tickets
+View all
+Sorry! nothing found for
+What is a Funded Sim account and what is a Funded Live account?
+Modified on Sun, 31 May at 11:08 AM
+Funded Sim account
+You are placed in a simulation account and paid from the simulated profits you make in the account.
+After completing the onboarding steps, you are set up instantly.
+There is no professional market data fee to pay; we will include the same data feed you had during the evaluation.
+There is no slippage rule.
+You can use your trading platform and the TradeDay evaluation dashboard to track your account progress.
+What is a Funded Sim Account?
+When a trader successfully completes the evaluation, they are placed in a Funded Sim account.
+A Funded Sim account is a simulation account in which the trader can earn profits. It carries simulated commissions because it's designed to reflect the experience of trading a Funded Live account.
+TradeDay has no control over the simulated environments; they are owned and managed by third-party brokers and platforms.
+There is no professional market data fee to pay when in a Funded Sim account.
+What is a Funded Live Account?
+A funded live account is a trading account that is a sub-account of our master account at our broker. You are given the power of authority to trade over it.
+You are trading the live markets, and as you are trading our money, you will be considered a professional by the exchange.
+Here are the features of the funded LIVE account:
+All profits are paid out at a 90/10 split in the trader's favor.
+You are trading in the live markets on the Exchange.
+Setting up takes around five days because the broker and clearing firm have time-consuming processes (such as KYC and AML background checks).
+You must purchase the professional market data feed to trade the account (currently $156 per month, per Exchange ).
+All funded live accounts are subject to the slippage rules to help TradeDay manage our risk from slippage.
+Funded live accounts are still subject to the monthly professional market data fee.
+There will be a three-month cooling-off period for traders who lose their Funded Live accounts, during which they won't be able to take part in TradeDay evaluations. After this time, the user can reapply to take more evaluations by emailing fundedtrader@tradeday.com
+Funded Live returning traders.
+Traders previously on the Funded Live accounts who are returning to TradeDay will be placed in the Funded Sim, allowing the trading group to better manage its risk and assess your ability.
+NB: TradeDay reserves the right to move a trader directly to a Funded Live account on passing the evaluation. On rare occasions, we may move a trader directly to Funded Live on passing their evaluation. This decision would be based on the trader's previous evaluation, Funded Sim and Funded Live account history with TradeDay.
+Was this article helpful?
+No
+Yes
+That’s Great!
+Thank you for your feedback
+Sorry! We couldn't be helpful
+Thank you for your feedback
+Your e-mail address
+*
+Let us know how can we improve this article! *
+Need more information
+Difficult to understand
+Inaccurate/irrelevant content
+Missing/broken link
+Select at least one of the reasons
+Please give your comments
+CAPTCHA verification is required.
+Cancel
+Send
+Feedback sent
+We appreciate your effort and will try to fix the article
+X
+0 of 0

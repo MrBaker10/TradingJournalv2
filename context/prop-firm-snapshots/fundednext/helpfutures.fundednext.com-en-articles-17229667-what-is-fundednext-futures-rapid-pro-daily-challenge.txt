@@ -1,0 +1,146 @@
+What is FundedNext Futures Rapid Pro & Daily Challenge?
+Table of contents
+TL;DR: FundedNext Futures Rapid Pro & Daily is a single 1-time fee, 1-Step Challenge with two trader-selected paths: Rapid Pro and Rapid Daily. Both share a 1-Day Pass, End-of-Day (EOD) trailing drawdown, no activation fee, and a 90% Reward Share, across 25K, 50K, and 100K account sizes. The path is chosen at purchase and cannot be changed afterward.
+Rapid Pro is built for flexibility with rewards every 3 days, no daily loss limit by default (with an optional Daily Loss Limit Add-On at a discounted price), and a 40% Consistency Rule that applies only in the FundedNext Account. Rapid Daily is built for speed, as there are daily rewards and a daily loss limit as a guardrail, a buffer rule, and no consistency rule at all.
+The FundedNext Futures Rapid Pro & Daily Challenge is designed to combine speed, flexibility, and value in a single Challenge. Instead of choosing between separate Challenges, traders select the path that matches their trading style: Rapid Pro or Rapid Daily, at the point of purchase, then pass in a single day and progress to a FundedNext Account with a one-time fee and no activation cost.
+What is the difference between the Rapid Pro and Rapid Daily paths?
+Rapid Pro & Daily is one Challenge with two paths. Both paths pass in a single day and offer a 90% Reward Share, but they differ in how and when rewards are earned. The path is locked at purchase and cannot be switched during the journey.
+Feature
+Rapid Pro
+Rapid Daily
+Best for
+Flexibility & control
+Speed & simplicity
+Challenge Pass
+1 Day
+1 Day
+Rewards
+Every 3 Days
+Daily
+Daily Loss Limit
+None (optional add-on)
+Yes
+Consistency Rule (FundedNext Account)
+40%
+None
+Buffer Rule
+No
+Yes
+Reward Share
+90%
+90%
+What are the Available Account Sizes in the FundedNext Futures Rapid Pro & Daily Challenge?
+The Rapid Pro & Daily Challenge is available in three account sizes ( 25K, 50K, 100K ). The Profit Target and Maximum Loss Limit are the same across both paths for each size.
+Account Size
+Profit Target
+Maximum Loss Limit
+$25,000
+$1,500
+$1,000
+$50,000
+$3,000
+$2,000
+$100,000
+$5,000
+$2,500
+What is the pricing of the FundedNext Futures Rapid Pro & Daily Challenge?
+The Rapid Pro & Daily Challenge follows a flat 50% discount on all purchases. Both paths share the same standard pricing at each account size.
+Account Size
+Original Price
+Discounted Price (50% Off)
+Reset Price
+25K
+$159.98
+$79.99
+$87.99
+50K
+$299.98
+$149.99
+$157.99
+100K
+$499.98
+$249.99
+$257.99
+Rapid Pro also offers an optional Daily Loss Limit Add-On that lowers the price in exchange for adding a daily loss limit.
+Can I Reset my FundedNext Futures Rapid Pro & Daily Challenge?
+Yes, you can reset your account as long as it is still in the Challenge Phase. Once your account progresses to a FundedNext Account, the reset option is no longer available. Please note that existing Rapid and Bolt Accounts purchased before discontinuation can continue trading but cannot be reset. For more details, you can refer to our related article here .
+Does the Consistency Rule apply to the FundedNext Futures Rapid Pro & Daily Challenge?
+There is no consistency rule during the Challenge Account for either path. In the FundedNext Account, the rule depends on the path you chose:
+Rapid Pro: A 40% Consistency Rule applies in the FundedNext Account. If your highest single-day profit is more than 40% of your total profit, you will need to keep trading until your results are consistent.
+Rapid Daily: No consistency rule applies at any stage.
+For more details, you can refer to our related Consistency Rule article .
+How is the Maximum Loss Limit calculated in the FundedNext Futures Rapid Pro & Daily Challenge?
+Both paths use an End-of-Day (EOD) trailing drawdown . This means the maximum loss limit adjusts based on your end-of-day balance as your account grows, helping to lock in a portion of your gains over time. For more details, you can refer to our related article here .
+How does the Daily Loss Limit work in the FundedNext Futures Rapid Pro & Daily Challenge?
+The daily loss limit caps how much you can lose in a single trading day. It applies differently by path:
+Rapid Daily: A daily loss limit applies from the Challenge Account through the FundedNext Account.
+Rapid Pro: No daily loss limit by default. Traders can add one through the optional Daily loss Limit Add-On at purchase.
+Account Size
+Rapid Daily (Daily Loss Limit)
+Rapid Pro (with DLL Add-On)
+25K
+$500
+$500
+50K
+$1,000
+$1,000
+100K
+$1,250
+$1,250
+What are the Contract Limits in the FundedNext Futures Rapid Pro & Daily Challenge?
+The contract limits define the maximum number of contracts a trader can hold at any given time. These limits are the same for both paths and vary by account size.
+Account Size
+Maximum Contract Limits (Challenge + FundedNext Account)
+25K
+2 Mini
+50K
+4 Mini
+100K
+6 Mini
+For more details, you can refer to our related article here .
+What are the Performance Reward eligibility rules in the FundedNext Futures Rapid Pro & Daily Challenge?
+To qualify for a Performance Reward in the FundedNext Account, a minimum of $500 profit in the current trading cycle is required for both paths, along with the path-specific requirement below:
+Rapid Pro: Meet the 40% Consistency Rule.
+Rapid Daily: Your end-of-day balance must reach the buffer level (starting balance + maximum loss limit + $100). The amount above the buffer is withdrawable, while the buffer stays in the account.
+Both paths offer a 90% Reward Share, and the FundedNext Account is concluded after the 5th Performance Reward. For more details, you can refer to our related Performance Reward Eligibility article. Rapid Pro Challenge and Rapid Daily Challenge .
+Is there any withdrawal cap in the FundedNext Futures Rapid Pro & Daily Challenge?
+Yes. Both paths share the same minimum and maximum withdrawal limits, which vary by account size.
+Account Size
+Minimum Withdrawal
+Maximum Withdrawal
+25K
+$250
+$800
+50K
+$250
+$1,200
+100K
+$250
+$2,500
+Is there any Add-On Available for the FundedNext Futures Rapid Pro & Daily Challenge?
+Yes. The Daily Loss Limit Add-On is available exclusively for the Rapid Pro path. Opting in reduces the challenge price and applies a Daily Loss Limit to your Pro account. The Add-On must be selected at purchase and cannot be added or removed afterward . The Rapid Daily path does not include any Add-Ons.
+Account Size
+Standard Pro Price
+Price with DLL Add-On
+Reset with DLL Add-On
+25K
+$79.99
+59.99(-20)
+$67.99
+50K
+$149.99
+109.99(-40)
+$117.99
+100K
+$249.99
+199.99(-50)
+$207.99
+Related Articles
+FundedNext Futures Rapid Daily & Rapid Pro Up-to 50% Discount Offer
+What types and sizes of Challenges are available at FundedNext Futures?
+What are the reset conditions and fees at FundedNext Futures?
+How does the Daily Loss Limit Add-On works on the Rapid Pro Challenge And FundedNext Account
+FundedNext Futures Rapid Daily Challenge All Rules
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

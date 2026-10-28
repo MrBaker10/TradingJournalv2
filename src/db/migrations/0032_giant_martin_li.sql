@@ -1,0 +1,1 @@
+ALTER TABLE "prop_firm_programs" ADD COLUMN "discontinued_at" timestamp with time zone;

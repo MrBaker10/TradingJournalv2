@@ -166,6 +166,10 @@ filtering, and that is database work. Two clean-up items before
 seeding: four of the fifteen blocks have lost their firm name, and the headings use
 `##Name` without a space so they do not parse as markdown.
 
+A program no longer in the file is marked discontinued at the next seed: it leaves the
+catalogue, stays linkable, and a linked account shows it as no longer sold. A monthly
+data refresh keeps the file current (`operations.md` → Prop firm data refresh).
+
 ### I) Econ Calendar
 
 This week / next week / both, high-impact filter, currency, forecast and previous value.

@@ -1,0 +1,86 @@
+All
+Articles
+Recent Searches
+Clear all
+No recent searches
+Popular Articles
+Articles
+View all
+Topics
+View all
+Tickets
+View all
+Sorry! nothing found for
+What is the maximum drawdown rule?
+Modified on Sun, 31 May at 11:07 AM
+TradeDay calculates the Maximum Drawdown limit depending on the type of evaluation you purchased.
+TradeDay has two types of Maximum Drawdown limits. An End-of-Day (EOD) limit is calculated from the end-of-day balance, and an Intraday Limit is calculated from unrealized balances within the day. See here for the differences between them.
+Trailing max drawdown limits continues to trail your account growth until they reach the starting account balance.
+These limits are enforced in real time, regardless of how the limit is calculated. You cannot go below the max drawdown limit with an open position during the trading session, if you do the evaluation will be over.
+--------
+How does the Intraday Trailing Maximum Drawdown limit work?
+A trailing maximum drawdown (TMD) limit is the maximum amount of money you are allowed to lose.
+Think of it as a line you will not be allowed to cross.
+If you have an open position and you touch the limit, your positions will be liquidated, the trading shut off, and you will have failed the evaluation, or lost your funded trading account.
+The t railing maximum drawdown (TMD) is a limit that trails your account growth. It trails up as the account earns profits. If your account balance goes down the next day because of trading losses, the trailing maximum drawdown doesn’t move as it is pegged to the highest balance you have had in your account.
+At TradeDay, the TMD amount is set by the program you signed up for.
+On day 1
+Start: Balance = $100,000, TMD = $97,000.
+Equity intraday peaks at $101,000 (open profit +$1,000).
+TMD moves up to $98,000.
+Trader finishes the day at $100,000 (flat, no net gain).
+Even though the day ended at $100K, TMD stays at $98,000.
+On day 2
+Start: Balance = $100,000, TMD = $98,000.
+Trader loses $1,000 leaving the balance $99,000.
+No new highs, so TMD stays at $98,000.
+On day 3
+Balance $99,000.
+Equity intraday peaks at $103,000.
+TMD moves up to $100,000.
+End of day balance = $102,000.
+How does an end-of-day max drawdown work?
+With EOD drawdown, the limit is updated only at the end of each trading day, based on your closing balance.
+Important: Even though the max drawdown only moves up at day’s end, you must never let your equity fall below the active drawdown level at any point during the day, doing so will still trigger auto-liquidation.
+EOD Max Drawdown account example:
+On day 1
+Trader makes +$2,000 profit.
+End-of-day balance = $102,000.
+Drawdown trails up to $99,000 (3K below the new high).
+On day 2
+Trader loses -$1,500.
+End-of-day balance = $100,500.
+Drawdown stays at $99,000 (no new high balance reached).
+On day 3
+Trader gains +$3,000.
+End-of-day balance = $103,500.
+Drawdown moves up to $100,500 (3K below the new high).
+For example:
+If you join a $100k evaluation program, the starting balance will be $100,000, the TMD will be set at $97,000. When you have an account balance of $103,000 your TMD will be at $100,000 where it freezes, and you are not allowed to go below this balance.
+Why do we have a maximum drawdown rule?
+Unfortunately, not everyone who tries trading succeeds, and we need a way to measure if your trading strategies are working.
+By putting a limit on the amount you can lose, we can track your success and measure your ability to be consistent in your trading.
+A drawdown limit is a risk management tool. It's a way for a trading group to manage their risk to a trader. At some point a trading group will want to stop the trader losing money, so they will put in a drawdown limit which will be the maximum they will allow that trader to lose.
+Was this article helpful?
+No
+Yes
+That’s Great!
+Thank you for your feedback
+Sorry! We couldn't be helpful
+Thank you for your feedback
+Your e-mail address
+*
+Let us know how can we improve this article! *
+Need more information
+Difficult to understand
+Inaccurate/irrelevant content
+Missing/broken link
+Select at least one of the reasons
+Please give your comments
+CAPTCHA verification is required.
+Cancel
+Send
+Feedback sent
+We appreciate your effort and will try to fix the article
+X
+0 of 0

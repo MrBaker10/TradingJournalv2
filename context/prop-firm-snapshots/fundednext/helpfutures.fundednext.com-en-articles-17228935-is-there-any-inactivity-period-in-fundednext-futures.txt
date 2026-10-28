@@ -1,0 +1,29 @@
+Is there any inactivity period in FundedNext Futures?
+Table of contents
+TL;DR : FundedNext Futures has an inactivity period . Both FundedNext Challenge and FundedNext Account are breached after 30 consecutive calendar days of no trades . For Futures Direct Account only, the inactivity period is for 7 calendar days. Inactivity count starts if no trade is placed by 04:01:00 PM CT after purchase on the same day, It counts calendar days including weekends , and the timer resets when at least one trade is placed .
+FundedNext Futures will deem an account as "inactive" if there is no trading activity within the specified inactivity period:
+Challenge Accounts: Marked as breached and deactivated after 30 consecutive calendar days of no trades.
+FundedNext Accounts: Marked as inactive and deactivated after 30 consecutive calendar days of no trades.
+Direct Accounts: Marked as inactive and deactivated after 7 consecutive calendar days of no trades.
+Inactive accounts will be deactivated to maintain platform stability. To avoid this, simply place at least one trade within the respective timeframe. This helps maintain platform stability.
+How is the inactivity counted?
+From the day the Challenge is purchased, if no trades are placed by 04:01:00 PM CT, the inactivity day count begins.
+Calendar days are counted (including weekends)
+Placing at least one trade resets the inactivity counter
+The inactivity count increases each day at 04:01:00 PM CT. Once 30 consecutive inactive days are reached, the account is breached at 04:01:00 PM CT.
+The inactivity count increases each day at 04:01:00 PM CT. Once 7 consecutive inactive days are reached, the account is breached at 04:01:00 PM CT. (Direct Account only)
+What happens after the days of inactivity?
+The account will be considered breached due to exceeding the futures inactivity period.
+Once breached, the account will be deactivated, and trading access will be lost.
+If you wish to continue trading, you must reset your account to regain access.
+FundedNext Accounts can not be reset; a new purchase is required to continue trading.
+Inactive accounts can cause system inefficiencies and may impact the overall trading experience for active users. Keeping your account active ensures smooth platform performance and uninterrupted access to trading features on FundedNext Futures.
+Related Articles
+What Are the Trading Hours in FundedNext Futures?
+FundedNext Futures — Most Frequently Asked Questions
+What are the reset conditions and fees at FundedNext Futures?
+How to navigate your FundedNext Futures Dashboard?
+How often will my FundedNext Dashboard be updated for futures?
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

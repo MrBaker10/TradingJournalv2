@@ -1,0 +1,62 @@
+Elite Daily V2 – Daily Loss Limit (DLL) - Funded Phase
+In this article you can find more about the Daily Loss Limit during the Funded Phase of the Elite Daily V2 accounts
+Table of contents
+The Daily Loss Limit (DLL) is set between 1.23% and 2.0% of your account balance, depending on the account size, for both the evaluation phase and the funded phase of the Elite Daily V2 plan. This helps manage risk and ensures responsible trading. Here's how it looks for each Elite Daily funded account.
+💡 Prefer to trade without a Daily Loss Limit? You can select the No Daily Loss Limit add-on at checkout for about 30% more than the base account price. The add-on can only be chosen during the initial checkout, not afterwards or when paying for a reset. Learn more: No Daily Loss Limit Add-On .
+Important disclaimer: the Daily Loss Limit is a risk management tool, not a stop loss . It may execute late or early, fill at a different price than expected, or not trigger exactly at the set value. Place hard stop loss orders directly on your trades; any loss beyond your allowed threshold remains the trader's responsibility.
+Elite Daily V2: Sim Funded Accounts
+Account size
+Daily Loss Limit
+$25,000
+$500
+$50,000
+$1,000
+$100,000
+$1,250
+$150,000
+$1,850
+How Is It Calculated?
+The Daily Loss Limit is a dynamic value calculated based on your previous day's closing balance. Let's use an example to illustrate, with a $25K account where the daily loss allowed is $500:
+Step
+Amount
+Previous day's close
+$26,000
+Daily loss allowed
+$500
+Breach level for the current day
+$26,000 - $500 = $25,500
+This means that if your account's equity drops to $25,500 at any point during the current trading day, the system will automatically execute market orders to liquidate all open positions.
+Important Disclaimer
+The Daily Loss Limit (DLL) is a risk management tool, not a stop loss. It should never be relied on to close your trades at a specific loss amount. Due to market volatility, slippage, and execution speed:
+The DLL may execute late
+It may execute early
+It may fill at a different price than expected
+It may not trigger exactly at the set value
+If you want to control your risk properly, you must place hard stop loss orders directly on your trades. Relying solely on the DLL can result in larger losses than intended. Top One Futures is not responsible for any losses that exceed the daily drawdown limit. Any loss beyond your allowed threshold remains the trader's responsibility.
+What Happens If You Hit the Daily Drawdown?
+Event
+What happens
+Soft breach
+Trading is paused for the remainder of the trading day.
+Resume trading
+You may continue trading the next trading day, provided your account has not violated the Max Trailing Drawdown.
+Key Notes
+DLL resets daily based on the previous day's closing balance
+Both realized and unrealized losses count
+This article covers the sim funded phase; the evaluation phase has its own DLL article (see below)
+DLL is separate from the End of Day Trailing Drawdown
+Related articles
+Elite Daily V2 – Daily Loss Limit (DLL) - Evaluation Phase
+Elite Daily V2 – Max Loss Limit (MLL)
+Elite DAILY V2 - Overview
+Elite Daily V2 – Daily Payout Rules
+Daily Drawdown: What You Need to Know
+Related Articles
+Elite Daily V2 – Max Loss Limit (MLL)
+Elite Daily V2 – Profit Target (Evaluation)
+Elite ACCESS – Daily Loss Limit (DLL)
+Elite Daily V2 – Daily Loss Limit (DLL) - Evaluation Phase
+Elite ACCESS Intraday - Daily Loss Limit (DLL)
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

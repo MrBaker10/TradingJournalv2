@@ -1,0 +1,84 @@
+Maximum Payout Until Live Explained
+The maximum amount you can withdraw per payout in the Sim Funded stage, per account type and size, until you move to a Live Account.
+Table of contents
+Until traders transition to a Live Account , there is a Maximum Payout Limit in place. This article explains how this works and what traders can expect.
+What is the Maximum Payout Until Live?
+While in the Sim Funded stage, traders can withdraw profits, but there is a limit on how much can be withdrawn in a single payout. Once a trader qualifies for a Live Account, this limit is removed, and traders can withdraw without restriction.
+What are the maximum payout limits in the Sim Funded stage?
+The maximum amount you can withdraw in a single payout is based on your account size , account type , and purchase date . Find your account type below.
+Account size
+Max per withdrawal
+Elite Sim Funded
+$25,000
+$1,500
+$50,000
+$2,500
+$100,000
+$3,000
+$150,000
+$3,500
+Instant Sim Funded (purchased before 7/27/2026)
+$25,000
+$1,500
+$50,000
+$2,500
+$100,000
+$3,000
+$150,000
+$3,500
+Instant Sim Funded 2.0 (purchased on and after 7/27/2026)
+$25,000
+$1,000
+$50,000
+$2,000
+$100,000
+$2,500
+$150,000
+$3,000
+Elite Daily Funded
+$25,000
+$750
+$50,000
+$1,000
+$100,000
+$1,500
+$150,000
+$2,250
+Elite ACCESS Funded
+$25,000
+$1,000
+$50,000
+$1,500
+$100,000
+$2,000
+$150,000
+$2,500
+Ignite Instant Funding
+$25,000
+$500
+$50,000
+$1,000
+$100,000
+$1,500
+$150,000
+$2,000
+If your profit exceeds the maximum for your account, you can simply request the maximum amount, and the remaining profit stays in your account to be withdrawn in a future payout request.
+Does the maximum payout apply to every withdrawal?
+Yes. While in the Sim Funded stage, every withdrawal is subject to the payout limit based on your account size. However, once you transition to a Live Account, there are no payout restrictions.
+Where can I track my progress toward a Live Account?
+You can monitor your performance and payout eligibility in the Top One Futures trader dashboard, which provides real-time updates on your trading status.
+By understanding the Maximum Payout Until Live, traders can manage their expectations and work toward unlocking unlimited payouts in a Live Account. Keep trading smart, stay consistent, and grow with Top One Futures!
+Related articles
+What are the requirements to request a payout?
+Understanding Lock Upon Payout
+Understanding the Profit Split on Sim Funded Accounts
+Path to Trading Live
+Related Articles
+Maximum Contracts Explained
+Understanding the Drawdown Lock
+Trailing Drawdown on Instant Sim Funded Accounts: How It Works
+🏆 Elite Sim Funded Account: Payout Requirements
+📈 Instant Sim Funded Account: Payout Requirements
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

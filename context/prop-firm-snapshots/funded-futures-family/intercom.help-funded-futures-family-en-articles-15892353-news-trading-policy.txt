@@ -1,0 +1,35 @@
+News Trading Policy
+Table of contents
+General News Trading Guidelines
+News trading is permitted unless the specific rules for your account or plan state otherwise.
+Certain account types may include additional restrictions around high-impact news events. Traders are responsible for reviewing the rules applicable to their specific account before trading during news releases.
+Trade Your Strategy
+If your account does not have a specific news trading restriction, you may trade through news events, including Tier 1 events, while maintaining appropriate risk management.
+Account-Specific Restrictions
+Some accounts or plans may have restrictions before, during, or after certain high-impact news events. Any applicable restriction will be outlined within the rules for that specific account.
+Risk Awareness
+Trading during major news releases carries increased volatility and risk. Traders should manage positions responsibly during periods of sharp market movement.
+Order Execution Risks
+During high-impact news events, market conditions may result in gaps, slippage, delayed data, or irregular fills that can affect order execution.
+Flattening & Timing Rules
+There is no universal flattening requirement across all Funded Futures Family accounts.
+If your specific account does not include a news trading restriction, you are not required to flatten positions before or after Tier 1 news events and there are no additional timing restrictions around releases such as FOMC, CPI, or Employment Reports.
+If your account includes a news trading restriction, you must follow the timing and position requirements outlined within that account's rules.
+Important Notes
+Know Your Account Rules
+News trading requirements may vary by account or plan. Traders are responsible for understanding and following the rules associated with the account they are trading.
+Maintain Good Trading Practices
+Traders are expected to demonstrate consistent and responsible trading behavior at all times, including during news events.
+Order Execution Notice
+Market conditions surrounding news releases may result in irregularities in fills, spreads, slippage, or data delivery.
+Liability Notice
+Funded Futures Family is not liable for discrepancies, execution issues, slippage, data delays, or other issues that may arise from trading during high-volatility events in the simulated environment.
+Related Articles
+Professional Stage Account – Performance Check Account (PCA)
+What is Funded Futures Family?
+Fair Play and Integrity Policy
+Prohibited Trading Conduct
+Prohibited Trading Conduct
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

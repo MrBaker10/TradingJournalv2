@@ -1,0 +1,46 @@
+Evaluation Rules
+Evaluation Rules
+Table of contents
+To successfully pass the evaluation, you must complete the following three goals:
+1. Reach your profit target
+2. Maintain Consistency Rules
+3. Show consistency in attaining profits.
+Overview of Consistency Rules:
+34% Consistency Rule in Propel Premium and Static Evaluations (Except for the 300K Plan 21% Consistency)
+50% in Launch Plans Evaluations Account only (Buffer is still 34% to pass)
+Calculation Method: Highest profit day becomes the % of your new target. (Depends on what the account % is.)
+Orbit Evaluations have no consistency.
+Your dashboard will calculate this consistency metric for you, as well as indicate the PNL of the day you generated most profit:
+Passed a Launch or Stocks evaluation? Your Launch Fee is due
+Launch and Stocks plans carry a one-time Launch Fee that becomes due the moment you pass the evaluation. You have 14 days to pay it , from the Billing section of your members area. If it is not paid by the due date, the account expires immediately and your passed evaluation is lost — it cannot be reinstated, and no reset or renewal will bring it back. Propel and Orbit plans have no launch fee.
+There is only one way to fail the evaluation:
+1. Fall below the minimum balance (EOD Trailing)
+The minimum trailing balance increases with your highest EOD balance. It increases with profits, but it does not decrease with losses, and is calculated from your starting balance at 6PM.
+For example, the 50K evaluation starts with a 48K minimum balance (trailing by $2000).
+If your account reaches a $50,750 balance by EOD, your new minimum balance would be $48,750.
+If a subsequent trade closed back at $50,300, then your minimum balance would still be $48,750.
+If your balance falls to your established EOD minimum balance at any point, the evaluation has failed.
+=> You can monitor your minimum trailing balance in realtime with Rithmic by using the "Auto Liquidate Threshold Value" in RTrader Pro.
+=> You can monitor your minimum trailing balance in realtime with Tradovate by using the "Drawdown Auto Liq" column of the Accounts tab.
+=> Your BluSky dashboard will also update periodically to show your maximum drawdown left - Here's an example:
+Things that DONT fail your account
+Trading news events at your own risk
+Using too many contracts
+We will not fail you for using too many contracts and we are able to automatically limit limit your max size if you are trading one product. But if you find a way to use more contracts than your terms, we will liquidate and/or restart your account and/or deny brokerage entry entirely when our system detects it; Please do not exploit the system.
+Trading the wrong hours
+We recommend closing all trades before 4:45PM EST; our system attempts to limit when you can trade and will auto-liquidate around 15 minutes before markets close. This is not a guarantee of liquidation.
+NOTE: Although our system will do it's best to liquidate trades before the close of market, we still need you to take responsibility for closing your trades.
+The system is not perfect. This could result in substantial loss in your account which could then end up being a failure. Please be a responsible trader - We will not adjust accounts that have open positions after 5PM EST.
+Things that will fail your account:
+Hedging is not allowed in Futures Trading, this refers to the User/Household and may result in Reward denial, account closure, account forfeit or temporary account closure.
+For further inquiries, you are more than welcome to contact our Support Desk:
+BluSky Support Desk
+Related Articles
+BluSky Stock Account Plans?
+Launch Plans: Phases, Rules and Costs
+Propel Plans: Phases, Rules and Costs
+Orbit Plans: Two Phases, Faster Payouts
+Instant Funding: Direct to Funded and Instant Sim Funded
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

@@ -1,0 +1,205 @@
+Propel Plans: Phases, Rules and Costs
+The three Propel phases across all six account sizes, with targets, drawdowns and payout rules.
+Table of contents
+Propel plans run the same three phases as Launch with no launch fee at any point — the subscription is higher instead. Six account sizes are available, from 25K to 300K.
+The plans at a glance
+Account size
+Launch fee
+Profit target
+Drawdown
+Contracts
+25K
+None
+$1,500
+$-1,200 Trailing (EOD)
+2 Mini / 20 Micros
+50K
+None
+$3,000
+$-2,000 Trailing (EOD)
+5 Mini / 50 Micros
+100K
+None
+$6,000
+$-2,500 Trailing (EOD)
+10 Mini / 100 Micros
+150K
+None
+$3,000
+$-1,000 Static
+1 Mini / 10 Micros
+200K
+None
+$6,000
+$-2,000 Static
+2 Mini / 20 Micros
+300K
+None
+$20,000
+$-5,000 Static
+5 Mini / 50 Micros
+There is no launch fee on any Propel plan.
+The subscription
+Your plan is billed every 30 days while you are in the evaluation, and the subscription is the same price you paid for the plan . Whatever you were charged at purchase — including any discount or promotional code you used — is exactly what renews. A discount is not a one-off; it stays with the account for as long as the subscription runs. Current pricing and any active offers are on the plans page at blusky.pro.
+A renewal on a failed account includes a free reset. If your evaluation has already failed when the subscription renews, we reset it automatically within an hour of the payment clearing — you do not pay a reset fee on top of the renewal. If the new account has not appeared after that, contact support and we will sort it out.
+A reset never moves your renewal date. Resetting gives you a clean account, but the 30-day billing clock keeps running from where it was — it does not buy you extra time. So if your renewal is only a few days away and your account has already failed, it is usually worth waiting for the renewal and taking the free reset that comes with it, rather than paying for one now.
+The subscription runs during the evaluation only. Pass it and billing stops immediately — there is nothing to cancel, and nothing at all is charged during the Buffer Zone or once you are Sim Funded.
+Phase 1 — Evaluation
+This is where you show the strategy works. Reach the profit target without breaching your drawdown, and stay inside the consistency rule while you do it. Your subscription is running during this phase.
+Account size
+Profit target
+Drawdown
+Daily loss limit
+Consistency
+Largest single day
+25K
+$1,500
+$-1,200 Trailing (EOD)
+None
+34%
+$510 (34% of target)
+50K
+$3,000
+$-2,000 Trailing (EOD)
+None
+34%
+$1,020 (34% of target)
+100K
+$6,000
+$-2,500 Trailing (EOD)
+None
+34%
+$2,040 (34% of target)
+150K
+$3,000
+$-1,000 Static
+None
+34%
+$1,020 (34% of target)
+200K
+$6,000
+$-2,000 Static
+None
+34%
+$2,040 (34% of target)
+300K
+$20,000
+$-5,000 Static
+None
+21%
+$4,200 (21% of target)
+Because your biggest day cannot exceed 34% of your profitable days, the target cannot be reached in fewer than 3 profitable days . Plan for at least that many.
+Phase 2 — Buffer Zone
+Most firms send you straight from an evaluation into a funded account that still carries a profit target, usually under a tougher drawdown. Miss it and everything is gone — the only way back is to buy a new evaluation and start again.
+We split that step out and call it the Buffer Zone. It is where you build the balance that carries into your Sim Funded account, and it is deliberately gentler than the evaluation you just passed: a smaller target and no daily loss limit.
+Account size
+Profit target
+Drawdown
+Consistency
+Largest single day
+25K
+$1,500
+$1,200 Trailing (EOD)
+34%
+$510 (34% of target)
+50K
+$3,000
+$2,000 Trailing (EOD)
+34%
+$1,020 (34% of target)
+100K
+$3,500
+$2,500 Trailing (EOD)
+34%
+$1,190 (34% of target)
+150K
+$2,000
+$-1,000 Static
+34%
+$680 (34% of target)
+200K
+$3,000
+$-2,000 Static
+34%
+$1,020 (34% of target)
+300K
+$3,500
+$-2,500 Static
+21%
+$735 (21% of target)
+And if you fail it, you reset the Buffer Zone on its own. Your evaluation still stands — you never go back to the beginning. Resets are $250 each for the first three, then $300 for resets four to six, $350 for seven to nine, and so on. If your Buffer Zone had already passed into Sim Funded, a reset is $500. These are the Propel Buffer Zone reset prices.
+Phase 3 — Sim Funded
+Your account is still simulated, but the profits are real and you can withdraw them. There is no profit target here — the job is to keep trading well.
+Account size
+Starting balance
+Minimum balance
+Payout minimum
+7-day payout cap
+25K
+$1,500
+$100
+$500
+$1,500
+50K
+$3,000
+$100
+$500
+$2,500
+100K
+$3,500
+$100
+$500
+$3,000
+150K
+$2,000
+$100
+$500
+$1,500
+200K
+$3,000
+$100
+$500
+$2,500
+300K
+$3,500
+$100
+$500
+$3,000
+Payouts can be requested daily, Monday to Friday, on any balance above your starting balance. Requests made before 11am ET are processed the same trading day. While Sim Funded, stop trading for the day once you are $5,000 up and for the week once you are $10,000 up — passing $10,000 in total profit triggers a review for Live Brokerage, where the caps come off entirely.
+Nothing is charged during this phase. Your subscription ended at the evaluation.
+How the consistency rule works
+The consistency rule keeps your biggest day in proportion to the rest of your trading. We compare your largest single profitable day against the sum of your profitable days . Losing days are left out of the calculation entirely — many firms divide by your net profit instead, which shrinks the number you are measured against and makes the rule harder to satisfy.
+Here is a week counted both ways. Say you made $1,000 on Monday, $900 on Tuesday, lost $600 on Wednesday, then made $900 on Thursday and $600 on Friday:
+At BluSky we add up your profitable days: $1,000 + $900 + $900 + $600 = $3,400 . Your biggest day of $1,000 is 29.4% of that — inside the 34% rule. ✅
+Counting net profit instead subtracts the losing day: $3,400 − $600 = $2,800 . The same $1,000 day is now 35.7% — outside the same rule. ❌
+The 300K works to a 21% rule instead, so the same week would need your profit spread across more days to comply.
+Being out of consistency does not fail your account. It is checked when you request a payout or try to pass a phase, and you fix it by trading on — every additional profitable day grows the total you are measured against and brings your percentage down.
+Resetting a Propel evaluation
+Most traders do not pass first time. A reset clears the days traded, the balance and the rules by creating a fresh evaluation account, so you can try again without buying a new plan.
+Account size
+Propel evaluation reset
+25K
+$79
+50K
+$79
+100K
+$79
+150K
+$79
+200K
+$79
+300K
+$79
+These prices are for Propel plans only. Every plan family has its own reset pricing — check the article for your own plan rather than assuming the figures carry across.
+Remember that you do not always need to pay for one: if the account is already failed when your subscription renews, that renewal carries a free reset, as above. A reset does not move your renewal date, so when renewal is close it is usually worth waiting for the free one.
+Still have a question? Our team is here to help.
+BluSky Support Desk
+Related Articles
+Evaluation Rules
+BluSky Stock Account Plans?
+Launch Plans: Phases, Rules and Costs
+Orbit Plans: Two Phases, Faster Payouts
+Sim Funded Accounts Rules
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

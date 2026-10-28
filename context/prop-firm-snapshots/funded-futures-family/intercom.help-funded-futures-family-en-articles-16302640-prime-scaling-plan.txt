@@ -1,0 +1,57 @@
+Prime Scaling Plan
+August 13, 2026
+Table of contents
+Prime Funded Account Scaling Plan
+The Scaling Plan determines how much of your maximum contract size is available based on the simulated profits in your Funded Account. As your account profits increase or decrease, your available contract limit will scale up or down accordingly.
+The Scaling Plan does not apply during the Evaluation phase.
+Scaling limits are updated at the end of each trading session and will not adjust in real time throughout the day. Please refer to the table below for the applicable contract limits.
+Simulated Profits
+$25,000 Contract Limits
+$50,000 Contract Limits
+$100,000 Contract Limits
+$150,000 Contract Limits
+$0-$999
+1 Mini or 10 Micros
+3 Minis or 30 Micros
+4 Minis or 40 Micros
+5 Minis or 50 Micros
+$1,000-$1,499
+2 Minis or 20 Micros
+3 Minis or 30 Micros
+4 Minis or 40 Micros
+5 Minis or 50 Micros
+$1,500-$1,999
+2 Minis or 20 Micros
+4 Minis or 40 Micros
+6 Minis or 60 Micros
+7 Minis or 70 Micros
+$2,000-$2,999
+3 Minis or 30 Micros
+(MAX)
+5 Minis or 50 Micros
+(MAX)
+7 Minis or 70 Micros
+(MAX)
+10 Minis or 100 Micros
+$3,000-$4,499
+-
+-
+10 Minis or 100 Micros
+(MAX)
+12 Minis or 120 Micros
+(MAX)
+$4,500+
+-
+-
+-
+15 Minis or 150 Micros
+(MAX)
+Related Articles
+Prime Funded Account
+Premier+ Scaling Plan
+Velocity Scaling Plan
+Straight to Funded(S2F) Scaling Plan
+Base Plan Scaling Plan
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

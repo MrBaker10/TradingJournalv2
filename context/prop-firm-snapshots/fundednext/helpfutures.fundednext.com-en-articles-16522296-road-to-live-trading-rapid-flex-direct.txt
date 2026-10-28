@@ -1,0 +1,138 @@
+Road to Live Trading - Rapid, Flex & Direct
+Table of contents
+TLDR: Earn 15 Performance Rewards to enter the live review pool. If selected, up to 5 FundedNext Accounts transition to live. If you breach, you'll enter a 2-week cooldown before returning to sim — and every 5 Performance Rewards after that puts you back in the live review pool.
+1. Live Trading Eligibility Criteria
+FundedNext's risk team continuously reviews every trader's performance to identify who's ready for live trading.
+How you enter the live review pool
+New to live: 15 Performance Rewards across your FundedNext journey.
+Returning from a previous live journey: Re-enter the review pool after every 5 Performance Rewards. You've already proven your strategy live, so your bar is lower.
+Performance Rewards are counted across your full trading profile, whether they come from a single account or are spread across multiple accounts. Once you request your 15th Performance Reward, you'll be shortlisted for the live review pool, and your account(s) will be closed.
+What happens next
+Reaching the threshold places your trader profile under review. It doesn't guarantee a transition. Our risk team looks at your full performance history, and only traders who show consistent, responsible trading behaviour move to live. While the review is underway, your accounts may be temporarily placed on hold. If you're not selected, your accounts resume as normal.
+If you're selected
+Selection applies to your trader profile as a whole, not to individual accounts. Moving to live replaces your current FundedNext Accounts, so they are closed as part of the transition.
+Transitions only take place once the payout cycle that prompted your review has concluded, never mid-cycle.
+Example: If you're selected after requesting a payout in your 3rd cycle, your move to live takes place once that payout has been processed. However, if you have multiple accounts that have reached the 3rd cycle, and you reach your 15th Performance Reward, all of your accounts will be closed automatically and become eligible for the Live Program.
+2. Transition Process
+Challenge Accounts
+All active Challenge Accounts are permanently closed at the time of transition
+These accounts are not eligible for any refunds
+Note: Traders who prefer to preserve their Challenge Accounts should keep this in mind before stacking multiple Challenge Accounts
+FundedNext Accounts
+FundedNext Accounts with at least 1 successful withdrawal will be transitioned to a live account
+FundedNext Accounts with 0 payouts will be closed, and the FundedNext Accounts cost will be refunded within 3-5 business days once the live transition is completed.
+Note: Direct Accounts are treated as FundedNext Accounts and will therefore follow the structure mentioned above.
+3. Live Account Parameters
+Traders receive one live account per eligible FundedNext Account transitioning, up to a maximum of 5 live accounts.
+Account Size
+Starting Balance
+Max Loss Limit (MLL)
+25K
+$1,500
+Starts from $0
+50K
+$2,000
+Starts from $0
+100K
+$3,000
+Starts from $0
+150K
+$4,500
+Starts from $0
+Withdrawal Benefits:
+Daily withdrawal option
+Minimum withdrawal request: $100
+100% profit split on the first $5,000 in cumulative withdrawals, then 90/10 thereafter.
+Note: Withdrawals cannot be processed during an active trading session. Traders must conclude the trading day and submit their request the following day. Withdrawals from the Live account take approximately 2–5 business days to process, as this is handled directly by NinjaTrader Brokerage. Because of this processing timeframe, the FundedNext Brand Promise will not be maintained for Live account withdrawals.
+4. Contract Limits
+Traders who lock their MLL demonstrate they have grown their account to match their initial deposit, a mark of consistent and responsible trading. As a reward for reaching this milestone, contract limits double once the MLL locks, giving traders greater capacity to scale their live trading.
+Account Size
+Contracts (Standard)
+Contracts (After MLL Locks)
+25K
+2 Mini | 20 Micro
+4 Mini | 40 Micro
+50K
+3 Mini | 30 Micro
+6 Mini | 60 Micro
+100K
+4 Mini | 40 Micro
+8 Mini | 80 Micro
+150K
+5 Mini | 50 Micro
+10 Mini | 100 Micro
+5. Trailing MLL and the MLL Lock Benefit
+Trailing MLL
+The Maximum Loss Limit (MLL) on your live account is trailing. It moves up as your account grows and never moves down while it is trailing.
+When the MLL locks
+The MLL stops trailing and locks in either of these cases, whichever comes first:
+You request a payout.
+Your profit equals your starting balance.
+Once locked, the MLL never moves again, no matter how high your balance goes.
+The MLL Lock Benefit
+Normally, a locked MLL would sit at your starting balance. With the MLL Lock Benefit, which applies automatically to every live account, the floor locks $1,000 below your starting balance instead.
+On a 50K live account ($2,000 starting balance), the MLL would normally lock at $2,000. With the benefit, it locks at $1,000 .
+From the lock onward, $1,000 is the only breach level on your account. Dropping below your $2,000 starting balance does not end your account. Your account breaches only if your balance touches $1,000.
+Why we built it this way: A locked MLL means you have either doubled your loss buffer or taken a live payout. Both are proof that you can hold profits on a live account. Rather than a one-time bonus, we are providing what compounds: more room to keep trading and more room to scale payouts.
+Locked MLL floors per account size
+Account Size
+Starting Balance
+Standard Lock
+MLL Locks at (with Benefit)
+25K
+$1,500
+$1,500
+$500
+50K
+$2,000
+$2,000
+$1,000
+100K
+$3,000
+$3,000
+$2,000
+150K
+$4,500
+$4,500
+$3,500
+Every size follows the same rule: the lock is $1,000 below your starting balance.
+Example: 50K account ($2,000 starting balance)
+Event
+Balance
+MLL Floor
+Status
+Account opens
+$2,000
+$0 (trailing)
+Active
+Balance grows
+$3,000
+$1,000 (trailing)
+Active
+Profit equals starting balance, or payout requested
+$4,000
+$1,000 (locked, with Benefit)
+Active
+Balance drops below starting balance
+$1,800
+$1,000
+Active
+Balance touches the floor
+$1,000
+$1,000
+Breached
+At the lock point, you hold $3,000 of trading room ($4,000 balance minus the $1,000 floor), locked in for the life of the account.
+6. Breach and Cooldown
+Traders who breach live account(s) enter a mandatory cooldown before any trading is permitted.
+Standard cooldown: 2 weeks mandatory for all traders
+Extended cooldown: 4 weeks or an extended period, at FundedNext's discretion, for traders who breach through reckless behaviour such as aggressive positions or breaching within a single trading session.
+After completing the cooldown period, traders return to normal simulated trading, purchasing Challenge Accounts and following the standard path back to live.
+Related Articles
+Road To Live Trading - Legacy Challenge & Rapid Challenge (Former)
+FundedNext Futures Rapid Pro Challenge All Rules
+FundedNext Futures Rapid Pro FundedNext Account: All Rules
+FundedNext Futures Rapid Daily Challenge All Rules
+FundedNext Futures Rapid Daily FundedNext Account All Rules
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

@@ -1,0 +1,69 @@
+All
+Articles
+Recent Searches
+Clear all
+No recent searches
+Popular Articles
+Articles
+View all
+Topics
+View all
+Tickets
+View all
+Sorry! nothing found for
+What is the consistency objective?
+Modified on Tue, 28 Jul at 3:36 PM
+The consistency percentage for QuickPay accounts is 30%.
+The consistency percentage for FastPass accounts is 45%.
+No single day’s profit should exceed the consistency percentage of the profit target.
+If you have a profitable day in excess of the consistency percentage of your profit target you do not fail the evaluation (but your profit target does increase).
+How do we calculate if a day is consistent or inconsistent?
+We calculate the inconsistency rule by taking your day's Profit and Loss (PnL) as a percentage of the total PnL you have earned to date ( NOT your profit target).
+An example of an inconsistent day:
+Profit for the day / total profit made so far on the evaluation. 1200 / 1800 = 67%.
+Why does my first day show as inconsistent?
+Early days always show as inconsistent because they make up a significant percentage of your total profits, but as your profits grow they will dilute down to be consistent.
+How do I calculate the maximum I should make in any one day during the evaluation?
+Take your profit target x 30% (for QuickPay accounts) or target x 45% (for FastPass accounts).
+For example, the profit target is $3000 x 30% = $900. This is the maximum you should make in any one day if you want to have all days marked as consistent on the day you reach the profit target.
+What happens if I have a very profitable day?
+If that day exceeds the consistency percentage of the profit target, the profit target will increase. You will have to continue to build your total profits until that day accounts for 30% (for QuickPay accounts)/45% (for FastPass accounts) or less of your total.
+How do I figure out my new profit target for QuickPay accounts?
+Best days profit / 30% = Total profits needed to pass the evaluation
+$925 / 30% = $3083.33
+How do I figure out my new profit target for FastPass accounts?
+Best days profit / 45% = Total profits needed to pass the evaluation
+$1400 / 45% = $3,111.12
+Let’s take a look at an example:
+If a trader reaches the profit target of $3000, and they made $1200 of it in just one day, then the evaluation challenge is not finished. ($1200 of $3000 is 40%)
+The trader does not fail the Evaluation Challenge , they just have to keep trading until that day and accounts for less than 30% of the total PnL.
+In this example, the trader needs to continue to trade until their total profits are $4000, at which point the $1200 day will represent 30% of the total profits.
+Why do we have this rule?
+For you, the Evaluation Challenge is your path to getting funded as a trader. For us, it’s our way of assessing your potential to make money as a trader and getting an assessment of what sort of trader you are.
+Large, profitable days, that sit outside what we would normally expect given the amount of risk we give you, can be signs of gambling and taking large risks in trading (such as taking a position before a major economic announcement, and hoping the market accelerates in your favor).
+Also, we all get lucky from time to time, sometimes we will have a position in the market when an unexpected piece of news results in quick, large windfalls. These events are great in the live markets but tell us nothing about your ability to trade over the long term.
+By discounting large profitable days, we can see that you have achieved the profit target objective through consistent, acceptable risk-taking.
+To be clear, if you do have a large profitable day during the Evaluation Challenge, it is not considered a failure or rule breach, you are still being evaluated for funding.
+Was this article helpful?
+No
+Yes
+That’s Great!
+Thank you for your feedback
+Sorry! We couldn't be helpful
+Thank you for your feedback
+Your e-mail address
+*
+Let us know how can we improve this article! *
+Need more information
+Difficult to understand
+Inaccurate/irrelevant content
+Missing/broken link
+Select at least one of the reasons
+Please give your comments
+CAPTCHA verification is required.
+Cancel
+Send
+Feedback sent
+We appreciate your effort and will try to fix the article
+X
+0 of 0

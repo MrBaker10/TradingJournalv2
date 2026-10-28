@@ -1,0 +1,61 @@
+All
+Articles
+Recent Searches
+Clear all
+No recent searches
+Popular Articles
+Articles
+View all
+Topics
+View all
+Tickets
+View all
+Sorry! nothing found for
+What is the permitted trading times guideline?
+Modified on Mon, 27 Apr at 3:42 PM
+TradeDay does not fail you for accidentally breaching of the permitted times.
+Exit all positions 10 minutes before the close. No holding positions when the market closes.
+You can trade anytime when the market is open, with the exception of trading over TradeDay's tier 1 economic data releases.
+TradeDay will auto-liquidate all open positions 10 minutes before the daily market close and 2 minutes before TradeDay's tier 1 economic data releases , and open markets back up to trade 2 minutes after these releases.
+Do not rely on TradeDay to manage your orders. If you breach a drawdown limit because the software did not liquidate your position or prevent orders from being filled, TradeDay will not reset the account.
+Traders cannot carry positions into the close, or trade Tier 1 data releases. We do not fail traders for accidental breaches of these guidelines, but traders found to be ignoring these guidelines and abusing the policy will lose their account.
+Full details on the restriction of trading tier 1 economic data releases can be found here
+Trading session definition.
+For CME products, a trading session is defined from the opening of the market at 5 pm CT through to the close the next day. Any trading taking place during this session is considered a day.
+For example, if you place a trade in the ES at 6 pm on Wednesday and again at 3 pm on Thursday, these are part of the same trading day, and the Evaluation metrics are calculated off this.
+Different products have different closing times.
+For example, agricultural products close earlier than most of the other CME Group products.
+TradeDay can liquidate open positions at 3:50 pm CT only , so please note that if you are trading a product that has a different closing time, it is your responsibility to ensure that you are flat and have no working orders before the close of that product.
+For a list of market closing times, please see the CME groups website here:
+https://www.cmegroup.com/trading-hours.html (opens in a new tab)
+Also, please be aware of any trading holiday market closures or shortened sessions. We will do our best to forewarn you of any impending changes to a market closing time on our site, but it is the trader’s responsibility to be aware of any changes to their own products.
+https://www.cmegroup.com/tools-information/holiday-calendar.html (opens in a new tab)
+Trading generally resumes after 5 pm CT. Overnight trading is allowed, but any open positions must be closed before the market closes the next day.
+For example: If you open a crude oil position at 5.30 pm CT on Tuesday, it must be closed before 3.50 pm CT on Wednesday.
+For funded traders, we require all open positions to be closed 10 minutes before the close of the product you are trading. Any trader holding a position during this time will be issued a warning.
+Please note: Do not rely on TradeDay to manage your orders. Your order-book is your responsibility. If you breach a drawdown limit because our software did not liquidate your position or prevent orders from being filled, TradeDay will not reset the account.
+Why do we have this rule?
+When funded traders are trading in the live market, it is impossible for the trading group to risk manage positions when the market is closed. If a breaking news event, or data release happens when the market is closed, the price could open significantly against trader's risk limits incurring significant losses.
+Was this article helpful?
+No
+Yes
+That’s Great!
+Thank you for your feedback
+Sorry! We couldn't be helpful
+Thank you for your feedback
+Your e-mail address
+*
+Let us know how can we improve this article! *
+Need more information
+Difficult to understand
+Inaccurate/irrelevant content
+Missing/broken link
+Select at least one of the reasons
+Please give your comments
+CAPTCHA verification is required.
+Cancel
+Send
+Feedback sent
+We appreciate your effort and will try to fix the article
+X
+0 of 0

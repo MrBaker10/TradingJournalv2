@@ -1,0 +1,71 @@
+Prime Payout Requirements
+September 8, 2026
+Table of contents
+Requirements
+In order to receive a payout for a Prime Funded Account:
+You must adhere to all TOS guidelines and policy Trading Rules that are enforced by Funded Futures Family.
+Minimum of $200 profit per trading day
+Profit Structure
+All Prime funded account payouts are subject to a 90/10 profit split. 90% to the trader and 10% to Funded Futures Family.
+Payout Eligibility
+The following criteria must be met in order to qualify for a payout. These conditions will reset after every approved payout.
+Minimum Profit
+Each payout request requires traders to achieve a profit target since their previous payout. This ensures consistent trading performance and account growth.
+Account Size
+Profit Target
+$25,000
+$300
+$50,000
+$500
+$100,000
+$750
+$150,000
+$1,000
+Consistency Rule
+Any of your daily profits must not be more than 40% of your total profits during the specific payout cycle
+Consistency rule resets after each payout
+This rule enforces the idea that your payout must be earned by consistent and good habits rather than one lucky day or trade.
+Account Buffer Requirement
+In order to request a payout, the account balance must remain above the required buffer level. The buffer helps maintain account stability and ensures traders have sufficient capital to continue trading after a withdrawal.
+Buffer Formula:
+Drawdown + $100
+Account Size
+Buffer Balance
+$25,000
+$26,100
+$50,000
+$52,100
+$100,000
+$103,100
+$150,000
+$154,600
+Max Payouts
+Each account size has defined payout limits depending on whether it is the first payout or subsequent payouts.
+Account Size
+Payout 1
+Payout 2+
+$25,000
+$1,000
+$1,500
+$50,000
+$2,000
+$2,500
+$100,000
+$3,000
+$3,500
+$150,000
+$3,500
+$4,000
+Important Notes
+A minimum of three trading days is required between payout requests.
+The required buffer must always remain in the account and cannot be withdrawn.
+Traders must achieve a profit target between each payout request according to their account size.
+Related Articles
+Prime Drawdown
+Premier+ Evaluation
+Premier+ Payout Requirements
+Velocity Payout Requirements
+Straight to Funded(S2F) Payout Requirements
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

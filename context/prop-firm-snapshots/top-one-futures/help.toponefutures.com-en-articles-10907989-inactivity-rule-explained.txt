@@ -1,0 +1,40 @@
+Inactivity Rule Explained
+The 14-day Inactivity Rule: how it is counted, what happens if you do not trade in time, and tips to stay active.
+Table of contents
+All traders must place at least one trade every 14 calendar days to keep their account in good standing. This article explains how the Inactivity Rule works, what happens if you break it, and how to avoid it.
+What is the Inactivity Rule?
+Rule detail
+How it works
+Requirement
+At least one trade (entry and exit) must occur within a 14-day window, starting from your most recent trade
+Counting days
+The 14-day window includes weekends and holidays, not just business days
+Exact Calculation
+The 14-day rule is calculated strictly down to the exact hour and minute (336 consecutive hours) from the timestamp of your most recent trade.
+It is not based on calendar day cutoffs (e.g., midnight).
+Example: If your last trade was on the April 1st at 13:00 UTC , your 14-day window expires on April 15th at 13:00 UTC sharp .
+What happens if I don't trade for 14 days?
+If no trades are placed within any 14-day period:
+Your account will be marked inactive .
+The account will receive a hard breach and be closed permanently.
+All progress and profits on the account will be lost.
+Example: if your last trade was on April 1st, you must place your next trade no later than April 15th to avoid being breached for inactivity.
+Tips to avoid inactivity
+Set a reminder on your phone or calendar every 10 to 12 days.
+Even one small trade (meeting our 10-second minimum ) is enough to stay active.
+Do not wait until the last minute, give yourself a buffer.
+Please note: an inactivity breach is permanent. Keep your account active with at least one trade every 14 calendar days.
+Related articles
+Minimum Trade Time Rule Explained
+Trading Hours at Top One Futures
+Can I Hold Trades Overnight?
+Prohibited Trading Practices
+Related Articles
+Minimum Trade Time Rule Explained
+Consistency Rule in Instant Sim Funded Accounts Explained
+Elite ACCESS – News Trading Rule
+Elite ACCESS Intraday - News Trading Rule
+X-Ultra – Other Trading Rules (Not available for new purchases)
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

@@ -1,0 +1,89 @@
+Elite Daily V2 – Daily Payout Rules
+Accounts purchased on or after 5/11/26
+Table of contents
+One of the core advantages of the Elite Daily Plan is the ability to request payouts daily once funded. There is no consistency target on Elite Daily funded accounts. Funded traders may request a payout every 24 hours, provided all payout conditions are met.
+In short: daily payouts once funded, 90/10 profit split, $500 minimum, a per-request maximum and a fixed buffer per account size, and after your first payout at least 50% of every payout must come from new profits (Daily Progression Rule).
+Payout Rules at a Glance
+Rule
+Details
+Payout eligibility
+Evaluation: no. Funded: yes, daily (every 24 hours, provided all payout conditions are met).
+Profit split
+90% Trader / 10% Firm on all funded Elite Daily accounts.
+Minimum payout
+$500. Requests below $500 will not be processed.
+Maximum payout per request
+See table below. Profits above the maximum payout cap remain in the account.
+Payout buffer
+A fixed buffer must remain in the account at all times. Only profits above the buffer are eligible for withdrawal.
+Daily Progression Rule (50% rule)
+After your first payout, at least 50% of every future payout request must come from new profits generated since your previous payout. This requirement resets after every approved payout.
+Maximum Payout and Buffer by Account Size
+Account size
+Max payout per request
+Buffer
+Minimum balance after payout
+$25K
+$750
+$1,500
+$26,500
+$50K
+$1,000
+$2,500
+$52,500
+$100K
+$1,500
+$3,500
+$103,500
+$150K
+$2,250
+$4,500
+$154,500
+Once an Elite Daily funded account is breached, profits remaining inside the buffer are not withdrawable .
+Payout Examples
+Example
+First payout
+Next payout (50% rule)
+$25K account ($1,500 buffer, $750 max payout)
+Your balance reaches $28,000 and you request $750. New balance: $27,250. Since the account remains above the $26,500 required level, the payout is eligible.
+To request another $750, at least $375 must come from new profits. Your balance must grow from $27,250 to $27,625 before another full payout request becomes eligible.
+$50K account ($2,500 buffer, $1,000 max payout)
+Your balance reaches $54,500 and you request $1,000. New balance: $53,500.
+To request another $1,000, at least $500 must come from new profits. Your balance must increase from $53,500 to $54,000 before another full payout request becomes eligible.
+$100K account ($3,500 buffer, $1,500 max payout)
+Your balance reaches $106,500 and you request $1,500. New balance: $105,000.
+To request another $1,500, at least $750 must come from new profits. Your balance must increase from $105,000 to $105,750 before another payout request becomes eligible.
+Path to Live (5 Payouts)
+The goal during the Sim Funded stage is consistent performance. After successfully completing 5 payouts , traders will typically become eligible to transition to a Live account. While traders may occasionally be transitioned sooner, 5 successful payouts remains the standard guideline.
+Important Clarifications
+The 50% rule applies to every payout request after the first payout
+The rule resets after each approved payout
+Buffer requirements always remain active
+The payout cap applies per request
+How Payout Review Works
+Before approval, the following is reviewed: Max Loss Limit compliance, 50% Progression Rule compliance and News Rule compliance. All requirements must be met simultaneously.
+What Happens After a Payout?
+Account balance adjusts accordingly
+End of Day trailing drawdown remains active
+Buffer requirements remain active
+Next payout eligibility begins the following trading day
+Important Notes
+Daily payouts do not override risk rules
+Payout caps remain enforced
+Only closed profits count toward payouts
+Rule violations may result in payout denial
+Related articles
+Elite DAILY V2 - Overview
+Elite Daily V2 – Max Loss Limit (MLL)
+Elite Daily V2 – News Trading Rule (funded only)
+Elite Daily V2 - I've passed the Evaluation, what's next?
+What Are the Payout Platforms?
+Related Articles
+Elite ACCESS – Payout Requirements
+Elite ACCESS – Daily Progression Rule (50%)
+Elite DAILY V2 - Overview
+Elite Daily V2 - Reset Fees
+Elite ACCESS Intraday - Payout Requirements
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

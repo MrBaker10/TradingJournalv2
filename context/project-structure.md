@@ -79,6 +79,7 @@ src/
     econ/                     # Phase 2 — feed adapter, swappable in one file
     trades/                   # save a trade logged or edited by hand
     money.ts  time.ts  env.ts
+  scripts/                    # CLI scripts without a database (prop firm source check)
   hooks/
   types/
 context/

@@ -1,0 +1,17 @@
+Bots/Algorithmic Trading Policy
+September 8, 2026
+At Funded Futures Family, we don’t permit bot or algorithmic trading. Our goal is to create a fair, human-driven trading environment. Here’s how we detect bot-like activity and ensure that all trading is genuine:
+High-Frequency Trade Patterns : Bots often execute trades at extremely high frequencies within milliseconds. We monitor for unusually high trade volumes or repetitive trading patterns that occur faster than human capability.
+Unusual Scalping Behavior : While we support scalping, excessive entries and exits in very short periods may indicate automated trading. Legitimate scalping is usually characterized by trades based on market conditions, whereas bots tend to follow consistent, repetitive patterns.
+Non-Human Timing : We track the consistency of order timing. Bots often operate at precise intervals or react instantly to certain price triggers, which isn’t typical of manual trading.
+Simultaneous Market Activity : Some automated strategies rely on simultaneous or cross-market trading (e.g., hedging across different platforms). We watch for behavior that suggests coordinated strategies or arbitrage that would be difficult to achieve manually.
+Violating this policy may lead to account suspension or bans to protect the integrity of our trading environment. Please contact support if you have any questions about acceptable trading practices.
+We appreciate your cooperation and commitment to creating a fair, respectful trading space. VPNs and VPSs are permitted and may be used at the trader’s discretion.
+Related Articles
+News Trading Policy
+Micro-scalping Policy
+Prohibited Trading Conduct
+Prohibited Trading Conduct
+All-or-Nothing Trading and Account Rolling
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃

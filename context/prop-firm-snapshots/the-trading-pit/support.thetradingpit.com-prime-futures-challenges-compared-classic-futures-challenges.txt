@@ -1,0 +1,40 @@
+Futures Prime — How It Works
+What futures trading is, how the Futures Prime programme works, and its account sizes and targets.
+Table of contents
+What Is Futures Trading?
+Futures are a type of derivative contract — an agreement to buy or sell a specific commodity, asset or security at a set future date and price.
+Traders use them to speculate on where prices are heading, or to hedge against market moves.
+Trading futures requires a dedicated trading account and, unlike CFD or Forex, you pay for market data, because the pricing comes directly from the exchange in real time. Futures offer structure, clear rules and direct access to market pricing.
+What Is Futures Prime and How Does It Work?
+Futures Prime is a one-phase evaluation program.
+You purchase an account in the size you choose, then pass an evaluation Challenge by reaching the Profit Target within the rules and the 30-day Challenge period.
+All trading takes place on demo accounts using simulated funds. Once you pass, you receive a funded demo Earning Account where you can request rewards on the profit you generate.
+Futures Prime is available in three account sizes, each with its own targets and limits:
+Account size
+Profit Target
+Max Drawdown
+Daily Pause
+Max Contracts (STD / Micro)
+$50,000
+$3,000
+$2,000
+$1,000
+5 / 50
+$100,000
+$6,000
+$3,000
+$2,000
+10 / 100
+$150,000
+$9,000
+$4,500
+$3,000
+15 / 150
+Challenge duration: 30 days across all account sizes.
+Activation fee: new accounts created on or after 26/03/2026 have no activation fee ($0). Existing accounts and reset breached accounts may be subject to an activation fee before progressing to the Earning Phase.
+What Do Reset and Extend Mean?
+Reset — if you breach your Futures demo account, you can purchase a Reset at any time, as many times as you wish. Each Reset gives you a fresh account while preserving the days remaining from your original Challenge (e.g. reset 5 days in and your new account has 25 days left).
+Extend — if your Challenge deadline is approaching but your trading is going well, Extend gives you additional days without losing your current progress.
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents

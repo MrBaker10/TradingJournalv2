@@ -1,0 +1,14 @@
+News trading
+Tier-1 news in evaluation and funded accounts.
+Table of contents
+Evaluation: Tier-1 news trading is allowed.
+Funded: a trade placed in a restricted news window is voided, not a breach. The account stays active and that trade doesn't count.
+Nitro Sim Funded: Tier-1 news trading is not permitted.
+Tier-1 events
+Tier-1 events include employment reports, CPI, EIA reports for energy traders and key agricultural reports for agricultural traders. FOMC Minutes are no longer Tier 1. Use the Economic Calendar in your dashboard: events it doesn't mark as Tier 1 are not restricted.
+Always prohibited
+Straddles or strangles used to exploit volatility around a release.
+Disguising a news-based trade as a regular strategy.
+Did this answer your question?
+Disappointed Reaction 😞 Neutral Reaction 😐 Smiley Reaction 😃
+Table of contents
