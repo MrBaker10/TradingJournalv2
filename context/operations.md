@@ -53,7 +53,9 @@ its password or two-factor, delete it, sign other sessions out or upload screens
 ## Neon and Vercel
 
 **Neon (P2.2).** Production runs on Neon `tradingjournal` (aws-eu-central-1, PG 18),
-Vercel functions in `fra1`. Previews use the Neon branch `preview`. The Neon URLs live
+Vercel functions in `fra1`. Only `main` deploys on push (`vercel.json` →
+`git.deploymentEnabled`); other branches get no automatic preview. A preview deployed
+by hand uses the Neon branch `preview`. The Neon URLs live
 in the gitignored `.env.neon.production` and `.env.neon.preview` (`DATABASE_URL` pooled,
 `DATABASE_URL_DIRECT` direct). The `db:*` scripts only read `.env.local`; against Neon,
 load the Neon file second so it wins, and check the host first:
