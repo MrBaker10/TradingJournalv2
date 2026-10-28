@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthCard } from "@/components/auth/auth-card";
+import { buttonVariants } from "@/components/ui/button";
 import { env } from "@/lib/env";
 
 // The front page: two ways in and nothing else. It is public (src/proxy.ts)
@@ -11,14 +12,18 @@ export default function Home() {
       <div className="flex flex-col gap-3">
         <Link
           href="/login"
-          className="flex h-10 items-center justify-center rounded-ctl bg-[image:var(--gradient-info)] px-4 font-medium text-fg text-sm shadow-[var(--shadow-button-primary)] transition duration-200 hover:-translate-y-px hover:shadow-[var(--shadow-button-primary-hover)] hover:brightness-110 active:scale-[.978]"
+          className={buttonVariants({ size: "lg", className: "h-10 w-full" })}
         >
           Sign in
         </Link>
         {env.REGISTRATION_OPEN && (
           <Link
             href="/register"
-            className="flex h-10 items-center justify-center rounded-ctl border border-white/12 bg-white/5 px-4 font-medium text-fg text-sm transition duration-200 hover:-translate-y-px hover:border-cyan/35 hover:brightness-110 active:scale-[.978]"
+            className={buttonVariants({
+              variant: "outline",
+              size: "lg",
+              className: "h-10 w-full",
+            })}
           >
             Create account
           </Link>

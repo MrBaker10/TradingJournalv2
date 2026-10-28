@@ -231,32 +231,6 @@
   }
 }
 
-/* Standardkarte */
-@utility card-surface {
-  background: var(--gradient-card);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  position: relative;
-}
-
-/* Verlaufsrahmen (1px, per Mask) — neutral */
-@utility edge {
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    padding: 1px;
-    border-radius: inherit;
-    background: var(--gradient-edge);
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    -webkit-mask-composite: xor;
-    pointer-events: none;
-  }
-}
-
 /* Verlaufsrahmen — Neon, nur für Prozess-Karten */
 @utility edge-neon {
   box-shadow: var(--shadow-card), var(--shadow-neon-edge);
@@ -305,26 +279,6 @@
 @utility cap-practice {
   color: var(--color-practice);
   background: var(--color-practice-dim);
-}
-
-/* Seitenhintergrund — drei radiale Verläufe, konstant über alle Screens */
-@utility page-glow {
-  background:
-    radial-gradient(
-      700px 440px at 0% 0%,
-      rgba(0, 117, 255, 0.26),
-      transparent 66%
-    ),
-    radial-gradient(
-      640px 400px at 100% 2%,
-      rgba(33, 212, 253, 0.16),
-      transparent 66%
-    ),
-    radial-gradient(
-      900px 520px at 50% 108%,
-      rgba(0, 117, 255, 0.13),
-      transparent 70%
-    );
 }
 
 /* The tokens and the font variables are defined on <body> itself (theme and

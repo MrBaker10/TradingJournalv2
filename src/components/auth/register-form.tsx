@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { InlineMessage } from "@/components/ui/inline-message";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
+import { SELECT_CLASS } from "@/components/settings/fields";
+import { FieldError, FieldLabel } from "@/components/trades/form-blocks";
+import { notifyError } from "@/components/ui/toast";
 import { authClient } from "@/lib/auth/auth-client";
 import { placeholderEmail } from "@/lib/auth/placeholder-email";
 import { signUpSchema } from "@/schemas/auth";
-import { AuthField } from "./auth-field";
-import { SubmitButton } from "./submit-button";
+import { AUTH_LINK } from "./auth-card";
+import { AuthSubmit } from "./auth-submit";
+import { AuthTextField } from "./auth-text-field";
 
 type FieldErrors = Partial<
   Record<"username" | "displayName" | "password" | "timezone", string>
@@ -21,8 +24,8 @@ export function RegisterForm() {
   const [password, setPassword] = useState("");
   const [timezone, setTimezone] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const timezoneId = useId();
 
   // The server cannot know the browser's zone, so the default is filled in
   // after mount (project-overview.md: "prefilled from the browser").
@@ -63,7 +66,8 @@ export function RegisterForm() {
         if (error.code === "USERNAME_IS_ALREADY_TAKEN") {
           setErrors({ username: "That username is taken. Pick another." });
         } else {
-          setFormError("Couldn't create the account. Try again.");
+          // The form keeps its input; only the attempt failed (Design.md §3.11).
+          notifyError("Couldn't create the account. Try again.");
         }
         return;
       }
@@ -74,12 +78,11 @@ export function RegisterForm() {
 
   function clearError(field: keyof FieldErrors) {
     if (errors[field]) setErrors({ ...errors, [field]: undefined });
-    if (formError) setFormError(null);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2" noValidate>
-      <AuthField
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+      <AuthTextField
         label="Username"
         name="username"
         autoComplete="username"
@@ -89,13 +92,11 @@ export function RegisterForm() {
           setUsername(event.target.value);
           clearError("username");
         }}
-        message={
-          errors.username ?? "This is how you sign in. It can't be changed."
-        }
-        tone={errors.username ? "error" : "hint"}
+        error={errors.username}
+        hint="This is how you sign in. It can't be changed."
         disabled={isPending}
       />
-      <AuthField
+      <AuthTextField
         label="Display name"
         name="displayName"
         autoComplete="nickname"
@@ -104,10 +105,10 @@ export function RegisterForm() {
           setDisplayName(event.target.value);
           clearError("displayName");
         }}
-        message={errors.displayName ?? null}
+        error={errors.displayName}
         disabled={isPending}
       />
-      <AuthField
+      <AuthTextField
         label="Password"
         name="password"
         type="password"
@@ -117,15 +118,13 @@ export function RegisterForm() {
           setPassword(event.target.value);
           clearError("password");
         }}
-        message={errors.password ?? null}
+        error={errors.password}
         disabled={isPending}
       />
-      <div className="flex flex-col gap-1">
-        <label htmlFor="timezone" className="cap">
-          Timezone
-        </label>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <FieldLabel htmlFor={timezoneId}>Timezone</FieldLabel>
         <select
-          id="timezone"
+          id={timezoneId}
           name="timezone"
           value={timezone}
           onChange={(event) => {
@@ -133,7 +132,9 @@ export function RegisterForm() {
             clearError("timezone");
           }}
           disabled={isPending}
-          className="h-10 rounded-ctl border border-white/12 bg-well px-3 text-sm text-fg transition-colors duration-200 hover:border-cyan/35 focus:border-cyan focus:shadow-[var(--shadow-focus)] focus:outline-none disabled:opacity-60"
+          aria-invalid={errors.timezone ? true : undefined}
+          aria-describedby={`${timezoneId}-${errors.timezone ? "error" : "hint"}`}
+          className={SELECT_CLASS}
         >
           {timezone === "" && <option value="">Detecting…</option>}
           {(zones.includes(timezone) || timezone === ""
@@ -145,20 +146,22 @@ export function RegisterForm() {
             </option>
           ))}
         </select>
-        <InlineMessage
-          message={
-            errors.timezone ?? "The clock you sit in front of while trading."
-          }
-          tone={errors.timezone ? "error" : "hint"}
-        />
+        {!errors.timezone && (
+          <p
+            id={`${timezoneId}-hint`}
+            className="text-muted-foreground text-xs"
+          >
+            The clock you sit in front of while trading.
+          </p>
+        )}
+        <FieldError id={`${timezoneId}-error`} message={errors.timezone} />
       </div>
-      <SubmitButton loading={isPending} pendingLabel="Creating…" fullWidth>
+      <AuthSubmit pending={isPending} pendingLabel="Creating…">
         Create account
-      </SubmitButton>
-      <InlineMessage message={formError} />
-      <p className="text-fg-subtle text-xs">
+      </AuthSubmit>
+      <p className="text-muted-foreground text-xs">
         Already have an account?{" "}
-        <Link href="/login" className="text-cyan hover:underline">
+        <Link href="/login" className={AUTH_LINK}>
           Sign in
         </Link>
       </p>
