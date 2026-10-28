@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -9,6 +8,7 @@ import {
 } from "@/components/ui/sheet";
 import { Toggle } from "@/components/ui/toggle";
 import type { PropFirmRow } from "@/db/queries/prop-firms";
+import { useRetainedTarget } from "@/hooks/use-retained-target";
 import type { PropFirmsState } from "@/lib/prop-firms/href";
 import { PROGRAM_FIELD_LABELS } from "@/lib/prop-firms/parse";
 import { CompareToggle } from "./compare-toggle";
@@ -43,9 +43,7 @@ export function FirmSheet({
   /** Another program of the firm, or null to close. */
   onOpenChange: (programId: number | null) => void;
 }) {
-  // What the sheet shows, so it keeps showing it while it slides out.
-  const [shownId, setShownId] = useState(openId);
-  if (openId !== null && openId !== shownId) setShownId(openId);
+  const shownId = useRetainedTarget(openId, (id) => id);
 
   const shown = rows.find((row) => row.program.id === shownId);
   const programs = shown

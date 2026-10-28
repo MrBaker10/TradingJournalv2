@@ -1,6 +1,14 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import {
+  ChevronCell,
+  OpenColumnHead,
+  ROW_OPENER,
+  TABLE_BOX,
+  TABLE_HEAD_CELL,
+  TABLE_HEAD_ROW,
+  TABLE_ROW,
+} from "@/components/ui/dense-table";
 import { moveRowFocus } from "@/components/ui/row-focus";
 import type { Strategy } from "@/db/queries/strategies";
 import { STRATEGY_CHAPTERS } from "./strategy-chapters";
@@ -23,20 +31,16 @@ export function StrategyTable({
   openId: number | null;
   onOpen: (strategyId: number) => void;
 }) {
-  // `relative` makes the scroll box the containing block of the stretched
-  // buttons, or they would widen the page at 390 px.
   return (
-    <div className="relative overflow-x-auto rounded-xl border">
+    <div className={TABLE_BOX}>
       <table className="w-full text-sm [&_th]:whitespace-nowrap">
         <thead>
-          <tr className="border-b bg-muted/30 text-left text-muted-foreground text-xs">
-            <th className="px-4 py-2 font-normal">Strategy</th>
-            <th className="px-4 py-2 font-normal">Status</th>
-            <th className="px-4 py-2 text-right font-normal">Chapters</th>
-            <th className="px-4 py-2 text-right font-normal">Assigned</th>
-            <th className="w-8">
-              <span className="sr-only">Open</span>
-            </th>
+          <tr className={TABLE_HEAD_ROW}>
+            <th className={TABLE_HEAD_CELL}>Strategy</th>
+            <th className={TABLE_HEAD_CELL}>Status</th>
+            <th className={`${TABLE_HEAD_CELL} text-right`}>Chapters</th>
+            <th className={`${TABLE_HEAD_CELL} text-right`}>Assigned</th>
+            <OpenColumnHead />
           </tr>
         </thead>
         <tbody onKeyDown={moveRowFocus}>
@@ -48,14 +52,14 @@ export function StrategyTable({
               <tr
                 key={strategy.id}
                 aria-current={strategy.id === openId ? "true" : undefined}
-                className="group relative border-b align-top transition-colors duration-150 last:border-b-0 hover:bg-accent has-focus-visible:bg-accent has-focus-visible:ring-3 has-focus-visible:ring-ring/50 aria-current:bg-muted"
+                className={`${TABLE_ROW} align-top last:border-b-0`}
               >
                 <td className="min-w-48 px-4 py-2.5">
                   <button
                     type="button"
                     data-row
                     onClick={() => onOpen(strategy.id)}
-                    className="text-left outline-none after:absolute after:inset-0"
+                    className={ROW_OPENER}
                   >
                     {strategy.name}
                   </button>
@@ -73,12 +77,7 @@ export function StrategyTable({
                 <td className="whitespace-nowrap px-4 py-2.5 text-right font-mono tabular-nums">
                   {tradeCounts.get(strategy.id) ?? 0}
                 </td>
-                <td className="py-2.5 pr-3">
-                  <ChevronRight
-                    aria-hidden="true"
-                    className="size-4 text-muted-foreground transition-[translate] duration-150 group-hover:translate-x-0.5"
-                  />
-                </td>
+                <ChevronCell />
               </tr>
             );
           })}

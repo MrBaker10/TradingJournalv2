@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { MetricRow } from "@/components/dashboard/metric-row";
 import {
   Sheet,
@@ -11,6 +10,7 @@ import {
 import type { EconEventRow } from "@/db/queries/econ";
 import { isPast } from "@/domain/econ";
 import type { IsoDate } from "@/domain/streak";
+import { useRetainedTarget } from "@/hooks/use-retained-target";
 import { formatEventDayLabel, formatEventTime } from "@/lib/time";
 import { Figure, ImpactTag } from "./econ-table";
 
@@ -35,10 +35,7 @@ export function EconSheet({
   now: Date;
   onClose: () => void;
 }) {
-  // What the sheet shows, so it keeps showing it while it slides out.
-  const [shown, setShown] = useState(target);
-  if (target !== null && target.event.id !== shown?.event.id) setShown(target);
-  const view = target ?? shown;
+  const view = useRetainedTarget(target, (shown) => shown.event.id);
 
   return (
     <Sheet open={target !== null} onOpenChange={(next) => !next && onClose()}>

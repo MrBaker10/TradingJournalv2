@@ -21,6 +21,7 @@ import {
   metricValue,
   zeroLineLayout,
 } from "@/domain/analytics";
+import { useRetainedTarget } from "@/hooks/use-retained-target";
 import { formatMetric, formatR, formatShare } from "@/lib/analytics/format";
 import { moneyTone } from "@/lib/dashboard/sign-tone";
 import { type DisplayCurrency, formatCents } from "@/lib/money";
@@ -188,22 +189,24 @@ export function DimensionSheet({
   currency: DisplayCurrency;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-  // Kept after closing, so the sheet still has its content while it slides out.
-  const [dimension, setDimension] = useState<DimensionId | null>(null);
+  // The open dimension; null closes the sheet.
+  const [target, setTarget] = useState<DimensionId | null>(null);
+  const dimension = useRetainedTarget(target, (id) => id);
   const [metric, setMetric] = useState<AnalyticsMetric>("pnl");
   const opener = useRef<HTMLElement | null>(null);
 
   const openDimension = useCallback<OpenDimension>((next, from) => {
     opener.current = from;
-    setDimension(next);
-    setOpen(true);
+    setTarget(next);
   }, []);
 
   return (
     <OpenDimensionContext.Provider value={openDimension}>
       {children}
-      <Sheet open={open} onOpenChange={setOpen}>
+      <Sheet
+        open={target !== null}
+        onOpenChange={(next) => !next && setTarget(null)}
+      >
         <SheetContent size="analytics" finalFocus={opener}>
           {dimension && (
             <div className="flex flex-col gap-6 p-4 lg:p-6">

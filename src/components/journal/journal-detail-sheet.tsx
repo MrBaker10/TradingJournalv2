@@ -13,6 +13,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import type { JournalTradeRow } from "@/db/queries/trades";
+import { useRetainedTarget } from "@/hooks/use-retained-target";
 import type { DisplayCurrency } from "@/lib/money";
 import { TradeDetailBody } from "./trade-detail-body";
 
@@ -44,21 +45,23 @@ export function JournalDetailSheet({
   currency: DisplayCurrency;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-  // Kept after closing, so the sheet still has its content while it slides out.
-  const [trade, setTrade] = useState<JournalTradeRow | null>(null);
+  // The open trade; null closes the sheet.
+  const [target, setTarget] = useState<JournalTradeRow | null>(null);
+  const trade = useRetainedTarget(target, (row) => row.id);
   const opener = useRef<HTMLElement | null>(null);
 
   const openEntry = useCallback<OpenEntry>((next, from) => {
     opener.current = from;
-    setTrade(next);
-    setOpen(true);
+    setTarget(next);
   }, []);
 
   return (
     <OpenEntryContext.Provider value={openEntry}>
       {children}
-      <Sheet open={open} onOpenChange={setOpen}>
+      <Sheet
+        open={target !== null}
+        onOpenChange={(next) => !next && setTarget(null)}
+      >
         <SheetContent size="wide" finalFocus={opener}>
           {trade && (
             <div className="flex flex-col gap-4 p-4 lg:p-6">

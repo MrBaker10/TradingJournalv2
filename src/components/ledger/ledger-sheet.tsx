@@ -22,6 +22,7 @@ import type { LedgerAccount, LedgerEntryRow } from "@/db/queries/ledger";
 import { signedLedgerCents } from "@/domain/ledger";
 import type { IsoDate } from "@/domain/streak";
 import { type LedgerDraft, useLedgerDraft } from "@/hooks/use-ledger-draft";
+import { useRetainedTarget } from "@/hooks/use-retained-target";
 import { useTwoClickConfirm } from "@/hooks/use-two-click-confirm";
 import { moneyTone } from "@/lib/dashboard/sign-tone";
 import { formatCents, formatCentsPlain } from "@/lib/money";
@@ -107,12 +108,7 @@ export function LedgerSheet({
   today: IsoDate;
   onClose: () => void;
 }) {
-  // What the sheet shows, so it keeps showing it while it slides out.
-  const [shown, setShown] = useState(target);
-  const targetKey = keyOf(target);
-  if (target !== null && targetKey !== keyOf(shown)) setShown(target);
-  // Fresh props for the same entry (after a save) replace the view in place.
-  const view = target ?? shown;
+  const view = useRetainedTarget(target, keyOf);
 
   return (
     <Sheet open={target !== null} onOpenChange={(next) => !next && onClose()}>
@@ -131,8 +127,7 @@ export function LedgerSheet({
   );
 }
 
-function keyOf(target: LedgerSheetTarget | null): string | null {
-  if (target === null) return null;
+function keyOf(target: LedgerSheetTarget): string {
   return target.kind === "new" ? "new" : `entry:${target.entry.id}`;
 }
 

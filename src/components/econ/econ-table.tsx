@@ -1,6 +1,15 @@
 "use client";
 
-import { ChevronRight, Folder } from "lucide-react";
+import { Folder } from "lucide-react";
+import {
+  ChevronCell,
+  OpenColumnHead,
+  ROW_OPENER,
+  TABLE_BOX,
+  TABLE_HEAD_CELL,
+  TABLE_HEAD_ROW,
+  TABLE_ROW,
+} from "@/components/ui/dense-table";
 import { moveRowFocus } from "@/components/ui/row-focus";
 import type { EconEventRow } from "@/db/queries/econ";
 import { type EconDay, isHighImpact, isPast } from "@/domain/econ";
@@ -31,25 +40,21 @@ export function EconTable({
   openId: number | null;
   onOpen: (eventId: number) => void;
 }) {
-  // `relative` makes the scroll box the containing block of the stretched
-  // buttons, or they would widen the page at 390 px.
   return (
-    <div className="relative overflow-x-auto rounded-xl border">
+    <div className={TABLE_BOX}>
       <table
         className="w-full text-sm [&_th]:whitespace-nowrap [&>tbody:last-child>tr:last-child]:border-b-0"
         onKeyDown={moveRowFocus}
       >
         <thead>
-          <tr className="border-b bg-muted/30 text-left text-muted-foreground text-xs">
-            <th className="px-4 py-2 font-normal">Time</th>
-            <th className="px-4 py-2 font-normal">Cur</th>
-            <th className="px-4 py-2 font-normal">Impact</th>
-            <th className="px-4 py-2 font-normal">Event</th>
-            <th className="px-4 py-2 text-right font-normal">Forecast</th>
-            <th className="px-4 py-2 text-right font-normal">Previous</th>
-            <th className="w-8">
-              <span className="sr-only">Open</span>
-            </th>
+          <tr className={TABLE_HEAD_ROW}>
+            <th className={TABLE_HEAD_CELL}>Time</th>
+            <th className={TABLE_HEAD_CELL}>Cur</th>
+            <th className={TABLE_HEAD_CELL}>Impact</th>
+            <th className={TABLE_HEAD_CELL}>Event</th>
+            <th className={`${TABLE_HEAD_CELL} text-right`}>Forecast</th>
+            <th className={`${TABLE_HEAD_CELL} text-right`}>Previous</th>
+            <OpenColumnHead />
           </tr>
         </thead>
         {days.map((day) => (
@@ -69,7 +74,7 @@ export function EconTable({
                 <tr
                   key={event.id}
                   aria-current={event.id === openId ? "true" : undefined}
-                  className={`group relative border-b align-top transition-colors duration-150 hover:bg-accent has-focus-visible:bg-accent has-focus-visible:ring-3 has-focus-visible:ring-ring/50 aria-current:bg-muted ${past ? "text-muted-foreground" : ""}`}
+                  className={`${TABLE_ROW} align-top ${past ? "text-muted-foreground" : ""}`}
                 >
                   <td className="whitespace-nowrap px-4 py-2.5 font-mono tabular-nums">
                     {formatEventTime(event.occursAt, timeZone)}
@@ -85,7 +90,7 @@ export function EconTable({
                       type="button"
                       data-row
                       onClick={() => onOpen(event.id)}
-                      className={`text-left outline-none after:absolute after:inset-0 ${past ? "line-through" : ""}`}
+                      className={`${ROW_OPENER} ${past ? "line-through" : ""}`}
                     >
                       {past && <span className="sr-only">Past: </span>}
                       {event.title}
@@ -97,12 +102,7 @@ export function EconTable({
                   <td className="whitespace-nowrap px-4 py-2.5 text-right font-mono tabular-nums">
                     <Figure value={event.previous} />
                   </td>
-                  <td className="py-2.5 pr-3">
-                    <ChevronRight
-                      aria-hidden="true"
-                      className="size-4 text-muted-foreground transition-[translate] duration-150 group-hover:translate-x-0.5"
-                    />
-                  </td>
+                  <ChevronCell />
                 </tr>
               );
             })}

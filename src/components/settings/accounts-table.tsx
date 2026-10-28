@@ -1,6 +1,14 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import {
+  ChevronCell,
+  OpenColumnHead,
+  ROW_OPENER,
+  TABLE_BOX,
+  TABLE_HEAD_CELL,
+  TABLE_HEAD_ROW,
+  TABLE_ROW,
+} from "@/components/ui/dense-table";
 import type { AccountRulesRow } from "@/db/queries/account-rules";
 import { amountToCents } from "@/domain/commission";
 import type { AccountCurrency } from "@/domain/fx";
@@ -54,22 +62,18 @@ export function AccountsTable({
   openId: number | null;
   onOpen: (accountId: number) => void;
 }) {
-  // `relative` makes the scroll box the containing block of the stretched
-  // buttons and the sr-only header, or they would widen the page at 390 px.
   return (
-    <div className="relative overflow-x-auto rounded-xl border">
+    <div className={TABLE_BOX}>
       <table className="w-full text-sm [&_td:not(:first-child)]:whitespace-nowrap [&_th]:whitespace-nowrap">
         <thead>
-          <tr className="border-b bg-muted/30 text-left text-muted-foreground text-xs">
-            <th className="px-4 py-2 font-normal">Name</th>
-            <th className="px-4 py-2 font-normal">Currency</th>
-            <th className="px-4 py-2 text-right font-normal">
+          <tr className={TABLE_HEAD_ROW}>
+            <th className={TABLE_HEAD_CELL}>Name</th>
+            <th className={TABLE_HEAD_CELL}>Currency</th>
+            <th className={`${TABLE_HEAD_CELL} text-right`}>
               Starting balance
             </th>
-            <th className="px-4 py-2 font-normal">Prop firm</th>
-            <th className="w-8">
-              <span className="sr-only">Open</span>
-            </th>
+            <th className={TABLE_HEAD_CELL}>Prop firm</th>
+            <OpenColumnHead />
           </tr>
         </thead>
         <tbody>
@@ -77,7 +81,7 @@ export function AccountsTable({
             <tr
               key={account.id}
               aria-current={account.id === openId ? "true" : undefined}
-              className="group relative border-b transition-colors duration-150 last:border-b-0 hover:bg-accent has-focus-visible:bg-accent has-focus-visible:ring-3 has-focus-visible:ring-ring/50 aria-current:bg-muted"
+              className={`${TABLE_ROW} last:border-b-0`}
             >
               {/* The stripe sits on the cell: a row's own shadow does not
                   render in every browser. */}
@@ -92,7 +96,7 @@ export function AccountsTable({
                   <button
                     type="button"
                     onClick={() => onOpen(account.id)}
-                    className="text-left outline-none after:absolute after:inset-0"
+                    className={ROW_OPENER}
                   >
                     {account.name}
                   </button>
@@ -122,12 +126,7 @@ export function AccountsTable({
                   <span className="text-muted-foreground">—</span>
                 )}
               </td>
-              <td className="pr-3">
-                <ChevronRight
-                  aria-hidden="true"
-                  className="size-4 text-muted-foreground transition-[translate] duration-150 group-hover:translate-x-0.5"
-                />
-              </td>
+              <ChevronCell />
             </tr>
           ))}
         </tbody>

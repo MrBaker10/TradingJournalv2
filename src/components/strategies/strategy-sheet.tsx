@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import { runWithToast } from "@/components/ui/toast";
 import type { Strategy, StrategyTradeRow } from "@/db/queries/strategies";
+import { useRetainedTarget } from "@/hooks/use-retained-target";
 import { formatDateWithYear } from "@/lib/time";
 import { STRATEGY_ARCHIVE_FAILED } from "@/schemas/strategies";
 import { StrategyForm } from "./strategy-form";
@@ -30,8 +31,7 @@ type Mode =
   | { kind: "form" }
   | { kind: "saved"; edited: boolean; name: string };
 
-function keyOf(target: StrategySheetTarget | null): string | null {
-  if (target === null) return null;
+function keyOf(target: StrategySheetTarget): string {
   return target.kind === "new" ? "new" : `strategy:${target.strategy.id}`;
 }
 
@@ -47,11 +47,7 @@ export function StrategySheet({
   target: StrategySheetTarget | null;
   onClose: () => void;
 }) {
-  // What the sheet shows, so it keeps showing it while it slides out.
-  const [shown, setShown] = useState(target);
-  if (target !== null && keyOf(target) !== keyOf(shown)) setShown(target);
-  // Fresh props for the same strategy (after a save) replace the view in place.
-  const view = target ?? shown;
+  const view = useRetainedTarget(target, keyOf);
 
   return (
     <Sheet open={target !== null} onOpenChange={(next) => !next && onClose()}>

@@ -1,7 +1,6 @@
 "use client";
 
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -10,6 +9,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { ProgramOption } from "@/db/queries/prop-firms";
+import { useRetainedTarget } from "@/hooks/use-retained-target";
 import type { AccountTarget, OpenAccount } from "@/lib/settings/account-param";
 import {
   ActiveAccountActions,
@@ -26,9 +26,7 @@ export type OpenSettingsAccount = OpenAccount<
   ArchivedAccountData
 >;
 
-/** What the sheet shows, so it keeps showing it while it slides out. */
-function viewKey(open: OpenSettingsAccount | null) {
-  if (open === null) return null;
+function viewKey(open: OpenSettingsAccount) {
   return open.kind === "new" ? "new" : `${open.kind}:${open.account.id}`;
 }
 
@@ -63,11 +61,7 @@ export function AccountSheet({
   onDirtyChange: (dirty: boolean) => void;
   confirmDiscard: () => boolean;
 }) {
-  const [view, setView] = useState(open);
-  if (open !== null && viewKey(open) !== viewKey(view)) setView(open);
-  // Fresh props for the same account (after a save or a move) replace the
-  // view without a key change, so the editor keeps its state.
-  const shown = open ?? view;
+  const shown = useRetainedTarget(open, viewKey);
 
   function onKeyDown(event: React.KeyboardEvent) {
     if (shown?.kind !== "active") return;

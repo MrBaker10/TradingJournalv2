@@ -1,6 +1,14 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import {
+  ChevronCell,
+  OpenColumnHead,
+  ROW_OPENER,
+  TABLE_BOX,
+  TABLE_HEAD_CELL,
+  TABLE_HEAD_ROW,
+  TABLE_ROW,
+} from "@/components/ui/dense-table";
 import { moveRowFocus } from "@/components/ui/row-focus";
 import type { LedgerEntryRow } from "@/db/queries/ledger";
 import { signedLedgerCents } from "@/domain/ledger";
@@ -24,20 +32,16 @@ export function LedgerTable({
   openId: number | null;
   onOpen: (entryId: number) => void;
 }) {
-  // `relative` makes the scroll box the containing block of the stretched
-  // buttons, or they would widen the page at 390 px.
   return (
-    <div className="relative overflow-x-auto rounded-xl border">
+    <div className={TABLE_BOX}>
       <table className="w-full text-sm [&_th]:whitespace-nowrap">
         <thead>
-          <tr className="border-b bg-muted/30 text-left text-muted-foreground text-xs">
-            <th className="px-4 py-2 font-normal">Date</th>
-            <th className="px-4 py-2 font-normal">Entry</th>
-            <th className="px-4 py-2 font-normal">Account</th>
-            <th className="px-4 py-2 text-right font-normal">Amount</th>
-            <th className="w-8">
-              <span className="sr-only">Open</span>
-            </th>
+          <tr className={TABLE_HEAD_ROW}>
+            <th className={TABLE_HEAD_CELL}>Date</th>
+            <th className={TABLE_HEAD_CELL}>Entry</th>
+            <th className={TABLE_HEAD_CELL}>Account</th>
+            <th className={`${TABLE_HEAD_CELL} text-right`}>Amount</th>
+            <OpenColumnHead />
           </tr>
         </thead>
         <tbody onKeyDown={moveRowFocus}>
@@ -47,7 +51,7 @@ export function LedgerTable({
               <tr
                 key={entry.id}
                 aria-current={entry.id === openId ? "true" : undefined}
-                className="group relative border-b align-top transition-colors duration-150 last:border-b-0 hover:bg-accent has-focus-visible:bg-accent has-focus-visible:ring-3 has-focus-visible:ring-ring/50 aria-current:bg-muted"
+                className={`${TABLE_ROW} align-top last:border-b-0`}
               >
                 <td className="whitespace-nowrap px-4 py-2.5 font-mono text-muted-foreground tabular-nums">
                   {formatDateWithYear(entry.entryDate)}
@@ -57,7 +61,7 @@ export function LedgerTable({
                     type="button"
                     data-row
                     onClick={() => onOpen(entry.id)}
-                    className="text-left outline-none after:absolute after:inset-0"
+                    className={ROW_OPENER}
                   >
                     {ledgerEntryLabel(entry.kind, entry.category)}
                   </button>
@@ -77,12 +81,7 @@ export function LedgerTable({
                 >
                   {formatCents(signed, { signed: true })}
                 </td>
-                <td className="py-2.5 pr-3">
-                  <ChevronRight
-                    aria-hidden="true"
-                    className="size-4 text-muted-foreground transition-[translate] duration-150 group-hover:translate-x-0.5"
-                  />
-                </td>
+                <ChevronCell />
               </tr>
             );
           })}
