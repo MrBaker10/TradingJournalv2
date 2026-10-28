@@ -23,9 +23,28 @@ never use `push`. Keep schema and generated migration in the same commit.
 
 Demo data: `pnpm db:seed:demo` deletes and recreates the user `demo` with about four
 months of made-up journal data (accounts incl. practice and archived, trades, missed
-setups, notes, checklist, weekly reviews, ledger, closed months, badges). It refuses
-any host but localhost and needs `DEMO_USER_PASSWORD` plus the instrument, trade-tag,
-prop-firm and badge seeds. Test data never goes into a migration.
+setups, notes, checklist, weekly reviews, ledger, closed months, badges). It needs
+`DEMO_USER_PASSWORD` plus the instrument, trade-tag, prop-firm and badge seeds. Test
+data never goes into a migration.
+
+It refuses any host but localhost unless `--allow-host` names exactly the host of
+`DATABASE_URL`. On such a host an existing `demo` user stops the run with its id,
+creation date and entry count, because a real person may have registered that name;
+add `--replace` only once that is checked. Against Neon production it is run by
+Sascha, not by an agent. A password set in the shell wins over `.env.local`, so
+production gets its own:
+
+```bash
+read -rs DEMO_USER_PASSWORD && export DEMO_USER_PASSWORD
+node --env-file=.env.local --env-file=.env.neon.production src/db/seed-demo.ts \
+  --allow-host <host of DATABASE_URL in .env.neon.production>
+```
+
+On a machine without `.env.neon.production`, read the pooled production connection
+string from the Neon console into the shell instead (`read -rs DATABASE_URL && export
+DATABASE_URL`) and leave out the second `--env-file`: a variable set in the shell
+wins over the file. Dates are relative to the day of the run; run it again (with `--replace`) to bring the
+history up to date. Anyone with the password can change or delete the account.
 
 ## Neon and Vercel
 
