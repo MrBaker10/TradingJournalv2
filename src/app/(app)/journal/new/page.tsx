@@ -7,6 +7,7 @@ import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
 import { listStrategies } from "@/db/queries/strategies";
 import { listConfluenceGroups, listMistakeTags } from "@/db/queries/trades";
+import { isDemoUsername } from "@/domain/demo";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { strategyOptions } from "@/lib/trades/strategy-options";
 
@@ -46,6 +47,7 @@ export default async function NewTradePage() {
         commissionRates={commissionRates}
         confluenceGroups={confluenceGroups}
         mistakeTags={mistakeTags}
+        screenshotUploads={!isDemoUsername(user.username)}
       />
     </div>
   );

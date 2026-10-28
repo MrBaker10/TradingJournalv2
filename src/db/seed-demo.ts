@@ -2,6 +2,7 @@ import { parseArgs } from "node:util";
 import { hashPassword } from "better-auth/crypto";
 import { and, count, eq, inArray } from "drizzle-orm";
 import { calculateConsistencyScore } from "../domain/consistency.ts";
+import { DEMO_USERNAME } from "../domain/demo.ts";
 import { reviewWeekStartOf } from "../domain/review-week.ts";
 import { placeholderEmail } from "../lib/auth/placeholder-email.ts";
 import { syncUserBadges } from "../lib/badges/sync.ts";
@@ -41,7 +42,6 @@ import { weeklyReviews } from "./schema/weekly-reviews.ts";
 // The data is deterministic for a given day: a fixed PRNG seed, dates
 // relative to today.
 
-const DEMO_USERNAME = "demo";
 const DEMO_TIMEZONE = "Europe/Berlin";
 const MIN_PASSWORD_LENGTH = 8;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);

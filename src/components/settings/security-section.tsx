@@ -6,6 +6,8 @@ import { TwoFactorCard } from "./two-factor-card";
 interface SecuritySectionProps {
   username: string;
   twoFactorEnabled: boolean;
+  /** The shared demo account: the rows show, their actions do not. */
+  demo: boolean;
 }
 
 // Username, password and two-factor as rows, then the danger zone set apart
@@ -14,6 +16,7 @@ interface SecuritySectionProps {
 export function SecuritySection({
   username,
   twoFactorEnabled,
+  demo,
 }: SecuritySectionProps) {
   return (
     <div className="flex flex-col gap-6">
@@ -27,10 +30,20 @@ export function SecuritySection({
             </>
           }
         />
-        <PasswordCard />
-        <TwoFactorCard enabled={twoFactorEnabled} username={username} />
+        <PasswordCard locked={demo} />
+        <TwoFactorCard
+          enabled={twoFactorEnabled}
+          username={username}
+          locked={demo}
+        />
       </div>
-      <DeleteAccountCard />
+      {demo && (
+        <p className="text-muted-foreground text-sm">
+          Password, two-factor and deleting the account are off on the demo
+          account, so every visitor keeps the same way in.
+        </p>
+      )}
+      <DeleteAccountCard locked={demo} />
     </div>
   );
 }

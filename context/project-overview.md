@@ -575,7 +575,8 @@ and branch per item. Terms in `GLOSSARY.md`.
 - **No sharing of any kind.** No public links, no member-to-member shares, no
   leaderboard, no `/shared` route, no read-only views. The journal is visible to its
   owner and to nobody else. If this ever returns it needs a dedicated read model, so it
-  is a feature and not a toggle.
+  is a feature and not a toggle. The seeded demo account is the one exception
+  (Decisions → Demo account).
 - **No public journal data.** Route exceptions are defined in
   `coding-standards.md` → “Visibility”. A fuller landing page requires its own design
   and review; the existing front page only offers sign-in and registration.
@@ -627,6 +628,13 @@ by picking a different answer while coding.
 - **Account ↔ prop firm link** — deferred to Future, no column in Phase 1.
 - **Sharing** — dropped entirely, including the leaderboard and the raffle.
   Single-owner journal, self-contained feedback loop.
+- **Demo account** (2026-10-28, demo-account) — the user `demo`, seeded with made-up
+  data (`pnpm db:seed:demo`), may run in production with a shared password so the
+  journal can be shown. It is the one exception to "No sharing of any kind": no real
+  user's data, no link, no read-only view. On it, changing the password, two-factor,
+  deleting the account, signing other sessions out and screenshot uploads are refused;
+  nobody can register `demo`. It is reset by hand only. Rules:
+  `coding-standards.md` → "Visibility".
 - **Timezone** — stored per user, prefilled from the browser, applied only to econ
   events.
 - **Account selector memory** — a nullable `selected_account_id` column on `users`,

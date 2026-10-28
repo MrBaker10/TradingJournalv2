@@ -326,6 +326,11 @@ Non-negotiable, because this is a P&L tool:
   handlers check `CRON_SECRET` and return no user data.
 - New exceptions require an explicit product decision; keep this list and the proxy
   aligned. Session/ownership checks in application code remain required even with proxy.
+- The shared demo account (`src/domain/demo.ts`, project-overview.md → Decisions): the
+  auth hook refuses the password, two-factor, delete-user and revoke-session endpoints
+  for the user `demo`, and a sign-up as `demo` gets the taken-username error
+  (`src/lib/auth/demo-guard.ts`); `/api/uploads` answers 403 for it. The UI hides
+  those actions, but the server refusal is what holds.
 
 ## Error handling
 

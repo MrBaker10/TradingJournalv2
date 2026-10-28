@@ -44,7 +44,10 @@ On a machine without `.env.neon.production`, read the pooled production connecti
 string from the Neon console into the shell instead (`read -rs DATABASE_URL && export
 DATABASE_URL`) and leave out the second `--env-file`: a variable set in the shell
 wins over the file. Dates are relative to the day of the run; run it again (with `--replace`) to bring the
-history up to date. Anyone with the password can change or delete the account.
+history up to date. Visitors with the password can journal on it, but cannot change
+its password or two-factor, delete it, sign other sessions out or upload screenshots
+(`coding-standards.md` → "Visibility"); anything else they change stays until the next
+`--replace`.
 
 ## Neon and Vercel
 

@@ -34,6 +34,7 @@ export function ScreenshotTiles({
   screenshots,
   pending,
   disabled = false,
+  uploads = true,
   error,
   onAdd,
   onRemove,
@@ -41,6 +42,8 @@ export function ScreenshotTiles({
   screenshots: readonly ScreenshotItem[];
   pending: boolean;
   disabled?: boolean;
+  /** False on the demo account: the tiles show, nothing can be added. */
+  uploads?: boolean;
   error: string | null;
   onAdd: (files: File[]) => void;
   onRemove: (id: string | number) => void;
@@ -93,7 +96,12 @@ export function ScreenshotTiles({
           })}
         </div>
       )}
-      {free > 0 && (
+      {!uploads && (
+        <p className="text-muted-foreground text-xs">
+          Screenshots are off on the demo account.
+        </p>
+      )}
+      {uploads && free > 0 && (
         <button
           type="button"
           disabled={disabled || pending}

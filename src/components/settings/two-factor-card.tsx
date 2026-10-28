@@ -15,6 +15,8 @@ interface TwoFactorCardProps {
   enabled: boolean;
   /** Shown as the account name in the authenticator app. */
   username: string;
+  /** The shared demo account: the row shows, its action does not. */
+  locked?: boolean;
 }
 
 // The two-factor steps (Design-v1.md §4.19), opening below their row:
@@ -33,7 +35,11 @@ function secretOf(totpURI: string): string {
   return new URL(totpURI).searchParams.get("secret") ?? "";
 }
 
-export function TwoFactorCard({ enabled, username }: TwoFactorCardProps) {
+export function TwoFactorCard({
+  enabled,
+  username,
+  locked = false,
+}: TwoFactorCardProps) {
   const router = useRouter();
   const [step, setStep] = useState<Step>({ kind: "idle" });
   const [password, setPassword] = useState("");
@@ -127,7 +133,8 @@ export function TwoFactorCard({ enabled, username }: TwoFactorCardProps) {
       }
       hint="A six-digit code from an authenticator app after your password."
       action={
-        step.kind === "idle" && (
+        step.kind === "idle" &&
+        !locked && (
           <Button
             type="button"
             variant="outline"

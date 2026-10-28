@@ -9,6 +9,7 @@ import {
   getOwnedTrade,
 } from "@/db/queries/trades";
 import { tradeScreenshots } from "@/db/schema/trades";
+import { isDemoUsername } from "@/domain/demo";
 import { canAddScreenshot } from "@/domain/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { storage } from "@/lib/storage";
@@ -41,6 +42,13 @@ export async function POST(request: NextRequest) {
   }
 
   const user = await getCurrentUser();
+  // Visitors of the shared demo account would see each other's images.
+  if (isDemoUsername(user.username)) {
+    return NextResponse.json(
+      { error: "Screenshots are off on the demo account." },
+      { status: 403 },
+    );
+  }
   const trade = await getOwnedTrade(user.id, tradeId);
   if (!trade) {
     return NextResponse.json({ error: "Trade not found" }, { status: 404 });
