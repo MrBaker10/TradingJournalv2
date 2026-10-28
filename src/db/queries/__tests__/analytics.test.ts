@@ -494,7 +494,7 @@ describe("getMissedSetupBreakdowns", () => {
 
   it("keeps missed setups visible while a single account is selected", async () => {
     // A missed setup carries no account assignment at all, so there is
-    // nothing to filter it by — the same rule isVisibleForAccount encodes.
+    // nothing to filter it by — the "scoped" visibility in scope.ts.
     const { missed } = await run({
       accounts: { Live: false, Other: false },
       trades: [{ on: [], taken: false, session: "London" }],

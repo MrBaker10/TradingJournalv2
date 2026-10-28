@@ -41,6 +41,8 @@ import {
   hasRealAccount,
   rowCommission,
   rowMoney,
+  scopeConditions,
+  type TradeVisibility,
   tradeDisplayCents,
 } from "./scope.ts";
 import type { StrategyContent } from "./strategies.ts";
@@ -209,26 +211,6 @@ export interface JournalTradesResult {
   /** The trade dates of `rows`, oldest first. */
   days: JournalDayValues[];
   hiddenPracticeCounts: JournalHiddenPracticeCount[];
-}
-
-/**
- * Visibility of one trade while a single account is selected.
- *
- * A taken trade shows when it is assigned to that account. A **missed setup
- * always shows**: it carries no account at all — `src/domain/trades.ts` only
- * requires one when `taken = true` — so there is nothing to match it against,
- * and Design-v1.md §4.9 calls it an equal entry, not a lesser kind.
- *
- * This used to be an inner join on `trade_accounts`, which silently dropped
- * every missed setup the moment an account was selected. The "all accounts"
- * branch had the rule right; this one had forgotten it. Found in review.
- */
-export function isVisibleForAccount(accountId: number) {
-  return sql<boolean>`(${trades.taken} = false or exists (
-    select 1 from ${tradeAccounts}
-    where ${tradeAccounts.tradeId} = ${trades.id}
-      and ${tradeAccounts.accountId} = ${accountId}
-  ))`;
 }
 
 // One JSON array of the accounts a trade is assigned to, built with a
@@ -439,31 +421,6 @@ function buildOrderBy(filters: JournalFilters) {
   return [sql`${rMultipleSortKey} ${direction} nulls last`, desc(trades.id)];
 }
 
-/**
- * Which trades a query may see, on top of the ownership filter.
- *
- * `"scoped"` is the list view: the account switcher decides, and with "all
- * accounts" a trade that lives only on practice accounts drops out (it comes
- * back through the reveal banner).
- *
- * `"owner"` is one trade addressed by its own id. The switcher must not reach
- * it: a practice-only trade opened by URL has to render, or
- * project-overview.md's "Nothing disappears silently" would break on the one
- * page that is supposed to show everything.
- */
-type TradeVisibility = "scoped" | "owner";
-
-function visibilityCondition(
-  visibility: TradeVisibility,
-  selectedAccountId: number | null,
-): SQL | undefined {
-  if (visibility === "owner") return undefined;
-  if (selectedAccountId === null) {
-    return sql`(${trades.taken} = false or (${trades.taken} = true and ${hasRealAccount}))`;
-  }
-  return isVisibleForAccount(selectedAccountId);
-}
-
 interface TradeRowsQuery {
   userId: number;
   /**
@@ -560,13 +517,10 @@ async function queryTradeRows(input: TradeRowsQuery): Promise<{
       eq(strategyRevisions.strategyId, tradingStrategies.id),
     );
 
-  const ownership = eq(trades.userId, input.userId);
-
   const query = baseQuery.where(
     and(
-      ownership,
+      ...scopeConditions(input, undefined, input.visibility),
       ...input.conditions,
-      visibilityCondition(input.visibility, input.selectedAccountId),
     ),
   );
 
@@ -757,10 +711,9 @@ async function listJournalDayValues(
     .innerJoin(instruments, eq(trades.instrumentId, instruments.id))
     .where(
       and(
-        eq(trades.userId, filters.userId),
+        ...scopeConditions(filters),
         inArray(trades.tradeDate, dates),
         ...buildFilterConditions(filters),
-        visibilityCondition("scoped", filters.selectedAccountId),
       ),
     )
     .groupBy(trades.tradeDate)

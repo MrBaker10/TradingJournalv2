@@ -12,6 +12,7 @@ import {
   type QueryScope,
   rowMoney,
   scopeWhere,
+  type TradeVisibility,
 } from "../scope.ts";
 
 // The scope module's interface against real Postgres: which trades an account
@@ -49,7 +50,13 @@ async function inRollback<T>(body: (tx: Tx) => Promise<T>): Promise<T> {
 const TRADE_DATE = "2001-03-12";
 
 type AccountName = "Live" | "Eval" | "Demo";
-type TradeName = "copy" | "practiceOnly" | "shared" | "missed" | "foreign";
+type TradeName =
+  | "copy"
+  | "practiceOnly"
+  | "shared"
+  | "missed"
+  | "foreign"
+  | "otherUser";
 
 interface Fixture {
   userId: number;
@@ -160,6 +167,41 @@ async function fixture(tx: Tx): Promise<Fixture> {
       });
     }
   }
+
+  // Another user's trade on a real account of their own: no scope and no
+  // visibility of this user may ever reach it.
+  const [other] = await tx
+    .insert(users)
+    .values({
+      username: "scope-fixture-other",
+      email: "scope-fixture-other@users.invalid",
+      displayName: "Scope Fixture Other",
+      timezone: "UTC",
+    })
+    .returning({ id: users.id });
+  const [otherAccount] = await tx
+    .insert(accounts)
+    .values({ userId: other.id, name: "Theirs", sortOrder: 0 })
+    .returning({ id: accounts.id });
+  const [otherTrade] = await tx
+    .insert(trades)
+    .values({
+      userId: other.id,
+      tradeDate: TRADE_DATE,
+      instrumentId: usdInstrument.id,
+      taken: true,
+      contracts: "1",
+      entryTime: "10:00",
+      exitTime: "10:05",
+      direction: "long",
+      entryPrice: "100",
+      exitPrice: "110",
+    })
+    .returning({ id: trades.id });
+  tradeNames.set(otherTrade.id, "otherUser");
+  await tx
+    .insert(tradeAccounts)
+    .values({ tradeId: otherTrade.id, accountId: otherAccount.id });
 
   return { userId: user.id, accountIds, tradeNames };
 }
@@ -301,4 +343,69 @@ describe("row money against figure money", () => {
     expect(await figures(null)).not.toHaveProperty("practiceOnly");
     expect(await figures("Live")).not.toHaveProperty("practiceOnly");
   });
+});
+
+describe("visibility per account scope", () => {
+  /** The trades a scope sees under one visibility, by name, sorted. */
+  async function visible(
+    selected: AccountName | null,
+    visibility?: TradeVisibility,
+  ): Promise<TradeName[]> {
+    return inRollback(async (tx) => {
+      const f = await fixture(tx);
+      const rows = await tx
+        .select({ id: trades.id })
+        .from(trades)
+        .where(scopeWhere(scopeFor(f, selected), undefined, visibility));
+      return rows
+        .map((row) => {
+          const name = f.tradeNames.get(row.id);
+          if (name === undefined) throw new Error(`Unknown trade ${row.id}`);
+          return name;
+        })
+        .sort();
+    });
+  }
+
+  it("shows real-account trades and the missed setup with all accounts", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    expect(await visible(null)).toEqual([
+      "copy",
+      "foreign",
+      "missed",
+      "shared",
+    ]);
+  });
+
+  it("shows the selected real account's trades and the missed setup", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    expect(await visible("Live")).toEqual(["copy", "missed", "shared"]);
+  });
+
+  it("shows the selected practice account's trades and the missed setup", async (ctx) => {
+    ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+    expect(await visible("Demo")).toEqual(["missed", "practiceOnly", "shared"]);
+  });
+
+  it.for([
+    ["all accounts", null],
+    ["one real account", "Live"],
+    ["the practice account", "Demo"],
+  ] as const)(
+    "lets the owner reach every own trade with %s, practice-only included",
+    async ([, selected], ctx) => {
+      ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
+
+      expect(await visible(selected, "owner")).toEqual([
+        "copy",
+        "foreign",
+        "missed",
+        "practiceOnly",
+        "shared",
+      ]);
+    },
+  );
 });

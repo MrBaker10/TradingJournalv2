@@ -86,30 +86,59 @@ export function assignedToAccount(accountId: number): SQL<boolean> {
 }
 
 /**
- * The rows a figure is allowed to see: this user's entries in the date range,
- * with taken trades narrowed to the selected scope and missed setups always
- * included, since they belong to no account by design.
+ * Which trades a query may see, on top of ownership.
+ *
+ * `"scoped"` is every figure and list: the account switcher decides. With all
+ * accounts a taken trade shows when it sits on a real account, so a trade on
+ * practice accounts only drops out (the journal surfaces it through the
+ * reveal banner); with one account selected, when it is assigned to that
+ * account. A **missed setup always shows**: it carries no account at all —
+ * `src/domain/trades.ts` only requires one when `taken = true` — so there is
+ * nothing to match it against, and Design-v1.md §4.9 calls it an equal entry.
+ *
+ * `"owner"` is one trade addressed by its own id. The switcher must not reach
+ * it: a practice-only trade opened by URL has to render, or
+ * project-overview.md's "Nothing disappears silently" would break on the one
+ * page that is supposed to show everything.
+ */
+export type TradeVisibility = "scoped" | "owner";
+
+/**
+ * The rows a figure or list is allowed to see: this user's entries in the
+ * date range, under the visibility above.
  *
  * Without a range the whole history is in scope — which is what the analytics
  * page's "All time" preset means. Every month-scoped caller passes one.
+ *
+ * Streak, consistency score and badges pass all accounts whatever the
+ * switcher says: they count entries on real accounts and missed setups.
  */
-export function scopeConditions(scope: QueryScope, range?: DateRange): SQL[] {
+export function scopeConditions(
+  scope: QueryScope,
+  range?: DateRange,
+  visibility: TradeVisibility = "scoped",
+): SQL[] {
+  const conditions: SQL[] = [eq(trades.userId, scope.userId)];
+  if (range?.from) conditions.push(gte(trades.tradeDate, range.from));
+  if (range?.to) conditions.push(lte(trades.tradeDate, range.to));
+  if (visibility === "owner") return conditions;
+
   const inScope =
     scope.selectedAccountId === null
       ? hasRealAccount
       : assignedToAccount(scope.selectedAccountId);
-
-  const conditions: SQL[] = [eq(trades.userId, scope.userId)];
-  if (range?.from) conditions.push(gte(trades.tradeDate, range.from));
-  if (range?.to) conditions.push(lte(trades.tradeDate, range.to));
   conditions.push(sql`(${trades.taken} = false or ${inScope})`);
 
   return conditions;
 }
 
 /** All of `scopeConditions` as one expression, for a query that needs a single `where`. */
-export function scopeWhere(scope: QueryScope, range?: DateRange) {
-  return and(...scopeConditions(scope, range));
+export function scopeWhere(
+  scope: QueryScope,
+  range?: DateRange,
+  visibility?: TradeVisibility,
+) {
+  return and(...scopeConditions(scope, range, visibility));
 }
 
 // Realised P&L in integer cents, mirroring calculatePnl in
