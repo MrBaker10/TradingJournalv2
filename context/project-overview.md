@@ -560,13 +560,6 @@ and branch per item. Terms in `GLOSSARY.md`.
 
 - Light mode — a separate design round, not a token override
 - Landing page — the only public surface, own document
-- Prop Firm Rules rule detail table (the catalogue, firm sheet and compare panel are
-  designed in `Design.md` → Reference catalogue)
-- Richer prop firm compare
-- Per-account equity curves side by side
-- **Personal rulebook** — the trader's own rules (max daily loss, sessions) with daily
-  adherence. Deferred 2026-10-18: it overlaps mistakes and the pre-market plan, and
-  feeding plan adherence would change the consistency score rules.
 
 ---
 
@@ -823,6 +816,11 @@ by picking a different answer while coding.
   written month stays frozen. Every month from the registration month on gets a row,
   a zero month included; no month before the deployment is backfilled. `score_90`
   reads the best frozen month and is awarded in the write paths, never by the job.
+- **Future list trimmed** (2026-10-29) — dropped the Prop Firm Rules rule detail table,
+  the richer prop firm compare and per-account equity curves side by side: the firm
+  sheet, the compare panel, the single-account equity curve and the analytics "By
+  account" dimension cover them. Dropped the personal rulebook: trading strategies and
+  the by-the-book assessment carry the trader's own rules.
 
 
 ---
