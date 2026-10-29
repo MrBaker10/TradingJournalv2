@@ -7,16 +7,32 @@ Accounts. This applies whatever the user chose for the setup guide.
 
 **Blocked by:** None (can start immediately).
 
-Status: ready-for-agent
+Status: done
 
 ## Acceptance
 
-- [ ] With no active account, the trade form's account picker shows the empty state
+- [x] With no active account, the trade form's account picker shows the empty state
       with a working link to Settings → Accounts.
-- [ ] With no active account, the import wizard's account step shows the same empty
+- [x] With no active account, the import wizard's account step shows the same empty
       state and link.
-- [ ] A user whose only accounts are archived sees the empty state too.
-- [ ] With at least one active account (a practice account counts), both pickers
+- [x] A user whose only accounts are archived sees the empty state too.
+- [x] With at least one active account (a practice account counts), both pickers
       behave exactly as before.
-- [ ] Follows Design.md §1.8 (rule and next action, no apology) in both themes and at
+- [x] Follows Design.md §1.8 (rule and next action, no apology) in both themes and at
       phone width; no new console errors.
+
+## Review
+
+Baseline: HEAD `f998c5e`. Two independent axes via the code-review skill.
+
+- Standards: no hard violations. Judgement calls kept as is: the inline link uses the
+  browser's focus outline and inline-link height, like the existing checklist-card
+  empty state; the `length === 0` branch appears in both pickers, which differ too
+  much (Chips vs Choice) to share a wrapper.
+- Spec: no missing requirements or scope creep. The edit form cannot show the empty
+  state, because a trade always keeps at least one account in its assignable list.
+- Verification: lint, typecheck, full test suite (1496 passed, none skipped) and build
+  pass. Browser: a newly registered user with no account, then with only an archived
+  account, sees the empty state on Journal → New and Import → Account step (Dark at
+  1280 px, Light at 390 px, no horizontal scroll); the link opens `/settings#accounts`.
+  The demo user still sees 4 account chips and 4 import options. No console errors.

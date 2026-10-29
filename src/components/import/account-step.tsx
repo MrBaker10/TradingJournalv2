@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Choice } from "@/components/trades/form-blocks";
+import { Choice, NoAccounts } from "@/components/trades/form-blocks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
@@ -59,34 +59,38 @@ export function AccountStep({
         </p>
       </div>
 
-      <Choice
-        label="Account"
-        options={[...byId.keys()]}
-        value={picked}
-        clearable={false}
-        disabled={pending}
-        onChange={(id) => {
-          if (id === "") return;
-          setPicked(id);
-          onChoose(Number(id));
-        }}
-        render={(id) => {
-          const account = byId.get(id);
-          if (account === undefined) return id;
-          return account.isPractice ? (
-            <>
-              <span
-                aria-hidden="true"
-                className="h-4 w-0.5 rounded-full bg-practice"
-              />
-              {account.name}
-              <Badge variant="outline">Practice</Badge>
-            </>
-          ) : (
-            account.name
-          );
-        }}
-      />
+      {accounts.length === 0 ? (
+        <NoAccounts />
+      ) : (
+        <Choice
+          label="Account"
+          options={[...byId.keys()]}
+          value={picked}
+          clearable={false}
+          disabled={pending}
+          onChange={(id) => {
+            if (id === "") return;
+            setPicked(id);
+            onChoose(Number(id));
+          }}
+          render={(id) => {
+            const account = byId.get(id);
+            if (account === undefined) return id;
+            return account.isPractice ? (
+              <>
+                <span
+                  aria-hidden="true"
+                  className="h-4 w-0.5 rounded-full bg-practice"
+                />
+                {account.name}
+                <Badge variant="outline">Practice</Badge>
+              </>
+            ) : (
+              account.name
+            );
+          }}
+        />
+      )}
       {hasPractice && (
         <p className="text-muted-foreground text-xs">
           Trades on a practice account are left out of every combined figure.

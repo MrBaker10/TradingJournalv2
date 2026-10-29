@@ -2,6 +2,7 @@
 
 import { Check, ChevronDown } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
+import Link from "next/link";
 import { type ReactNode, useId } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -369,6 +370,26 @@ export function Chips({
         );
       })}
     </fieldset>
+  );
+}
+
+/**
+ * The account picker's empty state (trade form and import): with no active
+ * account there is nothing to pick, so it names the rule and where to add one
+ * (Design.md §1.8).
+ */
+export function NoAccounts() {
+  return (
+    <p className="rounded-xl border border-dashed p-4 text-muted-foreground text-sm">
+      Every trade belongs to an account.{" "}
+      <Link
+        href="/settings#accounts"
+        className="text-foreground underline underline-offset-2"
+      >
+        Add one in Settings
+      </Link>
+      .
+    </p>
   );
 }
 

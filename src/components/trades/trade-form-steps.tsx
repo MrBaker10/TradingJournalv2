@@ -11,6 +11,7 @@ import {
   Choice,
   FieldError,
   FieldLabel,
+  NoAccounts,
   PopCheck,
   TextField,
 } from "@/components/trades/form-blocks";
@@ -186,19 +187,23 @@ export function StepWhat({
       {state.taken && (
         <div className="flex flex-col gap-1.5">
           <FieldLabel required>Accounts</FieldLabel>
-          <Chips
-            label="Accounts"
-            items={data.accounts.map((account) => ({
-              id: account.id,
-              label: account.name,
-              practice: account.isPractice,
-              archived: account.isArchived,
-            }))}
-            selected={state.accountIds}
-            disabled={disabled}
-            invalid={isMissing("Accounts") || !!errors.accountIds}
-            onChange={(accountIds) => update({ accountIds })}
-          />
+          {data.accounts.length === 0 ? (
+            <NoAccounts />
+          ) : (
+            <Chips
+              label="Accounts"
+              items={data.accounts.map((account) => ({
+                id: account.id,
+                label: account.name,
+                practice: account.isPractice,
+                archived: account.isArchived,
+              }))}
+              selected={state.accountIds}
+              disabled={disabled}
+              invalid={isMissing("Accounts") || !!errors.accountIds}
+              onChange={(accountIds) => update({ accountIds })}
+            />
+          )}
           <FieldError message={errors.accountIds} />
         </div>
       )}
