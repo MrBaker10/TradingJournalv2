@@ -24,13 +24,16 @@ export function FieldLabel({
   required = false,
   htmlFor,
   id,
+  info,
 }: {
   children: ReactNode;
   required?: boolean;
   htmlFor?: string;
   id?: string;
+  /** An info icon for the field's term, beside the label, not inside it. */
+  info?: ReactNode;
 }) {
-  return (
+  const label = (
     <label
       id={id}
       htmlFor={htmlFor}
@@ -43,6 +46,13 @@ export function FieldLabel({
         </span>
       )}
     </label>
+  );
+  if (!info) return label;
+  return (
+    <span className="flex items-center gap-1.5">
+      {label}
+      {info}
+    </span>
   );
 }
 
@@ -107,6 +117,7 @@ export function Choice<T extends string>({
   disabled = false,
   isOptionDisabled,
   render,
+  info,
 }: {
   label: string;
   options: readonly T[];
@@ -119,12 +130,19 @@ export function Choice<T extends string>({
   /** One option shown but not pickable, while the others are. */
   isOptionDisabled?: (option: T) => boolean;
   render?: (option: T) => ReactNode;
+  /** An info icon for the choice's term, beside the legend. */
+  info?: ReactNode;
 }) {
   const id = useId();
   return (
-    <fieldset className="flex min-w-0 flex-col gap-1.5">
-      <legend className="mb-1.5 font-medium text-muted-foreground text-xs">
-        {label}
+    // Named by the label alone, not by the info icon's label beside it.
+    <fieldset
+      aria-labelledby={`${id}-legend`}
+      className="flex min-w-0 flex-col gap-1.5"
+    >
+      <legend className="mb-1.5 flex items-center gap-1.5 font-medium text-muted-foreground text-xs">
+        <span id={`${id}-legend`}>{label}</span>
+        {info}
       </legend>
       <div className="flex flex-wrap gap-1.5">
         {options.map((option) => {
@@ -200,6 +218,8 @@ export interface CardOption<T extends string> {
   title: string;
   hint: string;
   icon?: ReactNode;
+  /** An info icon for the option's term; a sibling of the card, never inside it. */
+  info?: ReactNode;
 }
 
 /**
@@ -230,60 +250,71 @@ export function CardChoice<T extends string>({
       {options.map((option) => {
         const active = value === option.value;
         return (
-          <Toggle
-            key={option.value}
-            variant="outline"
-            pressed={active}
-            disabled={disabled}
-            onPressedChange={() => onChange(option.value)}
-            render={
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.97 }}
-                transition={PICK_SPRING}
-              />
-            }
-            className={cn(
-              "relative h-auto justify-start gap-3 whitespace-normal rounded-xl p-4 text-left transition-[translate,border-color,background-color] duration-150 hover:-translate-y-px hover:bg-accent aria-pressed:bg-transparent",
-              active ? "border-foreground/30" : invalid && "border-negative/60",
-            )}
-          >
-            {active && (
-              <motion.span
-                layoutId={`${id}-card`}
-                transition={PICK_SPRING}
-                className="absolute inset-0 rounded-xl bg-muted"
-              />
-            )}
-            {option.icon && (
-              <span
-                className={cn(
-                  "relative flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-150",
-                  active
-                    ? "bg-background text-foreground"
-                    : "bg-muted text-muted-foreground",
-                )}
-              >
-                {option.icon}
+          <div key={option.value} className="relative">
+            <Toggle
+              variant="outline"
+              pressed={active}
+              disabled={disabled}
+              onPressedChange={() => onChange(option.value)}
+              render={
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.97 }}
+                  transition={PICK_SPRING}
+                />
+              }
+              className={cn(
+                "relative h-auto w-full justify-start gap-3 whitespace-normal rounded-xl p-4 text-left transition-[translate,border-color,background-color] duration-150 hover:-translate-y-px hover:bg-accent aria-pressed:bg-transparent",
+                active
+                  ? "border-foreground/30"
+                  : invalid && "border-negative/60",
+                // Room for the info icon left of the check.
+                option.info && "pr-20",
+              )}
+            >
+              {active && (
+                <motion.span
+                  layoutId={`${id}-card`}
+                  transition={PICK_SPRING}
+                  className="absolute inset-0 rounded-xl bg-muted"
+                />
+              )}
+              {option.icon && (
+                <span
+                  className={cn(
+                    "relative flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-150",
+                    active
+                      ? "bg-background text-foreground"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {option.icon}
+                </span>
+              )}
+              <span className="relative flex min-w-0 flex-col">
+                <span
+                  className={cn(
+                    "font-medium text-[15px]",
+                    active ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {option.title}
+                </span>
+                <span className="font-normal text-muted-foreground text-xs">
+                  {option.hint}
+                </span>
+              </span>
+              <span className="relative ml-auto flex size-5 shrink-0 items-center justify-center">
+                <PopCheck shown={active} />
+              </span>
+            </Toggle>
+            {option.info && (
+              // Left of the check, so its 40 px hit area stays clear of it.
+              <span className="absolute top-1/2 right-14 flex -translate-y-1/2">
+                {option.info}
               </span>
             )}
-            <span className="relative flex min-w-0 flex-col">
-              <span
-                className={cn(
-                  "font-medium text-[15px]",
-                  active ? "text-foreground" : "text-muted-foreground",
-                )}
-              >
-                {option.title}
-              </span>
-              <span className="font-normal text-muted-foreground text-xs">
-                {option.hint}
-              </span>
-            </span>
-            <span className="relative ml-auto flex size-5 shrink-0 items-center justify-center">
-              <PopCheck shown={active} />
-            </span>
-          </Toggle>
+          </div>
         );
       })}
     </fieldset>
@@ -471,6 +502,7 @@ export function TextField({
   hint,
   maxLength,
   disabled = false,
+  info,
 }: {
   id: string;
   label: string;
@@ -485,11 +517,12 @@ export function TextField({
   hint?: string;
   maxLength?: number;
   disabled?: boolean;
+  info?: ReactNode;
 }) {
   const bad = invalid || Boolean(error);
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <FieldLabel htmlFor={id} required={required}>
+      <FieldLabel htmlFor={id} required={required} info={info}>
         {label}
       </FieldLabel>
       <Input

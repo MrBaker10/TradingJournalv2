@@ -337,6 +337,22 @@ Each pattern names its **shape**, its **states**, its **motion** and the
 - **Login and Register:** a calm single `card` in the same tokens, centred, one primary
   button. Errors and feedback as §3.11.
 
+### 3.14 Info popover
+
+- **Shape.** A 16 px info icon in `muted-foreground` beside a term that carries a
+  non-obvious rule, or beside the field that term governs (R multiple on the stop
+  price): after a label or legend, or inside a card's area as its sibling, left of the
+  card's check and never inside a button. It opens the shadcn popover on the tooltip's
+  colours (`foreground` background, `background` text): the term in semibold, then its
+  definition worded from `GLOSSARY.md`. A term gets the icon where it first matters on
+  a page, not on every repetition.
+- **States.** Icon: rest, hover and open (`foreground`), focus ring. Opens by click,
+  tap or Enter/Space, never on hover alone; Escape and an outside click close it and
+  focus returns to the icon. The hit area is 40 px. Its accessible label names the
+  term ("About Missed setup").
+- **Motion.** Fade and zoom in from 95 % like the tooltip, 150 ms.
+- **Reduced motion.** It appears and disappears at once.
+
 ---
 
 ## 4. Motion

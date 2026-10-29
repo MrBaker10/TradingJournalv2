@@ -2,8 +2,9 @@
 
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo, useRef, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 import { PriceBandChart } from "@/components/journal/price-band";
+import { TermInfo } from "@/components/terms/term-info";
 import {
   CardChoice,
   ChipGroup,
@@ -115,6 +116,7 @@ export function StepWhat({
             value: "missed",
             title: "Missed setup",
             hint: "Seen, not taken. It counts too",
+            info: <TermInfo term="missedSetup" />,
           },
         ]}
       />
@@ -186,7 +188,9 @@ export function StepWhat({
           setup was never executed, so it has none. */}
       {state.taken && (
         <div className="flex flex-col gap-1.5">
-          <FieldLabel required>Accounts</FieldLabel>
+          <FieldLabel required info={<TermInfo term="copyTrade" />}>
+            Accounts
+          </FieldLabel>
           {data.accounts.length === 0 ? (
             <NoAccounts />
           ) : (
@@ -297,7 +301,12 @@ export function StepExecution(props: StepProps) {
   const field = (
     key: keyof TradeFormState & string,
     label: string,
-    options: { required?: boolean; numeric?: boolean; hint?: string } = {},
+    options: {
+      required?: boolean;
+      numeric?: boolean;
+      hint?: string;
+      info?: ReactNode;
+    } = {},
   ) => (
     <TextField
       id={key}
@@ -306,6 +315,7 @@ export function StepExecution(props: StepProps) {
       numeric={options.numeric}
       required={options.required}
       hint={options.hint}
+      info={options.info}
       value={state[key] as string}
       disabled={disabled}
       invalid={isMissing(label)}
@@ -331,6 +341,7 @@ export function StepExecution(props: StepProps) {
           {field("entryTime", "Entry time", {
             required: true,
             hint: "Chart clock",
+            info: <TermInfo term="chartClock" />,
           })}
           {state.taken && field("exitTime", "Exit time", { required: true })}
         </div>
@@ -339,14 +350,20 @@ export function StepExecution(props: StepProps) {
             required: true,
             numeric: true,
           })}
-          {field("stopPrice", "Stop price", { numeric: true })}
+          {field("stopPrice", "Stop price", {
+            numeric: true,
+            info: <TermInfo term="rMultiple" />,
+          })}
           {state.taken &&
             field("exitPrice", "Exit price", { required: true, numeric: true })}
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           {state.taken &&
             field("contracts", "Contracts", { required: true, numeric: true })}
-          {field("mfeR", "MFE (R)", { numeric: true })}
+          {field("mfeR", "MFE (R)", {
+            numeric: true,
+            info: <TermInfo term="mfeMae" />,
+          })}
           {field("maeR", "MAE (R)", { numeric: true })}
           {/* Post-exit MFE needs a stop: without one it cannot be derived.
               A value already typed keeps the field, so the schema's error
@@ -696,6 +713,7 @@ export function StepReflect({
           <div className="flex flex-col gap-1.5">
             <Choice
               label="By the book"
+              info={<TermInfo term="byTheBook" />}
               options={["Yes", "No"] as const}
               value={
                 state.byTheBook === undefined
