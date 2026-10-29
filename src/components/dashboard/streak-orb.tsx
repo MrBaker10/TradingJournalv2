@@ -2,6 +2,7 @@
 
 import { useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { useThemeChange } from "@/hooks/use-theme-change";
 import { ringPositions } from "@/lib/dashboard/ring";
 
 const SIZE = 168;
@@ -77,7 +78,8 @@ function StaticRing({
  * bundle or the first paint. Once it is there it draws the ring; at a process
  * moment the points first gather from a scattered cloud while the ring turns
  * once. Either way the render loop stops after its last frame, so nothing
- * moves at rest.
+ * moves at rest. A theme change redraws the ring in the new process colour,
+ * without playing the gathering again.
  */
 export function StreakOrb({
   streak,
@@ -92,9 +94,12 @@ export function StreakOrb({
   const host = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
   const [live, setLive] = useState(false);
+  const themeVersion = useThemeChange();
+  const gathered = useRef(false);
   const ghost = streak === 0;
   const count = Math.min(ghost ? longest : streak, MAX_POINTS);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `themeVersion` only triggers the redraw; the colour is read from the token
   useEffect(() => {
     if (reduceMotion || count === 0) return;
     let disposed = false;
@@ -148,8 +153,11 @@ export function StreakOrb({
       scene.add(points);
 
       const ease = (t: number) => 1 - (1 - t) ** 3;
-      // Without a moment the first frame is already the last one.
-      const startedAt = moment ? performance.now() : -GATHER_MS;
+      // Without a moment, or once it has played, the first frame is already
+      // the last one.
+      const gather = moment && !gathered.current;
+      if (gather) gathered.current = true;
+      const startedAt = gather ? performance.now() : -GATHER_MS;
       let frame = 0;
 
       function tick(now: number) {
@@ -188,7 +196,7 @@ export function StreakOrb({
       cleanup();
       setLive(false);
     };
-  }, [moment, reduceMotion, count, ghost]);
+  }, [moment, reduceMotion, count, ghost, themeVersion]);
 
   return (
     // size-42 is SIZE (168 px); a class, since inline styles are reserved for

@@ -42,7 +42,7 @@ export interface AccountRowData {
 /** The practice marker: amber stripe plus the word (Design.md §5). */
 export function PracticeTag() {
   return (
-    <span className="rounded-full border border-amber-400/50 px-1.5 py-0.5 text-[10px] text-amber-300">
+    <span className="rounded-full border border-practice/50 px-1.5 py-0.5 text-[10px] text-practice-foreground">
       Practice
     </span>
   );
@@ -89,7 +89,7 @@ export function AccountsTable({
                 className={cn(
                   "px-4 py-2.5",
                   account.isPractice &&
-                    "shadow-[inset_2px_0_0_0_var(--color-amber-400)]",
+                    "shadow-[inset_2px_0_0_0_var(--color-practice)]",
                 )}
               >
                 <span className="flex flex-wrap items-center gap-2">

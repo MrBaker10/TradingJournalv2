@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 const DOT: Record<RuleState | "unknown", { tone: string; label: string }> = {
   ok: { tone: "bg-positive/70", label: "Rules ok" },
-  close: { tone: "bg-amber-400", label: "Close to a limit" },
+  close: { tone: "bg-practice", label: "Close to a limit" },
   breached: { tone: "bg-negative", label: "Rule breached" },
   unknown: { tone: "bg-muted-foreground/40", label: "Not checkable" },
 };

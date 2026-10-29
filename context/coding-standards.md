@@ -94,13 +94,15 @@ version upgrades belong in a separate commit that changes nothing else.
 - No inline styles, with one exception: a screen position measured at runtime (an
   anchored portal's `left`/`top`/`bottom`/`width`), which no class can express. Type
   it narrowly so nothing else rides along.
-- **Dark only.** There is no light mode and no theme toggle. `next-themes` is not a
-  dependency. Light mode is a Future item and a separate design round, not a token
-  override — see `Design.md`.
+- **Themes.** Dark (default) and Light share every token name; each theme sets the
+  values in `globals.css`. The pick (Dark, Light, System) is a cookie per device that
+  the root layout reads (`docs/adr/0007`); System follows `prefers-color-scheme`.
+  `next-themes` is not a dependency. A colour that must change with the theme is a
+  token, never a fixed Tailwind palette class such as `amber-400`.
 - Numbers use the mono font with tabular figures. P&L, R and points are read as
   columns, so they must align.
 - Colours live in `@theme` as tokens. **No hex and no `rgba()` literal inside a
-  component**, ever. This is what keeps a later light mode possible at all.
+  component**, ever. This is what lets one component serve both themes.
 - Fonts: Instrument Sans and IBM Plex Mono via `next/font/local`, loading font files
   vendored in `src/app/fonts/`. Never `next/font/google` — it still fetches from
   Google's servers at build time even though the browser never does. Vendor files from

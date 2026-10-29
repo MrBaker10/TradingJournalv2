@@ -68,6 +68,7 @@ export function AppShell({
       </div>
       <CommandPalette
         accounts={shell.accounts}
+        theme={shell.theme}
         open={paletteOpen}
         onOpenChange={setPaletteOpen}
       />

@@ -62,7 +62,7 @@ export function AccountSwitcher({
           aria-hidden="true"
           className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-[5px] text-[11px] font-semibold ${
             isPractice
-              ? "bg-amber-400/20 text-amber-300"
+              ? "bg-practice/20 text-practice-foreground"
               : "bg-sidebar-primary text-sidebar-primary-foreground"
           } ${pending ? "animate-pulse" : ""}`}
         >
@@ -73,7 +73,7 @@ export function AccountSwitcher({
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium">{label}</span>
               {isPractice && (
-                <span className="block truncate text-[11px] leading-none text-amber-300">
+                <span className="block truncate text-[11px] leading-none text-practice-foreground">
                   Practice · not in totals
                 </span>
               )}
@@ -139,7 +139,7 @@ export function AccountSwitcher({
                     closeOnClick
                   >
                     <span className="flex-1 truncate">{account.name}</span>
-                    <span className="rounded-sm bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-amber-300 uppercase">
+                    <span className="rounded-sm bg-practice/15 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-practice-foreground uppercase">
                       Practice
                     </span>
                   </DropdownMenuRadioItem>

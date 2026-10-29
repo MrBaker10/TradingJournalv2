@@ -194,8 +194,8 @@ design, not caveats:
 
 Profile, immutable username, Discord handle, account management (create, rename,
 reorder, archive, practice toggle, set default for new trades), password change,
-TOTP two-factor, timezone, CSV export, account deletion. No theme
-toggle — the app is dark only.
+TOTP two-factor, timezone, CSV export, account deletion. The theme is not a
+setting here: it is picked per device from the sidebar (Decisions → Light mode).
 
 ---
 
@@ -418,7 +418,7 @@ calm. A profitable day triggers nothing.
 
 Also settled there and load-bearing elsewhere:
 
-- **Dark only.** No light mode, no theme toggle.
+- **Dark first.** Dark is the default; Light is a second palette of the same design.
 - **Monospace numerals** with tabular figures for every number, so columns align.
 - Colours are `@theme` tokens; no hex or `rgba()` literal in a component.
 - A **practice account is marked permanently** while selected, because its numbers
@@ -558,7 +558,6 @@ and branch per item. Terms in `GLOSSARY.md`.
 
 ### **Future**
 
-- Light mode — a separate design round, not a token override
 - Landing page — the only public surface, own document
 
 ---
@@ -577,7 +576,6 @@ and branch per item. Terms in `GLOSSARY.md`.
 - **No public journal data.** Route exceptions are defined in
   `coding-standards.md` → “Visibility”. A fuller landing page requires its own design
   and review; the existing front page only offers sign-in and registration.
-- No light mode and no theme toggle in v1.
 - **No raffle, no prizes, no rewards outside the app.** Streak, score and badges are the
   whole feedback loop, and all three are self-contained.
 - No native mobile app — responsive web only
@@ -638,7 +636,8 @@ by picking a different answer while coding.
 - **Account selector memory** — a nullable `selected_account_id` column on `users`,
   not browser storage. `NULL` means "All accounts".
 - **Name** — Trading-Journal.
-- **Design** — `Design.md` is authoritative. Dark only, no theme toggle. `motion` 13.2
+- **Design** — `Design.md` is authoritative. Dark first; Light since 2026-10-29
+  (Decisions → Light mode). `motion` 13.2
   planned, with `MotionConfig reducedMotion="user"` mandatory. Missed setups,
   by-the-book and current streak added to the metric panel; "room to daily loss"
   struck, since it needs the deferred prop firm link.
@@ -821,6 +820,12 @@ by picking a different answer while coding.
   sheet, the compare panel, the single-account equity curve and the analytics "By
   account" dimension cover them. Dropped the personal rulebook: trading strategies and
   the by-the-book assessment carry the trader's own rules.
+- **Light mode** (2026-10-29, light-mode) — lifts "dark only". The user picks Dark,
+  Light or System; Dark is the default. The pick is stored per device in a cookie, not
+  on the user, because the shared demo account would otherwise let one visitor change
+  the theme for all (`docs/adr/0007`). It applies to every page, signed-out ones too.
+  The switch sits in the sidebar footer and the command palette, not in Settings.
+  Light is palette "Warm paper" from the prototype; both themes meet WCAG 2.2 AA.
 
 
 ---

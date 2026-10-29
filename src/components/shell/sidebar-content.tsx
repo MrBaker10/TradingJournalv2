@@ -3,43 +3,16 @@
 import { LogOut } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type ReactElement, useTransition } from "react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { type RefObject, useTransition } from "react";
 import { authClient } from "@/lib/auth/auth-client";
+import type { ThemePick } from "@/lib/theme";
 import { isActiveHref, navGroups } from "./nav-items";
-
-/**
- * Rest, hover, press and focus of every sidebar item (Design.md §3.1, §4).
- * Below `lg` the items sit in the touch drawer and get 40 px (§5).
- */
-export const SIDEBAR_ITEM_CLASS =
-  "flex h-8 max-lg:h-10 items-center rounded-md text-[13px] transition-[color,background-color,scale] duration-150 focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.98]";
-
-/**
- * A label beside an icon that only shows as a tooltip while the sidebar is
- * the collapsed icon rail. Expanded, the visible label says it already.
- */
-export function RailTip({
-  collapsed,
-  label,
-  children,
-}: {
-  collapsed: boolean;
-  label: ReactElement | string;
-  children: ReactElement;
-}) {
-  if (!collapsed) return children;
-  return (
-    <Tooltip>
-      <TooltipTrigger render={children} />
-      <TooltipContent side="right">{label}</TooltipContent>
-    </Tooltip>
-  );
-}
+import {
+  RailTip,
+  SIDEBAR_ICON_BUTTON_CLASS,
+  SIDEBAR_ITEM_CLASS,
+} from "./sidebar-parts";
+import { ThemeMenu } from "./theme-menu";
 
 /**
  * What the sidebar holds below its top controls — the grouped navigation and
@@ -49,11 +22,16 @@ export function RailTip({
  */
 export function SidebarContent({
   displayName,
+  theme,
   collapsed = false,
   onNavigate,
+  menuContainer,
 }: {
   displayName: string;
+  theme: ThemePick;
   collapsed?: boolean;
+  /** The drawer's <dialog>, for menus that would otherwise sit behind it. */
+  menuContainer?: RefObject<HTMLElement | null>;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -145,13 +123,18 @@ export function SidebarContent({
             </span>
           </>
         )}
+        <ThemeMenu
+          theme={theme}
+          collapsed={collapsed}
+          container={menuContainer}
+        />
         <RailTip collapsed={collapsed} label="Sign out">
           <button
             type="button"
             aria-label="Sign out"
             onClick={signOut}
             disabled={isSigningOut}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/70 transition-[color,background-color,scale] duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-ring active:scale-95"
+            className={SIDEBAR_ICON_BUTTON_CLASS}
           >
             <LogOut className="h-4 w-4" aria-hidden="true" />
           </button>

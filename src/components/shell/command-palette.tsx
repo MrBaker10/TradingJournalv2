@@ -15,26 +15,32 @@ import {
 } from "@/components/ui/command";
 import { groupAccountsForSwitcher } from "@/domain/accounts";
 import { useSelectAccount } from "@/hooks/use-select-account";
+import { useThemePick } from "@/hooks/use-theme-pick";
+import { THEME_PICKS, type ThemePick } from "@/lib/theme";
 import type { SwitcherAccount } from "./account-switcher";
 import { IMPORT_TRADES_HREF, LOG_TRADE_HREF, navGroups } from "./nav-items";
+import { THEME_OPTIONS } from "./theme-options";
 
 /**
- * The ⌘K palette (Design.md §3.1): actions, every page and the account
- * switch in one filtered list. The shell owns the shortcut and the open
+ * The ⌘K palette (Design.md §3.1): actions, every page, the account switch
+ * and the theme in one filtered list. The shell owns the shortcut and the open
  * state. The generated dialog does not wrap its content in a command root,
  * so this does.
  */
 export function CommandPalette({
   accounts,
+  theme,
   open,
   onOpenChange,
 }: {
   accounts: SwitcherAccount[];
+  theme: ThemePick;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
   const { select } = useSelectAccount();
+  const { pick, choose } = useThemePick(theme);
   const { real, practice } = groupAccountsForSwitcher(accounts);
 
   function go(href: string) {
@@ -47,15 +53,20 @@ export function CommandPalette({
     select(accountId);
   }
 
+  function chooseTheme(next: ThemePick) {
+    onOpenChange(false);
+    choose(next);
+  }
+
   return (
     <CommandDialog
       open={open}
       onOpenChange={onOpenChange}
       title="Command palette"
-      description="Open a page, run an action or switch the account"
+      description="Open a page, run an action, switch the account or the theme"
     >
       <Command>
-        <CommandInput placeholder="Type a page, an action or an account…" />
+        <CommandInput placeholder="Type a page, an action, an account or a theme…" />
         <CommandList>
           <CommandEmpty>Nothing matches.</CommandEmpty>
           <CommandGroup heading="Actions">
@@ -103,11 +114,32 @@ export function CommandPalette({
                 onSelect={() => selectAccount(account.id)}
               >
                 {account.name}
-                <CommandShortcut className="text-amber-300">
+                <CommandShortcut className="text-practice-foreground">
                   Practice
                 </CommandShortcut>
               </CommandItem>
             ))}
+          </CommandGroup>
+          <CommandSeparator />
+          <CommandGroup heading="Theme">
+            {THEME_PICKS.map((value) => {
+              const { label, icon: Icon } = THEME_OPTIONS[value];
+              const current = value === pick;
+              return (
+                <CommandItem
+                  key={value}
+                  value={`theme ${value}`}
+                  keywords={["theme", label]}
+                  // The check icon reads data-checked; aria-checked says it.
+                  data-checked={current}
+                  aria-checked={current}
+                  onSelect={() => chooseTheme(value)}
+                >
+                  <Icon aria-hidden="true" />
+                  {label}
+                </CommandItem>
+              );
+            })}
           </CommandGroup>
         </CommandList>
       </Command>

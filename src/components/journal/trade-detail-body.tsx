@@ -61,7 +61,7 @@ function Chip({
     // Dashed like the entry card's mistakes, so a mistake never reads as a
     // confluence even without colour.
     mistake: "border border-dashed border-input",
-    practice: "bg-amber-400/15 text-amber-300",
+    practice: "bg-practice/15 text-practice-foreground",
   }[tone];
   return (
     <span

@@ -70,7 +70,8 @@ Historical notes do not override current specifications. Decisions are append-on
 - **Domain:** `src/domain/**` is pure, with no DB or `next/*` imports. Ship Vitest
   coverage with domain changes. Aggregate in SQL, not TypeScript.
 - **Accounts with trades:** archive rather than hard-delete. A trade has ≥1 account.
-- **UI:** dark only. Money gets semantic colour, no glow or celebration. Process
+- **UI:** Dark is the default theme; Light is a second palette with the same tokens
+  (`docs/adr/0007`). Money gets semantic colour, no glow or celebration. Process
   metrics use the `process` colour; expressive animation only at process moments.
   Selected practice accounts retain the amber edge stripe and fog the content area.
   Keep `<MotionConfig reducedMotion="user">` at the root.

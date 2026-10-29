@@ -77,7 +77,7 @@ export function AccountStep({
             <>
               <span
                 aria-hidden="true"
-                className="h-4 w-0.5 rounded-full bg-amber-400"
+                className="h-4 w-0.5 rounded-full bg-practice"
               />
               {account.name}
               <Badge variant="outline">Practice</Badge>

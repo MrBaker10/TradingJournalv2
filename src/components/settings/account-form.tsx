@@ -258,7 +258,7 @@ export function AccountForm({
           <div
             className={`flex items-start justify-between gap-5 rounded-lg border p-4 ${
               draft.isPractice
-                ? "border-amber-400/40 shadow-[inset_2px_0_0_0_var(--color-amber-400)]"
+                ? "border-practice/40 shadow-[inset_2px_0_0_0_var(--color-practice)]"
                 : ""
             }`}
           >
@@ -288,7 +288,7 @@ export function AccountForm({
                   ? "account-practice-help account-practice-lock"
                   : "account-practice-help"
               }
-              className="mt-0.5 after:-inset-y-3 data-checked:bg-amber-400"
+              className="mt-0.5 after:-inset-y-3 data-checked:bg-practice"
             />
           </div>
         </section>
