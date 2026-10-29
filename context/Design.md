@@ -27,7 +27,9 @@ touches that file updates it.
    "+$800.00, +2.00R".
 5. **One way to open detail.** A detail opens in a sheet over the list, a full page
    exists where the entity has its own URL, and nothing expands inline inside a list.
-6. **Dark only.** No light mode, no theme toggle, no token for either.
+6. **Dark first, light as a second palette.** Dark is the default theme; Light is the
+   same design with its own colour values, never a different layout, motion or rule.
+   The user picks Dark, Light or System per device (`docs/adr/0007`).
 7. **Practice is always visible.** A selected practice account fogs the content area;
    a practice account anywhere in a list carries the amber stripe.
 8. **Empty states teach.** An empty state names the rule that makes it empty and the
@@ -37,9 +39,10 @@ touches that file updates it.
 
 ## 2. Tokens
 
-Defined once in `src/app/globals.css` on the global theme; this document names roles,
-not values. No hex and no `rgba()` literal in a component; SVG colours come from a class,
-never a presentation attribute.
+Defined in `src/app/globals.css`, once per theme (Dark and Light) with the same names;
+this document names roles, not values. Every colour role has a value in both themes.
+No hex and no `rgba()` literal in a component; SVG colours come from a class, never a
+presentation attribute.
 
 ### Surfaces and text (shadcn set)
 
@@ -66,7 +69,7 @@ never a presentation attribute.
 | `positive` | Money with a positive sign: P&L, R, day tint, equity above zero |
 | `negative` | Money with a negative sign; a validation message |
 | `process` | Process metrics, selected process chips, the drawn save check, the orb, heatmap cells, process moments |
-| practice amber | The practice stripe and the practice fog: Tailwind `amber-400` as on the prototype |
+| `practice` / `practice-foreground` | Practice amber: the stripe, marker and fog colour; amber text on a surface |
 | `impact-low` / `impact-medium` / `impact-high` | The econ calendar's impact folder only. Its red is not `negative` and its orange not the practice amber |
 | `practice-fog` (shadow) | Two inset shadows in the practice amber over the content area: one wide and faint, one narrow and slightly stronger (values confirmed on the dashboard prototype, recorded in `handoffs/HANDOFF-2026-10-26-redesign-prototype.md`) |
 
@@ -100,6 +103,10 @@ Each pattern names its **shape**, its **states**, its **motion** and the
   palette (pages, actions, account switch). Shortcuts ignore events whose target is an
   input, textarea, select, editable element or dialog, and check
   `event.target instanceof Element` before `closest`.
+- **Theme.** An icon button in the sidebar footer beside "Sign out" (in the drawer
+  too) opens a menu with Dark, Light and System; the icon shows the current pick (moon,
+  sun, monitor) and the menu marks it. The command palette offers the same three as
+  actions. The theme changes at once, without a transition.
 - **Motion.** Width transition 200 ms ease-out; the fog follows the content edge with
   it. Items press with a slight scale.
 - **Reduced motion.** Width and fog change without transition.
@@ -351,6 +358,9 @@ Rules:
 
 ## 5. Accessibility
 
+- Both themes meet WCAG 2.2 AA: text at least 4.5:1 against its surface; field
+  borders, the focus ring, the practice stripe, chart lines and other non-text marks
+  that carry meaning at least 3:1. Hairlines (`border`) are decorative and exempt.
 - Focus ring visible on everything focusable (`ring` token); never `outline: none`
   without a replacement.
 - Interactive targets at least 40 px high on touch layouts.

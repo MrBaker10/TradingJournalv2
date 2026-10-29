@@ -164,7 +164,6 @@ econ calendar sync and the cron jobs.
 ## Not in scope
 
 - No sharing, publishing, leaderboard or read-only views of any kind.
-- No light mode and no theme toggle. Dark only.
 - No public journal data; route exceptions are in coding standards → “Visibility”.
   A fuller landing page remains a separate design task.
 - No raffle, prizes or rewards outside the app.
