@@ -9,6 +9,10 @@ never profit.
 The person who signs in and owns a journal; deleting the user deletes everything they logged.
 _Avoid_: Account, profile, login
 
+**Interface language**:
+The language a user reads the app in, English or German; it never changes what a user typed or data from outside sources.
+_Avoid_: Locale, translation, user language
+
 ## Entries
 
 **Trade**:
@@ -202,3 +206,11 @@ _Avoid_: Withdrawal, profit
 **Ledger net**:
 Payouts minus expenses; real money, never combined with trading P&L.
 _Avoid_: Profit, business P&L
+
+## German interface
+
+These terms stay English in the German interface: Trade, Taken trade, Missed setup,
+Setup, Confluence, Mistake, Drawdown, Trailing drawdown, Payout, Ledger, P&L, R,
+Win rate, Streak, Badge, Prop firm, Evaluation, Funded, Practice, By the book.
+Everything else is translated (Account → Konto, Trading strategy → Strategie,
+Weekly review → Wochenrückblick).
