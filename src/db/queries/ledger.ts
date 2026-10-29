@@ -16,6 +16,7 @@ import {
   ledgerNetCents,
   validateLedgerEntry,
 } from "../../domain/ledger.ts";
+import { messageKey } from "../../lib/i18n/message-keys.ts";
 import { formatCentsPlain } from "../../lib/money.ts";
 import { db } from "../index.ts";
 import { accounts } from "../schema/accounts.ts";
@@ -30,9 +31,10 @@ import { type DateRange, toNumber } from "./scope.ts";
 /** A ledger rule the entry broke; the message is meant for the user. */
 export class LedgerEntryError extends Error {}
 
-const ACCOUNT_NOT_ASSIGNABLE =
-  "Pick one of your active real accounts, or no account.";
-const ENTRY_NOT_FOUND = "This entry no longer exists.";
+const ACCOUNT_NOT_ASSIGNABLE = messageKey(
+  "validation.ledgerAccountNotAssignable",
+);
+const ENTRY_NOT_FOUND = messageKey("errors.ledgerEntryGone");
 
 type LedgerEntrySelect = typeof ledgerEntries.$inferSelect;
 

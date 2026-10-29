@@ -1,3 +1,4 @@
+import { messageKey } from "../lib/i18n/message-keys.ts";
 // Account rules: the rule values a linked account was bought under, entered by
 // the user and unaffected by later changes to the program (GLOSSARY.md,
 // docs/adr/0001). All money is USD, like every prop firm limit.
@@ -11,11 +12,10 @@ export type DrawdownType = (typeof DRAWDOWN_TYPES)[number];
 
 /** What the user reads when the rules break a rule (Design-v1.md §4.12). */
 export const ACCOUNT_RULES_MESSAGES = {
-  lockLevelType: "A lock level only applies to an EOD trailing drawdown.",
-  practice: "Practice accounts can't be linked to a prop firm program.",
-  practiceLinked:
-    "This account is linked to a prop firm program. Remove the link to make it a practice account.",
-  startingBalance: "Enter a starting balance to link a prop firm program.",
+  lockLevelType: messageKey("validation.lockLevelType"),
+  practice: messageKey("validation.practiceNotLinkable"),
+  practiceLinked: messageKey("validation.practiceLinked"),
+  startingBalance: messageKey("validation.startingBalanceForLink"),
 } as const;
 
 export interface AccountRulesCheck {

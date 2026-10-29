@@ -18,6 +18,7 @@ import { users } from "../../db/schema/users.ts";
 import { isDemoUsername } from "../../domain/demo.ts";
 import { env } from "../env.ts";
 import { DEFAULT_LANGUAGE, registrationLanguage } from "../i18n/languages.ts";
+import { messageKey } from "../i18n/message-keys.ts";
 import { deleteUserFiles, listUserStorageKeys } from "./delete-user-files.ts";
 import {
   DEMO_REFUSED_MESSAGE,
@@ -152,7 +153,7 @@ export const auth = betterAuth({
       // Auth would accept any session younger than a day.
       if (ctx.path === "/delete-user" && !ctx.body?.password) {
         throw new APIError("BAD_REQUEST", {
-          message: "Enter your password to delete your account.",
+          message: messageKey("validation.deletePasswordRequired"),
         });
       }
       // The username is immutable, and so is everything derived from it.
@@ -164,14 +165,14 @@ export const auth = betterAuth({
           ctx.body?.email !== undefined)
       ) {
         throw new APIError("BAD_REQUEST", {
-          message: "The username cannot be changed.",
+          message: messageKey("validation.usernameImmutable"),
         });
       }
       // The interface language is written by Settings alone, which keeps the
       // demo user's row untouched (docs/adr/0008).
       if (ctx.path === "/update-user" && ctx.body?.language !== undefined) {
         throw new APIError("BAD_REQUEST", {
-          message: "Change the language in Settings.",
+          message: messageKey("validation.languageInSettings"),
         });
       }
     }),

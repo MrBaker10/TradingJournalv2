@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { ACCOUNT_CURRENCIES } from "@/domain/fx";
+import { messageKey } from "@/lib/i18n/message-keys";
 import { exactCents } from "@/lib/money";
 import { accountRulesSchema } from "./account-rules";
 import { commissionField } from "./trades";
@@ -27,13 +28,20 @@ export const MAX_STARTING_BALANCE = 100_000_000;
  * tested — this file's `@/` imports keep it out of Vitest's reach.
  */
 export const startingBalanceField = z
-  .number({ error: "Enter the balance as a number" })
-  .min(0, "The starting balance cannot be negative")
-  .max(MAX_STARTING_BALANCE, "That starting balance is too large")
-  .refine((value) => exactCents(value) !== null, "At most two decimals");
+  .number({ error: messageKey("validation.balanceNumber") })
+  .min(0, messageKey("validation.balanceNegative"))
+  .max(MAX_STARTING_BALANCE, messageKey("validation.balanceTooLarge"))
+  .refine(
+    (value) => exactCents(value) !== null,
+    messageKey("validation.twoDecimals"),
+  );
 
 const accountFields = {
-  name: z.string().trim().min(1, "Name is required").max(100),
+  name: z
+    .string()
+    .trim()
+    .min(1, messageKey("validation.accountNameRequired"))
+    .max(100),
   isPractice: z.boolean().default(false),
   currency: accountCurrencySchema.default("USD"),
 };
@@ -41,7 +49,10 @@ const accountFields = {
 const commissionRatesField = z
   .array(
     z.object({
-      instrumentId: z.number().int().positive("Pick an instrument"),
+      instrumentId: z
+        .number()
+        .int()
+        .positive(messageKey("validation.pickInstrument")),
       perSide: commissionField,
     }),
   )
@@ -52,7 +63,7 @@ const commissionRatesField = z
         ctx.addIssue({
           code: "custom",
           path: [index, "instrumentId"],
-          message: "Each instrument can only have one rate",
+          message: messageKey("validation.oneRatePerInstrument"),
         });
       }
       seen.add(rate.instrumentId);

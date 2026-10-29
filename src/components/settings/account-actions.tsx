@@ -11,6 +11,7 @@ import {
 } from "@/actions/accounts";
 import { Button } from "@/components/ui/button";
 import { notifyError, notifyProcess } from "@/components/ui/toast";
+import { useMessage } from "@/hooks/use-message";
 import { useTwoClickConfirm } from "@/hooks/use-two-click-confirm";
 import { PART_HEADING } from "./fields";
 import { ROW_ACTION, SettingsRow } from "./settings-row";
@@ -20,6 +21,7 @@ type ActionResult = { success: true } | { success: false; error: string };
 /** Runs one account action and confirms it as the action (Design.md §3.11). */
 function useAccountAction() {
   const [isPending, startTransition] = useTransition();
+  const message = useMessage();
   function run(
     action: () => Promise<ActionResult>,
     done: string,
@@ -29,7 +31,7 @@ function useAccountAction() {
       try {
         const result = await action();
         if (!result.success) {
-          notifyError(result.error);
+          notifyError(message(result.error));
           return;
         }
         notifyProcess(done);

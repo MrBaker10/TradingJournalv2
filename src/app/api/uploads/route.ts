@@ -11,6 +11,7 @@ import { tradeScreenshots } from "@/db/schema/trades";
 import { isDemoUsername } from "@/domain/demo";
 import { canAddScreenshot } from "@/domain/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { messageKey } from "@/lib/i18n/message-keys";
 import { revalidatePage } from "@/lib/i18n/revalidate";
 import { storage } from "@/lib/storage";
 import {
@@ -32,26 +33,38 @@ export async function POST(request: NextRequest) {
 
   const tradeId = Number(tradeIdRaw);
   if (!Number.isInteger(tradeId) || tradeId <= 0) {
-    return NextResponse.json({ error: "Invalid tradeId" }, { status: 400 });
+    return NextResponse.json(
+      { error: messageKey("errors.uploadInvalidTrade") },
+      { status: 400 },
+    );
   }
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Missing file" }, { status: 400 });
+    return NextResponse.json(
+      { error: messageKey("errors.uploadMissingFile") },
+      { status: 400 },
+    );
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    return NextResponse.json({ error: "File is too large" }, { status: 400 });
+    return NextResponse.json(
+      { error: messageKey("errors.uploadTooLarge") },
+      { status: 400 },
+    );
   }
 
   const user = await getCurrentUser();
   // Visitors of the shared demo account would see each other's images.
   if (isDemoUsername(user.username)) {
     return NextResponse.json(
-      { error: "Screenshots are off on the demo account." },
+      { error: messageKey("errors.screenshotsOffOnDemo") },
       { status: 403 },
     );
   }
   const trade = await getOwnedTrade(user.id, tradeId);
   if (!trade) {
-    return NextResponse.json({ error: "Trade not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: messageKey("errors.tradeNotFound") },
+      { status: 404 },
+    );
   }
 
   const existingCount = await countTradeScreenshots(tradeId);

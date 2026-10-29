@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { messageKey } from "../lib/i18n/message-keys.ts";
 
 const MAX_NOTE_LENGTH = 4000;
 
@@ -15,10 +16,7 @@ export const saveDailyNoteSchema = z.object({
   premarketPlan: z
     .string()
     .trim()
-    .min(
-      1,
-      "Write your levels first — this is what plan adherence checks against.",
-    )
+    .min(1, messageKey("validation.planRequired"))
     .max(MAX_NOTE_LENGTH),
   // Optional by design: the review is written at the end of the day, hours
   // after the plan. An empty one is stored as NULL, not as "".

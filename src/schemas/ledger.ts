@@ -5,16 +5,15 @@ import {
   LEDGER_MESSAGES,
   validateLedgerCategory,
 } from "../domain/ledger.ts";
+import { messageKey } from "../lib/i18n/message-keys.ts";
 import { exactCents } from "../lib/money.ts";
 
 /** Shown by the form and returned by the action when a save fails. */
-export const LEDGER_SAVE_FAILED =
-  "Couldn't add the entry. Your input is still here — try again.";
+export const LEDGER_SAVE_FAILED = messageKey("errors.ledgerSaveFailed");
 
 /** The same for an edit, and for a delete (Design-v1.md §4.25, Microcopy). */
-export const LEDGER_UPDATE_FAILED =
-  "Couldn't save the changes. Your input is still here — try again.";
-export const LEDGER_DELETE_FAILED = "Couldn't delete the entry — try again.";
+export const LEDGER_UPDATE_FAILED = messageKey("errors.ledgerUpdateFailed");
+export const LEDGER_DELETE_FAILED = messageKey("errors.ledgerDeleteFailed");
 
 /**
  * The largest amount accepted. Same bound and reason as
@@ -36,14 +35,14 @@ export const MAX_LEDGER_NOTE_LENGTH = 500;
 const ledgerEntryFields = z.object({
   kind: z.enum(LEDGER_KINDS),
   category: z.enum(EXPENSE_CATEGORIES).nullable(),
-  entryDate: z.iso.date("Pick a date"),
+  entryDate: z.iso.date(messageKey("validation.pickDate")),
   // Null: no account, e.g. a data feed. Ownership, practice and archive are
   // checked on the server (src/db/queries/ledger.ts).
   accountId: z.number().int().positive().nullable(),
   amount: z
     .number({ error: LEDGER_MESSAGES.amountFormat })
     .min(0, LEDGER_MESSAGES.amountNegative)
-    .max(MAX_LEDGER_AMOUNT, "That amount is too large")
+    .max(MAX_LEDGER_AMOUNT, messageKey("validation.amountTooLarge"))
     .refine(
       (value) => exactCents(value) !== null,
       LEDGER_MESSAGES.amountFormat,
@@ -52,7 +51,7 @@ const ledgerEntryFields = z.object({
   note: z
     .string()
     .trim()
-    .max(MAX_LEDGER_NOTE_LENGTH, "Keep the note under 500 characters")
+    .max(MAX_LEDGER_NOTE_LENGTH, messageKey("validation.ledgerNoteTooLong"))
     .transform((value) => (value === "" ? null : value)),
 });
 

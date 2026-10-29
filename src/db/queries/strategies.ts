@@ -1,4 +1,5 @@
 import { and, desc, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import { messageKey } from "../../lib/i18n/message-keys.ts";
 import { db } from "../index.ts";
 import { instruments } from "../schema/instruments.ts";
 import { strategyRevisions, tradingStrategies } from "../schema/strategies.ts";
@@ -13,7 +14,7 @@ import { scopeWhere } from "./scope.ts";
 /** A strategy rule the request broke; the message is meant for the user. */
 export class StrategyError extends Error {}
 
-const STRATEGY_NOT_FOUND = "This strategy no longer exists.";
+const STRATEGY_NOT_FOUND = messageKey("errors.strategyGone");
 
 type RevisionSelect = typeof strategyRevisions.$inferSelect;
 type StrategySelect = typeof tradingStrategies.$inferSelect;

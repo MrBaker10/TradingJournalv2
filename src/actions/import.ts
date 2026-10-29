@@ -39,6 +39,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { awardBadgesQuietly } from "@/lib/badges/sync";
 import { convertToUsd } from "@/lib/fx/convert";
 import { fetchEcbRates } from "@/lib/fx/frankfurter";
+import { type MessageValues, messageKey } from "@/lib/i18n/message-keys";
 import {
   commitImportSchema,
   previewImportSchema,
@@ -47,7 +48,7 @@ import {
 
 type ActionResult<T> =
   | { success: true; data: T }
-  | { success: false; error: string };
+  | { success: false; error: string; values?: MessageValues };
 
 export type RowVerdict = "new" | "update" | "skip";
 
@@ -96,7 +97,7 @@ interface RowPnl {
 
 type ConvertedRows =
   | { ok: true; pnl: (RowPnl | null)[] }
-  | { ok: false; error: string };
+  | { ok: false; error: string; values: MessageValues };
 
 /**
  * Converts every file P&L of a batch. Missing rates are fetched first
@@ -135,10 +136,16 @@ async function convertRows(
     // the user retries later instead of suspecting their data.
     return {
       ok: false,
-      error:
-        result.reason === "unavailable"
-          ? `Couldn't fetch the ECB rates to convert ${currency} to USD. Nothing was imported — try again in a moment.`
-          : `There is no ECB rate for ${currency} on ${result.date}, so line ${rows[withPnl[result.index].index].sourceRow} cannot be converted to USD.`,
+      ...(result.reason === "unavailable"
+        ? { error: messageKey("errors.importFxFailed"), values: { currency } }
+        : {
+            error: messageKey("errors.importNoRate"),
+            values: {
+              currency,
+              date: result.date,
+              line: String(rows[withPnl[result.index].index].sourceRow),
+            },
+          }),
     };
   }
 
@@ -207,7 +214,7 @@ async function computePnl(rows: NormalizedTrade[]): Promise<(number | null)[]> {
 
 type RowCommissions =
   | { ok: true; commissions: (IncomingCommission | null)[] }
-  | { ok: false; error: string };
+  | { ok: false; error: string; values: MessageValues };
 
 /**
  * What the importing account paid per row (commissions): the file's charge,
@@ -243,7 +250,8 @@ async function commissionsFor(
     if (!result.ok) {
       return {
         ok: false,
-        error: `Couldn't convert the file's commission from ${account.currency} to USD. Nothing was imported — try again in a moment.`,
+        error: messageKey("errors.importCommissionFxFailed"),
+        values: { currency: account.currency },
       };
     }
     for (const [position, item] of charged.entries()) {
@@ -361,11 +369,16 @@ export async function previewImport(
     // archived account, which is not a valid import target.
     const account = await findImportAccount(user.id, parsed.data.accountId);
     if (account === null) {
-      return { success: false, error: "That account isn't yours" };
+      return { success: false, error: messageKey("errors.accountNotYours") };
     }
 
     const converted = await convertRows(parsed.data.rows, account.currency);
-    if (!converted.ok) return { success: false, error: converted.error };
+    if (!converted.ok)
+      return {
+        success: false,
+        error: converted.error,
+        values: converted.values,
+      };
 
     const candidates = await listMatchCandidates(
       user.id,
@@ -379,7 +392,12 @@ export async function previewImport(
       parsed.data.detectedShape,
       parsed.data.rows,
     );
-    if (!commissions.ok) return { success: false, error: commissions.error };
+    if (!commissions.ok)
+      return {
+        success: false,
+        error: commissions.error,
+        values: commissions.values,
+      };
 
     const { preview } = buildPreview(
       parsed.data.rows,
@@ -393,7 +411,7 @@ export async function previewImport(
   } catch {
     return {
       success: false,
-      error: "Couldn't read your journal to compare against. Try again.",
+      error: messageKey("errors.importJournalReadFailed"),
     };
   }
 }
@@ -426,13 +444,18 @@ export async function commitImport(
 
     const account = await findImportAccount(user.id, accountId);
     if (account === null) {
-      return { success: false, error: "That account isn't yours" };
+      return { success: false, error: messageKey("errors.accountNotYours") };
     }
 
     // Converted again rather than taken from the preview: the client is not
     // the authority on amounts, and a rate may have been published since.
     const converted = await convertRows(rows, account.currency);
-    if (!converted.ok) return { success: false, error: converted.error };
+    if (!converted.ok)
+      return {
+        success: false,
+        error: converted.error,
+        values: converted.values,
+      };
 
     const candidates = await listMatchCandidates(
       user.id,
@@ -445,7 +468,12 @@ export async function commitImport(
       detectedShape,
       rows,
     );
-    if (!commissions.ok) return { success: false, error: commissions.error };
+    if (!commissions.ok)
+      return {
+        success: false,
+        error: commissions.error,
+        values: commissions.values,
+      };
 
     const { preview, outcomes } = buildPreview(
       rows,
@@ -553,7 +581,7 @@ export async function commitImport(
   } catch {
     return {
       success: false,
-      error: "Nothing was imported — the whole batch was rolled back.",
+      error: messageKey("errors.importRolledBack"),
     };
   }
 
@@ -585,7 +613,7 @@ export async function undoImportBatch(
   } catch {
     return {
       success: false,
-      error: "Couldn't remove that import. Nothing was changed.",
+      error: messageKey("errors.importUndoFailed"),
     };
   }
 

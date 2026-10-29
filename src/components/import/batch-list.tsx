@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { notifyProcess } from "@/components/ui/toast";
 import type { ImportBatchSummary } from "@/db/queries/import";
+import { useMessage } from "@/hooks/use-message";
 import { useRouter } from "@/lib/i18n/navigation";
 import { calendarDateOf, formatDayLabel } from "@/lib/time";
 import { StepError } from "./step-error";
@@ -36,6 +37,7 @@ export function BatchList({ batches, timeZone }: BatchListProps) {
   const [armed, setArmed] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const message = useMessage();
 
   function remove(batchId: number) {
     if (armed !== batchId) {
@@ -48,7 +50,7 @@ export function BatchList({ batches, timeZone }: BatchListProps) {
       const response = await undoImportBatch({ batchId });
       setArmed(null);
       if (!response.success) {
-        setError(response.error);
+        setError(message(response.error));
         return;
       }
       // Confirms the action, never the outcome (Design.md §3.11).

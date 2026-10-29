@@ -13,7 +13,7 @@ describe("validateTradeAccountAssignment", () => {
       validateTradeAccountAssignment({ taken: true, accountIds: [] }),
     ).toEqual({
       success: false,
-      error: "A taken trade needs at least one account.",
+      error: "validation.tradeNeedsAccount",
     });
   });
 
@@ -40,7 +40,7 @@ describe("validateTradeAccountAssignment", () => {
       validateTradeAccountAssignment({ taken: false, accountIds: [1] }),
     ).toEqual({
       success: false,
-      error: "A missed setup cannot be assigned to an account.",
+      error: "validation.missedSetupNoAccount",
     });
   });
 });
@@ -57,14 +57,14 @@ describe("canAddScreenshot", () => {
   it("fails at the third existing screenshot", () => {
     expect(canAddScreenshot(3)).toEqual({
       success: false,
-      error: "A trade can have at most 3 screenshots.",
+      error: "validation.tooManyScreenshots",
     });
   });
 
   it("fails beyond three existing screenshots", () => {
     expect(canAddScreenshot(4)).toEqual({
       success: false,
-      error: "A trade can have at most 3 screenshots.",
+      error: "validation.tooManyScreenshots",
     });
   });
 });

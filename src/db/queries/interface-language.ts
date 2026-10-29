@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { isDemoUsername } from "../../domain/demo.ts";
 import { isLanguage } from "../../lib/i18n/languages.ts";
+import { messageKey } from "../../lib/i18n/message-keys.ts";
 import { db } from "../index.ts";
 import { users } from "../schema/users.ts";
 
@@ -17,7 +18,7 @@ export async function saveInterfaceLanguage(
   executor: Pick<typeof db, "select" | "update"> = db,
 ): Promise<"saved" | "demo"> {
   if (!isLanguage(language)) {
-    throw new InterfaceLanguageError("That language doesn't exist.");
+    throw new InterfaceLanguageError(messageKey("validation.languageUnknown"));
   }
   const [user] = await executor
     .select({ username: users.username })

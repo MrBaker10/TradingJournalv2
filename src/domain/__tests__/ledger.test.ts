@@ -43,7 +43,7 @@ describe("validateLedgerEntry", () => {
     ).toEqual({
       success: false,
       field: "category",
-      error: "Pick a category for this expense.",
+      error: "validation.ledgerCategoryMissing",
     });
   });
 
@@ -57,7 +57,7 @@ describe("validateLedgerEntry", () => {
     ).toEqual({
       success: false,
       field: "category",
-      error: "A payout has no category.",
+      error: "validation.ledgerCategoryOnPayout",
     });
   });
 
@@ -67,7 +67,7 @@ describe("validateLedgerEntry", () => {
     ).toEqual({
       success: false,
       field: "amount",
-      error: "The amount cannot be negative.",
+      error: "validation.ledgerAmountNegative",
     });
   });
 
@@ -77,7 +77,7 @@ describe("validateLedgerEntry", () => {
     ).toEqual({
       success: false,
       field: "amount",
-      error: "Amount in USD — digits and up to two decimals.",
+      error: "validation.ledgerAmountFormat",
     });
   });
 });

@@ -1,3 +1,4 @@
+import { messageKey } from "../i18n/message-keys.ts";
 // Saving a trade logged or edited by hand (save-trade). The server actions
 // parse the input, identify the user and call this; everything between — the
 // checks that keep a trader's data theirs, the columns and the P&L, each
@@ -171,7 +172,7 @@ interface StrategyAssignment {
   changed: boolean;
 }
 
-const STRATEGY_NOT_ASSIGNABLE = "Pick one of your active strategies, or none.";
+const STRATEGY_NOT_ASSIGNABLE = messageKey("validation.strategyNotAssignable");
 
 /**
  * What the save does with the strategy. An unchanged strategy keeps the
@@ -309,10 +310,10 @@ async function findUnknownTagError(
       countExistingMistakeTags(data.mistakeTagIds, executor),
     ]);
   if (existingConfluenceTagCount !== data.confluenceTagIds.length) {
-    return "One or more confluence tags not found";
+    return messageKey("errors.confluenceTagsNotFound");
   }
   if (existingMistakeTagCount !== data.mistakeTagIds.length) {
-    return "One or more mistake tags not found";
+    return messageKey("errors.mistakeTagsNotFound");
   }
   return null;
 }
@@ -487,13 +488,13 @@ export async function saveTrade(
   if (tradeId !== undefined) {
     existing = (await getOwnedTrade(userId, tradeId, executor)) ?? null;
     if (!existing) {
-      return { success: false, error: "Trade not found" };
+      return { success: false, error: messageKey("errors.tradeNotFound") };
     }
   }
 
   const instrument = await getInstrumentById(data.instrumentId, executor);
   if (!instrument) {
-    return { success: false, error: "Instrument not found" };
+    return { success: false, error: messageKey("errors.instrumentNotFound") };
   }
 
   const tagError = await findUnknownTagError(data, executor);

@@ -79,7 +79,7 @@ it("rejects the 21st step per phase without affecting other phases or users", as
       );
     await expect(
       createChecklistItem(userId, { phase: "premarket", text: "Overflow" }, tx),
-    ).rejects.toThrow("Each phase can have up to 20 steps.");
+    ).rejects.toThrow("validation.checklistPhaseFull");
     await createChecklistItem(userId, { phase: "review", text: "Review" }, tx);
     await createChecklistItem(
       otherUserId,
@@ -126,10 +126,10 @@ it("keeps another user's steps invisible and rejects their IDs on writes", async
     expect(await listChecklistItems(userId, tx)).toEqual([]);
     await expect(
       renameChecklistItem(userId, item.id, "Changed", tx),
-    ).rejects.toThrow("This step no longer exists.");
+    ).rejects.toThrow("errors.checklistStepGone");
     await expect(
       deleteChecklistItem(userId, item.id, TODAY, tx),
-    ).rejects.toThrow("This step no longer exists.");
+    ).rejects.toThrow("errors.checklistStepGone");
     expect(
       (await listChecklistItems(otherUserId, tx)).map((item) => item.text),
     ).toEqual(["Private"]);
@@ -281,7 +281,7 @@ describe("daily checklist", () => {
       for (const checked of [true, false])
         await expect(
           setChecklistCheck(userId, theirs.id, TODAY, checked, tx),
-        ).rejects.toThrow("This step no longer exists.");
+        ).rejects.toThrow("errors.checklistStepGone");
       expect(await getDailyChecklist(userId, TODAY, tx)).toEqual([]);
       expect(
         checkedTexts(await getDailyChecklist(otherUserId, TODAY, tx)),
@@ -380,7 +380,7 @@ describe("reordering", () => {
       );
       await expect(
         moveChecklistItem(userId, theirs.id, "up", tx),
-      ).rejects.toThrow("This step no longer exists.");
+      ).rejects.toThrow("errors.checklistStepGone");
       expect(
         (await listChecklistItems(otherUserId, tx)).map((item) => item.text),
       ).toEqual(["One", "Two"]);

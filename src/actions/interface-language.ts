@@ -6,6 +6,7 @@ import {
 } from "@/db/queries/interface-language";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import type { Language } from "@/lib/i18n/languages";
+import { messageKey } from "@/lib/i18n/message-keys";
 import { setInterfaceLanguageSchema } from "@/schemas/interface-language";
 
 type ActionResult<T> =
@@ -25,7 +26,7 @@ export async function setInterfaceLanguage(
   const user = await getCurrentUser();
   const parsed = setInterfaceLanguageSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: "That language doesn't exist." };
+    return { success: false, error: messageKey("validation.languageUnknown") };
   }
   try {
     await saveInterfaceLanguage(user.id, parsed.data);
@@ -37,6 +38,6 @@ export async function setInterfaceLanguage(
     console.error("Interface language write failed", {
       name: error instanceof Error ? error.name : "UnknownError",
     });
-    return { success: false, error: "Couldn't change the language." };
+    return { success: false, error: messageKey("errors.languageSaveFailed") };
   }
 }

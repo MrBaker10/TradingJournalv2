@@ -1,3 +1,4 @@
+import { messageKey } from "../lib/i18n/message-keys.ts";
 // Ledger entries are real money around the user's prop trading: expenses paid
 // out and payouts received (GLOSSARY.md, Ledger). They never enter trading
 // P&L, the equity curve, the calendar or progress (docs/adr/0002).
@@ -17,10 +18,10 @@ export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
 /** What the user reads when an entry breaks a rule (Design-v1.md §4.25). */
 export const LEDGER_MESSAGES = {
-  categoryMissing: "Pick a category for this expense.",
-  categoryOnPayout: "A payout has no category.",
-  amountFormat: "Amount in USD — digits and up to two decimals.",
-  amountNegative: "The amount cannot be negative.",
+  categoryMissing: messageKey("validation.ledgerCategoryMissing"),
+  categoryOnPayout: messageKey("validation.ledgerCategoryOnPayout"),
+  amountFormat: messageKey("validation.ledgerAmountFormat"),
+  amountNegative: messageKey("validation.ledgerAmountNegative"),
 } as const;
 
 export interface LedgerEntryCheck {

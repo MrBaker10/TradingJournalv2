@@ -18,7 +18,7 @@ describe("validateAccountRules", () => {
       ).toEqual({
         success: false,
         field: "lockLevel",
-        error: "A lock level only applies to an EOD trailing drawdown.",
+        error: "validation.lockLevelType",
       });
     }
   });
@@ -37,7 +37,7 @@ describe("checkLinkable", () => {
     ).toEqual({
       success: false,
       field: "isPractice",
-      error: "Practice accounts can't be linked to a prop firm program.",
+      error: "validation.practiceNotLinkable",
     });
   });
 
@@ -47,7 +47,7 @@ describe("checkLinkable", () => {
     ).toEqual({
       success: false,
       field: "startingBalance",
-      error: "Enter a starting balance to link a prop firm program.",
+      error: "validation.startingBalanceForLink",
     });
   });
 });

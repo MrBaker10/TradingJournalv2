@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { messageKey } from "@/lib/i18n/message-keys";
 import {
   THEME_COOKIE,
   THEME_COOKIE_OPTIONS,
@@ -28,7 +29,7 @@ export async function setTheme(
   await getCurrentUser();
   const parsed = setThemeSchema.safeParse(pick);
   if (!parsed.success) {
-    return { success: false, error: "That theme doesn't exist." };
+    return { success: false, error: messageKey("validation.themeUnknown") };
   }
   try {
     const cookieStore = await cookies();
@@ -36,6 +37,6 @@ export async function setTheme(
     return { success: true, data: parsed.data };
   } catch (error) {
     console.error(error);
-    return { success: false, error: "Couldn't save the theme." };
+    return { success: false, error: messageKey("errors.themeSaveFailed") };
   }
 }

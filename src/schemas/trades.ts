@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { messageKey } from "../lib/i18n/message-keys.ts";
 
 /**
  * Contracts for a future, lots for a CFD. At most four decimals, the scale of
@@ -6,11 +7,11 @@ import * as z from "zod";
  * like 1.88 has no exact decimal form to count digits on.
  */
 export const quantityField = z
-  .number({ error: "Enter the contracts as a number" })
+  .number({ error: messageKey("validation.contractsNumber") })
   .positive()
   .refine(
     (value) => Math.abs(value * 10_000 - Math.round(value * 10_000)) < 1e-6,
-    "At most four decimals",
+    messageKey("validation.fourDecimals"),
   );
 
 /**
@@ -22,12 +23,12 @@ export const quantityField = z
 export const MAX_COMMISSION = 10_000;
 
 export const commissionField = z
-  .number({ error: "Enter the commission as a number" })
-  .min(0, "A commission cannot be negative")
-  .max(MAX_COMMISSION, "That commission is too large")
+  .number({ error: messageKey("validation.commissionNumber") })
+  .min(0, messageKey("validation.commissionNegative"))
+  .max(MAX_COMMISSION, messageKey("validation.commissionTooLarge"))
   .refine(
     (value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6,
-    "At most two decimals",
+    messageKey("validation.twoDecimals"),
   );
 
 export const sessionEnum = z.enum(["Asia", "London", "NY-AM", "NY-PM"]);
@@ -59,14 +60,18 @@ export const feltEnum = z.enum([
 ]);
 export const directionEnum = z.enum(["long", "short"]);
 
-const dateField = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date");
-const timeField = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time");
+const dateField = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, messageKey("validation.invalidDate"));
+const timeField = z
+  .string()
+  .regex(/^\d{2}:\d{2}(:\d{2})?$/, messageKey("validation.invalidTime"));
 // Typed text the form cannot read as a decimal arrives as NaN and hears the
 // number format (src/lib/numbers.ts, parseDecimalInput).
 const priceField = z
-  .number({ error: "Enter the price as a number" })
+  .number({ error: messageKey("validation.priceNumber") })
   .positive();
-const rField = z.number({ error: "Enter the R as a number" });
+const rField = z.number({ error: messageKey("validation.rNumber") });
 
 const MAX_URL_LENGTH = 2048;
 
@@ -76,14 +81,14 @@ const MAX_URL_LENGTH = 2048;
 // rejects all three in one step, since none of them ever parse to "https:".
 export const httpsUrlSchema = z
   .string()
-  .max(MAX_URL_LENGTH, "Link is too long")
+  .max(MAX_URL_LENGTH, messageKey("validation.linkTooLong"))
   .refine((value) => {
     try {
       return new URL(value).protocol === "https:";
     } catch {
       return false;
     }
-  }, "Only https:// links are allowed");
+  }, messageKey("validation.linkHttpsOnly"));
 
 export const tradeLinkSchema = z.object({
   url: httpsUrlSchema,
@@ -132,13 +137,15 @@ export const takenTradeSchema = z
     exitTime: timeField,
     exitPrice: priceField,
     contracts: quantityField,
-    pnlOverride: z.number({ error: "Enter the P&L as a number" }).optional(),
+    pnlOverride: z
+      .number({ error: messageKey("validation.pnlNumber") })
+      .optional(),
     result: resultEnum.optional(),
     byTheBook: z.boolean().optional(),
     postExitMfeR: rField.optional(),
     accountIds: z
       .array(z.number().int().positive())
-      .min(1, "Select at least one account"),
+      .min(1, messageKey("validation.selectAccount")),
     // Only the amounts the user typed. An account left out keeps what it has
     // or takes its rate — src/domain/commission.ts, commissionOnSave.
     commissions: z
@@ -157,7 +164,7 @@ export const takenTradeSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["postExitMfeR"],
-        message: "Post-exit MFE requires a stop price",
+        message: messageKey("validation.postExitMfeNeedsStop"),
       });
     }
   });

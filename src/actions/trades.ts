@@ -6,6 +6,7 @@ import { getNextLinkSortOrder, getOwnedTrade } from "@/db/queries/trades";
 import { tradeLinks, tradeScreenshots, trades } from "@/db/schema/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { awardBadgesQuietly } from "@/lib/badges/sync";
+import { messageKey } from "@/lib/i18n/message-keys";
 import { revalidatePage } from "@/lib/i18n/revalidate";
 import { storage } from "@/lib/storage";
 import { saveTrade } from "@/lib/trades/save";
@@ -101,7 +102,7 @@ export async function deleteTrade(input: unknown): Promise<ActionResult<null>> {
   const user = await getCurrentUser();
   const trade = await getOwnedTrade(user.id, parsed.data.tradeId);
   if (!trade) {
-    return { success: false, error: "Trade not found" };
+    return { success: false, error: messageKey("errors.tradeNotFound") };
   }
 
   const screenshots = await db
@@ -134,7 +135,7 @@ export async function addTradeLink(
   const user = await getCurrentUser();
   const trade = await getOwnedTrade(user.id, parsed.data.tradeId);
   if (!trade) {
-    return { success: false, error: "Trade not found" };
+    return { success: false, error: messageKey("errors.tradeNotFound") };
   }
 
   const sortOrder = await getNextLinkSortOrder(trade.id);
@@ -163,7 +164,7 @@ export async function deleteTradeLink(
   const user = await getCurrentUser();
   const trade = await getOwnedTrade(user.id, parsed.data.tradeId);
   if (!trade) {
-    return { success: false, error: "Trade not found" };
+    return { success: false, error: messageKey("errors.tradeNotFound") };
   }
 
   await db
@@ -192,7 +193,7 @@ export async function deleteTradeScreenshot(
   const user = await getCurrentUser();
   const trade = await getOwnedTrade(user.id, parsed.data.tradeId);
   if (!trade) {
-    return { success: false, error: "Trade not found" };
+    return { success: false, error: messageKey("errors.tradeNotFound") };
   }
 
   const [screenshot] = await db
@@ -206,7 +207,7 @@ export async function deleteTradeScreenshot(
     )
     .limit(1);
   if (!screenshot) {
-    return { success: false, error: "Screenshot not found" };
+    return { success: false, error: messageKey("errors.screenshotNotFound") };
   }
 
   await db

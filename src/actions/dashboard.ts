@@ -8,6 +8,7 @@ import {
 } from "@/db/queries/dashboard";
 import { calculateStreak, pendingStreakMilestone } from "@/domain/streak";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { messageKey } from "@/lib/i18n/message-keys";
 import { todayInTimeZone } from "@/lib/time";
 
 type ActionResult<T> =
@@ -28,7 +29,7 @@ export async function markDashboardSeen(): Promise<ActionResult<null>> {
     await setDashboardSeenAt(user.id);
     return { success: true, data: null };
   } catch {
-    return { success: false, error: "Couldn't mark the dashboard as seen." };
+    return { success: false, error: messageKey("errors.dashboardSeenFailed") };
   }
 }
 
@@ -66,6 +67,6 @@ export async function markStreakMilestoneSeen(): Promise<ActionResult<null>> {
     await setStreakMilestoneSeen(user.id, milestone);
     return { success: true, data: null };
   } catch {
-    return { success: false, error: "Couldn't mark the milestone as seen." };
+    return { success: false, error: messageKey("errors.milestoneSeenFailed") };
   }
 }

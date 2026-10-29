@@ -19,6 +19,7 @@ import { users } from "@/db/schema/users";
 import type { AccountCurrency } from "@/domain/fx";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { convertToUsd } from "@/lib/fx/convert";
+import { type MessageValues, messageKey } from "@/lib/i18n/message-keys";
 import { exactCents } from "@/lib/money";
 import { todayInTimeZone } from "@/lib/time";
 import {
@@ -45,7 +46,7 @@ function optionalCents(amount: number | null): number | null {
 
 type ActionResult<T> =
   | { success: true; data: T }
-  | { success: false; error: string };
+  | { success: false; error: string; values?: MessageValues };
 
 /**
  * A starting balance in the account's currency, with its USD value converted
@@ -59,7 +60,7 @@ async function startingBalanceValues(
   amountCents: number,
   currency: AccountCurrency,
   timeZone: string,
-): Promise<StartingBalanceValues | { error: string }> {
+): Promise<StartingBalanceValues | { error: string; values: MessageValues }> {
   if (currency === "USD" || amountCents === 0) {
     return { amountCents, usdCents: amountCents, rateDate: null };
   }
@@ -69,7 +70,8 @@ async function startingBalanceValues(
   ]);
   if (!result.ok) {
     return {
-      error: `Couldn't fetch the ECB rate to convert ${currency} to USD. Nothing was saved — try again in a moment.`,
+      error: messageKey("errors.accountFxFailed"),
+      values: { currency },
     };
   }
   return {
@@ -121,7 +123,8 @@ async function saveAccountInput(
           currency,
           user.timezone,
         );
-        if ("error" in result) throw new AccountSaveError(result.error);
+        if ("error" in result)
+          throw new AccountSaveError(result.error, result.values);
         return result;
       },
     );
@@ -129,13 +132,13 @@ async function saveAccountInput(
     return { success: true, data: saved };
   } catch (error) {
     if (error instanceof AccountSaveError)
-      return { success: false, error: error.message };
+      return { success: false, error: error.message, values: error.values };
     console.error("Account save failed", {
       name: error instanceof Error ? error.name : "UnknownError",
     });
     return {
       success: false,
-      error: "Couldn't save the account. Nothing was saved — try again.",
+      error: messageKey("errors.accountSaveFailed"),
     };
   }
 }
@@ -161,10 +164,13 @@ export async function moveAccount(input: unknown): Promise<ActionResult<null>> {
   const user = await getCurrentUser();
   const account = await getOwnedAccount(user.id, parsed.data.accountId);
   if (!account) {
-    return { success: false, error: "Account not found" };
+    return { success: false, error: messageKey("errors.accountNotFound") };
   }
   if (account.archivedAt !== null) {
-    return { success: false, error: "Cannot reorder an archived account" };
+    return {
+      success: false,
+      error: messageKey("errors.accountArchivedReorder"),
+    };
   }
 
   const active = await listActiveAccountsForSwitcher(user.id);
@@ -176,8 +182,8 @@ export async function moveAccount(input: unknown): Promise<ActionResult<null>> {
       success: false,
       error:
         parsed.data.direction === "up"
-          ? "Already at the top"
-          : "Already at the bottom",
+          ? messageKey("errors.alreadyTop")
+          : messageKey("errors.alreadyBottom"),
     };
   }
 
@@ -207,7 +213,7 @@ export async function archiveAccount(
   const user = await getCurrentUser();
   const account = await getOwnedAccount(user.id, parsed.data.accountId);
   if (!account) {
-    return { success: false, error: "Account not found" };
+    return { success: false, error: messageKey("errors.accountNotFound") };
   }
 
   // An archived account can't remain the default for new trades, so both are
@@ -232,7 +238,7 @@ export async function unarchiveAccount(
   const user = await getCurrentUser();
   const account = await getOwnedAccount(user.id, parsed.data.accountId);
   if (!account) {
-    return { success: false, error: "Account not found" };
+    return { success: false, error: messageKey("errors.accountNotFound") };
   }
 
   await db
@@ -262,16 +268,16 @@ export async function hardDeleteAccount(
     });
     return {
       success: false,
-      error: "Couldn't delete the account. Nothing was changed — try again.",
+      error: messageKey("errors.accountDeleteFailed"),
     };
   }
   if (result === "not-found") {
-    return { success: false, error: "Account not found" };
+    return { success: false, error: messageKey("errors.accountNotFound") };
   }
   if (result === "in-use") {
     return {
       success: false,
-      error: "This account has trades or ledger entries, so it stays archived.",
+      error: messageKey("errors.accountStaysArchived"),
     };
   }
 
@@ -290,12 +296,12 @@ export async function setDefaultAccount(
   const user = await getCurrentUser();
   const account = await getOwnedAccount(user.id, parsed.data.accountId);
   if (!account) {
-    return { success: false, error: "Account not found" };
+    return { success: false, error: messageKey("errors.accountNotFound") };
   }
   if (account.archivedAt !== null) {
     return {
       success: false,
-      error: "An archived account cannot be the default",
+      error: messageKey("errors.accountArchivedDefault"),
     };
   }
 
@@ -332,12 +338,12 @@ export async function setSelectedAccount(
   if (parsed.data.accountId !== null) {
     const account = await getOwnedAccount(user.id, parsed.data.accountId);
     if (!account) {
-      return { success: false, error: "Account not found" };
+      return { success: false, error: messageKey("errors.accountNotFound") };
     }
     if (account.archivedAt !== null) {
       return {
         success: false,
-        error: "An archived account cannot be selected",
+        error: messageKey("errors.accountArchivedSelected"),
       };
     }
   }

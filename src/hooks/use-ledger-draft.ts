@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { ExpenseCategory, LedgerKind } from "@/domain/ledger";
+import { useMessage } from "@/hooks/use-message";
 import { parseDecimalInput } from "@/lib/numbers";
 import {
   type CreateLedgerEntryInput,
@@ -33,6 +34,7 @@ export function useLedgerDraft(initial: () => LedgerDraft) {
   const [draft, setDraft] = useState<LedgerDraft>(initial);
   const [errors, setErrors] = useState<LedgerFieldErrors>({});
   const formRef = useRef<HTMLFormElement>(null);
+  const message = useMessage();
 
   function change(values: Partial<LedgerDraft>) {
     setDraft((current) => ({ ...current, ...values }));
@@ -57,7 +59,7 @@ export function useLedgerDraft(initial: () => LedgerDraft) {
 
     const next: LedgerFieldErrors = {};
     for (const issue of parsed.error.issues)
-      next[issue.path.join(".")] ??= issue.message;
+      next[issue.path.join(".")] ??= message(issue.message);
     setErrors(next);
     requestAnimationFrame(() =>
       formRef.current

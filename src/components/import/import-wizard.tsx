@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { useState, useTransition } from "react";
 import {
   commitImport,
@@ -14,7 +15,10 @@ import type {
   InvalidRow,
   NormalizedTrade,
 } from "@/domain/import/types";
+import { useMessage } from "@/hooks/use-message";
+import type { MessageValues } from "@/lib/i18n/message-keys";
 import { useRouter } from "@/lib/i18n/navigation";
+import { formatNumericDate } from "@/lib/time";
 import { AccountStep } from "./account-step";
 import { BatchList } from "./batch-list";
 import { FileStep } from "./file-step";
@@ -77,6 +81,18 @@ export function ImportWizard({
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const message = useMessage();
+  const language = useLocale();
+
+  // A missing ECB rate names its date as stored; it reads in the page's format.
+  function failureText(error: string, values?: MessageValues) {
+    return message(
+      error,
+      values?.date
+        ? { ...values, date: formatNumericDate(values.date, language) }
+        : values,
+    );
+  }
 
   function reset() {
     setParsed(null);
@@ -105,7 +121,7 @@ export function ImportWizard({
         rows: parsed.rows,
       });
       if (!response.success) {
-        setError(response.error);
+        setError(failureText(response.error, response.values));
         return;
       }
       setPreview(response.data);
@@ -125,7 +141,7 @@ export function ImportWizard({
         rows: parsed.rows,
       });
       if (!response.success) {
-        setError(response.error);
+        setError(failureText(response.error, response.values));
         return;
       }
       setResult(response.data);

@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gt, lt, sql } from "drizzle-orm";
+import { messageKey } from "../../lib/i18n/message-keys.ts";
 import {
   CHECKLIST_PHASE_FULL,
   type ChecklistItemInput,
@@ -88,7 +89,8 @@ export async function renameChecklistItem(
     .set({ text: parsed })
     .where(and(eq(items.userId, userId), eq(items.id, itemId)))
     .returning({ id: items.id });
-  if (!updated.length) throw new ChecklistError("This step no longer exists.");
+  if (!updated.length)
+    throw new ChecklistError(messageKey("errors.checklistStepGone"));
 }
 
 /**
@@ -107,7 +109,7 @@ export async function moveChecklistItem(
       .select({ phase: items.phase, position: items.position })
       .from(items)
       .where(and(eq(items.userId, userId), eq(items.id, itemId)));
-    if (!item) throw new ChecklistError("This step no longer exists.");
+    if (!item) throw new ChecklistError(messageKey("errors.checklistStepGone"));
     const [neighbour] = await tx
       .select({ id: items.id, position: items.position })
       .from(items)
@@ -158,7 +160,7 @@ async function lockOwnedItem(
     .from(items)
     .where(and(eq(items.userId, userId), eq(items.id, itemId)))
     .for("update");
-  if (!item) throw new ChecklistError("This step no longer exists.");
+  if (!item) throw new ChecklistError(messageKey("errors.checklistStepGone"));
   return item;
 }
 

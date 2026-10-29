@@ -1,4 +1,5 @@
 import { isDemoUsername } from "../../domain/demo.ts";
+import { messageKey } from "../i18n/message-keys.ts";
 
 // What the shared demo account may not do (coding-standards.md → Visibility):
 // everything that would lock the other visitors out or empty the demo. The
@@ -18,7 +19,7 @@ const DEMO_REFUSED_PATHS = new Set([
   "/revoke-other-sessions",
 ]);
 
-export const DEMO_REFUSED_MESSAGE = "That is off on the demo account.";
+export const DEMO_REFUSED_MESSAGE = messageKey("errors.demoRefused");
 
 export function refusedOnDemo(path: string): boolean {
   return DEMO_REFUSED_PATHS.has(path);

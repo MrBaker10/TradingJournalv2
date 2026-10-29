@@ -251,10 +251,10 @@ describe("tradePayload — decimal input", () => {
       ]),
     );
     expect(messages).toEqual({
-      entryPrice: "Enter the price as a number",
-      contracts: "Enter the contracts as a number",
-      pnlOverride: "Enter the P&L as a number",
-      mfeR: "Enter the R as a number",
+      entryPrice: "validation.priceNumber",
+      contracts: "validation.contractsNumber",
+      pnlOverride: "validation.pnlNumber",
+      mfeR: "validation.rNumber",
     });
   });
 

@@ -3,6 +3,7 @@
 import { upsertDailyNote } from "@/db/queries/daily-notes";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { awardBadgesQuietly } from "@/lib/badges/sync";
+import { messageKey } from "@/lib/i18n/message-keys";
 import { revalidatePage } from "@/lib/i18n/revalidate";
 import { todayInTimeZone } from "@/lib/time";
 import { saveDailyNoteSchema } from "@/schemas/daily-notes";
@@ -42,7 +43,7 @@ export async function saveDailyNote(
   } catch {
     return {
       success: false,
-      error: "Couldn't save. Your text is still here — try again.",
+      error: messageKey("errors.textSaveFailed"),
     };
   }
 }

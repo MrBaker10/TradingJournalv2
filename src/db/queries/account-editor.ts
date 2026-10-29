@@ -6,6 +6,7 @@ import {
 } from "../../domain/account-rules.ts";
 import { amountToCents } from "../../domain/commission.ts";
 import type { AccountCurrency } from "../../domain/fx.ts";
+import { type MessageValues, messageKey } from "../../lib/i18n/message-keys.ts";
 import { formatCentsPlain } from "../../lib/money.ts";
 import { db } from "../index.ts";
 import { accountRules } from "../schema/account-rules.ts";
@@ -20,7 +21,15 @@ import {
   type StartingBalanceValues,
 } from "./accounts.ts";
 
-export class AccountSaveError extends Error {}
+export class AccountSaveError extends Error {
+  /** `message` is a message key; `values` are the ones it names (message-keys.ts). */
+  constructor(
+    message: string,
+    readonly values?: MessageValues,
+  ) {
+    super(message);
+  }
+}
 
 export interface AccountDraftWrite {
   accountId?: number;
@@ -62,7 +71,9 @@ export async function saveAccountDraft(
             )
             .for("update");
     if (draft.accountId !== undefined && !current) {
-      throw new AccountSaveError("Account not found or archived");
+      throw new AccountSaveError(
+        messageKey("errors.accountNotFoundOrArchived"),
+      );
     }
 
     const amount = formatCentsPlain(draft.balanceCents);
@@ -122,13 +133,15 @@ export async function saveAccountDraft(
           .where(and(eq(accounts.id, current.id), eq(accounts.userId, userId)));
         if (locks?.hasTrades && current.currency !== draft.currency)
           throw new AccountSaveError(
-            "This account has trades. Its currency can no longer change.",
+            messageKey("errors.accountCurrencyLocked"),
           );
         if (locks?.hasLedgerEntries && draft.isPractice && !current.isPractice)
           throw new AccountSaveError(
-            "This account has ledger entries. It can't become a practice account.",
+            messageKey("errors.accountPracticeLocked"),
           );
-        throw new AccountSaveError("Account not found or archived");
+        throw new AccountSaveError(
+          messageKey("errors.accountNotFoundOrArchived"),
+        );
       }
       saved = updated;
     } else {
@@ -151,9 +164,7 @@ export async function saveAccountDraft(
         .from(instruments)
         .where(inArray(instruments.id, instrumentIds));
       if (found.length !== instrumentIds.length)
-        throw new AccountSaveError(
-          "Pick a different instrument for each commission rate",
-        );
+        throw new AccountSaveError(messageKey("validation.pickRateInstrument"));
     }
     await tx
       .delete(accountCommissionRates)
@@ -219,7 +230,8 @@ async function saveAccountRules(
     .select({ id: propFirmPrograms.id })
     .from(propFirmPrograms)
     .where(eq(propFirmPrograms.id, rules.programId));
-  if (!program) throw new AccountSaveError("Pick a prop firm program");
+  if (!program)
+    throw new AccountSaveError(messageKey("validation.pickProgram"));
 
   const cents = (value: number | null) =>
     value === null ? null : formatCentsPlain(value);

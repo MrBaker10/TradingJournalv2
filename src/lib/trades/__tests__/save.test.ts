@@ -297,7 +297,7 @@ describe("saveTrade — create", () => {
 
     expect(result.saved).toEqual({
       success: false,
-      error: "A taken trade needs at least one account.",
+      error: "validation.tradeNeedsAccount",
     });
     expect(result.count).toBe(0);
   });
@@ -320,7 +320,7 @@ describe("saveTrade — create", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "A taken trade needs at least one account.",
+      error: "validation.tradeNeedsAccount",
     });
   });
 
@@ -376,7 +376,10 @@ describe("saveTrade — create", () => {
       );
     });
 
-    expect(result).toEqual({ success: false, error: "Instrument not found" });
+    expect(result).toEqual({
+      success: false,
+      error: "errors.instrumentNotFound",
+    });
   });
 
   it("fails an unknown confluence or mistake tag with today's messages", async (ctx) => {
@@ -401,11 +404,11 @@ describe("saveTrade — create", () => {
 
     expect(result.confluence).toEqual({
       success: false,
-      error: "One or more confluence tags not found",
+      error: "errors.confluenceTagsNotFound",
     });
     expect(result.mistake).toEqual({
       success: false,
-      error: "One or more mistake tags not found",
+      error: "errors.mistakeTagsNotFound",
     });
   });
 
@@ -749,11 +752,11 @@ describe("saveTrade — edit", () => {
 
     expect(result.strangers).toEqual({
       success: false,
-      error: "Trade not found",
+      error: "errors.tradeNotFound",
     });
     expect(result.deleted).toEqual({
       success: false,
-      error: "Trade not found",
+      error: "errors.tradeNotFound",
     });
     expect(result.count).toBe(0);
   });
@@ -1210,7 +1213,7 @@ describe("saveTrade — strategy", () => {
 
     expect(result.saved).toEqual({
       success: false,
-      error: "Pick one of your active strategies, or none.",
+      error: "validation.strategyNotAssignable",
     });
     expect(result.count).toBe(0);
   });

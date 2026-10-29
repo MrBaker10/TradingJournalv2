@@ -9,6 +9,7 @@ import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { Textarea } from "@/components/ui/textarea";
 import { runWithToast } from "@/components/ui/toast";
 import type { WeeklyReview } from "@/db/queries/weekly-reviews";
+import { useMessage } from "@/hooks/use-message";
 import { cn } from "@/lib/utils";
 import {
   MAX_REVIEW_FIELD_LENGTH,
@@ -61,6 +62,7 @@ export function WeeklyReviewForm({ weekStart, review }: WeeklyReviewFormProps) {
   });
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const message = useMessage();
 
   useEffect(() => {
     if (!saved) return;
@@ -74,6 +76,7 @@ export function WeeklyReviewForm({ weekStart, review }: WeeklyReviewFormProps) {
       const ok = await runWithToast(
         () => saveWeeklyReview({ weekStart, ...values }),
         { success: "Review saved", failed: WEEKLY_REVIEW_SAVE_FAILED },
+        message,
       );
       if (ok) setSaved(true);
     });

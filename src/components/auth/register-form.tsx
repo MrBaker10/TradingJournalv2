@@ -5,6 +5,7 @@ import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { SELECT_CLASS } from "@/components/settings/fields";
 import { FieldError, FieldLabel } from "@/components/trades/form-blocks";
 import { notifyError } from "@/components/ui/toast";
+import { useMessage } from "@/hooks/use-message";
 import { authClient } from "@/lib/auth/auth-client";
 import { placeholderEmail } from "@/lib/auth/placeholder-email";
 import { Link, useRouter } from "@/lib/i18n/navigation";
@@ -27,6 +28,7 @@ export function RegisterForm() {
   const [timezone, setTimezone] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isPending, startTransition] = useTransition();
+  const message = useMessage();
   const timezoneId = useId();
 
   // The server cannot know the browser's zone, so the default is filled in
@@ -48,7 +50,7 @@ export function RegisterForm() {
       const next: FieldErrors = {};
       for (const issue of parsed.error.issues) {
         const field = issue.path[0] as keyof FieldErrors;
-        next[field] ??= issue.message;
+        next[field] ??= message(issue.message);
       }
       setErrors(next);
       return;

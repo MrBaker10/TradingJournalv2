@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
 import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
+import { useMessage } from "@/hooks/use-message";
 import { useTwoClickConfirmFor } from "@/hooks/use-two-click-confirm";
 import { domainLabel } from "@/lib/links";
 import { cn } from "@/lib/utils";
@@ -171,13 +172,14 @@ export function TradeLinks({
   const [label, setLabel] = useState("");
   const [invalid, setInvalid] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const toText = useMessage();
 
   function add() {
     const trimmed = url.trim();
     if (trimmed === "") return;
     const parsed = httpsUrlSchema.safeParse(trimmed);
     if (!parsed.success) {
-      setInvalid(parsed.error.issues[0].message);
+      setInvalid(toText(parsed.error.issues[0].message));
       return;
     }
     setInvalid(null);

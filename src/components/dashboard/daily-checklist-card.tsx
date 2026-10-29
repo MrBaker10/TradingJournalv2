@@ -5,6 +5,7 @@ import { useOptimistic, useState, useTransition } from "react";
 import { setChecklistStepChecked } from "@/actions/checklist";
 import { InlineMessage } from "@/components/ui/inline-message";
 import type { DailyChecklistItem } from "@/db/queries/checklist";
+import { useMessage } from "@/hooks/use-message";
 import { Link } from "@/lib/i18n/navigation";
 import {
   CHECKLIST_PHASE_LABELS,
@@ -28,6 +29,7 @@ export function DailyChecklistCard({ items }: { items: DailyChecklistItem[] }) {
   );
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const message = useMessage();
 
   // Optimistic: the tick shows at once and falls back to the server-rendered
   // state when the transition ends, so a failed save rolls back by itself.
@@ -40,9 +42,9 @@ export function DailyChecklistCard({ items }: { items: DailyChecklistItem[] }) {
           itemId: tick.id,
           checked: tick.checked,
         });
-        if (!result.success) setError(result.error);
+        if (!result.success) setError(message(result.error));
       } catch {
-        setError(CHECKLIST_TICK_FAILED);
+        setError(message(CHECKLIST_TICK_FAILED));
       }
     });
   }

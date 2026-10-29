@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { AuthSubmit } from "@/components/auth/auth-submit";
 import { AuthTextField } from "@/components/auth/auth-text-field";
 import { Button } from "@/components/ui/button";
+import { useMessage } from "@/hooks/use-message";
 import { authClient } from "@/lib/auth/auth-client";
 import { withAccountLabel } from "@/lib/auth/totp-label";
 import { useRouter } from "@/lib/i18n/navigation";
@@ -46,6 +47,7 @@ export function TwoFactorCard({
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const message = useMessage();
 
   function reset() {
     setStep({ kind: "idle" });
@@ -101,7 +103,7 @@ export function TwoFactorCard({
     if (step.kind !== "scan") return;
     const parsed = totpCodeSchema.safeParse(code);
     if (!parsed.success) {
-      setError(parsed.error.issues[0].message);
+      setError(message(parsed.error.issues[0].message));
       return;
     }
 

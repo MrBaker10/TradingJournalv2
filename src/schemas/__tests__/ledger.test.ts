@@ -30,21 +30,21 @@ describe("createLedgerEntrySchema", () => {
     expect(
       fieldErrors({ ...valid, category: null, amount: Number.NaN }),
     ).toEqual({
-      amount: "Amount in USD — digits and up to two decimals.",
-      category: "Pick a category for this expense.",
+      amount: "validation.ledgerAmountFormat",
+      category: "validation.ledgerCategoryMissing",
     });
   });
 
   it("refuses a category on a payout", () => {
     expect(fieldErrors({ ...valid, kind: "payout" })).toEqual({
-      category: "A payout has no category.",
+      category: "validation.ledgerCategoryOnPayout",
     });
   });
 
   it("refuses a third decimal and a negative amount", () => {
     expect(fieldErrors({ ...valid, amount: 1.005 })).toHaveProperty("amount");
     expect(fieldErrors({ ...valid, amount: -1 })).toEqual({
-      amount: "The amount cannot be negative.",
+      amount: "validation.ledgerAmountNegative",
     });
   });
 });
@@ -65,7 +65,7 @@ describe("updateLedgerEntrySchema", () => {
     });
     expect(result.success).toBe(false);
     expect(!result.success && result.error.issues[0].message).toBe(
-      "A payout has no category.",
+      "validation.ledgerCategoryOnPayout",
     );
   });
 });

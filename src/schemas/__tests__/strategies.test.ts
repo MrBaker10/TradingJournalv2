@@ -32,7 +32,7 @@ describe("strategyContentSchema", () => {
       name: "   ",
     });
     expect(!result.success && result.error.issues[0].message).toBe(
-      "Name your strategy",
+      "validation.strategyNameRequired",
     );
   });
 

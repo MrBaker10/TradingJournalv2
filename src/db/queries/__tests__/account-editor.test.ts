@@ -210,7 +210,7 @@ describe("saveAccountDraft", () => {
           usd,
           tx,
         ),
-      ).rejects.toThrow("instrument");
+      ).rejects.toThrow("validation.pickRateInstrument");
       expect(await read(tx, id)).toEqual(before);
       await expect(
         saveAccountDraft(
@@ -223,7 +223,7 @@ describe("saveAccountDraft", () => {
           usd,
           tx,
         ),
-      ).rejects.toThrow("instrument");
+      ).rejects.toThrow("validation.pickRateInstrument");
       expect(
         await tx.select().from(accounts).where(eq(accounts.userId, userId)),
       ).toHaveLength(1);
@@ -267,7 +267,7 @@ describe("saveAccountDraft", () => {
           usd,
           tx,
         ),
-      ).rejects.toThrow("Account not found");
+      ).rejects.toThrow("errors.accountNotFoundOrArchived");
       expect(await read(tx, id)).toEqual(before);
       await tx
         .update(accounts)
@@ -275,7 +275,7 @@ describe("saveAccountDraft", () => {
         .where(eq(accounts.id, id));
       await expect(
         saveAccountDraft(userId, { ...draft, accountId: id }, usd, tx),
-      ).rejects.toThrow("archived");
+      ).rejects.toThrow("errors.accountNotFoundOrArchived");
     });
   });
 
@@ -333,7 +333,7 @@ describe("saveAccountDraft", () => {
           usd,
           tx,
         ),
-      ).rejects.toThrow("currency can no longer change");
+      ).rejects.toThrow("errors.accountCurrencyLocked");
       expect(await read(tx, id)).toEqual(before);
       await saveAccountDraft(
         userId,
@@ -386,7 +386,7 @@ describe("saveAccountDraft", () => {
           usd,
           tx,
         ),
-      ).rejects.toThrow("can't become a practice account");
+      ).rejects.toThrow("errors.accountPracticeLocked");
       expect(await read(tx, withEntry.id)).toEqual(before);
 
       await saveAccountDraft(
@@ -557,7 +557,7 @@ describe("saveAccountDraft with a prop firm program link", () => {
           usd,
           tx,
         ),
-      ).rejects.toThrow("Practice accounts can't be linked");
+      ).rejects.toThrow("validation.practiceNotLinkable");
       expect(
         await tx.select().from(accounts).where(eq(accounts.userId, userId)),
       ).toEqual([]);
@@ -585,7 +585,7 @@ describe("saveAccountDraft with a prop firm program link", () => {
           usd,
           tx,
         ),
-      ).rejects.toThrow("Remove the link to make it a practice account");
+      ).rejects.toThrow("validation.practiceLinked");
       expect(await read(tx, id)).toEqual(before);
       expect(await readRules(tx, id)).toHaveLength(1);
 
@@ -616,7 +616,7 @@ describe("saveAccountDraft with a prop firm program link", () => {
           usd,
           tx,
         ),
-      ).rejects.toThrow("Enter a starting balance");
+      ).rejects.toThrow("validation.startingBalanceForLink");
       expect(await readRules(tx, id)).toEqual([]);
 
       // A balance entered in the same save is enough.
@@ -640,7 +640,7 @@ describe("saveAccountDraft with a prop firm program link", () => {
           usd,
           tx,
         ),
-      ).rejects.toThrow("Account not found");
+      ).rejects.toThrow("errors.accountNotFoundOrArchived");
       await expect(
         saveAccountDraft(
           userId,
@@ -648,7 +648,7 @@ describe("saveAccountDraft with a prop firm program link", () => {
           usd,
           tx,
         ),
-      ).rejects.toThrow("Pick a prop firm program");
+      ).rejects.toThrow("validation.pickProgram");
       await expect(
         saveAccountDraft(
           userId,
@@ -660,7 +660,7 @@ describe("saveAccountDraft with a prop firm program link", () => {
           usd,
           tx,
         ),
-      ).rejects.toThrow("A lock level only applies");
+      ).rejects.toThrow("validation.lockLevelType");
       expect(await readRules(tx, id)).toEqual([]);
     });
   });

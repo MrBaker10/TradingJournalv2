@@ -13,6 +13,7 @@ import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { runWithToast } from "@/components/ui/toast";
 import type { Strategy } from "@/db/queries/strategies";
+import { useMessage } from "@/hooks/use-message";
 import {
   MAX_STRATEGY_CHAPTER_LENGTH,
   MAX_STRATEGY_NAME_LENGTH,
@@ -55,6 +56,7 @@ export function StrategyForm({
   const [draft, setDraft] = useState<Draft>(() => draftOf(strategy));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
+  const message = useMessage();
 
   function change(values: Partial<Draft>) {
     setDraft((current) => ({ ...current, ...values }));
@@ -67,7 +69,7 @@ export function StrategyForm({
     if (!parsed.success) {
       const next: Record<string, string> = {};
       for (const issue of parsed.error.issues)
-        next[issue.path.join(".")] ??= issue.message;
+        next[issue.path.join(".")] ??= message(issue.message);
       setErrors(next);
       requestAnimationFrame(() =>
         formRef.current
@@ -83,6 +85,7 @@ export function StrategyForm({
             ? editStrategy({ ...draft, strategyId: strategy.id })
             : addStrategy(draft),
         { failed: STRATEGY_SAVE_FAILED },
+        message,
       );
       if (saved) onSaved(parsed.data.name);
     });

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
+import { useMessage } from "@/hooks/use-message";
 import { authClient } from "@/lib/auth/auth-client";
 import { Link } from "@/lib/i18n/navigation";
 import { backupCodeSchema, signInSchema, totpCodeSchema } from "@/schemas/auth";
@@ -27,6 +28,7 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
   // Only an empty username lands here; the server's answer stays one sentence.
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const message = useMessage();
 
   // Unprefixed on purpose: the proxy sends the user on to their stored
   // language (docs/adr/0008), which need not be this page's.
@@ -40,8 +42,9 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
     const parsed = signInSchema.safeParse({ username, password });
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
-      if (issue.path[0] === "username") setUsernameError(issue.message);
-      else setError(issue.message);
+      if (issue.path[0] === "username")
+        setUsernameError(message(issue.message));
+      else setError(message(issue.message));
       return;
     }
 
@@ -76,7 +79,7 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
       codeKind === "totp" ? totpCodeSchema : backupCodeSchema
     ).safeParse(code);
     if (!parsed.success) {
-      setError(parsed.error.issues[0].message);
+      setError(message(parsed.error.issues[0].message));
       return;
     }
 

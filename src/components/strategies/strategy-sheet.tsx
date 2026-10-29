@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import { runWithToast } from "@/components/ui/toast";
 import type { Strategy, StrategyTradeRow } from "@/db/queries/strategies";
+import { useMessage } from "@/hooks/use-message";
 import { useRetainedTarget } from "@/hooks/use-retained-target";
 import { Link } from "@/lib/i18n/navigation";
 import { formatDateWithYear } from "@/lib/time";
@@ -153,6 +154,7 @@ function StrategyDetail({
 }) {
   const [isPending, startTransition] = useTransition();
   const language = useLocale();
+  const message = useMessage();
   const archived = strategy.archivedAt !== null;
   const total = trades[0]?.total ?? 0;
 
@@ -165,6 +167,7 @@ function StrategyDetail({
           success: archived ? "Strategy reactivated" : "Strategy archived",
           failed: STRATEGY_ARCHIVE_FAILED,
         },
+        message,
       );
     });
   }

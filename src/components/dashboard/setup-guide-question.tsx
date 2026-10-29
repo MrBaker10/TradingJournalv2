@@ -5,6 +5,7 @@ import { answerSetupGuide } from "@/actions/setup-guide";
 import { Button } from "@/components/ui/button";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { runWithToast } from "@/components/ui/toast";
+import { useMessage } from "@/hooks/use-message";
 import {
   SETUP_GUIDE_SAVE_FAILED,
   type SetupGuideAnswer,
@@ -24,13 +25,16 @@ const ANSWERS = [
 export function SetupGuideQuestion() {
   const [pending, setPending] = useState<SetupGuideAnswer | null>(null);
   const [, startTransition] = useTransition();
+  const message = useMessage();
 
   function answer(choice: SetupGuideAnswer) {
     setPending(choice);
     startTransition(async () => {
-      await runWithToast(() => answerSetupGuide({ answer: choice }), {
-        failed: SETUP_GUIDE_SAVE_FAILED,
-      });
+      await runWithToast(
+        () => answerSetupGuide({ answer: choice }),
+        { failed: SETUP_GUIDE_SAVE_FAILED },
+        message,
+      );
       setPending(null);
     });
   }

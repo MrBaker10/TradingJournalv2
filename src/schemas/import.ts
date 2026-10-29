@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { messageKey } from "../lib/i18n/message-keys.ts";
 import { directionEnum, quantityField } from "./trades.ts";
 
 // What the import actions accept.
@@ -26,8 +27,12 @@ export const importShapeEnum = z.enum([
   "ftmo",
 ]);
 
-const dateField = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date");
-const timeField = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time");
+const dateField = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, messageKey("validation.invalidDate"));
+const timeField = z
+  .string()
+  .regex(/^\d{2}:\d{2}(:\d{2})?$/, messageKey("validation.invalidTime"));
 const priceField = z.number().positive();
 
 /**
@@ -55,7 +60,7 @@ export const normalizedTradeSchema = z.object({
 
 const rowsField = z
   .array(normalizedTradeSchema)
-  .max(MAX_IMPORT_ROWS, `A file may hold at most ${MAX_IMPORT_ROWS} rows`);
+  .max(MAX_IMPORT_ROWS, messageKey("validation.importTooManyRows"));
 
 export const previewImportSchema = z.object({
   accountId: z.number().int().positive(),
@@ -70,7 +75,7 @@ export const commitImportSchema = z.object({
   // Shown in the batch list so an undo can be recognised later.
   filename: z.string().trim().min(1).max(255),
   detectedShape: importShapeEnum,
-  rows: rowsField.min(1, "There is nothing to import"),
+  rows: rowsField.min(1, messageKey("validation.importNothing")),
 });
 
 export const undoImportSchema = z.object({

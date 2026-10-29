@@ -577,7 +577,7 @@ describe("editing and deleting entries", () => {
 
       await expect(
         updateLedgerEntry(userId, id, { ...evaluation, amountCents: 1 }, tx),
-      ).rejects.toThrow("This entry no longer exists.");
+      ).rejects.toThrow("errors.ledgerEntryGone");
       expect(
         (await listLedgerEntries(otherUserId, {}, tx))[0].amountCents,
       ).toBe(15_000);
@@ -627,9 +627,7 @@ describe("editing and deleting entries", () => {
 
       await expect(
         updateLedgerEntry(userId, id, { ...evaluation, accountId: live }, tx),
-      ).rejects.toThrow(
-        "Pick one of your active real accounts, or no account.",
-      );
+      ).rejects.toThrow("validation.ledgerAccountNotAssignable");
     });
   });
 

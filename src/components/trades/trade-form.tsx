@@ -31,6 +31,7 @@ import { Progress } from "@/components/ui/progress";
 import { notifyError } from "@/components/ui/toast";
 import type { JournalTradeRow } from "@/db/queries/trades";
 import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
+import { useMessage } from "@/hooks/use-message";
 import { usePasteImages } from "@/hooks/use-paste-images";
 import { useTwoClickConfirm } from "@/hooks/use-two-click-confirm";
 import { Link, useRouter } from "@/lib/i18n/navigation";
@@ -103,6 +104,7 @@ export function TradeForm(props: TradeFormProps) {
   const [shake, setShake] = useState(0);
   const [saved, setSaved] = useState<{ taken: boolean; note: string | null }>();
   const [isPending, startTransition] = useTransition();
+  const message = useMessage();
   const [attaching, setAttaching] = useState(false);
   const [stagedLinks, setStagedLinks] = useState<TradeLinkItem[]>([]);
   const [stagedScreenshots, setStagedScreenshots] = useState<
@@ -202,7 +204,7 @@ export function TradeForm(props: TradeFormProps) {
     if (parsed.success) return fieldErrors;
     for (const issue of parsed.error.issues) {
       const key = String(issue.path[0] ?? "form");
-      if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      if (!fieldErrors[key]) fieldErrors[key] = message(issue.message);
     }
     return fieldErrors;
   }
@@ -237,14 +239,14 @@ export function TradeForm(props: TradeFormProps) {
           tradeId: edit.trade.id,
           trade: parsed.data,
         });
-        if (!result.success) return notifyError(result.error);
+        if (!result.success) return notifyError(message(result.error));
         setErrors({});
         setSaved({ taken: state.taken, note: null });
         return;
       }
 
       const result = await createTrade(parsed.data);
-      if (!result.success) return notifyError(result.error);
+      if (!result.success) return notifyError(message(result.error));
 
       // Screenshots can only be uploaded once the trade exists.
       let note: string | null = null;
@@ -290,16 +292,14 @@ export function TradeForm(props: TradeFormProps) {
     const body: { error?: string } | null = await response
       .json()
       .catch(() => null);
-    return body?.error ?? "Could not upload that screenshot.";
+    return message(body?.error ?? "errors.uploadFailed");
   }
 
   /** Dropped, picked or pasted images go into the next free slots. */
   async function addScreenshots(files: File[]) {
     const free = MAX_SCREENSHOTS_PER_TRADE - screenshots.length;
     if (free <= 0) {
-      setScreenshotError(
-        `A trade can have at most ${MAX_SCREENSHOTS_PER_TRADE} screenshots.`,
-      );
+      setScreenshotError(message("validation.tooManyScreenshots"));
       return;
     }
     const images = files.filter((file) => file.type.startsWith("image/"));
@@ -336,7 +336,7 @@ export function TradeForm(props: TradeFormProps) {
         tradeId: edit.trade.id,
         screenshotId: Number(id),
       });
-      setScreenshotError(result.success ? null : result.error);
+      setScreenshotError(result.success ? null : message(result.error));
       if (result.success) router.refresh();
       return;
     }
@@ -350,7 +350,7 @@ export function TradeForm(props: TradeFormProps) {
   async function addLink(input: { url: string; label?: string }) {
     if (edit) {
       const result = await addTradeLink({ tradeId: edit.trade.id, ...input });
-      setLinkError(result.success ? null : result.error);
+      setLinkError(result.success ? null : message(result.error));
       if (result.success) router.refresh();
       return;
     }
@@ -366,7 +366,7 @@ export function TradeForm(props: TradeFormProps) {
         tradeId: edit.trade.id,
         linkId: Number(id),
       });
-      setLinkError(result.success ? null : result.error);
+      setLinkError(result.success ? null : message(result.error));
       if (result.success) router.refresh();
       return;
     }
@@ -378,7 +378,7 @@ export function TradeForm(props: TradeFormProps) {
     deleteConfirm.press(() =>
       startTransition(async () => {
         const result = await deleteTrade({ tradeId: edit.trade.id });
-        if (!result.success) return notifyError(result.error);
+        if (!result.success) return notifyError(message(result.error));
         router.push("/journal");
         router.refresh();
       }),

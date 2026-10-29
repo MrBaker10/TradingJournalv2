@@ -1,3 +1,4 @@
+import { messageKey } from "../lib/i18n/message-keys.ts";
 import { dollarsToCents } from "../lib/money.ts";
 import { toScaledPrice } from "./pnl.ts";
 
@@ -22,13 +23,13 @@ export function validateTradeAccountAssignment(
   if (input.taken && input.accountIds.length === 0) {
     return {
       success: false,
-      error: "A taken trade needs at least one account.",
+      error: messageKey("validation.tradeNeedsAccount"),
     };
   }
   if (!input.taken && input.accountIds.length > 0) {
     return {
       success: false,
-      error: "A missed setup cannot be assigned to an account.",
+      error: messageKey("validation.missedSetupNoAccount"),
     };
   }
   return { success: true };
@@ -48,7 +49,7 @@ export function canAddScreenshot(existingCount: number): ScreenshotSlotResult {
   if (existingCount >= MAX_SCREENSHOTS_PER_TRADE) {
     return {
       success: false,
-      error: `A trade can have at most ${MAX_SCREENSHOTS_PER_TRADE} screenshots.`,
+      error: messageKey("validation.tooManyScreenshots"),
     };
   }
   return { success: true };

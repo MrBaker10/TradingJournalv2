@@ -12,6 +12,7 @@ import {
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { Textarea } from "@/components/ui/textarea";
 import { notifyProcess } from "@/components/ui/toast";
+import { useMessage } from "@/hooks/use-message";
 import { PLAN_HINT_LENGTH } from "@/schemas/daily-notes";
 
 interface PlanCardProps {
@@ -22,9 +23,6 @@ interface PlanCardProps {
 const SUCCESS_HOLD_MS = 1400;
 /** Room for the review field as it grows with its text; it scrolls beyond. */
 const REVIEW_MAX_HEIGHT = 480;
-
-const EMPTY_PLAN_MESSAGE =
-  "Write your levels first — this is what plan adherence checks against.";
 
 // Live feedback while typing, with an intermediate
 // step. Too short is a neutral hint, not an error — it still saves.
@@ -55,6 +53,7 @@ export function PlanCard({ premarketPlan, eodReview }: PlanCardProps) {
   const [reviewOpen, setReviewOpen] = useState((eodReview ?? "") !== "");
   const [planError, setPlanError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const message = useMessage();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const planRef = useRef<HTMLTextAreaElement>(null);
@@ -64,7 +63,7 @@ export function PlanCard({ premarketPlan, eodReview }: PlanCardProps) {
     if (loading || success) return;
 
     if (plan.trim().length === 0) {
-      setPlanError(EMPTY_PLAN_MESSAGE);
+      setPlanError(message("validation.planRequired"));
       planRef.current?.focus();
       return;
     }
@@ -79,7 +78,7 @@ export function PlanCard({ premarketPlan, eodReview }: PlanCardProps) {
     setLoading(false);
 
     if (!result.success) {
-      setFormError(result.error);
+      setFormError(message(result.error));
       return;
     }
     setSuccess(true);

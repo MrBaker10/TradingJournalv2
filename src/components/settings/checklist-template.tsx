@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { notifyError, notifyProcess } from "@/components/ui/toast";
 import type { ChecklistItem } from "@/db/queries/checklist";
+import { useMessage } from "@/hooks/use-message";
 import { useTwoClickConfirm } from "@/hooks/use-two-click-confirm";
 import {
   CHECKLIST_MOVE_FAILED,
@@ -106,6 +107,7 @@ function ChecklistRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
+  const message = useMessage();
   const removeConfirm = useTwoClickConfirm();
   const renameButton = useRef<HTMLButtonElement>(null);
 
@@ -119,7 +121,7 @@ function ChecklistRow({
       try {
         const result = await deleteChecklistStep({ itemId: item.id });
         if (!result.success) {
-          notifyError(result.error);
+          notifyError(message(result.error));
           return;
         }
         notifyProcess("Step removed");
@@ -196,6 +198,7 @@ function MoveControls({
   isLast: boolean;
 }) {
   const [moving, startMove] = useTransition();
+  const message = useMessage();
   const [pressed, setPressed] = useState<ChecklistMoveDirection | null>(null);
   const buttons = useRef<
     Record<ChecklistMoveDirection, HTMLButtonElement | null>
@@ -229,12 +232,12 @@ function MoveControls({
       try {
         const result = await moveChecklistStep({ itemId: item.id, direction });
         if (!result.success) {
-          notifyError(result.error);
+          notifyError(message(result.error));
           return;
         }
         refocus.current = true;
       } catch {
-        notifyError(CHECKLIST_MOVE_FAILED);
+        notifyError(message(CHECKLIST_MOVE_FAILED));
       }
     });
   }
@@ -284,8 +287,10 @@ function StepForm({
   const localRef = useRef<HTMLInputElement>(null);
   const ref = inputRef ?? localRef;
   const [text, setText] = useState(item?.text ?? "");
+  // A message key; turned into text below.
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+  const message = useMessage();
 
   useEffect(() => {
     if (item) ref.current?.focus();
@@ -313,7 +318,7 @@ function StepForm({
           if (result.field) {
             setError(result.error);
             ref.current?.focus();
-          } else notifyError(result.error);
+          } else notifyError(message(result.error));
           return;
         }
         setError("");
@@ -324,7 +329,7 @@ function StepForm({
           ref.current?.focus();
         }
       } catch {
-        notifyError(CHECKLIST_SAVE_FAILED);
+        notifyError(message(CHECKLIST_SAVE_FAILED));
       }
     });
   }
@@ -332,7 +337,8 @@ function StepForm({
   const label = item
     ? `Rename ${item.text}`
     : `New ${CHECKLIST_PHASE_LABELS[phase].toLowerCase()} step`;
-  const message = error || (full ? CHECKLIST_PHASE_FULL : "");
+  const shown = error || (full ? CHECKLIST_PHASE_FULL : "");
+  const errorText = shown && message(shown);
 
   return (
     <form
@@ -355,7 +361,7 @@ function StepForm({
         enterKeyHint={item ? "done" : "enter"}
         placeholder={item ? undefined : "+ Add a step, press Enter"}
         aria-invalid={error ? true : undefined}
-        aria-describedby={message ? `${id}-error` : undefined}
+        aria-describedby={errorText ? `${id}-error` : undefined}
         onKeyDown={(event) => {
           if (item && event.key === "Escape") {
             event.preventDefault();
@@ -374,7 +380,7 @@ function StepForm({
         }}
         className={`h-10 lg:h-9 ${item ? "" : "border-dashed"}`}
       />
-      <FieldError id={`${id}-error`} message={message} />
+      <FieldError id={`${id}-error`} message={errorText} />
     </form>
   );
 }

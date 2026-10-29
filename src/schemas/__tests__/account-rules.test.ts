@@ -38,7 +38,7 @@ describe("accountRulesSchema", () => {
 
   it("reports a lock level on a static drawdown under the lock level field", () => {
     expect(fieldErrors({ ...valid, drawdownType: "static" })).toEqual({
-      lockLevel: "A lock level only applies to an EOD trailing drawdown.",
+      lockLevel: "validation.lockLevelType",
     });
   });
 
@@ -50,11 +50,11 @@ describe("accountRulesSchema", () => {
         drawdownAmount: undefined,
       }),
     ).toEqual({
-      profitTarget: "Enter the profit target",
-      drawdownAmount: "Enter the max drawdown",
+      profitTarget: "validation.enterProfitTarget",
+      drawdownAmount: "validation.enterMaxDrawdown",
     });
     expect(fieldErrors({ ...valid, profitTarget: Number.NaN })).toEqual({
-      profitTarget: "Enter the amount as a number",
+      profitTarget: "validation.amountNumber",
     });
   });
 
@@ -68,10 +68,10 @@ describe("accountRulesSchema", () => {
         minTradingDays: 0,
       }),
     ).toEqual({
-      profitTarget: "Enter an amount above 0",
-      drawdownAmount: "At most two decimals",
-      consistencyPercent: "Enter a whole percentage from 1 to 100",
-      minTradingDays: "Enter at least 1 day",
+      profitTarget: "validation.amountAboveZero",
+      drawdownAmount: "validation.twoDecimals",
+      consistencyPercent: "validation.consistencyPercent",
+      minTradingDays: "validation.daysAtLeastOne",
     });
   });
 });

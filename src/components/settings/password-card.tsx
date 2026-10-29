@@ -5,6 +5,7 @@ import { AuthSubmit } from "@/components/auth/auth-submit";
 import { AuthTextField } from "@/components/auth/auth-text-field";
 import { Button } from "@/components/ui/button";
 import { notifyError } from "@/components/ui/toast";
+import { useMessage } from "@/hooks/use-message";
 import { authClient } from "@/lib/auth/auth-client";
 import { changePasswordSchema } from "@/schemas/auth";
 import { ROW_ACTION, SettingsRow } from "./settings-row";
@@ -28,6 +29,7 @@ export function PasswordCard({
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [success, setSuccess] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const message = useMessage();
 
   function update(field: Field, value: string) {
     setValues({ ...values, [field]: value });
@@ -40,7 +42,7 @@ export function PasswordCard({
     if (!parsed.success) {
       const next: Partial<Record<Field, string>> = {};
       for (const issue of parsed.error.issues) {
-        next[issue.path[0] as Field] ??= issue.message;
+        next[issue.path[0] as Field] ??= message(issue.message);
       }
       setErrors(next);
       return;

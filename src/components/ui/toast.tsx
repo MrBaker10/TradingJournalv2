@@ -2,6 +2,7 @@
 
 import { Check, CircleAlert } from "lucide-react";
 import { Toaster as SonnerToaster, toast } from "sonner";
+import type { MessageKey } from "@/lib/i18n/message-keys";
 
 // Design.md §3.11: bottom right, stacked, 4200ms hold, in a polite live
 // region. Never blocking, never centred, never with a button — a toast is a
@@ -69,22 +70,25 @@ export function notifyError(message: string) {
  * Runs a server action and reports it as a toast: the action's
  * own message when it refuses, `failed` when the request itself breaks, and
  * `success` when given — a form with its own saved state leaves it out.
- * Resolves to whether it succeeded, so the form decides what follows.
+ * Resolves to whether it succeeded, so the form decides what follows. The
+ * action's message and `failed` are message keys, turned into text by
+ * `message` (useMessage).
  */
 export async function runWithToast(
   action: () => Promise<{ success: true } | { success: false; error: string }>,
-  messages: { success?: string; failed: string },
+  messages: { success?: string; failed: MessageKey },
+  message: (key: string) => string,
 ): Promise<boolean> {
   try {
     const result = await action();
     if (!result.success) {
-      notifyError(result.error);
+      notifyError(message(result.error));
       return false;
     }
     if (messages.success) notifyProcess(messages.success);
     return true;
   } catch {
-    notifyError(messages.failed);
+    notifyError(message(messages.failed));
     return false;
   }
 }

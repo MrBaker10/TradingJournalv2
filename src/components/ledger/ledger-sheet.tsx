@@ -23,6 +23,7 @@ import type { LedgerAccount, LedgerEntryRow } from "@/db/queries/ledger";
 import { signedLedgerCents } from "@/domain/ledger";
 import type { IsoDate } from "@/domain/streak";
 import { type LedgerDraft, useLedgerDraft } from "@/hooks/use-ledger-draft";
+import { useMessage } from "@/hooks/use-message";
 import { useRetainedTarget } from "@/hooks/use-retained-target";
 import { useTwoClickConfirm } from "@/hooks/use-two-click-confirm";
 import { moneyTone } from "@/lib/dashboard/sign-tone";
@@ -249,6 +250,7 @@ function LedgerDetail({
   onDeleted: () => void;
 }) {
   const [isDeleting, startDelete] = useTransition();
+  const message = useMessage();
   const deleteConfirm = useTwoClickConfirm();
   const language = useLocale();
   const signed = signedLedgerCents(entry);
@@ -309,6 +311,7 @@ function LedgerDetail({
                 const deleted = await runWithToast(
                   () => removeLedgerEntry({ entryId: entry.id }),
                   { success: "Entry deleted", failed: LEDGER_DELETE_FAILED },
+                  message,
                 );
                 if (deleted) onDeleted();
               }),
@@ -340,6 +343,7 @@ function LedgerForm({
     () => initial,
   );
   const [isPending, startTransition] = useTransition();
+  const message = useMessage();
 
   function save() {
     if (isPending) return;
@@ -350,10 +354,13 @@ function LedgerForm({
         ? await runWithToast(
             () => editLedgerEntry({ ...input, entryId: entry.id }),
             { failed: LEDGER_UPDATE_FAILED },
+            message,
           )
-        : await runWithToast(() => addLedgerEntry(input), {
-            failed: LEDGER_SAVE_FAILED,
-          });
+        : await runWithToast(
+            () => addLedgerEntry(input),
+            { failed: LEDGER_SAVE_FAILED },
+            message,
+          );
       if (saved) onSaved(draft);
     });
   }

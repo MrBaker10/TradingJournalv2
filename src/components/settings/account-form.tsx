@@ -13,6 +13,7 @@ import { notifyError, notifyProcess } from "@/components/ui/toast";
 import type { ProgramOption } from "@/db/queries/prop-firms";
 import { ACCOUNT_RULES_MESSAGES } from "@/domain/account-rules";
 import { ACCOUNT_CURRENCIES, type AccountCurrency } from "@/domain/fx";
+import { useMessage } from "@/hooks/use-message";
 import { useUnsavedAccount } from "@/hooks/use-unsaved-account";
 import { formatCentsPlain } from "@/lib/money";
 import { parseDecimalInput } from "@/lib/numbers";
@@ -90,6 +91,7 @@ export function AccountForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const message = useMessage();
   const formRef = useRef<HTMLFormElement>(null);
   const dirty = JSON.stringify(initial) !== JSON.stringify(draft);
   useUnsavedAccount(dirty, isPending);
@@ -128,10 +130,10 @@ export function AccountForm({
     const next: Record<string, string> = {};
     if (!parsed.success) {
       for (const issue of parsed.error.issues)
-        next[issue.path.join(".")] ??= issue.message;
+        next[issue.path.join(".")] ??= message(issue.message);
     }
     if (linked && !((startingBalance ?? 0) > 0))
-      next.startingBalance ??= ACCOUNT_RULES_MESSAGES.startingBalance;
+      next.startingBalance ??= message(ACCOUNT_RULES_MESSAGES.startingBalance);
     if (!parsed.success || Object.keys(next).length) {
       setErrors(next);
       requestAnimationFrame(() =>
@@ -148,7 +150,7 @@ export function AccountForm({
           ? await updateAccount({ ...data, accountId: account.id })
           : await createAccount(data);
         if (!result.success) {
-          notifyError(result.error);
+          notifyError(message(result.error, result.values));
           return;
         }
         notifyProcess(account ? "Account saved" : "Account created");

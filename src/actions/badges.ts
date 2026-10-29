@@ -2,6 +2,7 @@
 
 import { setBadgesSeenAt } from "@/db/queries/badges";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { messageKey } from "@/lib/i18n/message-keys";
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -18,6 +19,6 @@ export async function markBadgesSeen(): Promise<ActionResult<null>> {
     await setBadgesSeenAt(user.id);
     return { success: true, data: null };
   } catch {
-    return { success: false, error: "Couldn't mark the badges as seen." };
+    return { success: false, error: messageKey("errors.badgesSeenFailed") };
   }
 }

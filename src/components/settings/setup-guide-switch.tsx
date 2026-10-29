@@ -5,6 +5,7 @@ import { useTransition } from "react";
 import { showSetupGuide } from "@/actions/setup-guide";
 import { Switch } from "@/components/ui/switch";
 import { runWithToast } from "@/components/ui/toast";
+import { useMessage } from "@/hooks/use-message";
 import { SETUP_GUIDE_SAVE_FAILED } from "@/schemas/setup-guide";
 import { SettingsRow } from "./settings-row";
 
@@ -13,6 +14,7 @@ import { SettingsRow } from "./settings-row";
 // to the dashboard, and this row goes away with the re-render.
 export function SetupGuideSwitch() {
   const [pending, startTransition] = useTransition();
+  const message = useMessage();
   return (
     // Set apart from the account rows so it is not missed; neutral surface,
     // no process colour (Design.md §3.8).
@@ -41,9 +43,11 @@ export function SetupGuideSwitch() {
           onCheckedChange={(checked) => {
             if (!checked) return;
             startTransition(async () => {
-              await runWithToast(showSetupGuide, {
-                failed: SETUP_GUIDE_SAVE_FAILED,
-              });
+              await runWithToast(
+                showSetupGuide,
+                { failed: SETUP_GUIDE_SAVE_FAILED },
+                message,
+              );
             });
           }}
         />
