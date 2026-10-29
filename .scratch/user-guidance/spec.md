@@ -95,7 +95,8 @@ suggests how to trade and never rewards money.
   account (practice accounts count); has at least one trade (taken or missed,
   manual or imported); has at least one account linked to a prop firm program; has at
   least one trading strategy; has a checklist template with at least one step; is the
-  demo user.
+  demo user. An archived strategy, and a prop firm link on an archived account, tick
+  nothing (confirmed 2026-10-29 during ticket 02).
 - **Rules**, owned by one pure domain function that maps state and facts to what is
   shown:
   - Demo user → hidden, no Settings switch.

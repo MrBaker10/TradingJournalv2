@@ -2,16 +2,20 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   boolean,
   integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { SETUP_GUIDE_STATES } from "../../domain/setup-guide.ts";
 // Thunk-based .references() below lets this file and accounts.ts import each
 // other: neither dereferences the other table's column until Drizzle calls
 // the callback, so the cycle never has to resolve at module-load time. The
 // explicit AnyPgColumn return type breaks TypeScript's circular type
 // inference between the two mutually referencing tables.
 import { accounts } from "./accounts.ts";
+
+export const setupGuideState = pgEnum("setup_guide_state", SETUP_GUIDE_STATES);
 
 // Also Better Auth's user table (src/lib/auth/auth.ts maps its model onto
 // this one), so the columns from `email` to `twoFactorEnabled` are the ones
@@ -50,6 +54,10 @@ export const users = pgTable("users", {
   // Design-v1.md §6 words this as "once per session"; it is stored per user instead, the
   // way the badge card already works — see decisions.md.
   streakMilestoneSeen: integer("streak_milestone_seen"),
+  // The dashboard setup guide (src/domain/setup-guide.ts). Existing users keep
+  // the default and are never asked once they have an account and an entry,
+  // so there is no backfill.
+  setupGuide: setupGuideState("setup_guide").notNull().default("undecided"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

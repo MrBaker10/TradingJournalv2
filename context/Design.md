@@ -126,13 +126,21 @@ Each pattern names its **shape**, its **states**, its **motion** and the
 - **Checklist.** Ticking strikes the step through like a pen, line by line, at a
   constant pen speed (900 px/s on the prototype), line boxes measured from the DOM.
   Unticking removes all lines at once.
+- **Setup guide.** One card (`card` surface, hairline border) above the calendar and
+  the right column, only while the guide shows something. First the question with two
+  buttons, "Yes, show me" (outline) and "No, I'll find my way" (ghost). Then the five
+  steps as a list of links, each row at least 40 px high on touch: a round tick that
+  fills in `foreground` once the step's data exists, the step, "Required" or
+  "Optional" in muted text, a chevron. Ticks are never set by hand and carry no
+  `process` colour. No modal, overlay tour or redirect.
 - **Equity curve.** Sign colour above and below zero, the area fading from faint to
   nothing; no glow.
 - **Orb.** Three.js, loaded lazily inside an effect; a static SVG ring before load,
   without WebGL and under reduced motion. At a process moment the points gather and
   the ring turns once, then the render loop stops.
 - **Motion.** Day hover 150 ms ease-out. SVG coordinates from trigonometry are rounded
-  so server and client agree.
+  so server and client agree. Setup guide rows change colour in 150 ms and nudge the
+  chevron 2 px.
 - **Reduced motion.** Day hover keeps the shadow only. Strike lines appear at once.
   The orb is the static ring.
 
