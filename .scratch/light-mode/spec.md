@@ -1,6 +1,6 @@
 # Spec: Light mode
 
-Status: ready-for-agent
+Status: done
 
 Decision: project overview → Decisions → Light mode; ADR 0007 (theme per device).
 Design: Design.md §1 (principle 6), §2 Tokens, §3.1 Shell (Theme), §5 Accessibility.

@@ -100,8 +100,8 @@ Each pattern names its **shape**, its **states**, its **motion** and the
   Expanded or collapsed, remembered in `localStorage`. Practice selected: fog over the
   content area, sidebar excluded; the account in the selector carries the amber marker.
 - **Keys.** `[` toggles the sidebar, `C` opens the trade form, ⌘K opens the command
-  palette (pages, actions, account switch). Shortcuts ignore events whose target is an
-  input, textarea, select, editable element or dialog, and check
+  palette (pages, actions, account switch, theme). Shortcuts ignore events whose target
+  is an input, textarea, select, editable element or dialog, and check
   `event.target instanceof Element` before `closest`.
 - **Theme.** An icon button in the sidebar footer beside "Sign out" (in the drawer
   too) opens a menu with Dark, Light and System; the icon shows the current pick (moon,
