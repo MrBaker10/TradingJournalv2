@@ -47,6 +47,7 @@ import {
   stepOfField,
   type TradeFormState,
   tradePayload,
+  unreadableInStep,
 } from "@/lib/trades/form-steps";
 import { resizeAndCompressImage } from "@/lib/uploads/resize-image";
 import { cn } from "@/lib/utils";
@@ -160,19 +161,27 @@ export function TradeForm(props: TradeFormProps) {
 
   function next() {
     if (missingInStep(state, step).length > 0) return block(step);
+    // Typed text that is no number stops here too, with the schema's message
+    // at its field, instead of only when the trade is saved.
+    const unreadable = unreadableInStep(state, step);
+    if (unreadable.length > 0) {
+      const messages = schemaErrors(parsePayload());
+      setErrors((prev) => ({
+        ...prev,
+        ...Object.fromEntries(
+          unreadable.flatMap((field) =>
+            messages[field] ? [[field, messages[field]]] : [],
+          ),
+        ),
+      }));
+      return block(step);
+    }
     if (last) save();
     else go(step + 1);
   }
 
-  /** "Log now" and ⌘↵: save from any step once steps one and two hold. */
-  function save() {
-    const blocked = firstBlockedStep(state);
-    if (blocked !== undefined) {
-      if (blocked !== step) go(blocked);
-      return block(blocked);
-    }
-
-    const parsed = createTradeSchema.safeParse(
+  function parsePayload() {
+    return createTradeSchema.safeParse(
       tradePayload(
         state,
         edit
@@ -183,12 +192,32 @@ export function TradeForm(props: TradeFormProps) {
             })),
       ),
     );
+  }
+
+  /** The schema's first message per field; empty when the payload passes. */
+  function schemaErrors(
+    parsed: ReturnType<typeof parsePayload>,
+  ): Record<string, string> {
+    const fieldErrors: Record<string, string> = {};
+    if (parsed.success) return fieldErrors;
+    for (const issue of parsed.error.issues) {
+      const key = String(issue.path[0] ?? "form");
+      if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+    }
+    return fieldErrors;
+  }
+
+  /** "Log now" and ⌘↵: save from any step once steps one and two hold. */
+  function save() {
+    const blocked = firstBlockedStep(state);
+    if (blocked !== undefined) {
+      if (blocked !== step) go(blocked);
+      return block(blocked);
+    }
+
+    const parsed = parsePayload();
     if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        const key = String(issue.path[0] ?? "form");
-        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
-      }
+      const fieldErrors = schemaErrors(parsed);
       setErrors(fieldErrors);
       // The error lands at its field, so open the first step that holds one.
       const steps = Object.keys(fieldErrors)

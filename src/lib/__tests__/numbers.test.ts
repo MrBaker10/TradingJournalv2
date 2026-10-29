@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatDecimalString, formatFixed, formatPercent } from "../numbers.ts";
+import {
+  formatDecimalString,
+  formatFixed,
+  formatPercent,
+  parseDecimalInput,
+} from "../numbers.ts";
 
 const NBSP = " ";
 
@@ -43,5 +48,38 @@ describe("formatPercent", () => {
   it("puts a space before the sign in German", () => {
     expect(formatPercent(0.456, "de")).toBe(`46${NBSP}%`);
     expect(formatPercent(0, "de")).toBe(`0${NBSP}%`);
+  });
+});
+
+describe("parseDecimalInput", () => {
+  it("reads a comma or a dot as the decimal separator", () => {
+    expect(parseDecimalInput("21234,50")).toBe(21234.5);
+    expect(parseDecimalInput("21240.25")).toBe(21240.25);
+    expect(parseDecimalInput(" 0,8 ")).toBe(0.8);
+    expect(parseDecimalInput("-12,5")).toBe(-12.5);
+    expect(parseDecimalInput("4500")).toBe(4500);
+  });
+
+  it("reads one separator as a decimal, never as thousands", () => {
+    expect(parseDecimalInput("1.234")).toBe(1.234);
+    expect(parseDecimalInput("1,234")).toBe(1.234);
+  });
+
+  it("refuses a thousands separator", () => {
+    expect(parseDecimalInput("1.234,5")).toBeNaN();
+    expect(parseDecimalInput("1,234.5")).toBeNaN();
+    expect(parseDecimalInput("1 234,5")).toBeNaN();
+    expect(parseDecimalInput("1.234.567")).toBeNaN();
+  });
+
+  it("refuses what is not a decimal", () => {
+    expect(parseDecimalInput("abc")).toBeNaN();
+    expect(parseDecimalInput("1e3")).toBeNaN();
+    expect(parseDecimalInput(",")).toBeNaN();
+  });
+
+  it("reads an empty field as no value", () => {
+    expect(parseDecimalInput("")).toBeUndefined();
+    expect(parseDecimalInput("   ")).toBeUndefined();
   });
 });

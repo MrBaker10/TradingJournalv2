@@ -6,6 +6,7 @@ import type { AccountRulesRow } from "@/db/queries/account-rules";
 import type { ProgramOption } from "@/db/queries/prop-firms";
 import { DRAWDOWN_TYPES, type DrawdownType } from "@/domain/account-rules";
 import { formatCentsPlain } from "@/lib/money";
+import { parseDecimalInput } from "@/lib/numbers";
 import { HELP_TEXT, PART_HEADING, SELECT_CLASS } from "./fields";
 
 /** The link as the editor holds it; `programId` "" means not linked. */
@@ -55,12 +56,9 @@ export function initialLinkDraft(
   };
 }
 
-/** An empty required field is `undefined`, so the schema names it. */
-function required(value: string): number | undefined {
-  return value.trim() === "" ? undefined : Number(value);
-}
+/** An empty optional field is `null`: the program has no such rule. */
 function optional(value: string): number | null {
-  return value.trim() === "" ? null : Number(value);
+  return parseDecimalInput(value) ?? null;
 }
 
 /**
@@ -72,8 +70,8 @@ export function linkInput(link: ProgramLinkDraft) {
   return {
     programId: Number(link.programId),
     evaluationStart: link.evaluationStart,
-    profitTarget: required(link.profitTarget),
-    drawdownAmount: required(link.drawdownAmount),
+    profitTarget: parseDecimalInput(link.profitTarget),
+    drawdownAmount: parseDecimalInput(link.drawdownAmount),
     drawdownType: link.drawdownType,
     lockLevel:
       link.drawdownType === "eod_trailing" ? optional(link.lockLevel) : null,

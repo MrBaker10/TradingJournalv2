@@ -15,6 +15,7 @@ import { ACCOUNT_RULES_MESSAGES } from "@/domain/account-rules";
 import { ACCOUNT_CURRENCIES, type AccountCurrency } from "@/domain/fx";
 import { useUnsavedAccount } from "@/hooks/use-unsaved-account";
 import { formatCentsPlain } from "@/lib/money";
+import { parseDecimalInput } from "@/lib/numbers";
 import { cn } from "@/lib/utils";
 import { createAccountSchema } from "@/schemas/accounts";
 import {
@@ -112,17 +113,15 @@ export function AccountForm({
 
   function save() {
     if (isPending) return;
+    const startingBalance = parseDecimalInput(draft.startingBalance);
     const parsed = createAccountSchema.safeParse({
       name: draft.name,
       currency: draft.currency,
       isPractice: draft.isPractice,
-      startingBalance:
-        draft.startingBalance.trim() === ""
-          ? undefined
-          : Number(draft.startingBalance),
+      startingBalance,
       commissionRates: draft.rates.map((rate) => ({
         instrumentId: Number(rate.instrumentId),
-        perSide: rate.perSide.trim() === "" ? undefined : Number(rate.perSide),
+        perSide: parseDecimalInput(rate.perSide),
       })),
       rules: linkInput(draft.link),
     });
@@ -131,7 +130,7 @@ export function AccountForm({
       for (const issue of parsed.error.issues)
         next[issue.path.join(".")] ??= issue.message;
     }
-    if (linked && !(Number(draft.startingBalance) > 0))
+    if (linked && !((startingBalance ?? 0) > 0))
       next.startingBalance ??= ACCOUNT_RULES_MESSAGES.startingBalance;
     if (!parsed.success || Object.keys(next).length) {
       setErrors(next);

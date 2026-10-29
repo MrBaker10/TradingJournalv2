@@ -6,7 +6,7 @@ import * as z from "zod";
  * like 1.88 has no exact decimal form to count digits on.
  */
 export const quantityField = z
-  .number()
+  .number({ error: "Enter the contracts as a number" })
   .positive()
   .refine(
     (value) => Math.abs(value * 10_000 - Math.round(value * 10_000)) < 1e-6,
@@ -61,7 +61,12 @@ export const directionEnum = z.enum(["long", "short"]);
 
 const dateField = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date");
 const timeField = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time");
-const priceField = z.number().positive();
+// Typed text the form cannot read as a decimal arrives as NaN and hears the
+// number format (src/lib/numbers.ts, parseDecimalInput).
+const priceField = z
+  .number({ error: "Enter the price as a number" })
+  .positive();
+const rField = z.number({ error: "Enter the R as a number" });
 
 const MAX_URL_LENGTH = 2048;
 
@@ -97,8 +102,8 @@ const sharedFields = {
   entryModel: entryModelEnum.optional(),
   confluenceTagIds: z.array(z.number().int().positive()).default([]),
   mistakeTagIds: z.array(z.number().int().positive()).default([]),
-  mfeR: z.number().optional(),
-  maeR: z.number().optional(),
+  mfeR: rField.optional(),
+  maeR: rField.optional(),
   notes: z.string().max(4000).optional(),
   felt: feltEnum.optional(),
   grade: gradeEnum.optional(),
@@ -127,10 +132,10 @@ export const takenTradeSchema = z
     exitTime: timeField,
     exitPrice: priceField,
     contracts: quantityField,
-    pnlOverride: z.number().optional(),
+    pnlOverride: z.number({ error: "Enter the P&L as a number" }).optional(),
     result: resultEnum.optional(),
     byTheBook: z.boolean().optional(),
-    postExitMfeR: z.number().optional(),
+    postExitMfeR: rField.optional(),
     accountIds: z
       .array(z.number().int().positive())
       .min(1, "Select at least one account"),

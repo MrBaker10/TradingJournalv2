@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { takenTradeSchema } from "../../../schemas/trades.ts";
 import {
   EMPTY_TRADE_FORM,
   firstBlockedStep,
@@ -6,6 +7,8 @@ import {
   missingInStep,
   stepEcho,
   stepOfField,
+  tradePayload,
+  unreadableInStep,
 } from "../form-steps.ts";
 
 describe("missingInStep", () => {
@@ -28,7 +31,7 @@ describe("missingInStep", () => {
   });
 
   it("names the execution fields a taken trade needs", () => {
-    const state = { ...EMPTY_TRADE_FORM, entryPrice: "abc", stopPrice: "" };
+    const state = { ...EMPTY_TRADE_FORM, entryPrice: " ", stopPrice: "" };
     expect(missingInStep(state, 1)).toEqual([
       "Entry time",
       "Exit time",
@@ -36,6 +39,18 @@ describe("missingInStep", () => {
       "Exit price",
       "Contracts",
     ]);
+  });
+
+  it("leaves a typed but unreadable value to the schema, not to missing", () => {
+    const state = {
+      ...EMPTY_TRADE_FORM,
+      entryTime: "09:31",
+      exitTime: "09:52",
+      entryPrice: "1.234,5",
+      exitPrice: "abc",
+      contracts: "1 000",
+    };
+    expect(missingInStep(state, 1)).toEqual([]);
   });
 
   it("asks a missed setup only for its entry", () => {
@@ -163,5 +178,148 @@ describe("isStepDone", () => {
 
   it("does not check an optional step left empty", () => {
     expect(isStepDone(QUICK_ENTRY, 2, attached)).toBe(false);
+  });
+});
+
+describe("tradePayload — decimal input", () => {
+  // A taken trade with every required field, prices typed as given.
+  function taken(fields: Partial<typeof EMPTY_TRADE_FORM>) {
+    return takenTradeSchema.safeParse(
+      tradePayload(
+        {
+          ...EMPTY_TRADE_FORM,
+          tradeDate: "2026-10-29",
+          instrumentId: "1",
+          direction: "long",
+          entryTime: "09:31",
+          exitTime: "09:52",
+          entryPrice: "21234.50",
+          exitPrice: "21240.25",
+          contracts: "1",
+          accountIds: [7],
+          ...fields,
+        },
+        [],
+      ),
+    );
+  }
+
+  it("saves comma prices as the values a dot gives", () => {
+    const comma = taken({ entryPrice: "21234,50", exitPrice: "21240,25" });
+    const dot = taken({ entryPrice: "21234.50", exitPrice: "21240.25" });
+    expect(comma.success && comma.data.entryPrice).toBe(21234.5);
+    expect(comma.success && comma.data.exitPrice).toBe(21240.25);
+    expect(comma.data).toEqual(dot.data);
+  });
+
+  it("reads a comma in stop, contracts, P&L override and commission", () => {
+    const result = taken({
+      stopPrice: "21230,75",
+      contracts: "0,5",
+      pnlOverride: "-12,5",
+      commissions: { 7: "4,80" },
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.stopPrice).toBe(21230.75);
+    expect(result.data.contracts).toBe(0.5);
+    expect(result.data.pnlOverride).toBe(-12.5);
+    expect(result.data.commissions).toEqual([{ accountId: 7, amount: 4.8 }]);
+  });
+
+  it("refuses a thousands separator at the field", () => {
+    for (const typed of ["1.234,5", "1,234.5", "1 234,5"]) {
+      const result = taken({ entryPrice: typed, stopPrice: typed });
+      expect(result.success).toBe(false);
+      const fields = result.error?.issues.map((issue) => issue.path[0]);
+      expect(fields).toContain("entryPrice");
+      expect(fields).toContain("stopPrice");
+    }
+  });
+
+  it("names the number format for every unreadable field", () => {
+    const result = taken({
+      entryPrice: "1.234,5",
+      contracts: "1 000",
+      pnlOverride: "1,234.5",
+      mfeR: "1.5.0",
+    });
+    const messages = Object.fromEntries(
+      (result.error?.issues ?? []).map((issue) => [
+        issue.path[0],
+        issue.message,
+      ]),
+    );
+    expect(messages).toEqual({
+      entryPrice: "Enter the price as a number",
+      contracts: "Enter the contracts as a number",
+      pnlOverride: "Enter the P&L as a number",
+      mfeR: "Enter the R as a number",
+    });
+  });
+
+  it("keeps the scale limits with a comma", () => {
+    expect(taken({ contracts: "0,1234" }).success).toBe(true);
+    expect(taken({ contracts: "0,12345" }).success).toBe(false);
+    expect(taken({ commissions: { 7: "4,85" } }).success).toBe(true);
+    expect(taken({ commissions: { 7: "4,855" } }).success).toBe(false);
+  });
+});
+
+describe("unreadableInStep", () => {
+  it("names the typed fields of a step that are no decimal", () => {
+    const state = {
+      ...EMPTY_TRADE_FORM,
+      entryPrice: "1.234,5",
+      exitPrice: "21240,25",
+      stopPrice: "abc",
+      contracts: "1 000",
+      pnlOverride: "-12,5",
+      accountIds: [7, 8],
+      commissions: { 7: "4,80", 8: "4.800,00" },
+    };
+    expect(unreadableInStep(state, 1)).toEqual([
+      "entryPrice",
+      "stopPrice",
+      "contracts",
+      "commissions",
+    ]);
+  });
+
+  it("leaves empty fields to missingInStep", () => {
+    expect(unreadableInStep(EMPTY_TRADE_FORM, 1)).toEqual([]);
+  });
+
+  it("ignores the execution fields a missed setup does not send", () => {
+    const missed = {
+      ...EMPTY_TRADE_FORM,
+      taken: false,
+      entryPrice: "21234,5",
+      exitPrice: "abc",
+      contracts: "abc",
+    };
+    expect(unreadableInStep(missed, 1)).toEqual([]);
+  });
+
+  it("has nothing to read outside the execution step", () => {
+    const state = { ...EMPTY_TRADE_FORM, entryPrice: "abc" };
+    for (const step of [0, 2, 3, 4]) {
+      expect(unreadableInStep(state, step)).toEqual([]);
+    }
+  });
+});
+
+describe("isStepDone — unreadable values", () => {
+  it("does not check a step that holds a value the schema cannot read", () => {
+    const state = {
+      ...EMPTY_TRADE_FORM,
+      entryTime: "09:31",
+      exitTime: "09:52",
+      entryPrice: "1.234,5",
+      exitPrice: "21510",
+      contracts: "2",
+    };
+    const attached = { instrumentSymbol: "NQ", screenshots: 0, links: 0 };
+    expect(isStepDone(state, 1, attached)).toBe(false);
   });
 });

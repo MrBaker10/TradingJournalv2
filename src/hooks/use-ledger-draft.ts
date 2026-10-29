@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { ExpenseCategory, LedgerKind } from "@/domain/ledger";
+import { parseDecimalInput } from "@/lib/numbers";
 import {
   type CreateLedgerEntryInput,
   createLedgerEntrySchema,
@@ -47,7 +48,8 @@ export function useLedgerDraft(initial: () => LedgerDraft) {
           : null,
       accountId: draft.accountId === "" ? null : Number(draft.accountId),
       entryDate: draft.entryDate,
-      amount: draft.amount.trim() === "" ? Number.NaN : Number(draft.amount),
+      // Empty or unreadable both hear the amount format.
+      amount: parseDecimalInput(draft.amount) ?? Number.NaN,
       note: draft.note,
     };
     const parsed = createLedgerEntrySchema.safeParse(input);

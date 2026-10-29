@@ -1,5 +1,7 @@
 import type { JournalTradeRow } from "@/db/queries/trades";
 import type { TradeDirection } from "@/domain/pnl";
+// Relative: a runtime import, and this file is within Vitest's reach.
+import { parseDecimalInput } from "../numbers.ts";
 
 /**
  * The trade form as its inputs hold it: every field a controlled string, so
@@ -131,8 +133,8 @@ export function tradePayload(
       state.instrumentId === "" ? undefined : Number(state.instrumentId),
     direction: state.direction === "" ? undefined : state.direction,
     entryTime: state.entryTime,
-    entryPrice: parseNumber(state.entryPrice),
-    stopPrice: parseNumber(state.stopPrice),
+    entryPrice: parseDecimalInput(state.entryPrice),
+    stopPrice: parseDecimalInput(state.stopPrice),
     session: state.session === "" ? undefined : state.session,
     strategyId: state.strategyId === "" ? null : Number(state.strategyId),
     adoptCurrentStrategyRules: state.adoptCurrentStrategyRules,
@@ -140,8 +142,8 @@ export function tradePayload(
     entryModel: state.entryModel === "" ? undefined : state.entryModel,
     confluenceTagIds: state.confluenceTagIds,
     mistakeTagIds: state.mistakeTagIds,
-    mfeR: parseNumber(state.mfeR),
-    maeR: parseNumber(state.maeR),
+    mfeR: parseDecimalInput(state.mfeR),
+    maeR: parseDecimalInput(state.maeR),
     notes: state.notes.trim() === "" ? undefined : state.notes,
     felt: state.felt === "" ? undefined : state.felt,
     grade: state.grade === "" ? undefined : state.grade,
@@ -156,18 +158,18 @@ export function tradePayload(
     ...shared,
     taken: true as const,
     exitTime: state.exitTime,
-    exitPrice: parseNumber(state.exitPrice),
-    contracts: parseNumber(state.contracts),
-    pnlOverride: parseNumber(state.pnlOverride),
+    exitPrice: parseDecimalInput(state.exitPrice),
+    contracts: parseDecimalInput(state.contracts),
+    pnlOverride: parseDecimalInput(state.pnlOverride),
     result: state.result === "" ? undefined : state.result,
     byTheBook: state.byTheBook,
-    postExitMfeR: parseNumber(state.postExitMfeR),
+    postExitMfeR: parseDecimalInput(state.postExitMfeR),
     accountIds: state.accountIds,
     // Only the fields typed into, and only for accounts still selected.
     commissions: state.accountIds.flatMap((accountId) => {
       const typed = state.commissions[accountId];
       if (typed === undefined || typed.trim() === "") return [];
-      return [{ accountId, amount: parseNumber(typed) }];
+      return [{ accountId, amount: parseDecimalInput(typed) }];
     }),
   };
 }
@@ -179,10 +181,15 @@ export const LOG_NOW_FROM_STEP = 2;
 /** Evidence, where ⌘V attaches a screenshot. */
 export const EVIDENCE_STEP = 4;
 
+/**
+ * A typed number for what the form works out while typing (live P&L, the
+ * price band): undefined until the field holds a readable decimal. The
+ * payload reads with `parseDecimalInput` instead, so an unreadable value
+ * reaches the schema and is refused there.
+ */
 export function parseNumber(value: string): number | undefined {
-  if (value.trim() === "") return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  const parsed = parseDecimalInput(value);
+  return parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined;
 }
 
 /**
@@ -201,18 +208,56 @@ export function missingInStep(state: TradeFormState, step: number): string[] {
   if (step === 1) {
     if (state.entryTime === "") missing.push("Entry time");
     if (state.taken && state.exitTime === "") missing.push("Exit time");
-    if (parseNumber(state.entryPrice) === undefined)
-      missing.push("Entry price");
+    // Empty only: a typed value the schema cannot read is refused there,
+    // with the field's own message, not reported as missing.
+    if (state.entryPrice.trim() === "") missing.push("Entry price");
     if (state.taken) {
-      if (parseNumber(state.exitPrice) === undefined) {
-        missing.push("Exit price");
-      }
-      if (parseNumber(state.contracts) === undefined) {
-        missing.push("Contracts");
-      }
+      if (state.exitPrice.trim() === "") missing.push("Exit price");
+      if (state.contracts.trim() === "") missing.push("Contracts");
     }
   }
   return missing;
+}
+
+/** Typed but no decimal: what `parseDecimalInput` refuses. */
+function unreadable(value: string): boolean {
+  return Number.isNaN(parseDecimalInput(value));
+}
+
+/**
+ * The payload fields of one step that hold text the schema will refuse as no
+ * number, such as `1.234,5`: Next stops on them like on a missing field, and
+ * the schema names the format. Empty fields are `missingInStep`'s. Only the
+ * fields the payload sends count — a missed setup sends no exit.
+ */
+export function unreadableInStep(
+  state: TradeFormState,
+  step: number,
+): string[] {
+  if (step !== 1) return [];
+  const fields: [string, string][] = [
+    ["entryPrice", state.entryPrice],
+    ["stopPrice", state.stopPrice],
+    ["mfeR", state.mfeR],
+    ["maeR", state.maeR],
+  ];
+  if (state.taken) {
+    fields.push(
+      ["exitPrice", state.exitPrice],
+      ["contracts", state.contracts],
+      ["pnlOverride", state.pnlOverride],
+      ["postExitMfeR", state.postExitMfeR],
+    );
+  }
+  const found = fields
+    .filter(([, value]) => unreadable(value))
+    .map(([field]) => field);
+  const commissions =
+    state.taken &&
+    state.accountIds.some((accountId) =>
+      unreadable(state.commissions[accountId] ?? ""),
+    );
+  return commissions ? [...found, "commissions"] : found;
 }
 
 // Which step holds each payload field, so an error from the schema or the
@@ -317,6 +362,7 @@ export function isStepDone(
 ): boolean {
   return (
     stepEcho(state, attached)[step] !== "" &&
-    missingInStep(state, step).length === 0
+    missingInStep(state, step).length === 0 &&
+    unreadableInStep(state, step).length === 0
   );
 }
