@@ -68,7 +68,7 @@ export function SettingsToc({
                       aria-hidden="true"
                       className={cn(
                         "h-3 w-0.5 shrink-0 rounded-full",
-                        account.isPractice && "bg-amber-400",
+                        account.isPractice && "bg-practice",
                       )}
                     />
                     <span className="min-w-0 flex-1 truncate">

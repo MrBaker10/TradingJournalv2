@@ -28,8 +28,8 @@ export function HiddenPracticeBanner({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-400/30 border-l-2 border-l-amber-400 bg-amber-400/5 px-4 py-2.5 text-sm">
-      <span className="font-medium text-amber-300">Practice</span>
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-practice/30 border-l-2 border-l-practice bg-practice/5 px-4 py-2.5 text-sm">
+      <span className="font-medium text-practice-foreground">Practice</span>
       <span className="text-muted-foreground">
         {hiddenCounts.length === 1
           ? `${hiddenCounts[0].count} trade${
@@ -46,7 +46,7 @@ export function HiddenPracticeBanner({
           className={buttonVariants({
             variant: "outline",
             className:
-              "h-10 border-amber-400/40 text-amber-300 hover:bg-amber-400/10 hover:text-amber-300 lg:h-8 dark:border-amber-400/40",
+              "h-10 border-practice/40 text-practice-foreground hover:bg-practice/10 hover:text-practice-foreground lg:h-8 dark:border-practice/40",
           })}
         >
           {entry.accountName} ({entry.count})

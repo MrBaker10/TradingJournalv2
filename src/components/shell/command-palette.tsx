@@ -103,7 +103,7 @@ export function CommandPalette({
                 onSelect={() => selectAccount(account.id)}
               >
                 {account.name}
-                <CommandShortcut className="text-amber-300">
+                <CommandShortcut className="text-practice-foreground">
                   Practice
                 </CommandShortcut>
               </CommandItem>

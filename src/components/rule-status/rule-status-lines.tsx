@@ -7,7 +7,7 @@ import { formatCents } from "@/lib/money";
 
 const STATE_TONE: Record<RuleState, string> = {
   ok: "text-foreground",
-  close: "text-amber-400",
+  close: "text-practice-foreground",
   breached: "text-negative",
 };
 

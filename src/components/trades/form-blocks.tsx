@@ -358,7 +358,7 @@ export function Chips({
                   : "border-foreground/30 aria-pressed:bg-muted"
                 : invalid && "border-negative/60",
               // The practice account is named as well as striped (§5).
-              item.practice && "border-l-2 border-l-amber-400",
+              item.practice && "border-l-2 border-l-practice",
             )}
           >
             <PopCheck shown={active} tone={tone} />
