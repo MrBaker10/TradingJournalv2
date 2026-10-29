@@ -1,4 +1,5 @@
 import { MetricRow } from "@/components/dashboard/metric-row";
+import { TermInfo } from "@/components/terms/term-info";
 import type { LedgerTotals as LedgerTotalsData } from "@/db/queries/ledger";
 import { signedLedgerCents } from "@/domain/ledger";
 import { moneyTone } from "@/lib/dashboard/sign-tone";
@@ -37,6 +38,7 @@ export function LedgerTotals({
         </MetricRow>
         <MetricRow
           label="Ledger net"
+          info={<TermInfo term="ledgerNet" />}
           note={currency}
           tone={moneyTone(totals.netCents)}
         >

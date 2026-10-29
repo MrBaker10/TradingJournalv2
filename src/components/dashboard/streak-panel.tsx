@@ -5,6 +5,7 @@ import {
   markDashboardSeen,
   markStreakMilestoneSeen,
 } from "@/actions/dashboard";
+import { TermInfo } from "@/components/terms/term-info";
 import { StreakOrb } from "./streak-orb";
 
 interface StreakPanelProps {
@@ -48,8 +49,11 @@ export function StreakPanel({
         longest={longestStreak}
         moment={bumpStreak || milestone !== null}
       />
-      <div className="mt-2 text-muted-foreground text-xs">
+      {/* The orb's own label sits under the pointer, so the streak's info
+          icon goes beside the line under it. */}
+      <div className="mt-2 flex items-center gap-1.5 text-muted-foreground text-xs">
         Longest {longestStreak} {longestStreak === 1 ? "day" : "days"}
+        <TermInfo term="streak" />
       </div>
       {milestone !== null && (
         <p

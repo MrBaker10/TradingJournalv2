@@ -1,3 +1,4 @@
+import { TermInfo } from "@/components/terms/term-info";
 import { MetricRow } from "./metric-row";
 
 interface ProcessMetricsProps {
@@ -33,7 +34,11 @@ export function ProcessMetrics({
   return (
     <section aria-label="Process metrics" className="text-sm">
       <dl>
-        <MetricRow label="Consistency" tone="text-process">
+        <MetricRow
+          label="Consistency"
+          info={<TermInfo term="consistencyScore" />}
+          tone="text-process"
+        >
           {score}
           <span className="text-muted-foreground">/100</span>
         </MetricRow>
