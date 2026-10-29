@@ -132,7 +132,8 @@ Each pattern names its **shape**, its **states**, its **motion** and the
   steps as a list of links, each row at least 40 px high on touch: a round tick that
   fills in `foreground` once the step's data exists, the step, "Required" or
   "Optional" in muted text, a chevron. Ticks are never set by hand and carry no
-  `process` colour. No modal, overlay tour or redirect.
+  `process` colour. Once an account exists, an outline "Hide guide" button with an
+  icon sits beside the heading. No modal, overlay tour or redirect.
 - **Equity curve.** Sign colour above and below zero, the area fading from faint to
   nothing; no glow.
 - **Orb.** Three.js, loaded lazily inside an effect; a static SVG ring before load,
@@ -259,7 +260,9 @@ Each pattern names its **shape**, its **states**, its **motion** and the
   rule dot, practice stripe; "Add account" and archived accounts under it. The
   checklist template in three columns, add on Enter, remove on hover; reorder and
   limits as before. Export, username, password and two-factor as rows with one action;
-  the danger zone set apart with a `negative` border and a `negative` action.
+  the danger zone set apart with a `negative` border and a `negative` action. "Show
+  setup guide" is a row with a switch at the end of Accounts, set apart in a bordered
+  box on a faint `muted` surface with an icon, only while the guide rules offer it.
 - **Editor sheet** (medium): details, commissions, prop firm link stacked. Header shows
   "n / total" with previous and next; ↑/↓ do the same unless focus is in a textarea or
   select. The open account is the `account` search parameter (`new` for a new one);

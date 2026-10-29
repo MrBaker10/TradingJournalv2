@@ -1,11 +1,13 @@
 import { Check, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import type {
-  SetupGuideView,
-  SetupStep,
-  SetupStepKey,
+import {
+  nextSetupGuideState,
+  type SetupGuideView,
+  type SetupStep,
+  type SetupStepKey,
 } from "@/domain/setup-guide";
 import { cn } from "@/lib/utils";
+import { SetupGuideHide } from "./setup-guide-hide";
 import { SetupGuideQuestion } from "./setup-guide-question";
 
 // Where each step is done. Step order and required/optional come from the
@@ -36,12 +38,15 @@ export function SetupGuideCard({
       aria-labelledby="setup-guide-heading"
       className="flex flex-col gap-3 rounded-xl border bg-card p-4 text-card-foreground"
     >
-      <h2
-        id="setup-guide-heading"
-        className="text-[11px] text-muted-foreground uppercase tracking-wider"
-      >
-        Setup guide
-      </h2>
+      <div className="flex items-center gap-3">
+        <h2
+          id="setup-guide-heading"
+          className="text-[11px] text-muted-foreground uppercase tracking-wider"
+        >
+          Setup guide
+        </h2>
+        {nextSetupGuideState(view, "hide") !== null && <SetupGuideHide />}
+      </div>
       {view.kind === "question" ? (
         <>
           <p className="font-medium">Want a short setup guide?</p>

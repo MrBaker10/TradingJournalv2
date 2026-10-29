@@ -13,9 +13,9 @@ import { tradingStrategies } from "../../schema/strategies.ts";
 import { tradeAccounts, trades } from "../../schema/trades.ts";
 import { users } from "../../schema/users.ts";
 import {
+  applySetupGuideAction,
   getSetupGuide,
   SetupGuideError,
-  saveSetupGuideAnswer,
 } from "../setup-guide.ts";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -279,10 +279,10 @@ describe("getSetupGuide facts", () => {
   });
 });
 
-describe("saveSetupGuideAnswer", () => {
+describe("applySetupGuideAction", () => {
   it("shows the steps after yes", async () => {
     await fixture(async (f) => {
-      await saveSetupGuideAnswer(f.userId, "yes", f.tx);
+      await applySetupGuideAction(f.userId, "accept", f.tx);
       expect(await getSetupGuide(f.userId, f.tx)).toEqual(
         expect.objectContaining({ kind: "steps", canHide: false }),
       );
@@ -291,7 +291,7 @@ describe("saveSetupGuideAnswer", () => {
 
   it("hides the card after no and leaves the switch for Settings", async () => {
     await fixture(async (f) => {
-      await saveSetupGuideAnswer(f.userId, "no", f.tx);
+      await applySetupGuideAction(f.userId, "decline", f.tx);
       expect(await getSetupGuide(f.userId, f.tx)).toEqual({
         kind: "hidden",
         offerSwitch: true,
@@ -301,10 +301,10 @@ describe("saveSetupGuideAnswer", () => {
 
   it("refuses a second answer", async () => {
     await fixture(async (f) => {
-      await saveSetupGuideAnswer(f.userId, "no", f.tx);
-      await expect(saveSetupGuideAnswer(f.userId, "yes", f.tx)).rejects.toThrow(
-        SetupGuideError,
-      );
+      await applySetupGuideAction(f.userId, "decline", f.tx);
+      await expect(
+        applySetupGuideAction(f.userId, "accept", f.tx),
+      ).rejects.toThrow(SetupGuideError);
       expect(await getSetupGuide(f.userId, f.tx)).toEqual({
         kind: "hidden",
         offerSwitch: true,
@@ -316,9 +316,9 @@ describe("saveSetupGuideAnswer", () => {
     await fixture(async (f) => {
       const accountId = await addAccount(f, f.userId);
       await addTrade(f, f.userId, { taken: false, accountId });
-      await expect(saveSetupGuideAnswer(f.userId, "yes", f.tx)).rejects.toThrow(
-        SetupGuideError,
-      );
+      await expect(
+        applySetupGuideAction(f.userId, "accept", f.tx),
+      ).rejects.toThrow(SetupGuideError);
     });
   });
 
@@ -340,16 +340,16 @@ describe("saveSetupGuideAnswer", () => {
         })
         .returning({ id: users.id });
       const demoId = demo.id;
-      for (const answer of ["yes", "no"] as const)
+      for (const action of ["accept", "decline", "hide", "show"] as const)
         await expect(
-          saveSetupGuideAnswer(demoId, answer, f.tx),
+          applySetupGuideAction(demoId, action, f.tx),
         ).rejects.toThrow(SetupGuideError);
     });
   });
 
   it("changes only the answering user's guide", async () => {
     await fixture(async (f) => {
-      await saveSetupGuideAnswer(f.userId, "no", f.tx);
+      await applySetupGuideAction(f.userId, "decline", f.tx);
       expect(await getSetupGuide(f.otherUserId, f.tx)).toEqual({
         kind: "question",
       });
@@ -358,7 +358,7 @@ describe("saveSetupGuideAnswer", () => {
 
   it("goes with the user when the user is deleted", async () => {
     await fixture(async (f) => {
-      await saveSetupGuideAnswer(f.userId, "yes", f.tx);
+      await applySetupGuideAction(f.userId, "accept", f.tx);
       await f.tx.delete(users).where(eq(users.id, f.userId));
       await expect(getSetupGuide(f.userId, f.tx)).rejects.toThrow(
         "no such user",
@@ -366,6 +366,101 @@ describe("saveSetupGuideAnswer", () => {
       expect(await getSetupGuide(f.otherUserId, f.tx)).toEqual({
         kind: "question",
       });
+    });
+  });
+});
+
+describe("hiding and showing the guide", () => {
+  it("refuses to hide the guide before an account exists", async () => {
+    await fixture(async (f) => {
+      await applySetupGuideAction(f.userId, "accept", f.tx);
+      await addTrade(f, f.userId, { taken: false });
+      await expect(
+        applySetupGuideAction(f.userId, "hide", f.tx),
+      ).rejects.toThrow(SetupGuideError);
+      expect(await getSetupGuide(f.userId, f.tx)).toEqual(
+        expect.objectContaining({ kind: "steps", canHide: false }),
+      );
+    });
+  });
+
+  it("hides the guide once an account exists and offers the switch", async () => {
+    await fixture(async (f) => {
+      await applySetupGuideAction(f.userId, "accept", f.tx);
+      await addAccount(f, f.userId, { isPractice: true });
+      await applySetupGuideAction(f.userId, "hide", f.tx);
+      expect(await getSetupGuide(f.userId, f.tx)).toEqual({
+        kind: "hidden",
+        offerSwitch: true,
+      });
+    });
+  });
+
+  it("shows the steps again after the switch, from declined or dismissed", async () => {
+    await fixture(async (f) => {
+      await applySetupGuideAction(f.userId, "decline", f.tx);
+      await applySetupGuideAction(f.userId, "show", f.tx);
+      expect(await getSetupGuide(f.userId, f.tx)).toEqual(
+        expect.objectContaining({ kind: "steps" }),
+      );
+      await addAccount(f, f.userId);
+      await applySetupGuideAction(f.userId, "hide", f.tx);
+      await applySetupGuideAction(f.userId, "show", f.tx);
+      expect(await getSetupGuide(f.userId, f.tx)).toEqual(
+        expect.objectContaining({ kind: "steps", canHide: true }),
+      );
+    });
+  });
+
+  it("refuses the switch once both required steps are done, after a hide too", async () => {
+    await fixture(async (f) => {
+      await applySetupGuideAction(f.userId, "accept", f.tx);
+      await addAccount(f, f.userId);
+      await applySetupGuideAction(f.userId, "hide", f.tx);
+      await addTrade(f, f.userId, { taken: false });
+      await expect(
+        applySetupGuideAction(f.userId, "show", f.tx),
+      ).rejects.toThrow(SetupGuideError);
+    });
+  });
+
+  it("refuses the switch once both required steps are done", async () => {
+    await fixture(async (f) => {
+      await applySetupGuideAction(f.userId, "decline", f.tx);
+      const accountId = await addAccount(f, f.userId);
+      await addTrade(f, f.userId, { taken: true, accountId });
+      await expect(
+        applySetupGuideAction(f.userId, "show", f.tx),
+      ).rejects.toThrow(SetupGuideError);
+      expect(await getSetupGuide(f.userId, f.tx)).toEqual({
+        kind: "hidden",
+        offerSwitch: false,
+      });
+    });
+  });
+
+  it("refuses the switch in state completed", async () => {
+    await fixture(async (f) => {
+      await f.tx
+        .update(users)
+        .set({ setupGuide: "completed" })
+        .where(eq(users.id, f.userId));
+      await expect(
+        applySetupGuideAction(f.userId, "show", f.tx),
+      ).rejects.toThrow(SetupGuideError);
+    });
+  });
+
+  it("hides only the acting user's guide", async () => {
+    await fixture(async (f) => {
+      for (const userId of [f.userId, f.otherUserId]) {
+        await applySetupGuideAction(userId, "accept", f.tx);
+        await addAccount(f, userId);
+      }
+      await applySetupGuideAction(f.userId, "hide", f.tx);
+      expect(await getSetupGuide(f.otherUserId, f.tx)).toEqual(
+        expect.objectContaining({ kind: "steps", canHide: true }),
+      );
     });
   });
 });

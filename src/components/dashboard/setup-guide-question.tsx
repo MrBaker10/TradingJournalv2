@@ -11,8 +11,8 @@ import {
 } from "@/schemas/setup-guide";
 
 const ANSWERS = [
-  { choice: "yes", label: "Yes, show me", variant: "outline" },
-  { choice: "no", label: "No, I'll find my way", variant: "ghost" },
+  { choice: "accept", label: "Yes, show me", variant: "outline" },
+  { choice: "decline", label: "No, I'll find my way", variant: "ghost" },
 ] as const satisfies readonly {
   choice: SetupGuideAnswer;
   label: string;

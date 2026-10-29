@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  applySetupGuideAction,
   SetupGuideError,
-  saveSetupGuideAnswer,
 } from "@/db/queries/setup-guide";
+import type { SetupGuideAction } from "@/domain/setup-guide";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import {
   answerSetupGuideSchema,
@@ -24,21 +25,34 @@ function failure(error: unknown): ActionResult {
   return { success: false, error: SETUP_GUIDE_SAVE_FAILED };
 }
 
-/**
- * The question card's answer. The query refuses it unless the rules show the
- * question, which covers the demo user and a second answer.
- */
-export async function answerSetupGuide(input: unknown): Promise<ActionResult> {
-  const parsed = answerSetupGuideSchema.safeParse(input);
-  if (!parsed.success)
-    return { success: false, error: SETUP_GUIDE_SAVE_FAILED };
+// The query refuses whatever the rules do not offer right now
+// (nextSetupGuideState).
+async function apply(action: SetupGuideAction): Promise<ActionResult> {
   try {
     const user = await getCurrentUser();
-    await saveSetupGuideAnswer(user.id, parsed.data.answer);
+    await applySetupGuideAction(user.id, action);
     revalidatePath("/dashboard");
     revalidatePath("/settings");
     return { success: true, data: null };
   } catch (error) {
     return failure(error);
   }
+}
+
+/** The question card's answer. */
+export async function answerSetupGuide(input: unknown): Promise<ActionResult> {
+  const parsed = answerSetupGuideSchema.safeParse(input);
+  if (!parsed.success)
+    return { success: false, error: SETUP_GUIDE_SAVE_FAILED };
+  return apply(parsed.data.answer);
+}
+
+/** The card's hide action, offered once an account exists. */
+export async function hideSetupGuide(): Promise<ActionResult> {
+  return apply("hide");
+}
+
+/** Settings' "Show setup guide", offered while a required step is open. */
+export async function showSetupGuide(): Promise<ActionResult> {
+  return apply("show");
 }

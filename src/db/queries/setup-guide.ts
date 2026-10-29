@@ -1,13 +1,12 @@
 import { and, eq, isNull, type SQLWrapper, sql } from "drizzle-orm";
 import { isDemoUsername } from "../../domain/demo.ts";
 import {
+  nextSetupGuideState,
+  type SetupGuideAction,
   type SetupGuideView,
   setupGuideView,
 } from "../../domain/setup-guide.ts";
-import {
-  SETUP_GUIDE_REFUSED,
-  type SetupGuideAnswer,
-} from "../../schemas/setup-guide.ts";
+import { SETUP_GUIDE_REFUSED } from "../../schemas/setup-guide.ts";
 import { db } from "../index.ts";
 import { accountRules } from "../schema/account-rules.ts";
 import { accounts } from "../schema/accounts.ts";
@@ -89,28 +88,26 @@ export async function getSetupGuide(
 }
 
 /**
- * The question card's answer: yes → `active`, no → `declined`. Refused unless
- * the rules show the question right now, which also refuses the demo user and
- * anyone who already answered.
+ * Applies what the user did to the guide — answer, hide, show — if the rules
+ * offer it right now (nextSetupGuideState); refused otherwise.
  */
-export async function saveSetupGuideAnswer(
+export async function applySetupGuideAction(
   userId: number,
-  answer: SetupGuideAnswer,
+  action: SetupGuideAction,
   executor: Pick<typeof db, "transaction"> = db,
 ): Promise<void> {
   await executor.transaction(async (tx) => {
-    // Locks the user row, so two tabs answering at once cannot both pass.
+    // Locks the user row, so two tabs acting at once cannot both pass.
     await tx
       .select({ id: users.id })
       .from(users)
       .where(eq(users.id, userId))
       .for("update");
-    const view = await getSetupGuide(userId, tx);
-    if (view.kind !== "question")
-      throw new SetupGuideError(SETUP_GUIDE_REFUSED);
+    const next = nextSetupGuideState(await getSetupGuide(userId, tx), action);
+    if (next === null) throw new SetupGuideError(SETUP_GUIDE_REFUSED);
     await tx
       .update(users)
-      .set({ setupGuide: answer === "yes" ? "active" : "declined" })
+      .set({ setupGuide: next })
       .where(eq(users.id, userId));
   });
 }

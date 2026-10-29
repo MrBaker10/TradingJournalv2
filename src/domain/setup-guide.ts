@@ -76,3 +76,28 @@ export function setupGuideView(
   if (requiredDone) return { kind: "completion", steps: stepsOf(facts) };
   return { kind: "steps", steps: stepsOf(facts), canHide: facts.hasAccount };
 }
+
+/** What a user can do to the guide: answer the question, hide it, bring it back. */
+export type SetupGuideAction = "accept" | "decline" | "hide" | "show";
+
+/**
+ * The state an action leads to from what is shown now, or null when the rules
+ * do not offer it: no write for the demo user, no second answer, no hiding
+ * without an account, no switch once both required steps are done. The server asks this before every write, so a stale tab or
+ * a hand-made request cannot do what the card or Settings would not show.
+ */
+export function nextSetupGuideState(
+  view: SetupGuideView,
+  action: SetupGuideAction,
+): SetupGuideState | null {
+  switch (action) {
+    case "accept":
+      return view.kind === "question" ? "active" : null;
+    case "decline":
+      return view.kind === "question" ? "declined" : null;
+    case "hide":
+      return view.kind === "steps" && view.canHide ? "dismissed" : null;
+    case "show":
+      return view.kind === "hidden" && view.offerSwitch ? "active" : null;
+  }
+}

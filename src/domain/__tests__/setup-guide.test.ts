@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  nextSetupGuideState,
   SETUP_GUIDE_STATES,
+  type SetupGuideAction,
   type SetupGuideFacts,
+  type SetupGuideState,
   setupGuideView,
 } from "../setup-guide.ts";
 
@@ -121,4 +124,65 @@ describe("setupGuideView", () => {
       offerSwitch: false,
     });
   });
+});
+
+describe("nextSetupGuideState", () => {
+  const next = (
+    state: SetupGuideState,
+    facts: SetupGuideFacts,
+    action: SetupGuideAction,
+  ) => nextSetupGuideState(setupGuideView(state, facts), action);
+
+  it("answers the question: yes → active, no → declined", () => {
+    expect(next("undecided", newUser, "accept")).toBe("active");
+    expect(next("undecided", newUser, "decline")).toBe("declined");
+  });
+
+  it("refuses an answer once the question is gone", () => {
+    expect(next("declined", newUser, "accept")).toBeNull();
+    expect(next("active", newUser, "decline")).toBeNull();
+    expect(next("undecided", setUp, "accept")).toBeNull();
+  });
+
+  it("hides an active guide only once an account exists", () => {
+    expect(next("active", newUser, "hide")).toBeNull();
+    expect(next("active", { ...newUser, hasEntry: true }, "hide")).toBeNull();
+    expect(next("active", { ...newUser, hasAccount: true }, "hide")).toBe(
+      "dismissed",
+    );
+  });
+
+  it("does not hide a guide that is not showing its steps", () => {
+    expect(
+      next("undecided", { ...newUser, hasAccount: true }, "hide"),
+    ).toBeNull();
+    expect(next("active", setUp, "hide")).toBeNull();
+  });
+
+  it.each(["declined", "dismissed"] as const)(
+    "shows the guide again from %s while a required step is open",
+    (state) => {
+      expect(next(state, newUser, "show")).toBe("active");
+      expect(next(state, { ...newUser, hasAccount: true }, "show")).toBe(
+        "active",
+      );
+      expect(next(state, setUp, "show")).toBeNull();
+    },
+  );
+
+  it("refuses to show a guide that is undecided, active or completed", () => {
+    expect(next("undecided", newUser, "show")).toBeNull();
+    expect(next("active", newUser, "show")).toBeNull();
+    expect(next("completed", newUser, "show")).toBeNull();
+  });
+
+  it.each(["accept", "decline", "hide", "show"] as const)(
+    "refuses %s for the demo user in every state",
+    (action) => {
+      for (const state of SETUP_GUIDE_STATES)
+        expect(
+          next(state, { ...newUser, isDemo: true, hasAccount: true }, action),
+        ).toBeNull();
+    },
+  );
 });
