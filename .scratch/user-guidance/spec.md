@@ -84,8 +84,9 @@ suggests how to trade and never rewards money.
 
 ## Implementation Decisions
 
-- Reuse the installed stack, the existing dashboard card, settings section, popover and
-  empty-state patterns. No new dependency.
+- Reuse the installed stack, the existing dashboard card, settings section and
+  empty-state patterns. The info popover is a new thin UI component on the installed
+  `@base-ui/react` popover. No new dependency.
 - **Schema:** one new non-null column on users holding the setup guide state, an
   enum of `undecided` (default), `declined`, `active`, `dismissed`, `completed`.
   Generated migration; no data backfill, because existing users are covered by the
