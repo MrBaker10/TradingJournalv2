@@ -1,0 +1,2 @@
+CREATE TYPE "public"."setup_guide_state" AS ENUM('undecided', 'declined', 'active', 'dismissed', 'completed');--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN "setup_guide" "setup_guide_state" DEFAULT 'undecided' NOT NULL;

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { TermInfo } from "@/components/terms/term-info";
 import { HEATMAP_WEEK_COUNT, type HeatmapCell } from "@/domain/progress";
 import { useProcessMoment } from "@/hooks/use-process-moment";
 import { DAY_CELL_CLASS, dayCellLabel, TODAY_RING } from "./day-cell";
@@ -93,6 +94,7 @@ export function LoggedDaysHeatmap({
             className="h-2.5 w-2.5 rounded-[2px] border border-dashed border-process/60"
           />
           Grace day (one per month)
+          <TermInfo term="graceDay" />
         </li>
         <li className="flex items-center gap-1.5">
           <span

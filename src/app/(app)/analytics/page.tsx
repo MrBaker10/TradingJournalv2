@@ -7,6 +7,7 @@ import { ExecutionSection } from "@/components/analytics/execution-section";
 import { MissedSection } from "@/components/analytics/missed-section";
 import { QuestionToc } from "@/components/analytics/question-toc";
 import { RangeFilter } from "@/components/analytics/range-filter";
+import { TermInfo } from "@/components/terms/term-info";
 import {
   getDimensionBreakdowns,
   getExcursionBuckets,
@@ -146,7 +147,11 @@ export default async function AnalyticsPage({
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h1 className="page-title">Analytics</h1>
               <p className="text-muted-foreground text-sm">
-                Net P&amp;L with avg R beside it. Open any card for the detail.
+                Net P&amp;L with avg R{" "}
+                <span className="inline-flex align-middle">
+                  <TermInfo term="rMultiple" />
+                </span>{" "}
+                beside it. Open any card for the detail.
               </p>
             </div>
             <RangeFilter />

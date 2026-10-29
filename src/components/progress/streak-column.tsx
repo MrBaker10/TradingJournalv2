@@ -1,4 +1,5 @@
 import { StreakOrb } from "@/components/dashboard/streak-orb";
+import { TermInfo } from "@/components/terms/term-info";
 import type { HeatmapCell } from "@/domain/progress";
 import { DAY_CELL_CLASS, dayCellLabel, TODAY_RING } from "./day-cell";
 
@@ -26,9 +27,12 @@ export function StreakColumn({
       aria-label="Logging streak"
       className="flex flex-col items-center gap-3"
     >
-      <h2 className="self-start text-muted-foreground text-xs">
-        Logging streak
-      </h2>
+      {/* The icon beside the heading, not in it: its label would join the
+          heading's name. */}
+      <div className="flex items-center gap-1.5 self-start">
+        <h2 className="text-muted-foreground text-xs">Logging streak</h2>
+        <TermInfo term="streak" />
+      </div>
       <StreakOrb streak={current} longest={longest} moment={moment} />
       <ol aria-label="This week" className="flex gap-1.5">
         {week.map((cell, index) => (

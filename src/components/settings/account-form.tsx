@@ -3,6 +3,7 @@
 import { Check } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createAccount, updateAccount } from "@/actions/accounts";
+import { TermInfo } from "@/components/terms/term-info";
 import { FieldError, FieldLabel } from "@/components/trades/form-blocks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -263,7 +264,10 @@ export function AccountForm({
             }`}
           >
             <div>
-              <span className="font-medium text-sm">Practice account</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-medium text-sm">Practice account</span>
+                <TermInfo term="practiceAccount" />
+              </div>
               <p id="account-practice-help" className={`mt-1 ${HELP_TEXT}`}>
                 Excluded from combined figures and progress. View its numbers by
                 selecting this account.

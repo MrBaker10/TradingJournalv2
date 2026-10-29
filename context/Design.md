@@ -126,13 +126,22 @@ Each pattern names its **shape**, its **states**, its **motion** and the
 - **Checklist.** Ticking strikes the step through like a pen, line by line, at a
   constant pen speed (900 px/s on the prototype), line boxes measured from the DOM.
   Unticking removes all lines at once.
+- **Setup guide.** One card (`card` surface, hairline border) above the calendar and
+  the right column, only while the guide shows something. First the question with two
+  buttons, "Yes, show me" (outline) and "No, I'll find my way" (ghost). Then the five
+  steps as a list of links, each row at least 40 px high on touch: a round tick that
+  fills in `foreground` once the step's data exists, the step, "Required" or
+  "Optional" in muted text, a chevron. Ticks are never set by hand and carry no
+  `process` colour. Once an account exists, an outline "Hide guide" button with an
+  icon sits beside the heading. No modal, overlay tour or redirect.
 - **Equity curve.** Sign colour above and below zero, the area fading from faint to
   nothing; no glow.
 - **Orb.** Three.js, loaded lazily inside an effect; a static SVG ring before load,
   without WebGL and under reduced motion. At a process moment the points gather and
   the ring turns once, then the render loop stops.
 - **Motion.** Day hover 150 ms ease-out. SVG coordinates from trigonometry are rounded
-  so server and client agree.
+  so server and client agree. Setup guide rows change colour in 150 ms and nudge the
+  chevron 2 px.
 - **Reduced motion.** Day hover keeps the shadow only. Strike lines appear at once.
   The orb is the static ring.
 
@@ -251,7 +260,9 @@ Each pattern names its **shape**, its **states**, its **motion** and the
   rule dot, practice stripe; "Add account" and archived accounts under it. The
   checklist template in three columns, add on Enter, remove on hover; reorder and
   limits as before. Export, username, password and two-factor as rows with one action;
-  the danger zone set apart with a `negative` border and a `negative` action.
+  the danger zone set apart with a `negative` border and a `negative` action. "Show
+  setup guide" is a row with a switch at the end of Accounts, set apart in a bordered
+  box on a faint `muted` surface with an icon, only while the guide rules offer it.
 - **Editor sheet** (medium): details, commissions, prop firm link stacked. Header shows
   "n / total" with previous and next; ↑/↓ do the same unless focus is in a textarea or
   select. The open account is the `account` search parameter (`new` for a new one);
@@ -325,6 +336,22 @@ Each pattern names its **shape**, its **states**, its **motion** and the
 - **Trade edit:** §3.5 prefilled. **Trade detail page:** §3.3.
 - **Login and Register:** a calm single `card` in the same tokens, centred, one primary
   button. Errors and feedback as §3.11.
+
+### 3.14 Info popover
+
+- **Shape.** A 16 px info icon in `muted-foreground` beside a term that carries a
+  non-obvious rule, or beside the field that term governs (R multiple on the stop
+  price): after a label or legend, or inside a card's area as its sibling, left of the
+  card's check and never inside a button. It opens the shadcn popover on the tooltip's
+  colours (`foreground` background, `background` text): the term in semibold, then its
+  definition worded from `GLOSSARY.md`. A term gets the icon where it first matters on
+  a page, not on every repetition.
+- **States.** Icon: rest, hover and open (`foreground`), focus ring. Opens by click,
+  tap or Enter/Space, never on hover alone; Escape and an outside click close it and
+  focus returns to the icon. The hit area is 40 px. Its accessible label names the
+  term ("About Missed setup").
+- **Motion.** Fade and zoom in from 95 % like the tooltip, 150 ms.
+- **Reduced motion.** It appears and disappears at once.
 
 ---
 

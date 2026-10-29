@@ -47,6 +47,19 @@ _Avoid_: Local time, broker time
 The calendar date of a trade on the chart clock; the journal and the calendar group entries by it, with no Sunday roll.
 _Avoid_: Trading day (that one rolls Sunday onto Monday)
 
+**R multiple**:
+The result of a taken trade measured in units of its initial risk, the distance from entry to stop; a trade without a stop price has none.
+_Avoid_: RR, risk-reward
+
+**MFE**:
+Maximum favourable excursion: the furthest price moved in the trade's favour before the exit, recorded by hand in R.
+
+**MAE**:
+Maximum adverse excursion: the furthest price moved against the trade before the exit, recorded by hand in R.
+
+**Post-exit MFE**:
+The furthest price moved in the trade's favour after the exit, recorded by hand in R; it shows how much the exit left behind.
+
 **Import batch**:
 The set of trades created by one CSV import, undoable as a unit.
 

@@ -20,6 +20,7 @@ import {
 } from "./archived-accounts-list";
 import { SettingsSection } from "./settings-section";
 import { SettingsToc } from "./settings-toc";
+import { SetupGuideSwitch } from "./setup-guide-switch";
 
 /**
  * The settings page's layout and its Accounts section (Design.md §3.8). The
@@ -35,6 +36,7 @@ export function SettingsAccounts({
   programs,
   today,
   timeZone,
+  offerSetupGuide,
   children,
 }: {
   active: AccountRowData[];
@@ -44,6 +46,8 @@ export function SettingsAccounts({
   /** Today in `users.timezone`. */
   today: string;
   timeZone: string;
+  /** Whether the rules offer "Show setup guide" (src/domain/setup-guide.ts). */
+  offerSetupGuide: boolean;
   /** The sections after Accounts. */
   children: React.ReactNode;
 }) {
@@ -133,6 +137,7 @@ export function SettingsAccounts({
             timeZone={timeZone}
             onOpen={go}
           />
+          {offerSetupGuide && <SetupGuideSwitch />}
         </SettingsSection>
         {children}
       </div>

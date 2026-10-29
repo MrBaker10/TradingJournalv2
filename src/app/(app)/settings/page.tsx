@@ -9,8 +9,10 @@ import { listChecklistItems } from "@/db/queries/checklist";
 import { listCommissionRates } from "@/db/queries/commission-rates";
 import { listInstruments } from "@/db/queries/instruments";
 import { listProgramOptions } from "@/db/queries/prop-firms";
+import { getSetupGuide } from "@/db/queries/setup-guide";
 import { isDemoUsername } from "@/domain/demo";
 import { worstRuleState } from "@/domain/rule-status";
+import { nextSetupGuideState } from "@/domain/setup-guide";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { loadRuleStatus } from "@/lib/prop-firms/rule-status";
 import { todayInTimeZone } from "@/lib/time";
@@ -21,7 +23,7 @@ import { todayInTimeZone } from "@/lib/time";
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   const accounts = await listAllAccountsForSettings(user.id);
-  const [rates, instruments, rules, programs, checklistItems] =
+  const [rates, instruments, rules, programs, checklistItems, setupGuide] =
     await Promise.all([
       listCommissionRates(
         user.id,
@@ -31,6 +33,7 @@ export default async function SettingsPage() {
       listAccountRules(user.id),
       listProgramOptions(),
       listChecklistItems(user.id),
+      getSetupGuide(user.id),
     ]);
   const today = todayInTimeZone(user.timezone);
   // One attempt read per linked active account; an account has at most one
@@ -72,6 +75,7 @@ export default async function SettingsPage() {
       programs={programs}
       today={today}
       timeZone={user.timezone}
+      offerSetupGuide={nextSetupGuideState(setupGuide, "show") !== null}
     >
       <SettingsSection
         id="checklist"

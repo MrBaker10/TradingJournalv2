@@ -6,6 +6,7 @@ import { PlanCard } from "@/components/dashboard/plan-card";
 import { ProcessMetrics } from "@/components/dashboard/process-metrics";
 import { RecentEntries } from "@/components/dashboard/recent-entries";
 import { RuleStatusCard } from "@/components/dashboard/rule-status-card";
+import { SetupGuideCard } from "@/components/dashboard/setup-guide-card";
 import { StreakPanel } from "@/components/dashboard/streak-panel";
 import { listUserBadges } from "@/db/queries/badges";
 import { getDailyChecklist } from "@/db/queries/checklist";
@@ -21,6 +22,7 @@ import {
   getStreakEntryDays,
 } from "@/db/queries/dashboard";
 import { withDisplayCurrency } from "@/db/queries/scope";
+import { getSetupGuide } from "@/db/queries/setup-guide";
 import { listRecentTrades } from "@/db/queries/trades";
 import { BADGE_DEFINITIONS } from "@/domain/badges";
 import {
@@ -108,6 +110,7 @@ export default async function DashboardPage({
     startingBalanceCents,
     ruleStatus,
     checklist,
+    setupGuide,
   ] = await Promise.all([
     getMoneyMetrics(scope),
     getCountMetrics(scope),
@@ -128,6 +131,7 @@ export default async function DashboardPage({
     loadSelectedRuleStatus(user.id, user.selectedAccountId, today),
     // Same day as the plan; no account scope, practice flag or scoring input.
     getDailyChecklist(user.id, today),
+    getSetupGuide(user.id),
   ]);
 
   const streak = calculateStreak(streakDays, today, user.timezone);
@@ -177,67 +181,71 @@ export default async function DashboardPage({
   // Design.md §3.2: the month fills the main area and the page reads from
   // month to detail; the process sits in the right column beside it.
   return (
-    <div className="grid xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="flex min-w-0 flex-col gap-6 xl:border-r xl:pr-6">
-        <MonthCalendar
-          month={calendarMonth}
-          today={today}
-          days={calendarDays}
-          currentMonth={month}
-          firstTradeMonth={firstTradeMonth}
-          currency={scope.currency}
-        />
-
-        {ruleStatus && <RuleStatusCard ruleStatus={ruleStatus} />}
-
-        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <MoneyMetrics
-            money={money}
-            counts={counts}
-            bestDay={extremeDay(allTotals.days, (a, b) => a > b)}
-            worstDay={extremeDay(allTotals.days, (a, b) => a < b)}
-            todayAmountCents={todayTotal?.amountCents ?? 0}
-            maxDrawdownCents={allTotals.maxDrawdownCents}
+    <div className="flex flex-col">
+      {/* Above everything else, and only while the rules show it. */}
+      {setupGuide.kind !== "hidden" && <SetupGuideCard view={setupGuide} />}
+      <div className="grid xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-w-0 flex-col gap-6 xl:border-r xl:pr-6">
+          <MonthCalendar
+            month={calendarMonth}
             today={today}
+            days={calendarDays}
+            currentMonth={month}
+            firstTradeMonth={firstTradeMonth}
             currency={scope.currency}
           />
-          <EquityCurve series={equity} currency={scope.currency} />
+
+          {ruleStatus && <RuleStatusCard ruleStatus={ruleStatus} />}
+
+          <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+            <MoneyMetrics
+              money={money}
+              counts={counts}
+              bestDay={extremeDay(allTotals.days, (a, b) => a > b)}
+              worstDay={extremeDay(allTotals.days, (a, b) => a < b)}
+              todayAmountCents={todayTotal?.amountCents ?? 0}
+              maxDrawdownCents={allTotals.maxDrawdownCents}
+              today={today}
+              currency={scope.currency}
+            />
+            <EquityCurve series={equity} currency={scope.currency} />
+          </div>
+
+          <RecentEntries trades={recentTrades} currency={scope.currency} />
         </div>
 
-        <RecentEntries trades={recentTrades} currency={scope.currency} />
-      </div>
-
-      <aside
-        aria-label="Process"
-        className="mt-8 flex flex-col gap-6 border-t pt-6 xl:mt-0 xl:border-t-0 xl:pt-0 xl:pl-6 [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:pb-6"
-      >
-        <StreakPanel
-          currentStreak={streak.current}
-          longestStreak={streak.longest}
-          bumpStreak={rewards.bumpStreak}
-          milestone={milestone}
-        />
-        {/* badgesEarned comes from `user_badges`, the same source /progress
+        <aside
+          aria-label="Process"
+          className="mt-8 flex flex-col gap-6 border-t pt-6 xl:mt-0 xl:border-t-0 xl:pt-0 xl:pl-6 [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:pb-6"
+        >
+          <StreakPanel
+            currentStreak={streak.current}
+            longestStreak={streak.longest}
+            bumpStreak={rewards.bumpStreak}
+            milestone={milestone}
+          />
+          {/* badgesEarned comes from `user_badges`, the same source /progress
             reads. Computing it live here instead would disagree with that
             page whenever the numbers are ahead of the write paths — score_90,
             for one, arrives with the first write after a month is frozen. */}
-        <ProcessMetrics
-          score={score.score}
-          loggedDays={loggedDays}
-          elapsedTradingDays={elapsedTradingDays}
-          hasEntriesThisMonth={scoreDays.length > 0}
-          badgesEarned={userBadges.length}
-          badgesTotal={BADGE_DEFINITIONS.length}
-          byTheBook={counts.byTheBook}
-          tradesLogged={counts.tradesLogged}
-          missedSetups={counts.missedSetups}
-        />
-        <PlanCard
-          premarketPlan={note?.premarketPlan ?? null}
-          eodReview={note?.eodReview ?? null}
-        />
-        <DailyChecklistCard items={checklist} />
-      </aside>
+          <ProcessMetrics
+            score={score.score}
+            loggedDays={loggedDays}
+            elapsedTradingDays={elapsedTradingDays}
+            hasEntriesThisMonth={scoreDays.length > 0}
+            badgesEarned={userBadges.length}
+            badgesTotal={BADGE_DEFINITIONS.length}
+            byTheBook={counts.byTheBook}
+            tradesLogged={counts.tradesLogged}
+            missedSetups={counts.missedSetups}
+          />
+          <PlanCard
+            premarketPlan={note?.premarketPlan ?? null}
+            eodReview={note?.eodReview ?? null}
+          />
+          <DailyChecklistCard items={checklist} />
+        </aside>
+      </div>
     </div>
   );
 }

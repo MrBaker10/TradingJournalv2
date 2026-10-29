@@ -1,3 +1,4 @@
+import { TermInfo } from "@/components/terms/term-info";
 import { type ConsistencyScore, SCORE_WEIGHTS } from "@/domain/consistency";
 import { type ScorePartKey, scoreRingArcs } from "@/lib/progress/ring";
 
@@ -48,9 +49,12 @@ export function ScoreRing({
       aria-label="Consistency this month"
       className="flex flex-col items-center gap-3"
     >
-      <h2 className="self-start text-muted-foreground text-xs">
-        Consistency this month
-      </h2>
+      <div className="flex items-center gap-1.5 self-start">
+        <h2 className="text-muted-foreground text-xs">
+          Consistency this month
+        </h2>
+        <TermInfo term="consistencyScore" />
+      </div>
       <div className="relative flex h-[140px] w-[140px] items-center justify-center">
         <svg
           className="-rotate-90 absolute inset-0 h-full w-full"

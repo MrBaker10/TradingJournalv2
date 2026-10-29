@@ -1,3 +1,4 @@
+import { TermInfo } from "@/components/terms/term-info";
 import type { ExecutionSummaryRow } from "@/db/queries/analytics";
 import { zeroLineLayout } from "@/domain/analytics";
 import {
@@ -63,14 +64,20 @@ function Legend() {
 
 function Figure({
   title,
+  info,
   children,
 }: {
   title: string;
+  /** An info icon for the title's term (Design.md §3.14). */
+  info?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className={`flex min-w-0 flex-col gap-3 ${CARD_SURFACE}`}>
-      <h3 className="font-medium text-sm">{title}</h3>
+      <div className="flex items-center gap-1.5">
+        <h3 className="font-medium text-sm">{title}</h3>
+        {info}
+      </div>
       {children}
     </div>
   );
@@ -144,9 +151,11 @@ function HoldTime({ summary }: { summary: ExecutionSummaryRow[] }) {
 function Excursions({
   kind,
   excursions,
+  info,
 }: {
   kind: ExcursionKind;
   excursions: ExcursionCount[];
+  info?: React.ReactNode;
 }) {
   const series = OUTCOMES.map((outcome) => ({
     outcome,
@@ -154,7 +163,7 @@ function Excursions({
   }));
   if (series.every(({ rows }) => rows.length === 0)) {
     return (
-      <Figure title={KIND_TITLES[kind]}>
+      <Figure title={KIND_TITLES[kind]} info={info}>
         <p className="text-muted-foreground text-xs">
           No {kind.toUpperCase()} recorded in this range. It is a manual field
           on trades with a stop price.
@@ -171,7 +180,7 @@ function Excursions({
   const layout = zeroLineLayout(shares);
 
   return (
-    <Figure title={KIND_TITLES[kind]}>
+    <Figure title={KIND_TITLES[kind]} info={info}>
       <svg className="block h-28 w-full" aria-hidden="true">
         {labels.map((label, bucket) =>
           series.map(({ outcome }, side) => {
@@ -270,7 +279,12 @@ export function ExecutionSection({
       <div className="grid gap-3 md:grid-cols-2">
         <HoldTime summary={summary} />
         <ExitEfficiency summary={summary} />
-        <Excursions kind="mae" excursions={excursions} />
+        {/* MFE and MAE share one explanation, on the first of the two. */}
+        <Excursions
+          kind="mae"
+          excursions={excursions}
+          info={<TermInfo term="mfeMae" />}
+        />
         <Excursions kind="mfe" excursions={excursions} />
       </div>
     </div>
