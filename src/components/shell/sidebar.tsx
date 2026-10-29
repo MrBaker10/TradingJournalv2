@@ -8,15 +8,19 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Kbd } from "@/components/ui/kbd";
+import type { ThemePick } from "@/lib/theme";
 import { AccountSwitcher, type SwitcherAccount } from "./account-switcher";
 import { LOG_TRADE_HREF } from "./nav-items";
-import { RailTip, SIDEBAR_ITEM_CLASS, SidebarContent } from "./sidebar-content";
+import { SidebarContent } from "./sidebar-content";
+import { RailTip, SIDEBAR_ITEM_CLASS } from "./sidebar-parts";
 
 /** What the app shell needs from the layout, for sidebar and mobile shell alike. */
 export interface ShellProps {
   displayName: string;
   accounts: SwitcherAccount[];
   selectedAccountId: number | null;
+  /** The theme pick from the `theme` cookie (docs/adr/0007). */
+  theme: ThemePick;
 }
 
 /**
@@ -29,6 +33,7 @@ export function Sidebar({
   displayName,
   accounts,
   selectedAccountId,
+  theme,
   collapsed,
   animate,
   onToggle,
@@ -132,7 +137,11 @@ export function Sidebar({
         </RailTip>
       </div>
 
-      <SidebarContent displayName={displayName} collapsed={collapsed} />
+      <SidebarContent
+        displayName={displayName}
+        theme={theme}
+        collapsed={collapsed}
+      />
     </aside>
   );
 }

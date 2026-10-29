@@ -9,9 +9,21 @@ export type ThemePick = (typeof THEME_PICKS)[number];
 /** The cookie that holds the pick, per device. */
 export const THEME_COOKIE = "theme";
 
+/** How the cookie is set: one year, every path, sent on top-level navigation. */
+export const THEME_COOKIE_OPTIONS = {
+  maxAge: 60 * 60 * 24 * 365,
+  sameSite: "lax",
+  path: "/",
+} as const;
+
+/** Whether an untrusted value is one of the picks, with no fallback. */
+export function isThemePick(value: unknown): value is ThemePick {
+  return THEME_PICKS.some((pick) => pick === value);
+}
+
 /** An untrusted cookie value as a pick; anything else is the default, Dark. */
 export function parseThemePick(value: string | null | undefined): ThemePick {
-  return THEME_PICKS.find((pick) => pick === value) ?? "dark";
+  return isThemePick(value) ? value : "dark";
 }
 
 /**

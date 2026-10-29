@@ -29,6 +29,7 @@ export function MobileShell({
   displayName,
   accounts,
   selectedAccountId,
+  theme,
 }: ShellProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -139,6 +140,8 @@ export function MobileShell({
                 </div>
                 <SidebarContent
                   displayName={displayName}
+                  theme={theme}
+                  menuContainer={dialogRef}
                   onNavigate={() => setOpen(false)}
                 />
               </motion.div>

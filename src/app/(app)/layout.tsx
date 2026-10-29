@@ -1,7 +1,9 @@
+import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { listActiveAccountsForSwitcher } from "@/db/queries/accounts";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { parseThemePick, THEME_COOKIE } from "@/lib/theme";
 
 // Every page behind the session renders at request time. Route segment config
 // in a layout applies to every segment below it, so this one line covers all
@@ -23,6 +25,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const practiceSelected =
     accounts.find((account) => account.id === user.selectedAccountId)
       ?.isPractice ?? false;
+  // The same reading as the root layout's, for the theme menu's current pick.
+  const theme = parseThemePick((await cookies()).get(THEME_COOKIE)?.value);
 
   return (
     <AppShell
@@ -30,6 +34,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       accounts={accounts}
       selectedAccountId={user.selectedAccountId}
       practiceSelected={practiceSelected}
+      theme={theme}
     >
       {children}
     </AppShell>

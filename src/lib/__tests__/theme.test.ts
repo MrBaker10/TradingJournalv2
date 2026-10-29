@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { parseThemePick, themeBodyClass } from "../theme";
+import {
+  isThemePick,
+  parseThemePick,
+  THEME_COOKIE_OPTIONS,
+  themeBodyClass,
+} from "../theme";
 
 describe("parseThemePick, docs/adr/0007", () => {
   it("reads each pick as itself", () => {
@@ -28,5 +33,38 @@ describe("themeBodyClass, globals.css", () => {
     expect(themeBodyClass("dark")).toBe("dark");
     expect(themeBodyClass("light")).toBe("light");
     expect(themeBodyClass("system")).toBe("system");
+  });
+});
+
+describe("isThemePick, strict, for untrusted values", () => {
+  it("accepts the three picks", () => {
+    for (const value of ["dark", "light", "system"]) {
+      expect(isThemePick(value)).toBe(true);
+    }
+  });
+
+  it("refuses anything else instead of falling back to dark", () => {
+    for (const value of [
+      undefined,
+      null,
+      "",
+      "Dark",
+      "blue",
+      1,
+      {},
+      ["dark"],
+    ]) {
+      expect(isThemePick(value)).toBe(false);
+    }
+  });
+});
+
+describe("THEME_COOKIE_OPTIONS, docs/adr/0007", () => {
+  it("keeps the pick for a year on every path, sent on top-level navigation", () => {
+    expect(THEME_COOKIE_OPTIONS).toEqual({
+      maxAge: 31_536_000,
+      sameSite: "lax",
+      path: "/",
+    });
   });
 });
