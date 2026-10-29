@@ -1,5 +1,6 @@
 import { ChecklistTemplate } from "@/components/settings/checklist-template";
 import { ExportCard } from "@/components/settings/export-card";
+import { LanguageSwitch } from "@/components/settings/language-switch";
 import { SecuritySection } from "@/components/settings/security-section";
 import { SettingsAccounts } from "@/components/settings/settings-accounts";
 import { SettingsSection } from "@/components/settings/settings-section";
@@ -14,6 +15,7 @@ import { isDemoUsername } from "@/domain/demo";
 import { worstRuleState } from "@/domain/rule-status";
 import { nextSetupGuideState } from "@/domain/setup-guide";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { storedLanguageOf } from "@/lib/i18n/languages";
 import { loadRuleStatus } from "@/lib/prop-firms/rule-status";
 import { todayInTimeZone } from "@/lib/time";
 
@@ -85,6 +87,9 @@ export default async function SettingsPage() {
       </SettingsSection>
       <SettingsSection id="data">
         <ExportCard />
+      </SettingsSection>
+      <SettingsSection id="language">
+        <LanguageSwitch stored={storedLanguageOf(user)} />
       </SettingsSection>
       {/* From lg the last section is at least a screen high, so every
           section can scroll to the top and the table of contents follows. */}

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronsUpDown, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,16 +41,19 @@ export function AccountSwitcher({
   selectedAccountId,
   placement = "sidebar",
 }: AccountSwitcherProps) {
+  const t = useTranslations("accountSwitcher");
   const { pending, select } = useSelectAccount();
   const { real, practice } = groupAccountsForSwitcher(accounts);
   const selected = accounts.find((account) => account.id === selectedAccountId);
-  const label = selected?.name ?? "All accounts";
+  const label = selected?.name ?? t("allAccounts");
   const isPractice = selected?.isPractice ?? false;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label={`Account: ${label}${isPractice ? ", practice" : ""}`}
+        aria-label={t(isPractice ? "triggerPractice" : "trigger", {
+          name: label,
+        })}
         className={`flex items-center gap-2 rounded-md text-left text-sm transition-[background-color,scale] duration-150 hover:bg-sidebar-accent focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.98] data-[popup-open]:bg-sidebar-accent ${
           placement === "rail"
             ? "h-10 w-10 justify-center"
@@ -74,7 +78,7 @@ export function AccountSwitcher({
               <span className="block truncate font-medium">{label}</span>
               {isPractice && (
                 <span className="block truncate text-[11px] leading-none text-practice-foreground">
-                  Practice · not in totals
+                  {t("practiceNotInTotals")}
                 </span>
               )}
             </span>
@@ -106,13 +110,13 @@ export function AccountSwitcher({
           {/* Radio items keep a menu open by default; picking an account is
               the whole job of this menu, so it closes. */}
           <DropdownMenuRadioItem value={ALL} closeOnClick>
-            All accounts
+            {t("allAccounts")}
           </DropdownMenuRadioItem>
           {real.length > 0 && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuLabel>Accounts</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("accounts")}</DropdownMenuLabel>
                 {real.map((account) => (
                   <DropdownMenuRadioItem
                     key={account.id}
@@ -129,9 +133,7 @@ export function AccountSwitcher({
             <>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuLabel>
-                  Practice · excluded from totals
-                </DropdownMenuLabel>
+                <DropdownMenuLabel>{t("practiceExcluded")}</DropdownMenuLabel>
                 {practice.map((account) => (
                   <DropdownMenuRadioItem
                     key={account.id}
@@ -140,7 +142,7 @@ export function AccountSwitcher({
                   >
                     <span className="flex-1 truncate">{account.name}</span>
                     <span className="rounded-sm bg-practice/15 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-practice-foreground uppercase">
-                      Practice
+                      {t("practice")}
                     </span>
                   </DropdownMenuRadioItem>
                 ))}

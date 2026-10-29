@@ -2,6 +2,7 @@
 
 import { LogOut } from "lucide-react";
 import { useLinkStatus } from "next/link";
+import { useTranslations } from "next-intl";
 import { type RefObject, useTransition } from "react";
 import { authClient } from "@/lib/auth/auth-client";
 import { Link, usePathname, useRouter } from "@/lib/i18n/navigation";
@@ -34,6 +35,7 @@ export function SidebarContent({
   menuContainer?: RefObject<HTMLElement | null>;
   onNavigate?: () => void;
 }) {
+  const t = useTranslations();
   const pathname = usePathname();
   const router = useRouter();
   const [isSigningOut, startSignOut] = useTransition();
@@ -50,14 +52,14 @@ export function SidebarContent({
   return (
     <>
       <nav
-        aria-label="Main"
+        aria-label={t("nav.main")}
         className={`flex flex-1 flex-col overflow-x-hidden overflow-y-auto px-2 py-2 ${
           collapsed ? "items-center" : ""
         }`}
       >
         {navGroups.map((group, index) => (
           <div
-            key={group.label}
+            key={group.key}
             className={`flex flex-col gap-0.5 ${collapsed ? "items-center" : "mb-4"}`}
           >
             {collapsed ? (
@@ -69,11 +71,12 @@ export function SidebarContent({
               )
             ) : (
               <div className="px-2 pb-1 text-[11px] font-medium whitespace-nowrap text-muted-foreground">
-                {group.label}
+                {t(`nav.groups.${group.key}`)}
               </div>
             )}
-            {group.items.map(({ href, label, icon: Icon }) => {
+            {group.items.map(({ href, key, icon: Icon }) => {
               const isActive = isActiveHref(href, pathname);
+              const label = t(`nav.items.${key}`);
               return (
                 <RailTip key={href} collapsed={collapsed} label={label}>
                   <Link
@@ -128,10 +131,10 @@ export function SidebarContent({
           collapsed={collapsed}
           container={menuContainer}
         />
-        <RailTip collapsed={collapsed} label="Sign out">
+        <RailTip collapsed={collapsed} label={t("shell.signOut")}>
           <button
             type="button"
-            aria-label="Sign out"
+            aria-label={t("shell.signOut")}
             onClick={signOut}
             disabled={isSigningOut}
             className={SIDEBAR_ICON_BUTTON_CLASS}

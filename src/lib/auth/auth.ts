@@ -17,6 +17,7 @@ import {
 import { users } from "../../db/schema/users.ts";
 import { isDemoUsername } from "../../domain/demo.ts";
 import { env } from "../env.ts";
+import { DEFAULT_LANGUAGE, registrationLanguage } from "../i18n/languages.ts";
 import { deleteUserFiles, listUserStorageKeys } from "./delete-user-files.ts";
 import {
   DEMO_REFUSED_MESSAGE,
@@ -73,6 +74,14 @@ export const auth = betterAuth({
     fields: { name: "displayName" },
     additionalFields: {
       timezone: { type: "string", required: true, input: true },
+      // Sent once by the registration form; afterwards only Settings writes
+      // it (src/db/queries/interface-language.ts), never /update-user.
+      language: {
+        type: "string",
+        required: false,
+        input: true,
+        defaultValue: DEFAULT_LANGUAGE,
+      },
     },
     deleteUser: {
       enabled: true,
@@ -108,11 +117,13 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        // The email is always the placeholder, whatever the client sent.
+        // The email is always the placeholder, whatever the client sent; the
+        // language is the registration page's, or English.
         before: async (user) => ({
           data: {
             ...user,
             email: placeholderEmail(String(user.username)),
+            language: registrationLanguage(user.language),
           },
         }),
       },
@@ -154,6 +165,13 @@ export const auth = betterAuth({
       ) {
         throw new APIError("BAD_REQUEST", {
           message: "The username cannot be changed.",
+        });
+      }
+      // The interface language is written by Settings alone, which keeps the
+      // demo user's row untouched (docs/adr/0008).
+      if (ctx.path === "/update-user" && ctx.body?.language !== undefined) {
+        throw new APIError("BAD_REQUEST", {
+          message: "Change the language in Settings.",
         });
       }
     }),

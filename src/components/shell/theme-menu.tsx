@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { RefObject } from "react";
 import {
   DropdownMenu,
@@ -11,7 +12,7 @@ import {
 import { useThemePick } from "@/hooks/use-theme-pick";
 import { isThemePick, THEME_PICKS, type ThemePick } from "@/lib/theme";
 import { RailTip, SIDEBAR_ICON_BUTTON_CLASS } from "./sidebar-parts";
-import { THEME_OPTIONS } from "./theme-options";
+import { THEME_ICONS } from "./theme-options";
 
 /**
  * The theme switch in the sidebar footer, beside "Sign out" (Design.md §3.1):
@@ -31,14 +32,16 @@ export function ThemeMenu({
    */
   container?: RefObject<HTMLElement | null>;
 }) {
+  const t = useTranslations("shell");
   const { pick, choose } = useThemePick(theme);
-  const { label, icon: Icon } = THEME_OPTIONS[pick];
+  const Icon = THEME_ICONS[pick];
+  const label = t("themeLabel", { theme: t(`themes.${pick}`) });
 
   return (
     <DropdownMenu>
-      <RailTip collapsed={collapsed} label={`Theme: ${label}`}>
+      <RailTip collapsed={collapsed} label={label}>
         <DropdownMenuTrigger
-          aria-label={`Theme: ${label}`}
+          aria-label={label}
           className={`${SIDEBAR_ICON_BUTTON_CLASS} data-[popup-open]:bg-sidebar-accent`}
         >
           <Icon className="h-4 w-4" aria-hidden="true" />
@@ -59,11 +62,11 @@ export function ThemeMenu({
           {/* Radio items keep a menu open by default; picking is the whole
               job of this menu, so it closes. */}
           {THEME_PICKS.map((value) => {
-            const { label: itemLabel, icon: ItemIcon } = THEME_OPTIONS[value];
+            const ItemIcon = THEME_ICONS[value];
             return (
               <DropdownMenuRadioItem key={value} value={value} closeOnClick>
                 <ItemIcon aria-hidden="true" />
-                {itemLabel}
+                {t(`themes.${value}`)}
               </DropdownMenuRadioItem>
             );
           })}

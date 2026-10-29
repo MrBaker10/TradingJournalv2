@@ -12,7 +12,8 @@ import type { auth } from "./auth.ts";
 // forms. It talks to /api/auth/* on the same origin; no base URL needed.
 // Everything server-side goes through getCurrentUser() instead.
 export const authClient = createAuthClient({
-  // Type-only: teaches the client the `timezone` field sign-up takes.
+  // Type-only: teaches the client the `timezone` and `language` fields
+  // sign-up takes.
   plugins: [
     usernameClient(),
     twoFactorClient(),

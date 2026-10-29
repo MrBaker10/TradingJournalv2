@@ -1,22 +1,22 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { authClient } from "@/lib/auth/auth-client";
-import { Link, useRouter } from "@/lib/i18n/navigation";
+import { Link } from "@/lib/i18n/navigation";
 import { backupCodeSchema, signInSchema, totpCodeSchema } from "@/schemas/auth";
 import { AUTH_LINK } from "./auth-card";
 import { AuthSubmit } from "./auth-submit";
 import { AuthTextField } from "./auth-text-field";
-
-// One sentence for a wrong username and a wrong password alike: splitting it
-// by field would tell a stranger which usernames exist.
-const SIGN_IN_FAILED = "Username or password is wrong.";
 
 interface LoginFormProps {
   registrationOpen: boolean;
 }
 
 export function LoginForm({ registrationOpen }: LoginFormProps) {
+  const t = useTranslations("auth");
+  // Next's own router, not the language-keeping one: see enterJournal.
   const router = useRouter();
   const [step, setStep] = useState<"password" | "code">("password");
   const [codeKind, setCodeKind] = useState<"totp" | "backup">("totp");
@@ -28,6 +28,8 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  // Unprefixed on purpose: the proxy sends the user on to their stored
+  // language (docs/adr/0008), which need not be this page's.
   function enterJournal() {
     router.replace("/dashboard");
     router.refresh();
@@ -50,8 +52,10 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
       if (signInError) {
         setError(
           signInError.status === 429
-            ? "Too many attempts. Wait a minute, then try again."
-            : SIGN_IN_FAILED,
+            ? t("tooManyAttempts")
+            : // One sentence for a wrong username and a wrong password alike:
+              // splitting it by field would tell a stranger which usernames exist.
+              t("signInFailed"),
         );
         return;
       }
@@ -82,11 +86,7 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
           ? await authClient.twoFactor.verifyTotp({ code: parsed.data })
           : await authClient.twoFactor.verifyBackupCode({ code: parsed.data });
       if (verifyError) {
-        setError(
-          codeKind === "totp"
-            ? "That code didn't match. Codes change every 30 seconds — try the current one."
-            : "That backup code didn't match, or it was used already.",
-        );
+        setError(codeKind === "totp" ? t("totpMismatch") : t("backupMismatch"));
         return;
       }
       enterJournal();
@@ -97,13 +97,11 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
     return (
       <form onSubmit={handleCode} className="flex flex-col gap-4" noValidate>
         <p className="text-muted-foreground text-sm">
-          {codeKind === "totp"
-            ? "Enter the six-digit code from your authenticator app."
-            : "Enter one of the backup codes you wrote down. Each works once."}
+          {codeKind === "totp" ? t("totpPrompt") : t("backupPrompt")}
         </p>
         <AuthTextField
           key={codeKind}
-          label={codeKind === "totp" ? "Authentication code" : "Backup code"}
+          label={codeKind === "totp" ? t("totpLabel") : t("backupLabel")}
           name="code"
           mono
           autoFocus
@@ -117,8 +115,8 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
           error={error}
           disabled={isPending}
         />
-        <AuthSubmit pending={isPending} pendingLabel="Checking…">
-          Verify
+        <AuthSubmit pending={isPending} pendingLabel={t("checking")}>
+          {t("verify")}
         </AuthSubmit>
         <button
           type="button"
@@ -129,9 +127,7 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
           }}
           className={`self-start text-xs ${AUTH_LINK}`}
         >
-          {codeKind === "totp"
-            ? "Use a backup code instead"
-            : "Use the authenticator app instead"}
+          {codeKind === "totp" ? t("useBackup") : t("useTotp")}
         </button>
       </form>
     );
@@ -140,7 +136,7 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
   return (
     <form onSubmit={handleSignIn} className="flex flex-col gap-4" noValidate>
       <AuthTextField
-        label="Username"
+        label={t("username")}
         name="username"
         autoComplete="username"
         autoFocus
@@ -153,7 +149,7 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
         disabled={isPending}
       />
       <AuthTextField
-        label="Password"
+        label={t("password")}
         name="password"
         type="password"
         autoComplete="current-password"
@@ -165,14 +161,14 @@ export function LoginForm({ registrationOpen }: LoginFormProps) {
         error={error}
         disabled={isPending}
       />
-      <AuthSubmit pending={isPending} pendingLabel="Signing in…">
-        Sign in
+      <AuthSubmit pending={isPending} pendingLabel={t("signingIn")}>
+        {t("signIn")}
       </AuthSubmit>
       {registrationOpen && (
         <p className="pt-2 text-muted-foreground text-xs">
-          No account yet?{" "}
+          {t("noAccountYet")}{" "}
           <Link href="/register" className={AUTH_LINK}>
-            Create account
+            {t("createAccount")}
           </Link>
         </p>
       )}

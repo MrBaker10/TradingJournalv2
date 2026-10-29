@@ -2,8 +2,11 @@ import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import {
   LANGUAGE_COOKIE,
+  LANGUAGE_COOKIE_OPTIONS,
   type Language,
+  languageOfPath,
   resolveLanguage,
+  storedLanguageOf,
 } from "@/lib/i18n/languages";
 
 // Every request without a session is turned away here, before a page or a
@@ -18,7 +21,9 @@ import {
 //
 // Pages also get their language here (docs/adr/0008): a path without a valid
 // prefix is redirected by resolveLanguage, which holds every rule; this file
-// only feeds it the request.
+// only feeds it the request. Every page served under a prefix also stores
+// that language in the cookie, so a signed-out visitor's next unprefixed path
+// keeps it — the footer switch on the signed-out pages is a plain link.
 
 /**
  * The only paths reachable without a session. Everything else is behind one.
@@ -41,18 +46,39 @@ function withoutLanguage(pathname: string, language: Language): string {
   return pathname.slice(language.length + 1) || "/";
 }
 
+/**
+ * The signed-in user's stored language for a path without a prefix. A failed
+ * lookup counts as none: the redirect still lands on a prefixed path, whose
+ * own session check below answers the outage.
+ */
+async function storedLanguageFor(request: NextRequest) {
+  try {
+    const session = await auth.api.getSession({ headers: request.headers });
+    return session
+      ? storedLanguageOf({
+          username: session.user.username ?? "",
+          language: session.user.language,
+        })
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isApi = pathname.startsWith("/api/");
+  const cookie = request.cookies.get(LANGUAGE_COOKIE)?.value;
 
   // Route handlers carry no language; pages always do.
   let language: Language | null = null;
   if (!isApi) {
     const decision = resolveLanguage({
       pathname,
-      // users.language arrives with the stored-language ticket.
-      storedLanguage: null,
-      cookie: request.cookies.get(LANGUAGE_COOKIE)?.value,
+      storedLanguage: languageOfPath(pathname)
+        ? null
+        : await storedLanguageFor(request),
+      cookie,
       acceptLanguage: request.headers.get("accept-language"),
     });
     if (decision.kind === "redirect") {
@@ -63,9 +89,18 @@ export async function proxy(request: NextRequest) {
     language = decision.language;
   }
 
+  /** Lets the request through, remembering a page's language on the device. */
+  function pass() {
+    const response = NextResponse.next();
+    if (language && cookie !== language) {
+      response.cookies.set(LANGUAGE_COOKIE, language, LANGUAGE_COOKIE_OPTIONS);
+    }
+    return response;
+  }
+
   const route = language ? withoutLanguage(pathname, language) : pathname;
   if (isPublic(route)) {
-    return NextResponse.next();
+    return pass();
   }
 
   let session: Awaited<ReturnType<typeof auth.api.getSession>>;
@@ -91,7 +126,7 @@ export async function proxy(request: NextRequest) {
     );
   }
   if (session) {
-    return NextResponse.next();
+    return pass();
   }
 
   // A route handler (the only request without a language) answers a status,

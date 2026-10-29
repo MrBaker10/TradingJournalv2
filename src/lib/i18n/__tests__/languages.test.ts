@@ -4,7 +4,9 @@ import {
   type LanguageRequest,
   languageFromAcceptHeader,
   languageOfPath,
+  registrationLanguage,
   resolveLanguage,
+  storedLanguageOf,
   withLanguage,
 } from "../languages";
 
@@ -144,5 +146,37 @@ describe("path helpers", () => {
     expect(isLanguage("en")).toBe(true);
     expect(isLanguage("fr")).toBe(false);
     expect(isLanguage(undefined)).toBe(false);
+  });
+});
+
+describe("storedLanguageOf, the demo exception of docs/adr/0008", () => {
+  it("reads a user's stored language", () => {
+    expect(storedLanguageOf({ username: "trader", language: "de" })).toBe("de");
+    expect(storedLanguageOf({ username: "trader", language: "en" })).toBe("en");
+  });
+
+  it("has none for the demo user, in any spelling, so the cookie decides", () => {
+    expect(storedLanguageOf({ username: "demo", language: "en" })).toBeNull();
+    expect(storedLanguageOf({ username: "Demo", language: "de" })).toBeNull();
+  });
+
+  it("has none for a missing or unknown value", () => {
+    expect(
+      storedLanguageOf({ username: "trader", language: undefined }),
+    ).toBeNull();
+    expect(storedLanguageOf({ username: "trader", language: "fr" })).toBeNull();
+  });
+});
+
+describe("registrationLanguage", () => {
+  it("keeps the language of the registration page", () => {
+    expect(registrationLanguage("de")).toBe("de");
+    expect(registrationLanguage("en")).toBe("en");
+  });
+
+  it("falls back to English for anything a client could send instead", () => {
+    for (const value of [undefined, null, "", "fr", "DE", 1, {}]) {
+      expect(registrationLanguage(value)).toBe("en");
+    }
   });
 });

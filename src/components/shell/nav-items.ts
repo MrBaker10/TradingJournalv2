@@ -11,41 +11,47 @@ import {
   Wallet,
 } from "lucide-react";
 
+import type en from "@/lib/i18n/messages/en.json";
+
+/** The item's label in the dictionary, under `nav.items`. */
+export type NavItemKey = keyof (typeof en)["nav"]["items"];
+
 export interface NavItem {
-  label: string;
+  key: NavItemKey;
   href: string;
   icon: LucideIcon;
 }
 
 export interface NavGroup {
-  label: string;
+  /** The group's label in the dictionary, under `nav.groups`. */
+  key: keyof (typeof en)["nav"]["groups"];
   items: NavItem[];
 }
 
 /** The navigation by what the trader is doing (Design.md §3.1). */
 export const navGroups: NavGroup[] = [
   {
-    label: "Daily",
+    key: "daily",
     items: [
-      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { label: "Trade Journal", href: "/journal", icon: NotebookText },
-      { label: "Econ Calendar", href: "/econ-calendar", icon: CalendarDays },
+      { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { key: "journal", href: "/journal", icon: NotebookText },
+      { key: "econCalendar", href: "/econ-calendar", icon: CalendarDays },
     ],
   },
   {
-    label: "Review",
+    key: "review",
     items: [
-      { label: "Analytics", href: "/analytics", icon: BarChart3 },
-      { label: "Progress", href: "/progress", icon: TrendingUp },
-      { label: "Ledger", href: "/ledger", icon: Wallet },
+      { key: "analytics", href: "/analytics", icon: BarChart3 },
+      { key: "progress", href: "/progress", icon: TrendingUp },
+      { key: "ledger", href: "/ledger", icon: Wallet },
     ],
   },
   {
-    label: "Set up",
+    key: "setUp",
     items: [
-      { label: "Strategies", href: "/strategies", icon: ListChecks },
-      { label: "Prop Firm Rules", href: "/prop-firms", icon: Landmark },
-      { label: "Settings", href: "/settings", icon: Settings },
+      { key: "strategies", href: "/strategies", icon: ListChecks },
+      { key: "propFirms", href: "/prop-firms", icon: Landmark },
+      { key: "settings", href: "/settings", icon: Settings },
     ],
   },
 ];

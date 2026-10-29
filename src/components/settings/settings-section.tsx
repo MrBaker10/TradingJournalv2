@@ -1,11 +1,14 @@
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+// In page order; each label is `settings.sections.<id>` in the dictionary.
 export const SETTINGS_SECTIONS = [
-  { id: "accounts", label: "Accounts" },
-  { id: "checklist", label: "Checklist" },
-  { id: "data", label: "Data" },
-  { id: "security", label: "Security" },
+  { id: "accounts" },
+  { id: "checklist" },
+  { id: "data" },
+  { id: "language" },
+  { id: "security" },
 ] as const;
 
 export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number]["id"];
@@ -22,7 +25,8 @@ export function SettingsSection({
   className?: string;
   children: ReactNode;
 }) {
-  const label = SETTINGS_SECTIONS.find((section) => section.id === id)?.label;
+  const t = useTranslations("settings.sections");
+  const label = t(id);
   return (
     <section
       id={id}

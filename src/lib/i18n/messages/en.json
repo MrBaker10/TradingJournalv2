@@ -2,5 +2,112 @@
   "app": {
     "title": "Trading Journal",
     "description": "Trade journal for prop-firm futures traders"
+  },
+  "languages": {
+    "en": "English",
+    "de": "Deutsch",
+    "switchLabel": "Language"
+  },
+  "nav": {
+    "main": "Main",
+    "groups": {
+      "daily": "Daily",
+      "review": "Review",
+      "setUp": "Set up"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "journal": "Trade Journal",
+      "econCalendar": "Econ Calendar",
+      "analytics": "Analytics",
+      "progress": "Progress",
+      "ledger": "Ledger",
+      "strategies": "Strategies",
+      "propFirms": "Prop Firm Rules",
+      "settings": "Settings"
+    }
+  },
+  "shell": {
+    "logTrade": "Log trade",
+    "importTrades": "Import trades",
+    "search": "Search",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar",
+    "signOut": "Sign out",
+    "navigation": "Navigation",
+    "openNavigation": "Open navigation",
+    "closeNavigation": "Close navigation",
+    "themeLabel": "Theme: {theme}",
+    "themes": {
+      "dark": "Dark",
+      "light": "Light",
+      "system": "System"
+    },
+    "palette": {
+      "title": "Command palette",
+      "description": "Open a page, run an action, switch the account or the theme",
+      "placeholder": "Type a page, an action, an account or a theme…",
+      "empty": "Nothing matches.",
+      "actions": "Actions",
+      "switchAccount": "Switch account",
+      "theme": "Theme"
+    }
+  },
+  "accountSwitcher": {
+    "allAccounts": "All accounts",
+    "accounts": "Accounts",
+    "practice": "Practice",
+    "practiceNotInTotals": "Practice · not in totals",
+    "practiceExcluded": "Practice · excluded from totals",
+    "trigger": "Account: {name}",
+    "triggerPractice": "Account: {name}, practice"
+  },
+  "auth": {
+    "brand": "Trading Journal",
+    "welcome": "Welcome",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "createAccount": "Create account",
+    "creating": "Creating…",
+    "username": "Username",
+    "password": "Password",
+    "displayName": "Display name",
+    "timezone": "Timezone",
+    "detectingTimezone": "Detecting…",
+    "timezoneHint": "The clock you sit in front of while trading.",
+    "usernameHint": "This is how you sign in. It can't be changed.",
+    "noAccountYet": "No account yet?",
+    "haveAccount": "Already have an account?",
+    "registrationClosed": "New accounts can't be created here.",
+    "backToSignIn": "Back to sign in",
+    "signInFailed": "Username or password is wrong.",
+    "tooManyAttempts": "Too many attempts. Wait a minute, then try again.",
+    "usernameTaken": "That username is taken. Pick another.",
+    "createFailed": "Couldn't create the account. Try again.",
+    "totpPrompt": "Enter the six-digit code from your authenticator app.",
+    "backupPrompt": "Enter one of the backup codes you wrote down. Each works once.",
+    "totpLabel": "Authentication code",
+    "backupLabel": "Backup code",
+    "checking": "Checking…",
+    "verify": "Verify",
+    "totpMismatch": "That code didn't match. Codes change every 30 seconds — try the current one.",
+    "backupMismatch": "That backup code didn't match, or it was used already.",
+    "useBackup": "Use a backup code instead",
+    "useTotp": "Use the authenticator app instead"
+  },
+  "settings": {
+    "language": {
+      "hint": "The language of the app. What you typed stays as you wrote it.",
+      "demoHint": "On the demo account the language applies to this browser only.",
+      "saveFailed": "Couldn't change the language."
+    },
+    "sections": {
+      "toc": "Settings sections",
+      "accounts": "Accounts",
+      "checklist": "Checklist",
+      "data": "Data",
+      "language": "Language",
+      "security": "Security"
+    }
   }
 }

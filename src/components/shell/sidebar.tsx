@@ -6,6 +6,7 @@ import {
   PanelLeftOpen,
   Plus,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Kbd } from "@/components/ui/kbd";
 import { Link } from "@/lib/i18n/navigation";
 import type { ThemePick } from "@/lib/theme";
@@ -44,6 +45,7 @@ export function Sidebar({
   onToggle: () => void;
   onOpenPalette: () => void;
 }) {
+  const t = useTranslations("shell");
   const itemShape = collapsed ? "w-9 justify-center" : "gap-2.5 px-2";
 
   return (
@@ -67,13 +69,13 @@ export function Sidebar({
           collapsed={collapsed}
           label={
             <>
-              Expand sidebar <Kbd>[</Kbd>
+              {t("expandSidebar")} <Kbd>[</Kbd>
             </>
           }
         >
           <button
             type="button"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={t(collapsed ? "expandSidebar" : "collapseSidebar")}
             aria-expanded={!collapsed}
             onClick={onToggle}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/70 transition-[color,background-color,scale] duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-ring active:scale-95"
@@ -94,19 +96,19 @@ export function Sidebar({
           collapsed={collapsed}
           label={
             <>
-              Log trade <Kbd>C</Kbd>
+              {t("logTrade")} <Kbd>C</Kbd>
             </>
           }
         >
           <Link
             href={LOG_TRADE_HREF}
-            aria-label={collapsed ? "Log trade" : undefined}
+            aria-label={collapsed ? t("logTrade") : undefined}
             className={`${SIDEBAR_ITEM_CLASS} ${itemShape} bg-primary font-medium text-primary-foreground shadow-sm hover:bg-primary/85 active:bg-primary/75`}
           >
             <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
             {!collapsed && (
               <>
-                Log trade
+                {t("logTrade")}
                 <Kbd className="ml-auto">C</Kbd>
               </>
             )}
@@ -116,20 +118,20 @@ export function Sidebar({
           collapsed={collapsed}
           label={
             <>
-              Search <Kbd>⌘K</Kbd>
+              {t("search")} <Kbd>⌘K</Kbd>
             </>
           }
         >
           <button
             type="button"
-            aria-label={collapsed ? "Search" : undefined}
+            aria-label={collapsed ? t("search") : undefined}
             onClick={onOpenPalette}
             className={`${SIDEBAR_ITEM_CLASS} ${itemShape} text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground`}
           >
             <CommandIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
             {!collapsed && (
               <>
-                Search
+                {t("search")}
                 <Kbd className="ml-auto">⌘K</Kbd>
               </>
             )}

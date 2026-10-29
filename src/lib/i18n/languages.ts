@@ -2,6 +2,8 @@
 // how the cookie reads, and which language a request gets. Pure, so the proxy,
 // the next-intl routing and the tests share one definition.
 
+import { isDemoUsername } from "../../domain/demo.ts";
+
 export const LANGUAGES = ["en", "de"] as const;
 
 export type Language = (typeof LANGUAGES)[number];
@@ -9,8 +11,18 @@ export type Language = (typeof LANGUAGES)[number];
 /** English is the fallback whenever nothing else names a language. */
 export const DEFAULT_LANGUAGE: Language = "en";
 
-/** The cookie that holds a signed-out visitor's pick, per device. */
+/**
+ * The cookie that holds the language of the last page this device was served:
+ * a signed-out visitor's pick, and the demo visitor's (docs/adr/0008).
+ */
 export const LANGUAGE_COOKIE = "language";
+
+/** How the cookie is set: one year, every path, sent on top-level navigation. */
+export const LANGUAGE_COOKIE_OPTIONS = {
+  maxAge: 60 * 60 * 24 * 365,
+  sameSite: "lax",
+  path: "/",
+} as const;
 
 /** Whether an untrusted value is one of the languages, with no fallback. */
 export function isLanguage(value: unknown): value is Language {
@@ -56,6 +68,24 @@ export function languageOfPath(pathname: string): Language | null {
 /** The same path under a language prefix; `/` becomes `/de`. */
 export function withLanguage(language: Language, pathname: string): string {
   return pathname === "/" ? `/${language}` : `/${language}${pathname}`;
+}
+
+/**
+ * The language a signed-in user has stored, as resolveLanguage reads it. The
+ * shared demo user has none: its row is never written, so its visitors'
+ * cookies decide instead (docs/adr/0008).
+ */
+export function storedLanguageOf(user: {
+  username: string;
+  language: unknown;
+}): Language | null {
+  if (isDemoUsername(user.username)) return null;
+  return isLanguage(user.language) ? user.language : null;
+}
+
+/** The language a new account starts in: its registration page's, else English. */
+export function registrationLanguage(value: unknown): Language {
+  return isLanguage(value) ? value : DEFAULT_LANGUAGE;
 }
 
 export interface LanguageRequest {

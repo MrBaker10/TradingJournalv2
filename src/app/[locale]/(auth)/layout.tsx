@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { LanguageLinks } from "@/components/i18n/language-links";
 
 // Front page, login and registration: the only pages reachable without a
 // session (src/proxy.ts). All three read REGISTRATION_OPEN, which has to be
@@ -6,5 +7,12 @@ import type { ReactNode } from "react";
 export const dynamic = "force-dynamic";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
-  return children;
+  return (
+    <>
+      {children}
+      <footer className="flex justify-center px-4 pb-6">
+        <LanguageLinks />
+      </footer>
+    </>
+  );
 }

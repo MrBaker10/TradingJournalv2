@@ -2,5 +2,112 @@
   "app": {
     "title": "Trading Journal",
     "description": "Trading-Journal für Prop-Firm-Futures-Trader"
+  },
+  "languages": {
+    "en": "English",
+    "de": "Deutsch",
+    "switchLabel": "Sprache"
+  },
+  "nav": {
+    "main": "Hauptnavigation",
+    "groups": {
+      "daily": "Täglich",
+      "review": "Rückblick",
+      "setUp": "Einrichten"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "journal": "Trade-Journal",
+      "econCalendar": "Wirtschaftskalender",
+      "analytics": "Analysen",
+      "progress": "Fortschritt",
+      "ledger": "Ledger",
+      "strategies": "Strategien",
+      "propFirms": "Prop-Firm-Regeln",
+      "settings": "Einstellungen"
+    }
+  },
+  "shell": {
+    "logTrade": "Trade erfassen",
+    "importTrades": "Trades importieren",
+    "search": "Suche",
+    "expandSidebar": "Seitenleiste ausklappen",
+    "collapseSidebar": "Seitenleiste einklappen",
+    "signOut": "Abmelden",
+    "navigation": "Navigation",
+    "openNavigation": "Navigation öffnen",
+    "closeNavigation": "Navigation schließen",
+    "themeLabel": "Design: {theme}",
+    "themes": {
+      "dark": "Dunkel",
+      "light": "Hell",
+      "system": "System"
+    },
+    "palette": {
+      "title": "Befehlspalette",
+      "description": "Seite öffnen, Aktion ausführen, Konto oder Design wechseln",
+      "placeholder": "Seite, Aktion, Konto oder Design eingeben …",
+      "empty": "Nichts gefunden.",
+      "actions": "Aktionen",
+      "switchAccount": "Konto wechseln",
+      "theme": "Design"
+    }
+  },
+  "accountSwitcher": {
+    "allAccounts": "Alle Konten",
+    "accounts": "Konten",
+    "practice": "Practice",
+    "practiceNotInTotals": "Practice · nicht in Summen",
+    "practiceExcluded": "Practice · aus Summen ausgenommen",
+    "trigger": "Konto: {name}",
+    "triggerPractice": "Konto: {name}, Practice"
+  },
+  "auth": {
+    "brand": "Trading Journal",
+    "welcome": "Willkommen",
+    "signIn": "Anmelden",
+    "signingIn": "Anmeldung läuft …",
+    "createAccount": "Konto erstellen",
+    "creating": "Wird erstellt …",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "displayName": "Anzeigename",
+    "timezone": "Zeitzone",
+    "detectingTimezone": "Wird erkannt …",
+    "timezoneHint": "Die Uhr, vor der du beim Traden sitzt.",
+    "usernameHint": "Damit meldest du dich an. Er lässt sich nicht ändern.",
+    "noAccountYet": "Noch kein Konto?",
+    "haveAccount": "Schon ein Konto?",
+    "registrationClosed": "Neue Konten können hier nicht erstellt werden.",
+    "backToSignIn": "Zurück zur Anmeldung",
+    "signInFailed": "Benutzername oder Passwort ist falsch.",
+    "tooManyAttempts": "Zu viele Versuche. Warte eine Minute und versuche es dann erneut.",
+    "usernameTaken": "Dieser Benutzername ist vergeben. Wähle einen anderen.",
+    "createFailed": "Das Konto konnte nicht erstellt werden. Versuche es erneut.",
+    "totpPrompt": "Gib den sechsstelligen Code aus deiner Authenticator-App ein.",
+    "backupPrompt": "Gib einen der Backup-Codes ein, die du dir notiert hast. Jeder funktioniert einmal.",
+    "totpLabel": "Authentifizierungscode",
+    "backupLabel": "Backup-Code",
+    "checking": "Wird geprüft …",
+    "verify": "Bestätigen",
+    "totpMismatch": "Der Code passt nicht. Codes wechseln alle 30 Sekunden – nimm den aktuellen.",
+    "backupMismatch": "Der Backup-Code passt nicht oder wurde schon verwendet.",
+    "useBackup": "Stattdessen einen Backup-Code verwenden",
+    "useTotp": "Stattdessen die Authenticator-App verwenden"
+  },
+  "settings": {
+    "language": {
+      "hint": "Die Sprache der App. Was du eingegeben hast, bleibt, wie du es geschrieben hast.",
+      "demoHint": "Im Demo-Konto gilt die Sprache nur für diesen Browser.",
+      "saveFailed": "Die Sprache konnte nicht geändert werden."
+    },
+    "sections": {
+      "toc": "Bereiche der Einstellungen",
+      "accounts": "Konten",
+      "checklist": "Checkliste",
+      "data": "Daten",
+      "language": "Sprache",
+      "security": "Sicherheit"
+    }
   }
 }

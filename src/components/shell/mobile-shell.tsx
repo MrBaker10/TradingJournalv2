@@ -2,6 +2,7 @@
 
 import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "@/lib/i18n/navigation";
 import { AccountSwitcher } from "./account-switcher";
@@ -31,10 +32,13 @@ export function MobileShell({
   selectedAccountId,
   theme,
 }: ShellProps) {
+  const t = useTranslations("shell");
+  const tItems = useTranslations("nav.items");
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const title = activeNavItem(pathname)?.label;
+  const activeKey = activeNavItem(pathname)?.key;
+  const title = activeKey && tItems(activeKey);
 
   useEffect(() => {
     if (open && !dialogRef.current?.open) dialogRef.current?.showModal();
@@ -76,7 +80,7 @@ export function MobileShell({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="Open navigation"
+          aria-label={t("openNavigation")}
           aria-expanded={open}
           aria-controls="mobile-navigation"
           className={ICON_BUTTON_CLASS}
@@ -96,7 +100,7 @@ export function MobileShell({
       <dialog
         id="mobile-navigation"
         ref={dialogRef}
-        aria-label="Navigation"
+        aria-label={t("navigation")}
         onCancel={(event) => {
           // Escape: animate out first, then close (onExitComplete).
           event.preventDefault();
@@ -132,7 +136,7 @@ export function MobileShell({
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
-                    aria-label="Close navigation"
+                    aria-label={t("closeNavigation")}
                     className={ICON_BUTTON_CLASS}
                   >
                     <X className="h-5 w-5" aria-hidden="true" />

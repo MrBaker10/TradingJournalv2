@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Upload } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   Command,
   CommandDialog,
@@ -19,7 +20,7 @@ import { useRouter } from "@/lib/i18n/navigation";
 import { THEME_PICKS, type ThemePick } from "@/lib/theme";
 import type { SwitcherAccount } from "./account-switcher";
 import { IMPORT_TRADES_HREF, LOG_TRADE_HREF, navGroups } from "./nav-items";
-import { THEME_OPTIONS } from "./theme-options";
+import { THEME_ICONS } from "./theme-options";
 
 /**
  * The ⌘K palette (Design.md §3.1): actions, every page, the account switch
@@ -38,6 +39,7 @@ export function CommandPalette({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations();
   const router = useRouter();
   const { select } = useSelectAccount();
   const { pick, choose } = useThemePick(theme);
@@ -62,39 +64,42 @@ export function CommandPalette({
     <CommandDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Command palette"
-      description="Open a page, run an action, switch the account or the theme"
+      title={t("shell.palette.title")}
+      description={t("shell.palette.description")}
     >
       <Command>
-        <CommandInput placeholder="Type a page, an action, an account or a theme…" />
+        <CommandInput placeholder={t("shell.palette.placeholder")} />
         <CommandList>
-          <CommandEmpty>Nothing matches.</CommandEmpty>
-          <CommandGroup heading="Actions">
+          <CommandEmpty>{t("shell.palette.empty")}</CommandEmpty>
+          <CommandGroup heading={t("shell.palette.actions")}>
             <CommandItem onSelect={() => go(LOG_TRADE_HREF)}>
               <Plus aria-hidden="true" />
-              Log trade
+              {t("shell.logTrade")}
               <CommandShortcut>C</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => go(IMPORT_TRADES_HREF)}>
               <Upload aria-hidden="true" />
-              Import trades
+              {t("shell.importTrades")}
             </CommandItem>
           </CommandGroup>
           <CommandSeparator />
           {navGroups.map((group) => (
-            <CommandGroup key={group.label} heading={group.label}>
-              {group.items.map(({ href, label, icon: Icon }) => (
+            <CommandGroup
+              key={group.key}
+              heading={t(`nav.groups.${group.key}`)}
+            >
+              {group.items.map(({ href, key, icon: Icon }) => (
                 <CommandItem key={href} onSelect={() => go(href)}>
                   <Icon aria-hidden="true" />
-                  {label}
+                  {t(`nav.items.${key}`)}
                 </CommandItem>
               ))}
             </CommandGroup>
           ))}
           <CommandSeparator />
-          <CommandGroup heading="Switch account">
+          <CommandGroup heading={t("shell.palette.switchAccount")}>
             <CommandItem onSelect={() => selectAccount(null)}>
-              All accounts
+              {t("accountSwitcher.allAccounts")}
             </CommandItem>
             {real.map((account) => (
               <CommandItem
@@ -115,15 +120,16 @@ export function CommandPalette({
               >
                 {account.name}
                 <CommandShortcut className="text-practice-foreground">
-                  Practice
+                  {t("accountSwitcher.practice")}
                 </CommandShortcut>
               </CommandItem>
             ))}
           </CommandGroup>
           <CommandSeparator />
-          <CommandGroup heading="Theme">
+          <CommandGroup heading={t("shell.palette.theme")}>
             {THEME_PICKS.map((value) => {
-              const { label, icon: Icon } = THEME_OPTIONS[value];
+              const Icon = THEME_ICONS[value];
+              const label = t(`shell.themes.${value}`);
               const current = value === pick;
               return (
                 <CommandItem

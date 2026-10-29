@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { SELECT_CLASS } from "@/components/settings/fields";
 import { FieldError, FieldLabel } from "@/components/trades/form-blocks";
@@ -17,6 +18,8 @@ type FieldErrors = Partial<
 >;
 
 export function RegisterForm() {
+  const t = useTranslations("auth");
+  const locale = useLocale();
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -57,16 +60,18 @@ export function RegisterForm() {
         name: parsed.data.displayName,
         password: parsed.data.password,
         timezone: parsed.data.timezone,
+        // The account starts in this page's language (docs/adr/0008).
+        language: locale,
         // Better Auth requires an email; the server replaces whatever is sent
         // with this same placeholder (src/lib/auth/auth.ts).
         email: placeholderEmail(parsed.data.username),
       });
       if (error) {
         if (error.code === "USERNAME_IS_ALREADY_TAKEN") {
-          setErrors({ username: "That username is taken. Pick another." });
+          setErrors({ username: t("usernameTaken") });
         } else {
           // The form keeps its input; only the attempt failed (Design.md §3.11).
-          notifyError("Couldn't create the account. Try again.");
+          notifyError(t("createFailed"));
         }
         return;
       }
@@ -82,7 +87,7 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       <AuthTextField
-        label="Username"
+        label={t("username")}
         name="username"
         autoComplete="username"
         autoFocus
@@ -92,11 +97,11 @@ export function RegisterForm() {
           clearError("username");
         }}
         error={errors.username}
-        hint="This is how you sign in. It can't be changed."
+        hint={t("usernameHint")}
         disabled={isPending}
       />
       <AuthTextField
-        label="Display name"
+        label={t("displayName")}
         name="displayName"
         autoComplete="nickname"
         value={displayName}
@@ -108,7 +113,7 @@ export function RegisterForm() {
         disabled={isPending}
       />
       <AuthTextField
-        label="Password"
+        label={t("password")}
         name="password"
         type="password"
         autoComplete="new-password"
@@ -121,7 +126,7 @@ export function RegisterForm() {
         disabled={isPending}
       />
       <div className="flex min-w-0 flex-col gap-1.5">
-        <FieldLabel htmlFor={timezoneId}>Timezone</FieldLabel>
+        <FieldLabel htmlFor={timezoneId}>{t("timezone")}</FieldLabel>
         <select
           id={timezoneId}
           name="timezone"
@@ -135,7 +140,9 @@ export function RegisterForm() {
           aria-describedby={`${timezoneId}-${errors.timezone ? "error" : "hint"}`}
           className={SELECT_CLASS}
         >
-          {timezone === "" && <option value="">Detecting…</option>}
+          {timezone === "" && (
+            <option value="">{t("detectingTimezone")}</option>
+          )}
           {(zones.includes(timezone) || timezone === ""
             ? zones
             : [timezone, ...zones]
@@ -150,18 +157,18 @@ export function RegisterForm() {
             id={`${timezoneId}-hint`}
             className="text-muted-foreground text-xs"
           >
-            The clock you sit in front of while trading.
+            {t("timezoneHint")}
           </p>
         )}
         <FieldError id={`${timezoneId}-error`} message={errors.timezone} />
       </div>
-      <AuthSubmit pending={isPending} pendingLabel="Creating…">
-        Create account
+      <AuthSubmit pending={isPending} pendingLabel={t("creating")}>
+        {t("createAccount")}
       </AuthSubmit>
       <p className="text-muted-foreground text-xs">
-        Already have an account?{" "}
+        {t("haveAccount")}{" "}
         <Link href="/login" className={AUTH_LINK}>
-          Sign in
+          {t("signIn")}
         </Link>
       </p>
     </form>
