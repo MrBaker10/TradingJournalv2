@@ -464,3 +464,60 @@ describe("hiding and showing the guide", () => {
     });
   });
 });
+
+describe("completing the guide", () => {
+  it("shows the completion once an active guide has an account and a missed setup, then writes completed", async () => {
+    await fixture(async (f) => {
+      await applySetupGuideAction(f.userId, "accept", f.tx);
+      await addAccount(f, f.userId, { isPractice: true });
+      await addTrade(f, f.userId, { taken: false });
+      expect(await getSetupGuide(f.userId, f.tx)).toEqual(
+        expect.objectContaining({ kind: "completion" }),
+      );
+      await applySetupGuideAction(f.userId, "complete", f.tx);
+      const [row] = await f.tx
+        .select({ state: users.setupGuide })
+        .from(users)
+        .where(eq(users.id, f.userId));
+      expect(row.state).toBe("completed");
+      expect(await getSetupGuide(f.userId, f.tx)).toEqual({
+        kind: "hidden",
+        offerSwitch: false,
+      });
+    });
+  });
+
+  it("refuses to complete before both required steps are done", async () => {
+    await fixture(async (f) => {
+      await applySetupGuideAction(f.userId, "accept", f.tx);
+      await addAccount(f, f.userId);
+      await expect(
+        applySetupGuideAction(f.userId, "complete", f.tx),
+      ).rejects.toThrow(SetupGuideError);
+    });
+  });
+
+  it.each(["decline", "hide"] as const)(
+    "gives no completion to a user who chose %s and then finished both required steps",
+    async (choice) => {
+      await fixture(async (f) => {
+        if (choice === "decline") {
+          await applySetupGuideAction(f.userId, "decline", f.tx);
+          await addAccount(f, f.userId);
+        } else {
+          await applySetupGuideAction(f.userId, "accept", f.tx);
+          await addAccount(f, f.userId);
+          await applySetupGuideAction(f.userId, "hide", f.tx);
+        }
+        await addTrade(f, f.userId, { taken: false });
+        expect(await getSetupGuide(f.userId, f.tx)).toEqual({
+          kind: "hidden",
+          offerSwitch: false,
+        });
+        await expect(
+          applySetupGuideAction(f.userId, "complete", f.tx),
+        ).rejects.toThrow(SetupGuideError);
+      });
+    },
+  );
+});

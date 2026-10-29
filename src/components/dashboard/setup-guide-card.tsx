@@ -7,6 +7,7 @@ import {
   type SetupStepKey,
 } from "@/domain/setup-guide";
 import { cn } from "@/lib/utils";
+import { SetupGuideCompletion } from "./setup-guide-completion";
 import { SetupGuideHide } from "./setup-guide-hide";
 import { SetupGuideQuestion } from "./setup-guide-question";
 
@@ -25,7 +26,7 @@ const STEP_LINKS: Record<SetupStepKey, { label: string; href: string }> = {
 
 /**
  * The setup guide at the top of the dashboard (Design.md §3.2): the question,
- * then the step list. It explains where things are and never comments on
+ * then the step list, then its completion once. It explains where things are and never comments on
  * results. The page renders it only when the rules show something.
  */
 export function SetupGuideCard({
@@ -33,7 +34,7 @@ export function SetupGuideCard({
 }: {
   view: Exclude<SetupGuideView, { kind: "hidden" }>;
 }) {
-  return (
+  const card = (
     <section
       aria-labelledby="setup-guide-heading"
       className="flex flex-col gap-3 rounded-xl border bg-card p-4 text-card-foreground"
@@ -53,8 +54,8 @@ export function SetupGuideCard({
           <SetupGuideQuestion />
         </>
       ) : (
-        // Until the completion view lands (ticket 04), a finished guide is the
-        // same list with every required step ticked.
+        // The completion is the same list with every required step ticked,
+        // shown while the sweep plays.
         <ol className="flex flex-col">
           {view.steps.map((step) => (
             <SetupStepRow key={step.key} step={step} />
@@ -63,6 +64,11 @@ export function SetupGuideCard({
       )}
     </section>
   );
+  // The card brings its own space below, so the completion can fold it away
+  // together with the gap.
+  if (view.kind === "completion")
+    return <SetupGuideCompletion>{card}</SetupGuideCompletion>;
+  return <div className="pb-6">{card}</div>;
 }
 
 function SetupStepRow({ step }: { step: SetupStep }) {

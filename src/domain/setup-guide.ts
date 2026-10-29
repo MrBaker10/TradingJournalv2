@@ -77,8 +77,16 @@ export function setupGuideView(
   return { kind: "steps", steps: stepsOf(facts), canHide: facts.hasAccount };
 }
 
-/** What a user can do to the guide: answer the question, hide it, bring it back. */
-export type SetupGuideAction = "accept" | "decline" | "hide" | "show";
+/**
+ * What can happen to the guide: the user answers the question, hides it or
+ * brings it back; the dashboard completes it once its completion was shown.
+ */
+export type SetupGuideAction =
+  | "accept"
+  | "decline"
+  | "hide"
+  | "show"
+  | "complete";
 
 /**
  * The state an action leads to from what is shown now, or null when the rules
@@ -99,5 +107,7 @@ export function nextSetupGuideState(
       return view.kind === "steps" && view.canHide ? "dismissed" : null;
     case "show":
       return view.kind === "hidden" && view.offerSwitch ? "active" : null;
+    case "complete":
+      return view.kind === "completion" ? "completed" : null;
   }
 }

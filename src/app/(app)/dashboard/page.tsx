@@ -181,7 +181,7 @@ export default async function DashboardPage({
   // Design.md §3.2: the month fills the main area and the page reads from
   // month to detail; the process sits in the right column beside it.
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col">
       {/* Above everything else, and only while the rules show it. */}
       {setupGuide.kind !== "hidden" && <SetupGuideCard view={setupGuide} />}
       <div className="grid xl:grid-cols-[minmax(0,1fr)_320px]">

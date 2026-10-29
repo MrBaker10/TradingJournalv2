@@ -176,7 +176,24 @@ describe("nextSetupGuideState", () => {
     expect(next("completed", newUser, "show")).toBeNull();
   });
 
-  it.each(["accept", "decline", "hide", "show"] as const)(
+  it("completes an active guide once both required steps are done", () => {
+    expect(next("active", setUp, "complete")).toBe("completed");
+  });
+
+  it("refuses to complete a guide that is not showing its completion", () => {
+    expect(
+      next("active", { ...newUser, hasAccount: true }, "complete"),
+    ).toBeNull();
+    for (const state of [
+      "undecided",
+      "declined",
+      "dismissed",
+      "completed",
+    ] as const)
+      expect(next(state, setUp, "complete")).toBeNull();
+  });
+
+  it.each(["accept", "decline", "hide", "show", "complete"] as const)(
     "refuses %s for the demo user in every state",
     (action) => {
       for (const state of SETUP_GUIDE_STATES)

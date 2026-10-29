@@ -27,12 +27,17 @@ function failure(error: unknown): ActionResult {
 
 // The query refuses whatever the rules do not offer right now
 // (nextSetupGuideState).
-async function apply(action: SetupGuideAction): Promise<ActionResult> {
+async function apply(
+  action: SetupGuideAction,
+  { revalidate = true } = {},
+): Promise<ActionResult> {
   try {
     const user = await getCurrentUser();
     await applySetupGuideAction(user.id, action);
-    revalidatePath("/dashboard");
-    revalidatePath("/settings");
+    if (revalidate) {
+      revalidatePath("/dashboard");
+      revalidatePath("/settings");
+    }
     return { success: true, data: null };
   } catch (error) {
     return failure(error);
@@ -55,4 +60,14 @@ export async function hideSetupGuide(): Promise<ActionResult> {
 /** Settings' "Show setup guide", offered while a required step is open. */
 export async function showSetupGuide(): Promise<ActionResult> {
   return apply("show");
+}
+
+/**
+ * Called by the completion card once it has mounted, not while the dashboard
+ * renders: a GET that writes would spend the moment even when the response
+ * never reached anyone. No revalidation, like markDashboardSeen: a re-render
+ * would cut the sweep short, and the next request reads the new state anyway.
+ */
+export async function completeSetupGuide(): Promise<ActionResult> {
+  return apply("complete", { revalidate: false });
 }
