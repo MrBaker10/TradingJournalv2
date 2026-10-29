@@ -167,7 +167,7 @@ themes meet WCAG 2.2 AA.
 ## Further Notes
 
 - Contrast of the prototype palettes was computed with a scratch script; all Light
-  values above pass AA. The other candidates (A "Cool paper", C "Soft gray") also passed
-  and stay on the prototype branch.
+  values above pass AA. The other candidates (A "Cool paper", C "Soft gray") also passed.
+  The prototype branch was deleted after the merge; its last commit was `58e62d5`.
 - Tickets: `issues/01` palette and cookie (no switch yet), `issues/02` sidebar menu,
   `issues/03` command palette.
