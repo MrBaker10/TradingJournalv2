@@ -1,7 +1,7 @@
 "use client";
 
 import { SlidersHorizontal } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { RANGE_PRESETS } from "@/components/ui/range-preset-chips";
 import { groupByAssetClass } from "@/domain/instruments";
+import { useRouter } from "@/lib/i18n/navigation";
 import {
   activeJournalFilterCount,
   buildJournalHref,

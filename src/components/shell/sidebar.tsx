@@ -6,8 +6,8 @@ import {
   PanelLeftOpen,
   Plus,
 } from "lucide-react";
-import Link from "next/link";
 import { Kbd } from "@/components/ui/kbd";
+import { Link } from "@/lib/i18n/navigation";
 import type { ThemePick } from "@/lib/theme";
 import { AccountSwitcher, type SwitcherAccount } from "./account-switcher";
 import { LOG_TRADE_HREF } from "./nav-items";

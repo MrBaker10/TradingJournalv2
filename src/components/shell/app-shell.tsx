@@ -1,9 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed";
+import { useRouter } from "@/lib/i18n/navigation";
 import { isFieldTarget, shellShortcut } from "@/lib/shell/shortcuts";
 import { CommandPalette } from "./command-palette";
 import { MobileShell } from "./mobile-shell";

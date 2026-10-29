@@ -1,6 +1,6 @@
-import Link from "next/link";
 import type { JournalTradeRow } from "@/db/queries/trades";
 import { moneyTone, SIGN_TEXT, signOf } from "@/lib/dashboard/sign-tone";
+import { Link } from "@/lib/i18n/navigation";
 import { type DisplayCurrency, formatCents } from "@/lib/money";
 
 function signedR(r: number): string {

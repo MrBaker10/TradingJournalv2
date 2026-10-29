@@ -1,6 +1,6 @@
 import { ChevronRight } from "lucide-react";
-import Link from "next/link";
 import { RuleStatusLines } from "@/components/rule-status/rule-status-lines";
+import { Link } from "@/lib/i18n/navigation";
 import type { LinkedRuleStatus } from "@/lib/prop-firms/rule-status";
 import { formatDateWithYear } from "@/lib/time";
 

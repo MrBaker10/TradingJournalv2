@@ -1,5 +1,4 @@
 import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { TradeForm } from "@/components/trades/trade-form";
 import { buttonVariants } from "@/components/ui/button";
 import { listActiveAccountsForSwitcher } from "@/db/queries/accounts";
@@ -9,6 +8,7 @@ import { listStrategies } from "@/db/queries/strategies";
 import { listConfluenceGroups, listMistakeTags } from "@/db/queries/trades";
 import { isDemoUsername } from "@/domain/demo";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { Link } from "@/lib/i18n/navigation";
 import { strategyOptions } from "@/lib/trades/strategy-options";
 
 export default async function NewTradePage() {

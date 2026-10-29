@@ -2,8 +2,6 @@
 
 import { ArrowLeft, ArrowRight, Check, Loader2, Trash2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { type ComponentType, useRef, useState, useTransition } from "react";
 import {
   addTradeLink,
@@ -35,6 +33,7 @@ import type { JournalTradeRow } from "@/db/queries/trades";
 import { MAX_SCREENSHOTS_PER_TRADE } from "@/domain/trades";
 import { usePasteImages } from "@/hooks/use-paste-images";
 import { useTwoClickConfirm } from "@/hooks/use-two-click-confirm";
+import { Link, useRouter } from "@/lib/i18n/navigation";
 import {
   EMPTY_TRADE_FORM,
   EVIDENCE_STEP,

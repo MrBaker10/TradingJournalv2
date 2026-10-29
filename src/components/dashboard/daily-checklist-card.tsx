@@ -1,11 +1,11 @@
 "use client";
 
 import { Check } from "lucide-react";
-import Link from "next/link";
 import { useOptimistic, useState, useTransition } from "react";
 import { setChecklistStepChecked } from "@/actions/checklist";
 import { InlineMessage } from "@/components/ui/inline-message";
 import type { DailyChecklistItem } from "@/db/queries/checklist";
+import { Link } from "@/lib/i18n/navigation";
 import {
   CHECKLIST_PHASE_LABELS,
   CHECKLIST_PHASES,

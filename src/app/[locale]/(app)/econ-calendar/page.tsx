@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { EconEvents } from "@/components/econ/econ-events";
 import { EconFilters } from "@/components/econ/econ-filters";
 import {
@@ -9,6 +8,7 @@ import {
 import { groupByDay, tabRange } from "@/domain/econ";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { parseEconState } from "@/lib/econ/href";
+import { Link } from "@/lib/i18n/navigation";
 
 interface EconCalendarPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

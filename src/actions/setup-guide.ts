@@ -1,12 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import {
   applySetupGuideAction,
   SetupGuideError,
 } from "@/db/queries/setup-guide";
 import type { SetupGuideAction } from "@/domain/setup-guide";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { revalidatePage } from "@/lib/i18n/revalidate";
 import {
   answerSetupGuideSchema,
   SETUP_GUIDE_SAVE_FAILED,
@@ -35,8 +35,8 @@ async function apply(
     const user = await getCurrentUser();
     await applySetupGuideAction(user.id, action);
     if (revalidate) {
-      revalidatePath("/dashboard");
-      revalidatePath("/settings");
+      revalidatePage("/dashboard");
+      revalidatePage("/settings");
     }
     return { success: true, data: null };
   } catch (error) {

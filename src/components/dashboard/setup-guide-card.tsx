@@ -1,11 +1,11 @@
 import { Check, ChevronRight } from "lucide-react";
-import Link from "next/link";
 import {
   nextSetupGuideState,
   type SetupGuideView,
   type SetupStep,
   type SetupStepKey,
 } from "@/domain/setup-guide";
+import { Link } from "@/lib/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { SetupGuideCompletion } from "./setup-guide-completion";
 import { SetupGuideHide } from "./setup-guide-hide";

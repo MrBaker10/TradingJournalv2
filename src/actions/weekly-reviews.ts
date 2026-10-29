@@ -1,9 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { upsertWeeklyReview } from "@/db/queries/weekly-reviews";
 import { reviewWeekPosition } from "@/domain/review-week";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { revalidatePage } from "@/lib/i18n/revalidate";
 import { todayInTimeZone } from "@/lib/time";
 import {
   saveWeeklyReviewSchema,
@@ -48,7 +48,7 @@ export async function saveWeeklyReview(
       focusNextWeek: blankToNull(parsed.data.focusNextWeek),
     });
 
-    revalidatePath("/progress/weekly-review");
+    revalidatePage("/progress/weekly-review");
     return { success: true, data: null };
   } catch (error) {
     console.error("Weekly review save failed", {

@@ -50,7 +50,7 @@ describe("reduced motion, Design.md §4", () => {
   });
 
   it('keeps MotionConfig reducedMotion="user" at the app root', () => {
-    const layout = read("src/app/layout.tsx");
+    const layout = read("src/app/[locale]/layout.tsx");
     expect(layout).toContain('<MotionConfig reducedMotion="user">');
   });
 });

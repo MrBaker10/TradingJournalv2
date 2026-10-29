@@ -1,12 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { AuthTextField } from "@/components/auth/auth-text-field";
 import { Button } from "@/components/ui/button";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { notifyError } from "@/components/ui/toast";
 import { authClient } from "@/lib/auth/auth-client";
+import { useRouter } from "@/lib/i18n/navigation";
 import { ROW_ACTION, SettingsRow } from "./settings-row";
 
 // The danger zone of Design.md §3.8, set apart in `negative`: the first click

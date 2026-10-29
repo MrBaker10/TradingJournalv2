@@ -1,12 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { undoImportBatch } from "@/actions/import";
 import { Button } from "@/components/ui/button";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import { notifyProcess } from "@/components/ui/toast";
 import type { ImportBatchSummary } from "@/db/queries/import";
+import { useRouter } from "@/lib/i18n/navigation";
 import { calendarDateOf, formatDayLabel } from "@/lib/time";
 import { StepError } from "./step-error";
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { Maximize2, Pencil } from "lucide-react";
-import Link from "next/link";
 import {
   createContext,
   type ReactNode,
@@ -14,6 +13,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import type { JournalTradeRow } from "@/db/queries/trades";
 import { useRetainedTarget } from "@/hooks/use-retained-target";
+import { Link } from "@/lib/i18n/navigation";
 import type { DisplayCurrency } from "@/lib/money";
 import { TradeDetailBody } from "./trade-detail-body";
 

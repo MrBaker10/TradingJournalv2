@@ -1,10 +1,11 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { SELECT_CLASS } from "@/components/settings/fields";
 import { FieldLabel } from "@/components/trades/form-blocks";
 import { Input } from "@/components/ui/input";
 import type { LedgerAccount } from "@/db/queries/ledger";
+import { useRouter } from "@/lib/i18n/navigation";
 import { buildHref, type SearchParamMap } from "@/lib/search-params";
 
 interface LedgerFilterBarProps {

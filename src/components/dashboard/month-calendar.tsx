@@ -1,8 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import type { DayTotal } from "@/db/queries/dashboard";
 import type { IsoDate } from "@/domain/streak";
@@ -17,6 +16,7 @@ import {
   SIGN_TINT,
   signOf,
 } from "@/lib/dashboard/sign-tone";
+import { Link, useRouter } from "@/lib/i18n/navigation";
 import { buildJournalHref } from "@/lib/journal/href";
 import {
   type DisplayCurrency,

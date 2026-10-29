@@ -1,5 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
+import {
+  LANGUAGE_COOKIE,
+  type Language,
+  resolveLanguage,
+} from "@/lib/i18n/languages";
 
 // Every request without a session is turned away here, before a page or a
 // route handler runs. Proxy runs on the Node runtime by default in Next 16
@@ -10,11 +15,16 @@ import { auth } from "@/lib/auth/auth";
 // every page, Server Action and route handler, because a matcher that misses
 // a path would otherwise leave it open (Next docs, proxy.md, "Server
 // Functions").
+//
+// Pages also get their language here (docs/adr/0008): a path without a valid
+// prefix is redirected by resolveLanguage, which holds every rule; this file
+// only feeds it the request.
 
 /**
  * The only paths reachable without a session. Everything else is behind one.
- * `/api/cron/` has no session either — Vercel Cron calls it — and checks
- * `CRON_SECRET` itself; it returns no user data.
+ * Page paths are listed without their language prefix and are public under
+ * each one. `/api/cron/` has no session either — Vercel Cron calls it — and
+ * checks `CRON_SECRET` itself; it returns no user data.
  */
 const PUBLIC_PATHS = ["/", "/login", "/register"];
 const PUBLIC_PREFIXES = ["/api/auth/", "/api/cron/"];
@@ -26,9 +36,35 @@ function isPublic(pathname: string): boolean {
   );
 }
 
+/** `/de/journal` → `/journal`, `/de` → `/`. */
+function withoutLanguage(pathname: string, language: Language): string {
+  return pathname.slice(language.length + 1) || "/";
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (isPublic(pathname)) {
+  const isApi = pathname.startsWith("/api/");
+
+  // Route handlers carry no language; pages always do.
+  let language: Language | null = null;
+  if (!isApi) {
+    const decision = resolveLanguage({
+      pathname,
+      // users.language arrives with the stored-language ticket.
+      storedLanguage: null,
+      cookie: request.cookies.get(LANGUAGE_COOKIE)?.value,
+      acceptLanguage: request.headers.get("accept-language"),
+    });
+    if (decision.kind === "redirect") {
+      const target = request.nextUrl.clone();
+      target.pathname = decision.pathname;
+      return NextResponse.redirect(target);
+    }
+    language = decision.language;
+  }
+
+  const route = language ? withoutLanguage(pathname, language) : pathname;
+  if (isPublic(route)) {
     return NextResponse.next();
   }
 
@@ -40,7 +76,7 @@ export async function proxy(request: NextRequest) {
     // unreachable. Not treated as "signed out": a redirect to /login would
     // hide the outage, and signing in would fail on the same database.
     console.error("proxy: session lookup failed", error);
-    if (pathname.startsWith("/api/")) {
+    if (isApi) {
       return NextResponse.json(
         { error: "Service unavailable" },
         { status: 503 },
@@ -58,12 +94,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // A route handler answers a status, not a login page it cannot render.
-  if (pathname.startsWith("/api/")) {
+  // A route handler (the only request without a language) answers a status,
+  // not a login page it cannot render.
+  if (!language) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.redirect(new URL("/login", request.url));
+  return NextResponse.redirect(new URL(`/${language}/login`, request.url));
 }
 
 export const config = {

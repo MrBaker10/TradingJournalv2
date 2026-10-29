@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import {
   ChecklistError,
   createChecklistItem,
@@ -10,6 +9,7 @@ import {
   setChecklistCheck,
 } from "@/db/queries/checklist";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { revalidatePage } from "@/lib/i18n/revalidate";
 import { todayInTimeZone } from "@/lib/time";
 import {
   CHECKLIST_MOVE_FAILED,
@@ -46,8 +46,8 @@ function failure(
 }
 
 function revalidateChecklist() {
-  revalidatePath("/settings");
-  revalidatePath("/dashboard");
+  revalidatePage("/settings");
+  revalidatePage("/dashboard");
 }
 
 export async function addChecklistStep(input: unknown): Promise<ActionResult> {

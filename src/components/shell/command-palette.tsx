@@ -1,7 +1,6 @@
 "use client";
 
 import { Plus, Upload } from "lucide-react";
-import { useRouter } from "next/navigation";
 import {
   Command,
   CommandDialog,
@@ -16,6 +15,7 @@ import {
 import { groupAccountsForSwitcher } from "@/domain/accounts";
 import { useSelectAccount } from "@/hooks/use-select-account";
 import { useThemePick } from "@/hooks/use-theme-pick";
+import { useRouter } from "@/lib/i18n/navigation";
 import { THEME_PICKS, type ThemePick } from "@/lib/theme";
 import type { SwitcherAccount } from "./account-switcher";
 import { IMPORT_TRADES_HREF, LOG_TRADE_HREF, navGroups } from "./nav-items";

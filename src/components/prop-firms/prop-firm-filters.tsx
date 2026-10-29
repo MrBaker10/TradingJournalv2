@@ -1,10 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Toggle } from "@/components/ui/toggle";
 import type { AccountSizeChip } from "@/db/queries/prop-firms";
+import { useRouter } from "@/lib/i18n/navigation";
 import {
   buildPropFirmsHref,
   type PropFirmsState,

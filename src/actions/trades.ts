@@ -1,12 +1,12 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 import { db } from "@/db/index";
 import { getNextLinkSortOrder, getOwnedTrade } from "@/db/queries/trades";
 import { tradeLinks, tradeScreenshots, trades } from "@/db/schema/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { awardBadgesQuietly } from "@/lib/badges/sync";
+import { revalidatePage } from "@/lib/i18n/revalidate";
 import { storage } from "@/lib/storage";
 import { saveTrade } from "@/lib/trades/save";
 import {
@@ -40,8 +40,8 @@ export async function createTrade(input: unknown): Promise<
 
   await awardBadgesQuietly(user.id, user.timezone);
 
-  revalidatePath("/journal");
-  revalidatePath("/dashboard");
+  revalidatePage("/journal");
+  revalidatePage("/dashboard");
   return saved;
 }
 
@@ -74,9 +74,9 @@ export async function updateTrade(input: unknown): Promise<
 
   await awardBadgesQuietly(user.id, user.timezone);
 
-  revalidatePath("/journal");
-  revalidatePath(`/journal/${saved.data.id}`);
-  revalidatePath("/dashboard");
+  revalidatePage("/journal");
+  revalidatePage(`/journal/${saved.data.id}`);
+  revalidatePage("/dashboard");
   return saved;
 }
 
@@ -115,8 +115,8 @@ export async function deleteTrade(input: unknown): Promise<ActionResult<null>> {
     await storage.deleteMany(screenshots.map((row) => row.storageKey));
   }
 
-  revalidatePath("/journal");
-  revalidatePath("/dashboard");
+  revalidatePage("/journal");
+  revalidatePage("/dashboard");
   return { success: true, data: null };
 }
 
@@ -148,7 +148,7 @@ export async function addTradeLink(
     })
     .returning({ id: tradeLinks.id });
 
-  revalidatePath("/journal");
+  revalidatePage("/journal");
   return { success: true, data: { id: created.id } };
 }
 
@@ -175,7 +175,7 @@ export async function deleteTradeLink(
       ),
     );
 
-  revalidatePath("/journal");
+  revalidatePage("/journal");
   return { success: true, data: null };
 }
 
@@ -214,6 +214,6 @@ export async function deleteTradeScreenshot(
     .where(eq(tradeScreenshots.id, parsed.data.screenshotId));
   await storage.delete(screenshot.storageKey);
 
-  revalidatePath("/journal");
+  revalidatePage("/journal");
   return { success: true, data: null };
 }

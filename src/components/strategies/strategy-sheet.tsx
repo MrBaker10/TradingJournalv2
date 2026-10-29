@@ -1,7 +1,6 @@
 "use client";
 
 import { Archive, ArchiveRestore, ChevronRight, Pencil } from "lucide-react";
-import Link from "next/link";
 import { useState, useTransition } from "react";
 import { setStrategyArchived } from "@/actions/strategies";
 import { DrawnCheck } from "@/components/trades/form-blocks";
@@ -15,6 +14,7 @@ import {
 import { runWithToast } from "@/components/ui/toast";
 import type { Strategy, StrategyTradeRow } from "@/db/queries/strategies";
 import { useRetainedTarget } from "@/hooks/use-retained-target";
+import { Link } from "@/lib/i18n/navigation";
 import { formatDateWithYear } from "@/lib/time";
 import { STRATEGY_ARCHIVE_FAILED } from "@/schemas/strategies";
 import { StrategyForm } from "./strategy-form";

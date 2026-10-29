@@ -21,6 +21,7 @@ version upgrades belong in a separate commit that changes nothing else.
 | motion (ex framer-motion) | 13.2.0 |
 | three.js / @types/three | 0.186.1 / 0.186.0 (streak orb only) |
 | Sonner (Toasts) | 2.0.8 |
+| next-intl | 4.14.9 (interface language, docs/adr/0008) |
 | Biome | 2.5.12 |
 | Vitest / Playwright | 4.1.11 / 1.63.0 |
 | pnpm | 12.3.4 |
@@ -321,8 +322,9 @@ Non-negotiable, because this is a P&L tool:
 
 - User data is private: application pages/actions/handlers require a session and
   ownership checks. No share tokens, public journals or read-only sharing.
-- The route exceptions are `/`, `/login`, `/register`, `/api/auth/*` and `/api/cron/*`
-  (plus framework assets excluded by `src/proxy.ts`). `/` only offers sign-in and
+- The route exceptions are `/`, `/login`, `/register` (under each language prefix:
+  `/en`, `/de/login`, …), `/api/auth/*` and `/api/cron/*` (plus framework assets
+  excluded by `src/proxy.ts`). A path without a language prefix only gets a redirect. `/` only offers sign-in and
   registration and reads neither session nor user data. Better Auth handles its
   protocol routes, including authentication required by individual operations. Cron
   handlers check `CRON_SECRET` and return no user data.

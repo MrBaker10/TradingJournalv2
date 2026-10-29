@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   commitImport,
@@ -15,6 +14,7 @@ import type {
   InvalidRow,
   NormalizedTrade,
 } from "@/domain/import/types";
+import { useRouter } from "@/lib/i18n/navigation";
 import { AccountStep } from "./account-step";
 import { BatchList } from "./batch-list";
 import { FileStep } from "./file-step";

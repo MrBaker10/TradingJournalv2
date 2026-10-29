@@ -15,7 +15,7 @@ import { propFirmPrograms, propFirms } from "../schema/prop-firms.ts";
 
 // Reference data, so unlike every other query module here there is no userId
 // argument and no ownership filter. The page still sits behind the session,
-// because it lives under src/app/(app).
+// because it lives under src/app/[locale]/(app).
 
 export interface PropFirmRow {
   firm: {

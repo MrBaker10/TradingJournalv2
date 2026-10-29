@@ -1,12 +1,13 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { RangePresetChips } from "@/components/ui/range-preset-chips";
 import {
   type AnalyticsSearchParams,
   buildAnalyticsHref,
 } from "@/lib/analytics/href";
+import { useRouter } from "@/lib/i18n/navigation";
 import { narrowingPreset, type RangePreset } from "@/lib/time";
 
 // The date range every section of the page is computed inside, mirrored into

@@ -1,5 +1,4 @@
 import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { ReviewWeekNav } from "@/components/progress/review-week-nav";
 import { WeekSummaryCard } from "@/components/progress/week-summary-card";
 import { WeeklyReviewForm } from "@/components/progress/weekly-review-form";
@@ -16,6 +15,7 @@ import {
   reviewWeekStartOf,
 } from "@/domain/review-week";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { Link } from "@/lib/i18n/navigation";
 import { firstValue } from "@/lib/search-params";
 import { formatDateWithYear, todayInTimeZone } from "@/lib/time";
 

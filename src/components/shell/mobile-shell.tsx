@@ -2,8 +2,8 @@
 
 import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "@/lib/i18n/navigation";
 import { AccountSwitcher } from "./account-switcher";
 import { activeNavItem } from "./nav-items";
 import type { ShellProps } from "./sidebar";

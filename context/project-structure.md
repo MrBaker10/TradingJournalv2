@@ -9,6 +9,9 @@ several self-named accounts (demo, evaluation, backtest, live) in one journal.
 
 ## Modules
 
+Every page path below sits under a language prefix (`/en/dashboard`, `/de/dashboard`;
+docs/adr/0008); `/api/*` has none.
+
 | Route | Module | Core job |
 |---|---|---|
 | `/dashboard` | Dashboard | KPI cards, streak, pre-market plan, end-of-day review, P&L calendar, recent trades |
@@ -24,17 +27,19 @@ several self-named accounts (demo, evaluation, backtest, live) in one journal.
 ```
 src/
   app/
-    (app)/                    # authenticated shell: sidebar + main
-      dashboard/
-      journal/
-        [id]/                 # trade detail
-          edit/               # same form as new, prefilled
-        import/
-      analytics/
-      progress/
-      prop-firms/
-      econ-calendar/          # Phase 2
-      settings/
+    [locale]/                 # language prefix, en | de; holds the root layout
+      (app)/                  # authenticated shell: sidebar + main
+        dashboard/
+        journal/
+          [id]/               # trade detail
+            edit/             # same form as new, prefilled
+          import/
+        analytics/
+        progress/
+        prop-firms/
+        econ-calendar/        # Phase 2
+        settings/
+      (auth)/                 # front page, login, register
     api/
       cron/
         fx/route.ts           # daily ECB rates via frankfurter
@@ -78,6 +83,7 @@ src/
     fx/                       # rate fetch + display conversion
     econ/                     # Phase 2 — feed adapter, swappable in one file
     trades/                   # save a trade logged or edited by hand
+    i18n/                     # languages, request language, next-intl routing, dictionaries
     money.ts  time.ts  env.ts
   scripts/                    # CLI scripts without a database (prop firm source check)
   hooks/

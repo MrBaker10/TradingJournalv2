@@ -1,5 +1,4 @@
 import { ArrowLeft, Pencil } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TradeDetailBody } from "@/components/journal/trade-detail-body";
 import { buttonVariants } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { isTradeFxProvisional } from "@/db/queries/fx";
 import { withDisplayCurrency } from "@/db/queries/scope";
 import { getJournalTradeById } from "@/db/queries/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { Link } from "@/lib/i18n/navigation";
 
 interface TradeDetailPageProps {
   params: Promise<{ id: string }>;

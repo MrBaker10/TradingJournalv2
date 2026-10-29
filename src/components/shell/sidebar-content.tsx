@@ -1,10 +1,10 @@
 "use client";
 
 import { LogOut } from "lucide-react";
-import Link, { useLinkStatus } from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useLinkStatus } from "next/link";
 import { type RefObject, useTransition } from "react";
 import { authClient } from "@/lib/auth/auth-client";
+import { Link, usePathname, useRouter } from "@/lib/i18n/navigation";
 import type { ThemePick } from "@/lib/theme";
 import { isActiveHref, navGroups } from "./nav-items";
 import {

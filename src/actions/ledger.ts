@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import type * as z from "zod";
 import {
   createLedgerEntry,
@@ -10,6 +9,7 @@ import {
   updateLedgerEntry,
 } from "@/db/queries/ledger";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { revalidatePage } from "@/lib/i18n/revalidate";
 import { exactCents } from "@/lib/money";
 import {
   createLedgerEntrySchema,
@@ -64,7 +64,7 @@ export async function addLedgerEntry(
       toLedgerWrite(parsed.data),
     );
 
-    revalidatePath("/ledger");
+    revalidatePage("/ledger");
     return { success: true, data: created };
   } catch (error) {
     if (error instanceof LedgerEntryError)
@@ -90,7 +90,7 @@ export async function editLedgerEntry(
     const { entryId, ...entry } = parsed.data;
     await updateLedgerEntry(user.id, entryId, toLedgerWrite(entry));
 
-    revalidatePath("/ledger");
+    revalidatePage("/ledger");
     return { success: true, data: null };
   } catch (error) {
     if (error instanceof LedgerEntryError)
@@ -113,7 +113,7 @@ export async function removeLedgerEntry(
     const user = await getCurrentUser();
     await deleteLedgerEntry(user.id, parsed.data.entryId);
 
-    revalidatePath("/ledger");
+    revalidatePage("/ledger");
     return { success: true, data: null };
   } catch (error) {
     if (error instanceof LedgerEntryError)

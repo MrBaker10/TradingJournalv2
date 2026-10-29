@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { Link } from "@/lib/i18n/navigation";
 import {
   activeJournalFilterCount,
   buildJournalHref,

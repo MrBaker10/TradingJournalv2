@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { SELECT_CLASS } from "@/components/settings/fields";
 import { FieldError, FieldLabel } from "@/components/trades/form-blocks";
 import { notifyError } from "@/components/ui/toast";
 import { authClient } from "@/lib/auth/auth-client";
 import { placeholderEmail } from "@/lib/auth/placeholder-email";
+import { Link, useRouter } from "@/lib/i18n/navigation";
 import { signUpSchema } from "@/schemas/auth";
 import { AUTH_LINK } from "./auth-card";
 import { AuthSubmit } from "./auth-submit";

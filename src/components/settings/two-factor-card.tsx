@@ -1,12 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { AuthSubmit } from "@/components/auth/auth-submit";
 import { AuthTextField } from "@/components/auth/auth-text-field";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/auth-client";
 import { withAccountLabel } from "@/lib/auth/totp-label";
+import { useRouter } from "@/lib/i18n/navigation";
 import { totpCodeSchema } from "@/schemas/auth";
 import { ROW_ACTION, SettingsRow } from "./settings-row";
 import { TotpQr } from "./totp-qr";

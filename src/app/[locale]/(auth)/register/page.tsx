@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { AUTH_LINK, AuthCard } from "@/components/auth/auth-card";
 import { RegisterForm } from "@/components/auth/register-form";
 import { env } from "@/lib/env";
+import { Link } from "@/lib/i18n/navigation";
 
 export default function RegisterPage() {
   if (!env.REGISTRATION_OPEN) {

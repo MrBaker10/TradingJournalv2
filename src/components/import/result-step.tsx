@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import type { ImportResult } from "@/actions/import";
 import { DrawnCheck } from "@/components/trades/form-blocks";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Link } from "@/lib/i18n/navigation";
 import { cn } from "@/lib/utils";
 
 interface ResultStepProps {

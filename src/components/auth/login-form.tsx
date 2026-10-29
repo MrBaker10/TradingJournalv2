@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { authClient } from "@/lib/auth/auth-client";
+import { Link, useRouter } from "@/lib/i18n/navigation";
 import { backupCodeSchema, signInSchema, totpCodeSchema } from "@/schemas/auth";
 import { AUTH_LINK } from "./auth-card";
 import { AuthSubmit } from "./auth-submit";

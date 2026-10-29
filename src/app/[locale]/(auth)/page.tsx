@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { AuthCard } from "@/components/auth/auth-card";
 import { buttonVariants } from "@/components/ui/button";
 import { env } from "@/lib/env";
+import { Link } from "@/lib/i18n/navigation";
 
 // The front page: two ways in and nothing else. It is public (src/proxy.ts)
 // and reads no session and no data, so it renders even when the database is

@@ -1,9 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Toggle } from "@/components/ui/toggle";
 import type { EconTab } from "@/domain/econ";
 import { buildEconHref, type EconState, toggleCurrency } from "@/lib/econ/href";
+import { useRouter } from "@/lib/i18n/navigation";
 
 interface EconFiltersProps {
   state: EconState;

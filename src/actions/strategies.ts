@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import {
   archiveStrategy,
   createStrategy,
@@ -9,6 +8,7 @@ import {
   updateStrategy,
 } from "@/db/queries/strategies";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { revalidatePage } from "@/lib/i18n/revalidate";
 import {
   STRATEGY_ARCHIVE_FAILED,
   STRATEGY_SAVE_FAILED,
@@ -34,7 +34,7 @@ export async function addStrategy(
     const user = await getCurrentUser();
     const { id } = await createStrategy(user.id, parsed.data);
 
-    revalidatePath("/strategies");
+    revalidatePage("/strategies");
     return { success: true, data: { id } };
   } catch (error) {
     console.error("Strategy create failed", {
@@ -58,7 +58,7 @@ export async function editStrategy(
     const { strategyId, ...content } = parsed.data;
     await updateStrategy(user.id, strategyId, content);
 
-    revalidatePath("/strategies");
+    revalidatePage("/strategies");
     return { success: true, data: null };
   } catch (error) {
     if (error instanceof StrategyError)
@@ -88,7 +88,7 @@ export async function setStrategyArchived(
     if (archived) await archiveStrategy(user.id, strategyId);
     else await reactivateStrategy(user.id, strategyId);
 
-    revalidatePath("/strategies");
+    revalidatePage("/strategies");
     return { success: true, data: null };
   } catch (error) {
     if (error instanceof StrategyError)

@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
-import Link from "next/link";
 import type { PropFirmRow } from "@/db/queries/prop-firms";
+import { Link } from "@/lib/i18n/navigation";
 import {
   buildPropFirmsHref,
   MAX_COMPARE,

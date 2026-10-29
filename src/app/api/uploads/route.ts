@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { revalidatePath } from "next/cache";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db/index";
@@ -12,6 +11,7 @@ import { tradeScreenshots } from "@/db/schema/trades";
 import { isDemoUsername } from "@/domain/demo";
 import { canAddScreenshot } from "@/domain/trades";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { revalidatePage } from "@/lib/i18n/revalidate";
 import { storage } from "@/lib/storage";
 import {
   createSignedUploadUrl,
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     .values({ tradeId, storageKey, sortOrder })
     .returning({ id: tradeScreenshots.id });
 
-  revalidatePath("/journal");
+  revalidatePage("/journal");
   return NextResponse.json({
     id: created.id,
     sortOrder,

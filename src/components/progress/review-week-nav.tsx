@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import Link from "next/link";
 import { shiftReviewWeek } from "@/domain/review-week";
 import type { IsoDate } from "@/domain/streak";
+import { Link } from "@/lib/i18n/navigation";
 import { formatDayLabel } from "@/lib/time";
 
 const PATH = "/progress/weekly-review";

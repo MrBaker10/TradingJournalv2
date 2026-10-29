@@ -217,7 +217,10 @@ describe("redesign guard", () => {
   });
 
   describe("the root layout", () => {
-    const layout = readFileSync(join(ROOT, "src/app/layout.tsx"), "utf8");
+    const layout = readFileSync(
+      join(ROOT, "src/app/[locale]/layout.tsx"),
+      "utf8",
+    );
 
     it('wraps every page in <MotionConfig reducedMotion="user"> (Design.md §4)', () => {
       expect(layout).toMatch(

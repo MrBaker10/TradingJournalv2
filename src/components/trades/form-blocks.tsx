@@ -2,11 +2,11 @@
 
 import { Check, ChevronDown } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import Link from "next/link";
 import { type ReactNode, useId } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Toggle } from "@/components/ui/toggle";
+import { Link } from "@/lib/i18n/navigation";
 import { cn } from "@/lib/utils";
 
 // The form blocks of Design.md §3.5. The trade form walks them in steps; the
