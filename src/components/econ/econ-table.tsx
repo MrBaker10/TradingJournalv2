@@ -1,6 +1,7 @@
 "use client";
 
 import { Folder } from "lucide-react";
+import { useLocale } from "next-intl";
 import {
   ChevronCell,
   OpenColumnHead,
@@ -40,6 +41,7 @@ export function EconTable({
   openId: number | null;
   onOpen: (eventId: number) => void;
 }) {
+  const language = useLocale();
   return (
     <div className={TABLE_BOX}>
       <table
@@ -65,7 +67,7 @@ export function EconTable({
                 colSpan={7}
                 className="px-4 py-1.5 text-left font-medium text-muted-foreground text-xs"
               >
-                {formatEventDayLabel(day.date)}
+                {formatEventDayLabel(day.date, language)}
               </th>
             </tr>
             {day.events.map((event) => {

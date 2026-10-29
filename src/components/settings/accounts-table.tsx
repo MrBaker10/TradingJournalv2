@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import {
   ChevronCell,
   OpenColumnHead,
@@ -62,6 +63,7 @@ export function AccountsTable({
   openId: number | null;
   onOpen: (accountId: number) => void;
 }) {
+  const language = useLocale();
   return (
     <div className={TABLE_BOX}>
       <table className="w-full text-sm [&_td:not(:first-child)]:whitespace-nowrap [&_th]:whitespace-nowrap">
@@ -114,6 +116,7 @@ export function AccountsTable({
               <td className="px-4 py-2.5 text-right font-mono tabular-nums">
                 {formatCents(amountToCents(account.startingBalance), {
                   currency: account.currency,
+                  language,
                 })}
               </td>
               <td className="px-4 py-2.5">

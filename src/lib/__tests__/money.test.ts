@@ -194,3 +194,47 @@ describe("formatCentsCompact", () => {
     expect(() => formatCentsCompact(12.5)).toThrow(RangeError);
   });
 });
+
+// Intl puts a no-break space between a German amount and its currency sign.
+const NBSP = " ";
+
+describe("formatCents — interface language", () => {
+  it("writes German grouping, decimal comma and a trailing sign", () => {
+    expect(formatCents(123456, { language: "de" })).toBe(`1.234,56${NBSP}$`);
+    expect(formatCents(123456, { language: "de", currency: "EUR" })).toBe(
+      `1.234,56${NBSP}€`,
+    );
+  });
+
+  it("keeps the minus and the explicit plus in front in German", () => {
+    expect(formatCents(-12000, { language: "de" })).toBe(`-120,00${NBSP}$`);
+    expect(formatCents(30000, { language: "de", signed: true })).toBe(
+      `+300,00${NBSP}$`,
+    );
+  });
+
+  it("is unchanged in English", () => {
+    expect(formatCents(-123456, { language: "en", signed: true })).toBe(
+      "-$1,234.56",
+    );
+  });
+});
+
+describe("formatCentsCompact — interface language", () => {
+  it("writes the decimal comma in German", () => {
+    expect(formatCentsCompact(-169_548, "de")).toBe("-1,6k");
+    expect(formatCentsCompact(1_234_567, "de")).toBe("+12,3k");
+  });
+
+  it("needs no separator below a thousand", () => {
+    expect(formatCentsCompact(14_256, "de")).toBe("+142");
+  });
+});
+
+describe("formatCentsThousands — interface language", () => {
+  it("writes the decimal comma in German", () => {
+    expect(formatCentsThousands(750_000, "de")).toBe("7,5k");
+    expect(formatCentsThousands(1_225_000, "de")).toBe("12,25k");
+    expect(formatCentsThousands(5_000_000, "de")).toBe("50k");
+  });
+});

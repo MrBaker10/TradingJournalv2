@@ -1,4 +1,5 @@
 import type { HeatmapCell, HeatmapState } from "@/domain/progress";
+import type { Language } from "@/lib/i18n/languages";
 import { formatDayLabel } from "@/lib/time";
 
 // One look for a trading day wherever /progress draws one: the heatmap and the
@@ -22,8 +23,8 @@ const STATE_LABEL: Record<HeatmapState, string> = {
 };
 
 /** What a cell says to a screen reader and on hover (Design.md §5). */
-export function dayCellLabel(cell: HeatmapCell): string {
-  return `${formatDayLabel(cell.date)}, ${STATE_LABEL[cell.state]}${
+export function dayCellLabel(cell: HeatmapCell, language: Language): string {
+  return `${formatDayLabel(cell.date, language)}, ${STATE_LABEL[cell.state]}${
     cell.isToday ? ", today" : ""
   }`;
 }

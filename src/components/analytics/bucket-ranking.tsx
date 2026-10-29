@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import {
   DIMENSION_TITLES,
   MIN_RANKED_R_TRADES,
@@ -19,6 +20,7 @@ function RankingRow({
   currency: DisplayCurrency;
 }) {
   const openDimension = useOpenDimension();
+  const language = useLocale();
   const { dimension, row } = bucket;
   return (
     <li>
@@ -36,7 +38,7 @@ function RankingRow({
           <span className="truncate">{row.label}</span>
         </span>
         <span className="text-right font-mono tabular-nums">
-          {formatR(row.avgR)}
+          {formatR(row.avgR, language)}
         </span>
         <span className="text-right font-mono text-xs tabular-nums">
           n={row.rCount}
@@ -44,7 +46,7 @@ function RankingRow({
         <span
           className={`text-right font-mono tabular-nums ${moneyTone(row.netPnlCents)}`}
         >
-          {formatCents(row.netPnlCents, { signed: true, currency })}
+          {formatCents(row.netPnlCents, { signed: true, currency, language })}
         </span>
       </button>
     </li>

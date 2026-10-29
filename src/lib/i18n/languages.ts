@@ -11,6 +11,12 @@ export type Language = (typeof LANGUAGES)[number];
 /** English is the fallback whenever nothing else names a language. */
 export const DEFAULT_LANGUAGE: Language = "en";
 
+/** The `Intl` locale that formats numbers, money and dates per language. */
+export const INTL_LOCALES: Record<Language, string> = {
+  en: "en-US",
+  de: "de-DE",
+};
+
 /**
  * The cookie that holds the language of the last page this device was served:
  * a signed-out visitor's pick, and the demo visitor's (docs/adr/0008).

@@ -209,7 +209,7 @@ describe("size filter", () => {
     expect(await namesFor({})).toContain(`${FIRM} · Select Custom`);
   });
 
-  it("offers every known size once, ascending, labelled in thousands", async (ctx) => {
+  it("offers every known size once, ascending, with its cents for the label", async (ctx) => {
     ctx.skip(!dbReachable, "Postgres not reachable — start DBngin first");
 
     const sizes = await inRollback(async (tx) => {
@@ -221,9 +221,9 @@ describe("size filter", () => {
     expect(usd).toEqual([...new Set(usd)].sort((a, b) => a - b));
     expect(sizes).toEqual(
       expect.arrayContaining([
-        { usd: 25_000, label: "25k" },
-        { usd: 50_000, label: "50k" },
-        { usd: 100_000, label: "100k" },
+        { usd: 25_000, cents: 2_500_000 },
+        { usd: 50_000, cents: 5_000_000 },
+        { usd: 100_000, cents: 10_000_000 },
       ]),
     );
   });

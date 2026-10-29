@@ -1,6 +1,7 @@
 "use client";
 
 import { Maximize2 } from "lucide-react";
+import { useLocale } from "next-intl";
 import {
   columnOrder,
   DIMENSION_TITLES,
@@ -32,6 +33,7 @@ export function ColumnChart({
   currency: DisplayCurrency;
 }) {
   const openDimension = useOpenDimension();
+  const language = useLocale();
   const rows = columnOrder(dimension, allRows);
   const title = DIMENSION_TITLES[dimension];
 
@@ -80,7 +82,7 @@ export function ColumnChart({
               className={barFill(row.netPnlCents, true)}
             >
               <title>
-                {`${row.label}: ${formatCents(row.netPnlCents, { signed: true, currency })} · ${row.trades} trades · ${formatShare(row.winRate)} win rate`}
+                {`${row.label}: ${formatCents(row.netPnlCents, { signed: true, currency, language })} · ${row.trades} trades · ${formatShare(row.winRate, language)} win rate`}
               </title>
             </rect>
           );

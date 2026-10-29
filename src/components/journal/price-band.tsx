@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import {
   type BandMarkerKind,
@@ -8,6 +9,8 @@ import {
   type LabelWidths,
   type PriceBandInput,
 } from "@/domain/price-band";
+import type { Language } from "@/lib/i18n/languages";
+import { formatDecimalString } from "@/lib/numbers";
 
 // Design.md §3.3 (detail, Prices). Hand-built SVG rather than Recharts: the band has no hover,
 // no tooltip and no axis interaction, and every position arrives finished from
@@ -38,8 +41,12 @@ function pct(value: number): string {
   return `${value}%`;
 }
 
-function formatAxisR(r: number): string {
-  return r === 0 ? "0" : `${r}R`;
+function formatAxisR(r: number, language: Language): string {
+  return r === 0 ? "0" : `${formatDecimalString(r, language)}R`;
+}
+
+function formatPrice(price: number | null, language: Language): string {
+  return price === null ? "" : formatDecimalString(price, language);
 }
 
 function labelWidths(
@@ -66,6 +73,7 @@ export function PriceBandChart({ input, prices }: PriceBandProps) {
   // Which labels collide depends on the real width, so the band is measured
   // and rebuilt when it changes. Before the first measurement the default
   // widths stand in.
+  const language = useLocale();
   const ref = useRef<HTMLDivElement>(null);
   const [widthPx, setWidthPx] = useState<number | null>(null);
   useEffect(() => {
@@ -97,7 +105,7 @@ export function PriceBandChart({ input, prices }: PriceBandProps) {
   const summary = band.markers
     .map(
       (marker) =>
-        `${MARKER_NAMES[marker.kind]} ${prices[marker.kind] ?? ""} at ${formatAxisR(marker.r)}`,
+        `${MARKER_NAMES[marker.kind]} ${formatPrice(prices[marker.kind], language)} at ${formatAxisR(marker.r, language)}`,
     )
     .join(", ");
 
@@ -179,7 +187,7 @@ export function PriceBandChart({ input, prices }: PriceBandProps) {
               textAnchor="middle"
               className="fill-muted-foreground text-[10px] tabular-nums"
             >
-              {formatAxisR(tick.r)}
+              {formatAxisR(tick.r, language)}
             </text>
           </g>
         ))}
@@ -214,7 +222,7 @@ export function PriceBandChart({ input, prices }: PriceBandProps) {
                 </tspan>
                 {prices[marker.kind] !== null && (
                   <tspan className="fill-foreground font-semibold" dx={4}>
-                    {prices[marker.kind]}
+                    {formatPrice(prices[marker.kind], language)}
                   </tspan>
                 )}
               </text>

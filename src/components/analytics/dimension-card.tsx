@@ -1,6 +1,7 @@
 "use client";
 
 import { Maximize2 } from "lucide-react";
+import { useLocale } from "next-intl";
 import {
   DIMENSION_TITLES,
   type DimensionId,
@@ -34,6 +35,7 @@ export function DimensionCard({
   currency: DisplayCurrency;
 }) {
   const openDimension = useOpenDimension();
+  const language = useLocale();
   const shown = rows.slice(0, CARD_ROW_COUNT);
 
   return (
@@ -63,10 +65,14 @@ export function DimensionCard({
               <span
                 className={`font-mono tabular-nums ${moneyTone(row.netPnlCents)}`}
               >
-                {formatCents(row.netPnlCents, { signed: true, currency })}
+                {formatCents(row.netPnlCents, {
+                  signed: true,
+                  currency,
+                  language,
+                })}
               </span>
               <span className="text-right font-mono tabular-nums">
-                {formatR(row.avgR)}
+                {formatR(row.avgR, language)}
               </span>
             </span>
             {row.barRatio !== null && (

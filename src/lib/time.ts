@@ -1,6 +1,15 @@
 import { TZDate } from "@date-fns/tz";
-import { addMonths, format, lastDayOfMonth, subDays } from "date-fns";
+import {
+  addDays,
+  addMonths,
+  format,
+  type Locale,
+  lastDayOfMonth,
+  subDays,
+} from "date-fns";
+import { de, enUS } from "date-fns/locale";
 import type { IsoDate } from "../domain/streak.ts";
+import { DEFAULT_LANGUAGE, type Language } from "./i18n/languages.ts";
 
 // The user's timezone (`users.timezone`) decides every calendar boundary:
 // what "today" and "this month" mean for streak, consistency score and badges
@@ -10,6 +19,56 @@ import type { IsoDate } from "../domain/streak.ts";
 //
 // `entry_time` / `exit_time` never pass through here. They are the user's
 // chart clock and stay unconverted.
+
+// Every date label takes the interface language, English when left out. The
+// language changes month and day names and the order of the parts, never the
+// date: each label is read UTC-anchored, whatever the language.
+const DATE_LOCALES: Record<Language, Locale> = { en: enUS, de };
+
+const DATE_PATTERNS: Record<
+  Language,
+  Record<
+    | "day"
+    | "month"
+    | "monthTick"
+    | "dateWithYear"
+    | "numericDate"
+    | "eventDay"
+    | "longDate"
+    | "weekdayShort",
+    string
+  >
+> = {
+  en: {
+    day: "MMM d",
+    month: "MMMM yyyy",
+    monthTick: "MMM yyyy",
+    dateWithYear: "d MMM yyyy",
+    numericDate: "yyyy-MM-dd",
+    eventDay: "EEE d MMM",
+    longDate: "EEEE d MMMM yyyy",
+    weekdayShort: "EEE",
+  },
+  de: {
+    day: "d. MMM",
+    month: "MMMM yyyy",
+    monthTick: "MMM yyyy",
+    dateWithYear: "dd.MM.yyyy",
+    numericDate: "dd.MM.yyyy",
+    eventDay: "EEE, d. MMM",
+    longDate: "EEEE, d. MMMM yyyy",
+    weekdayShort: "EEEEEE",
+  },
+};
+
+/** A calendar date as a midnight in UTC, the anchor every label reads. */
+function utcDay(date: IsoDate): TZDate {
+  return new TZDate(`${date}T00:00:00Z`, "UTC");
+}
+
+function formatIn(date: Date, pattern: string, language: Language): string {
+  return format(date, pattern, { locale: DATE_LOCALES[language] });
+}
 
 /** A `YYYY-MM` month key, matching `monthly_scores.month`. */
 export type MonthKey = string;
@@ -51,16 +110,26 @@ export function monthKeyOf(date: IsoDate): MonthKey {
  * Worst day. UTC-anchored for the same reason as monthRangeOf: the string is
  * a calendar date, and reading it in the machine's zone would shift the day.
  */
-export function formatDayLabel(date: IsoDate): string {
-  return format(new TZDate(`${date}T00:00:00Z`, "UTC"), "MMM d");
+export function formatDayLabel(
+  date: IsoDate,
+  language: Language = DEFAULT_LANGUAGE,
+): string {
+  return formatIn(utcDay(date), DATE_PATTERNS[language].day, language);
 }
 
 /**
  * A month as "September 2026", the header line beside a month-scoped card.
  * UTC-anchored like `formatDayLabel`, and for the same reason.
  */
-export function formatMonthLabel(month: MonthKey): string {
-  return format(new TZDate(`${month}-01T00:00:00Z`, "UTC"), "MMMM yyyy");
+export function formatMonthLabel(
+  month: MonthKey,
+  language: Language = DEFAULT_LANGUAGE,
+): string {
+  return formatIn(
+    utcDay(`${month}-01`),
+    DATE_PATTERNS[language].month,
+    language,
+  );
 }
 
 /**
@@ -68,16 +137,63 @@ export function formatMonthLabel(month: MonthKey): string {
  * month, where `formatDayLabel` would print "Sep 3" and leave the reader
  * guessing which year it belongs to.
  */
-export function formatMonthTickLabel(date: IsoDate): string {
-  return format(new TZDate(`${date}T00:00:00Z`, "UTC"), "MMM yyyy");
+export function formatMonthTickLabel(
+  date: IsoDate,
+  language: Language = DEFAULT_LANGUAGE,
+): string {
+  return formatIn(utcDay(date), DATE_PATTERNS[language].monthTick, language);
 }
 
 /**
- * A date as "13 Aug 2026", used where a range names its own start.
- * UTC-anchored like the other formatters here.
+ * A date as "13 Aug 2026" (German "13.08.2026"), used where a range names its
+ * own start. UTC-anchored like the other formatters here.
  */
-export function formatDateWithYear(date: IsoDate): string {
-  return format(new TZDate(`${date}T00:00:00Z`, "UTC"), "d MMM yyyy");
+export function formatDateWithYear(
+  date: IsoDate,
+  language: Language = DEFAULT_LANGUAGE,
+): string {
+  return formatIn(utcDay(date), DATE_PATTERNS[language].dateWithYear, language);
+}
+
+/**
+ * A date in digits, where a table column wants it short: the ISO date as
+ * stored in English, "29.10.2026" in German.
+ */
+export function formatNumericDate(
+  date: IsoDate,
+  language: Language = DEFAULT_LANGUAGE,
+): string {
+  return formatIn(utcDay(date), DATE_PATTERNS[language].numericDate, language);
+}
+
+/** The weekday of a date, "Thursday" or "Donnerstag". */
+export function formatWeekdayLabel(
+  date: IsoDate,
+  language: Language = DEFAULT_LANGUAGE,
+): string {
+  return formatIn(utcDay(date), "EEEE", language);
+}
+
+/** A date spelled out for an accessible label: "Thursday 29 October 2026". */
+export function formatLongDateLabel(
+  date: IsoDate,
+  language: Language = DEFAULT_LANGUAGE,
+): string {
+  return formatIn(utcDay(date), DATE_PATTERNS[language].longDate, language);
+}
+
+// Any Monday will do: the column heads of a Monday-first week.
+const A_MONDAY: IsoDate = "2026-01-05";
+
+/** Short weekday names from Monday: "Mon" … "Sun", "Mo" … "So". */
+export function weekdayLabels(language: Language = DEFAULT_LANGUAGE): string[] {
+  return Array.from({ length: 7 }, (_, offset) =>
+    formatIn(
+      addDays(utcDay(A_MONDAY), offset),
+      DATE_PATTERNS[language].weekdayShort,
+      language,
+    ),
+  );
 }
 
 /**
@@ -152,11 +268,14 @@ export function formatEventTime(instant: Date, timeZone: string): string {
 }
 
 /**
- * A date as "Mon 28 Sep", the heading over one day of the econ calendar and
- * of the journal list (Design-v1.md §4.27).
+ * A date as "Mon 28 Sep" (German "Mo., 28. Sep."), the heading over one day
+ * of the econ calendar and of the journal list (Design-v1.md §4.27).
  * UTC-anchored like the other formatters here: the zone was already applied
  * when the event was grouped under this date.
  */
-export function formatEventDayLabel(date: IsoDate): string {
-  return format(new TZDate(`${date}T00:00:00Z`, "UTC"), "EEE d MMM");
+export function formatEventDayLabel(
+  date: IsoDate,
+  language: Language = DEFAULT_LANGUAGE,
+): string {
+  return formatIn(utcDay(date), DATE_PATTERNS[language].eventDay, language);
 }

@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 import type {
   CountMetrics,
   DayTotal,
@@ -5,7 +6,9 @@ import type {
 } from "@/db/queries/dashboard";
 import type { IsoDate } from "@/domain/streak";
 import { moneyTone } from "@/lib/dashboard/sign-tone";
+import type { Language } from "@/lib/i18n/languages";
 import { type DisplayCurrency, formatCents } from "@/lib/money";
+import { formatFixed, formatPercent } from "@/lib/numbers";
 import { formatDayLabel } from "@/lib/time";
 import { MetricRow } from "./metric-row";
 
@@ -24,10 +27,14 @@ interface MoneyMetricsProps {
 
 const EMPTY = "—";
 
-function money(cents: number | null, currency: DisplayCurrency): string {
+function money(
+  cents: number | null,
+  currency: DisplayCurrency,
+  language: Language,
+): string {
   return cents === null
     ? EMPTY
-    : formatCents(cents, { signed: true, currency });
+    : formatCents(cents, { signed: true, currency, language });
 }
 
 /**
@@ -49,6 +56,7 @@ export function MoneyMetrics({
   today,
   currency,
 }: MoneyMetricsProps) {
+  const language = useLocale();
   return (
     <section aria-label="Money metrics">
       <dl className="font-mono text-[13px]">
@@ -57,14 +65,14 @@ export function MoneyMetrics({
           note="all time"
           tone={moneyTone(metrics.netPnlCents)}
         >
-          {money(metrics.netPnlCents, currency)}
+          {money(metrics.netPnlCents, currency, language)}
         </MetricRow>
         <MetricRow
           label="Today"
-          note={formatDayLabel(today)}
+          note={formatDayLabel(today, language)}
           tone={moneyTone(todayAmountCents)}
         >
-          {money(todayAmountCents, currency)}
+          {money(todayAmountCents, currency, language)}
         </MetricRow>
         <MetricRow
           label="Win rate"
@@ -76,45 +84,47 @@ export function MoneyMetrics({
         >
           {counts.winRate === null
             ? EMPTY
-            : `${Math.round(counts.winRate * 100)}%`}
+            : formatPercent(counts.winRate, language)}
         </MetricRow>
         <MetricRow label="Trades logged" note="all time">
           {String(counts.tradesLogged)}
         </MetricRow>
         <MetricRow label="Avg R">
-          {counts.avgR === null ? EMPTY : `${counts.avgR.toFixed(2)}R`}
+          {counts.avgR === null
+            ? EMPTY
+            : `${formatFixed(counts.avgR, 2, language)}R`}
         </MetricRow>
         <MetricRow label="Expectancy" tone={moneyTone(metrics.expectancyCents)}>
-          {money(metrics.expectancyCents, currency)}
+          {money(metrics.expectancyCents, currency, language)}
         </MetricRow>
         <MetricRow label="Profit factor">
           {metrics.profitFactor === null
             ? EMPTY
-            : metrics.profitFactor.toFixed(2)}
+            : formatFixed(metrics.profitFactor, 2, language)}
         </MetricRow>
         <MetricRow label="Avg winner" tone={moneyTone(metrics.avgWinnerCents)}>
-          {money(metrics.avgWinnerCents, currency)}
+          {money(metrics.avgWinnerCents, currency, language)}
         </MetricRow>
         <MetricRow label="Avg loser" tone={moneyTone(metrics.avgLoserCents)}>
-          {money(metrics.avgLoserCents, currency)}
+          {money(metrics.avgLoserCents, currency, language)}
         </MetricRow>
         <MetricRow
           label="Best day"
-          note={bestDay ? formatDayLabel(bestDay.date) : undefined}
+          note={bestDay ? formatDayLabel(bestDay.date, language) : undefined}
           tone={moneyTone(bestDay?.amountCents ?? null)}
         >
-          {money(bestDay?.amountCents ?? null, currency)}
+          {money(bestDay?.amountCents ?? null, currency, language)}
         </MetricRow>
         <MetricRow
           label="Worst day"
-          note={worstDay ? formatDayLabel(worstDay.date) : undefined}
+          note={worstDay ? formatDayLabel(worstDay.date, language) : undefined}
           tone={moneyTone(worstDay?.amountCents ?? null)}
         >
-          {money(worstDay?.amountCents ?? null, currency)}
+          {money(worstDay?.amountCents ?? null, currency, language)}
         </MetricRow>
         <MetricRow label="Max drawdown" tone={moneyTone(-maxDrawdownCents)}>
           {maxDrawdownCents > 0
-            ? formatCents(-maxDrawdownCents, { currency })
+            ? formatCents(-maxDrawdownCents, { currency, language })
             : EMPTY}
         </MetricRow>
       </dl>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Pencil, Trash2 } from "lucide-react";
+import { useLocale } from "next-intl";
 import { useState, useTransition } from "react";
 import {
   addLedgerEntry,
@@ -148,6 +149,7 @@ function LedgerSheetBody({
   );
   // Each "Add another" starts a fresh form from the last one.
   const [formKey, setFormKey] = useState(0);
+  const language = useLocale();
   const [nextDraft, setNextDraft] = useState<LedgerDraft | null>(null);
 
   if (mode.kind === "saved") {
@@ -160,7 +162,7 @@ function LedgerSheetBody({
         <DrawnCheck />
         <p className="font-semibold text-xl tracking-tight">Entry saved</p>
         <p className="font-mono text-muted-foreground text-sm tabular-nums">
-          {formatDateWithYear(mode.draft.entryDate)}
+          {formatDateWithYear(mode.draft.entryDate, language)}
         </p>
         <div className="mt-2 flex flex-wrap justify-center gap-2">
           {mode.edited ? (
@@ -248,6 +250,7 @@ function LedgerDetail({
 }) {
   const [isDeleting, startDelete] = useTransition();
   const deleteConfirm = useTwoClickConfirm();
+  const language = useLocale();
   const signed = signedLedgerCents(entry);
 
   return (
@@ -257,13 +260,13 @@ function LedgerDetail({
           {ledgerEntryLabel(entry.kind, entry.category)}
         </SheetTitle>
         <SheetDescription className="font-mono tabular-nums">
-          {formatDateWithYear(entry.entryDate)}
+          {formatDateWithYear(entry.entryDate, language)}
         </SheetDescription>
       </div>
 
       <dl className="text-[13px]">
         <MetricRow label="Amount" tone={moneyTone(signed)}>
-          {formatCents(signed, { signed: true })}
+          {formatCents(signed, { signed: true, language })}
         </MetricRow>
         <div className="flex items-baseline justify-between gap-4 border-b border-dashed py-1">
           <dt className="text-muted-foreground">Account</dt>

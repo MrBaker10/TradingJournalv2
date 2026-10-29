@@ -1,6 +1,7 @@
 "use client";
 
 import { useReducedMotion } from "motion/react";
+import { useLocale } from "next-intl";
 import {
   Area,
   AreaChart,
@@ -15,6 +16,7 @@ import {
 } from "recharts";
 import type { EquitySeries, PlottedPoint } from "@/domain/equity";
 import { SIGN_TEXT, signOf } from "@/lib/dashboard/sign-tone";
+import type { Language } from "@/lib/i18n/languages";
 import { type DisplayCurrency, formatCents } from "@/lib/money";
 import {
   formatDateWithYear,
@@ -38,10 +40,16 @@ const Y_AXIS_MIN_WIDTH = 84;
 const MONO_12PX_ADVANCE = 7.3;
 const Y_AXIS_PADDING = 12;
 
-function yAxisWidth(ticksCents: number[], currency: DisplayCurrency): number {
+function yAxisWidth(
+  ticksCents: number[],
+  currency: DisplayCurrency,
+  language: Language,
+): number {
   const widest = Math.max(
     0,
-    ...ticksCents.map((cents) => formatCents(cents, { currency }).length),
+    ...ticksCents.map(
+      (cents) => formatCents(cents, { currency, language }).length,
+    ),
   );
   return Math.max(
     Y_AXIS_MIN_WIDTH,
@@ -155,6 +163,7 @@ function EquityTooltip({
   startCents,
   currency,
 }: TooltipContentProps & { startCents: number; currency: DisplayCurrency }) {
+  const language = useLocale();
   if (!active || !payload?.length) return null;
 
   const point = payload[0].payload as PlottedPoint;
@@ -168,7 +177,7 @@ function EquityTooltip({
         <span
           className={`font-mono text-sm tabular-nums ${toneClass(point.equityCents, startCents)}`}
         >
-          {formatCents(point.equityCents, { currency })}
+          {formatCents(point.equityCents, { currency, language })}
         </span>
       </div>
     );
@@ -177,7 +186,7 @@ function EquityTooltip({
   return (
     <div className="flex flex-col gap-1 rounded-md border bg-popover px-2.5 py-1.5 text-popover-foreground shadow-md">
       <span className="text-muted-foreground text-xs">
-        {formatDayLabel(point.date)}
+        {formatDayLabel(point.date, language)}
       </span>
       <span
         className={`font-mono text-sm tabular-nums ${toneClass(point.equityCents, startCents)}`}
@@ -188,10 +197,12 @@ function EquityTooltip({
         {formatCents(point.equityCents, {
           signed: startCents === 0,
           currency,
+          language,
         })}
       </span>
       <span className="font-mono text-muted-foreground text-xs tabular-nums">
-        {formatCents(point.amountCents, { signed: true, currency })} that day
+        {formatCents(point.amountCents, { signed: true, currency, language })}{" "}
+        that day
       </span>
     </div>
   );
@@ -209,6 +220,7 @@ export function EquityCurve({ series, currency }: EquityCurveProps) {
   // prefers-reduced-motion block in globals.css reaches it. The build-in has
   // to be switched off by hand.
   const prefersReducedMotion = useReducedMotion();
+  const language = useLocale();
 
   // The range names itself out of the series — the first point is the first
   // day that was traded, so no separate query for "when did this start".
@@ -236,7 +248,7 @@ export function EquityCurve({ series, currency }: EquityCurveProps) {
         <span className="text-muted-foreground text-xs">
           {firstDate === undefined
             ? ""
-            : `${formatDateWithYear(firstDate)} — today`}
+            : `${formatDateWithYear(firstDate, language)} — today`}
         </span>
       </div>
 
@@ -261,8 +273,8 @@ export function EquityCurve({ series, currency }: EquityCurveProps) {
                   key === START_KEY
                     ? "Start"
                     : spansMonths
-                      ? formatMonthTickLabel(key)
-                      : formatDayLabel(key)
+                      ? formatMonthTickLabel(key, language)
+                      : formatDayLabel(key, language)
                 }
                 tickLine={false}
                 axisLine={false}
@@ -274,11 +286,11 @@ export function EquityCurve({ series, currency }: EquityCurveProps) {
                 domain={series.domainCents}
                 ticks={series.ticksCents}
                 tickFormatter={(cents: number) =>
-                  formatCents(cents, { currency })
+                  formatCents(cents, { currency, language })
                 }
                 tickLine={false}
                 axisLine={false}
-                width={yAxisWidth(series.ticksCents, currency)}
+                width={yAxisWidth(series.ticksCents, currency, language)}
               />
 
               <ReferenceLine y={series.startCents} />

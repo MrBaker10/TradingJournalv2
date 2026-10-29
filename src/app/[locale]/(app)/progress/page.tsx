@@ -1,3 +1,4 @@
+import { getLocale } from "next-intl/server";
 import {
   BadgeList,
   type ProgressBadge,
@@ -39,7 +40,7 @@ import {
 } from "@/lib/time";
 
 export default async function ProgressPage() {
-  const user = await getCurrentUser();
+  const [user, language] = await Promise.all([getCurrentUser(), getLocale()]);
 
   const today = todayInTimeZone(user.timezone);
   const month = monthKeyOf(today);
@@ -107,7 +108,7 @@ export default async function ProgressPage() {
       title: badge.title,
       description: badge.description,
       earnedOn: earned
-        ? formatDateWithYear(calendarDateOf(earned, user.timezone))
+        ? formatDateWithYear(calendarDateOf(earned, user.timezone), language)
         : null,
       isNew: earned !== undefined && isNew(earned),
       progress: badgeProgressOf(badge.key, badgeProgress),

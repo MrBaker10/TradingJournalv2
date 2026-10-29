@@ -1,17 +1,16 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import type { JournalTradeRow } from "@/db/queries/trades";
+import { formatR } from "@/lib/analytics/format";
 import { moneyTone, SIGN_TEXT, signOf } from "@/lib/dashboard/sign-tone";
 import { Link } from "@/lib/i18n/navigation";
 import { type DisplayCurrency, formatCents } from "@/lib/money";
+import { formatNumericDate } from "@/lib/time";
 import { useOpenEntry } from "./journal-detail-sheet";
 
 /** Confluences shown on the card; the rest are counted. */
 const VISIBLE_CONFLUENCES = 4;
-
-function signedR(r: number): string {
-  return `${r >= 0 ? "+" : ""}${r.toFixed(2)}R`;
-}
 
 /**
  * One entry of the journal (Design.md §3.3), recognisable without opening it:
@@ -49,6 +48,7 @@ export function EntryCard({
     .join(" · ");
   const hiddenConfluences = trade.confluences.length - VISIBLE_CONFLUENCES;
   const openEntry = useOpenEntry();
+  const language = useLocale();
 
   return (
     <Link
@@ -83,7 +83,9 @@ export function EntryCard({
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex min-w-0 items-baseline gap-2">
           <span className="shrink-0 font-mono text-muted-foreground text-xs tabular-nums">
-            {lead === "time" ? trade.entryTime.slice(0, 5) : trade.tradeDate}
+            {lead === "time"
+              ? trade.entryTime.slice(0, 5)
+              : formatNumericDate(trade.tradeDate, language)}
           </span>
           <span className="truncate font-medium">{trade.instrumentSymbol}</span>
           <span className="shrink-0 text-muted-foreground text-sm">
@@ -98,7 +100,7 @@ export function EntryCard({
             <span
               className={`ml-auto shrink-0 font-mono text-sm tabular-nums ${moneyTone(pnl)}`}
             >
-              {formatCents(pnl, { signed: true, currency })}
+              {formatCents(pnl, { signed: true, currency, language })}
             </span>
           )}
         </div>
@@ -109,7 +111,7 @@ export function EntryCard({
               <span
                 className={`ml-auto shrink-0 font-mono tabular-nums ${SIGN_TEXT[signOf(r)]}`}
               >
-                {signedR(r)}
+                {formatR(r, language)}
               </span>
             )}
           </div>

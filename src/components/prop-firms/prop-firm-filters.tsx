@@ -1,10 +1,12 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Toggle } from "@/components/ui/toggle";
 import type { AccountSizeChip } from "@/db/queries/prop-firms";
 import { useRouter } from "@/lib/i18n/navigation";
+import { formatCentsThousands } from "@/lib/money";
 import {
   buildPropFirmsHref,
   type PropFirmsState,
@@ -33,6 +35,7 @@ export function PropFirmFilters({
   count,
 }: PropFirmFiltersProps) {
   const router = useRouter();
+  const language = useLocale();
   const [search, setSearch] = useState(state.search);
   const stateRef = useRef(state);
 
@@ -75,7 +78,7 @@ export function PropFirmFilters({
               onPressedChange={() => go({ sizes: [chip.usd], anySize: false })}
               className="h-10 font-mono text-muted-foreground tabular-nums aria-pressed:text-foreground lg:h-8"
             >
-              {chip.label}
+              {formatCentsThousands(chip.cents, language)}
             </Toggle>
           ))}
         </fieldset>

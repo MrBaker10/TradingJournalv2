@@ -1,11 +1,10 @@
+import { useLocale } from "next-intl";
 import type { JournalTradeRow } from "@/db/queries/trades";
+import { formatR } from "@/lib/analytics/format";
 import { moneyTone, SIGN_TEXT, signOf } from "@/lib/dashboard/sign-tone";
 import { Link } from "@/lib/i18n/navigation";
 import { type DisplayCurrency, formatCents } from "@/lib/money";
-
-function signedR(r: number): string {
-  return `${r >= 0 ? "+" : ""}${r.toFixed(2)}R`;
-}
+import { formatNumericDate } from "@/lib/time";
 
 /**
  * The last few entries under the equity curve, a dense mono table. A missed
@@ -20,6 +19,7 @@ export function RecentEntries({
   /** The display currency of `displayPnlCents` (display-currency). */
   currency: DisplayCurrency;
 }) {
+  const language = useLocale();
   return (
     <section aria-labelledby="recent-entries-heading">
       <h2
@@ -39,7 +39,7 @@ export function RecentEntries({
               {trades.map((trade) => (
                 <tr key={trade.id} className="border-b hover:bg-accent/40">
                   <td className="py-2.5 lg:py-1.5 pr-3 text-muted-foreground">
-                    {trade.tradeDate}
+                    {formatNumericDate(trade.tradeDate, language)}
                   </td>
                   <td className="py-2.5 lg:py-1.5 pr-3">
                     <Link
@@ -60,7 +60,7 @@ export function RecentEntries({
                   >
                     {trade.rMultiple === null
                       ? ""
-                      : `${signedR(trade.rMultiple)}${trade.taken ? "" : " would-be"}`}
+                      : `${formatR(trade.rMultiple, language)}${trade.taken ? "" : " would-be"}`}
                   </td>
                   <td
                     className={`py-2.5 lg:py-1.5 text-right ${moneyTone(trade.taken ? trade.displayPnlCents : null)}`}
@@ -69,6 +69,7 @@ export function RecentEntries({
                       ? formatCents(trade.displayPnlCents, {
                           signed: true,
                           currency,
+                          language,
                         })
                       : "—"}
                   </td>

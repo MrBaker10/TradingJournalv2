@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 import { StreakOrb } from "@/components/dashboard/streak-orb";
 import { TermInfo } from "@/components/terms/term-info";
 import type { HeatmapCell } from "@/domain/progress";
@@ -22,6 +23,7 @@ export function StreakColumn({
   /** Play the orb's gathering once. */
   moment: boolean;
 }) {
+  const language = useLocale();
   return (
     <section
       aria-label="Logging streak"
@@ -39,8 +41,8 @@ export function StreakColumn({
           <li key={cell.date} className="flex flex-col items-center gap-1">
             <span
               role="img"
-              aria-label={dayCellLabel(cell)}
-              title={dayCellLabel(cell)}
+              aria-label={dayCellLabel(cell, language)}
+              title={dayCellLabel(cell, language)}
               className={`h-7 w-7 rounded-md ${DAY_CELL_CLASS[cell.state]} ${
                 cell.isToday ? TODAY_RING : ""
               }`}

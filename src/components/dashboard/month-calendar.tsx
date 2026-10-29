@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import type { DayTotal } from "@/db/queries/dashboard";
 import type { IsoDate } from "@/domain/streak";
@@ -16,6 +17,7 @@ import {
   SIGN_TINT,
   signOf,
 } from "@/lib/dashboard/sign-tone";
+import type { Language } from "@/lib/i18n/languages";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { buildJournalHref } from "@/lib/journal/href";
 import {
@@ -23,7 +25,12 @@ import {
   formatCents,
   formatCentsCompact,
 } from "@/lib/money";
-import { formatDateWithYear, formatMonthLabel, shiftMonth } from "@/lib/time";
+import {
+  formatDateWithYear,
+  formatMonthLabel,
+  shiftMonth,
+  weekdayLabels,
+} from "@/lib/time";
 
 interface MonthCalendarProps {
   /** The running month on the user's clock — paging forward stops here. */
@@ -38,8 +45,6 @@ interface MonthCalendarProps {
   currency: DisplayCurrency;
 }
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
 // Design.md §3.2: hover lifts a day above its neighbours with card surface,
 // a 2 px translate, scale about 1.04 and a shadow; press settles to 1.01.
 // Tailwind v4 drives translate and scale through their own properties, so the
@@ -51,10 +56,14 @@ const LIFT =
 
 // Design.md §5: the tint does not reach a screen reader, so the label carries
 // date, amount and entry count in words.
-function ariaLabel(total: DayTotal, currency: DisplayCurrency): string {
+function ariaLabel(
+  total: DayTotal,
+  currency: DisplayCurrency,
+  language: Language,
+): string {
   const entries =
     total.entryCount === 1 ? "1 entry" : `${total.entryCount} entries`;
-  return `${formatDateWithYear(total.date)}, ${formatCents(total.amountCents, { signed: true, currency })}, ${entries}`;
+  return `${formatDateWithYear(total.date, language)}, ${formatCents(total.amountCents, { signed: true, currency, language })}, ${entries}`;
 }
 
 /**
@@ -73,6 +82,7 @@ export function MonthCalendar({
 }: MonthCalendarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const language = useLocale();
   const weeks = monthGrid(month, today, days);
 
   // Paging stops where the data does: forward at the running month, back at
@@ -100,7 +110,7 @@ export function MonthCalendar({
             id="calendar-heading"
             className="font-semibold text-xl tracking-tight"
           >
-            {formatMonthLabel(month)}
+            {formatMonthLabel(month, language)}
           </h1>
           <span className="text-muted-foreground text-sm">
             {days.length} journaled {days.length === 1 ? "day" : "days"}
@@ -132,7 +142,7 @@ export function MonthCalendar({
 
       <div className="rounded-lg border">
         <div className="grid grid-cols-7 rounded-t-lg border-b bg-muted/30 text-[11px] text-muted-foreground uppercase tracking-wider">
-          {WEEKDAYS.map((weekday) => (
+          {weekdayLabels(language).map((weekday) => (
             <div key={weekday} className="px-1.5 py-1.5 sm:px-2">
               {weekday}
             </div>
@@ -178,7 +188,7 @@ export function MonthCalendar({
                       <span
                         className={`font-mono text-[11px] tabular-nums sm:hidden ${SIGN_TEXT[sign]}`}
                       >
-                        {formatCentsCompact(total.amountCents)}
+                        {formatCentsCompact(total.amountCents, language)}
                       </span>
                       <span
                         className={`hidden font-mono text-[13px] tabular-nums sm:inline ${SIGN_TEXT[sign]}`}
@@ -186,6 +196,7 @@ export function MonthCalendar({
                         {formatCents(total.amountCents, {
                           signed: true,
                           currency,
+                          language,
                         })}
                       </span>
                     </span>
@@ -220,7 +231,7 @@ export function MonthCalendar({
                       {},
                       { from: cell.date, to: cell.date },
                     )}
-                    aria-label={ariaLabel(total, currency)}
+                    aria-label={ariaLabel(total, currency, language)}
                     aria-current={cell.isToday ? "date" : undefined}
                     className={`${cellClass} ${LIFT} outline-none focus-visible:z-10 focus-visible:ring-3 focus-visible:ring-ring/50`}
                   >

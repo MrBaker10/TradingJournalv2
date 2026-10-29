@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 import { MetricRow } from "@/components/dashboard/metric-row";
 import { TermInfo } from "@/components/terms/term-info";
 import type { LedgerTotals as LedgerTotalsData } from "@/db/queries/ledger";
@@ -19,6 +20,7 @@ export function LedgerTotals({
   /** The "All accounts" display currency (display-currency). */
   currency: DisplayCurrency;
 }) {
+  const language = useLocale();
   const expenses = signedLedgerCents({
     kind: "expense",
     amountCents: totals.expensesCents,
@@ -31,10 +33,14 @@ export function LedgerTotals({
           note={currency}
           tone={moneyTone(totals.payoutsCents)}
         >
-          {formatCents(totals.payoutsCents, { signed: true, currency })}
+          {formatCents(totals.payoutsCents, {
+            signed: true,
+            currency,
+            language,
+          })}
         </MetricRow>
         <MetricRow label="Expenses" note={currency} tone={moneyTone(expenses)}>
-          {formatCents(expenses, { currency })}
+          {formatCents(expenses, { currency, language })}
         </MetricRow>
         <MetricRow
           label="Ledger net"
@@ -42,7 +48,7 @@ export function LedgerTotals({
           note={currency}
           tone={moneyTone(totals.netCents)}
         >
-          {formatCents(totals.netCents, { signed: true, currency })}
+          {formatCents(totals.netCents, { signed: true, currency, language })}
         </MetricRow>
       </dl>
     </section>

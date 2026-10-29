@@ -1,5 +1,7 @@
+import { useLocale } from "next-intl";
 import { TermInfo } from "@/components/terms/term-info";
 import { type ConsistencyScore, SCORE_WEIGHTS } from "@/domain/consistency";
+import { formatFixed } from "@/lib/numbers";
 import { type ScorePartKey, scoreRingArcs } from "@/lib/progress/ring";
 
 /** 54 px of the 140 px box, leaving room for the 8 px stroke. */
@@ -43,6 +45,7 @@ export function ScoreRing({
   loggedDays: number;
   elapsedTradingDays: number;
 }) {
+  const language = useLocale();
   const arcs = scoreRingArcs(score);
   return (
     <section
@@ -103,7 +106,7 @@ export function ScoreRing({
             />
             <dt className="text-muted-foreground">{PART_LABEL[arc.key]}</dt>
             <dd className="ml-auto font-mono tabular-nums">
-              {score[arc.key].toFixed(1)}
+              {formatFixed(score[arc.key], 1, language)}
               <span className="text-muted-foreground">
                 /{SCORE_WEIGHTS[arc.key]}
               </span>

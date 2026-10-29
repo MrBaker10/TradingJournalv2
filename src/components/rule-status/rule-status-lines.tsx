@@ -1,5 +1,7 @@
+import { useLocale } from "next-intl";
 import type { RuleState, RuleStatus } from "@/domain/rule-status";
 import { formatCents } from "@/lib/money";
+import { formatDecimalString, formatFixed } from "@/lib/numbers";
 
 // The rule status of a linked account's current attempt (Design.md §2,
 // semantic tokens). Figures in USD whatever the display currency; the state word
@@ -69,15 +71,17 @@ function ConsistencyFigure({
 }: {
   consistency: RuleStatus["consistency"];
 }) {
+  const language = useLocale();
   if (consistency.status === "not_set") return <SubtleText>Not set</SubtleText>;
   if (!consistency.checked) return <SubtleText>No profit yet</SubtleText>;
-  const share = (consistency.shareTenthsPercent / 10).toFixed(1);
+  const share = formatFixed(consistency.shareTenthsPercent / 10, 1, language);
+  const limit = formatDecimalString(consistency.limitPercent, language);
   return (
     <JudgedFigure
       state={consistency.status}
-      before={`Best day ${formatCents(consistency.bestDayCents)} · `}
+      before={`Best day ${formatCents(consistency.bestDayCents, { language })} · `}
       figure={`${share} %`}
-      after={` of ${formatCents(consistency.totalProfitCents)} · limit ${consistency.limitPercent} %`}
+      after={` of ${formatCents(consistency.totalProfitCents, { language })} · limit ${limit} %`}
     />
   );
 }
@@ -86,12 +90,13 @@ function ConsistencyFigure({
 export function RuleStatusLines({ status }: { status: RuleStatus }) {
   const { profitTarget, drawdown, dailyLoss, consistency, minTradingDays } =
     status;
+  const language = useLocale();
   return (
     <dl className="flex flex-col gap-1.5">
       <RuleLine label="Profit target">
         <span className="text-foreground">
-          {formatCents(profitTarget.progressCents, { signed: true })} of{" "}
-          {formatCents(profitTarget.targetCents)}
+          {formatCents(profitTarget.progressCents, { signed: true, language })}{" "}
+          of {formatCents(profitTarget.targetCents, { language })}
         </span>
       </RuleLine>
       <RuleLine label="Max drawdown">
@@ -100,8 +105,8 @@ export function RuleStatusLines({ status }: { status: RuleStatus }) {
         ) : (
           <JudgedFigure
             state={drawdown.status}
-            figure={formatCents(drawdown.distanceCents)}
-            after={` to floor ${formatCents(drawdown.floorCents)}`}
+            figure={formatCents(drawdown.distanceCents, { language })}
+            after={` to floor ${formatCents(drawdown.floorCents, { language })}`}
           />
         )}
       </RuleLine>
@@ -111,9 +116,9 @@ export function RuleStatusLines({ status }: { status: RuleStatus }) {
         ) : (
           <JudgedFigure
             state={dailyLoss.status}
-            before={`Today ${formatCents(dailyLoss.todayNetCents, { signed: true })} · `}
-            figure={formatCents(dailyLoss.distanceCents)}
-            after={` left of ${formatCents(dailyLoss.limitCents)}`}
+            before={`Today ${formatCents(dailyLoss.todayNetCents, { signed: true, language })} · `}
+            figure={formatCents(dailyLoss.distanceCents, { language })}
+            after={` left of ${formatCents(dailyLoss.limitCents, { language })}`}
           />
         )}
       </RuleLine>

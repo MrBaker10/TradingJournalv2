@@ -1,10 +1,14 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import type { ImportPreview, RowVerdict } from "@/actions/import";
 import { Button } from "@/components/ui/button";
 import { PendingIndicator } from "@/components/ui/pending-indicator";
 import type { InstrumentRef } from "@/domain/import/normalize";
+import type { Language } from "@/lib/i18n/languages";
 import { formatCentsPlain } from "@/lib/money";
+import { formatDecimalString } from "@/lib/numbers";
+import { formatNumericDate } from "@/lib/time";
 import type { ParsedFile } from "./import-wizard";
 import { StepError } from "./step-error";
 
@@ -29,8 +33,14 @@ const VERDICT_CLASS: Record<RowVerdict, string> = {
 };
 
 /** An amount with its currency, plain: the preview compares, it does not rate. */
-function amount(cents: number | null, currency: string): string {
-  return cents === null ? "—" : `${formatCentsPlain(cents)} ${currency}`;
+function amount(
+  cents: number | null,
+  currency: string,
+  language: Language,
+): string {
+  return cents === null
+    ? "—"
+    : `${formatDecimalString(formatCentsPlain(cents), language)} ${currency}`;
 }
 
 /**
@@ -50,6 +60,7 @@ export function PreviewStep({
   onBack,
   onConfirm,
 }: PreviewStepProps) {
+  const language = useLocale();
   const symbolById = new Map(
     instruments.map((instrument) => [instrument.id, instrument.symbol]),
   );
@@ -117,25 +128,27 @@ export function PreviewStep({
                     <span className="text-muted-foreground">
                       {trade?.direction}{" "}
                       <span className="font-mono tabular-nums">
-                        {trade?.contracts}
+                        {trade
+                          ? formatDecimalString(trade.contracts, language)
+                          : null}
                       </span>
                     </span>
                     <p className="text-muted-foreground text-xs">
                       line {row.sourceRow} — {row.reason}
                       {row.pnlUsdCents !== null && row.fxRateDate !== null
-                        ? ` · stored as ${amount(row.pnlUsdCents, "USD")} at the ECB rate of ${row.fxRateDate}`
+                        ? ` · stored as ${amount(row.pnlUsdCents, "USD", language)} at the ECB rate of ${formatNumericDate(row.fxRateDate, language)}`
                         : ""}
                       {row.provisional
                         ? " · provisional rate, corrected overnight"
                         : ""}
                       {trade?.stopPrice != null
-                        ? ` · stop ${trade.stopPrice}`
+                        ? ` · stop ${formatDecimalString(trade.stopPrice, language)}`
                         : ""}
                       {trade?.stopNotice ? ` · ${trade.stopNotice}` : ""}
                     </p>
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 font-mono text-muted-foreground tabular-nums">
-                    {trade?.tradeDate ?? "—"}
+                    {trade ? formatNumericDate(trade.tradeDate, language) : "—"}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right font-mono text-muted-foreground tabular-nums">
                     {trade?.entryTime.slice(0, 5) ?? "—"}
@@ -145,10 +158,10 @@ export function PreviewStep({
                       file's amount is in the account's currency, the
                       price-derived one in USD. */}
                   <td className="whitespace-nowrap px-4 py-2.5 text-right font-mono tabular-nums">
-                    {amount(row.filePnlCents, preview.currency)}
+                    {amount(row.filePnlCents, preview.currency, language)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right font-mono tabular-nums">
-                    {amount(row.computedPnlCents, "USD")}
+                    {amount(row.computedPnlCents, "USD", language)}
                   </td>
                   <td
                     className={`whitespace-nowrap px-4 py-2.5 text-right ${VERDICT_CLASS[row.verdict]}`}

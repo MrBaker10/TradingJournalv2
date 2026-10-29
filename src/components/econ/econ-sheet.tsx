@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { MetricRow } from "@/components/dashboard/metric-row";
 import {
   Sheet,
@@ -36,6 +37,7 @@ export function EconSheet({
   onClose: () => void;
 }) {
   const view = useRetainedTarget(target, (shown) => shown.event.id);
+  const language = useLocale();
 
   return (
     <Sheet open={target !== null} onOpenChange={(next) => !next && onClose()}>
@@ -47,7 +49,7 @@ export function EconSheet({
                 {view.event.title}
               </SheetTitle>
               <SheetDescription className="font-mono tabular-nums">
-                {formatEventDayLabel(view.date)} ·{" "}
+                {formatEventDayLabel(view.date, language)} ·{" "}
                 {formatEventTime(view.event.occursAt, timeZone)} {timeZone}
               </SheetDescription>
             </div>

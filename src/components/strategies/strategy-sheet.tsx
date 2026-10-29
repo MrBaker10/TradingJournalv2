@@ -1,6 +1,7 @@
 "use client";
 
 import { Archive, ArchiveRestore, ChevronRight, Pencil } from "lucide-react";
+import { useLocale } from "next-intl";
 import { useState, useTransition } from "react";
 import { setStrategyArchived } from "@/actions/strategies";
 import { DrawnCheck } from "@/components/trades/form-blocks";
@@ -151,6 +152,7 @@ function StrategyDetail({
   onEdit: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
+  const language = useLocale();
   const archived = strategy.archivedAt !== null;
   const total = trades[0]?.total ?? 0;
 
@@ -234,7 +236,7 @@ function StrategyDetail({
                   className="group flex items-baseline gap-3 rounded-md border-b border-dashed px-1 py-2.5 text-sm lg:py-1.5 transition-colors duration-150 hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
                   <span className="shrink-0 font-mono text-muted-foreground tabular-nums">
-                    {formatDateWithYear(trade.tradeDate)}
+                    {formatDateWithYear(trade.tradeDate, language)}
                   </span>
                   <span className="min-w-0 truncate font-mono">
                     {trade.instrumentSymbol}

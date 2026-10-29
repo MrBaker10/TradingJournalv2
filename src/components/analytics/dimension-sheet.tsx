@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import {
   createContext,
   type ReactNode,
@@ -79,6 +80,7 @@ function DetailBody({
   metric: AnalyticsMetric;
   currency: DisplayCurrency;
 }) {
+  const language = useLocale();
   const rows = detailOrder(dimension, unsorted, metric);
   // Not set shows its figures but stays out of the scale (Design.md §3.7).
   const layout = zeroLineLayout(
@@ -110,7 +112,7 @@ function DetailBody({
                 metric === "pnl" ? moneyTone(row.netPnlCents) : ""
               }`}
             >
-              {formatMetric(row, metric, currency)}
+              {formatMetric(row, metric, currency, language)}
             </span>
           </li>
         ))}
@@ -150,15 +152,19 @@ function DetailBody({
                   {row.trades}
                 </td>
                 <td className="whitespace-nowrap py-2 pl-3 text-right font-mono tabular-nums">
-                  {formatShare(row.winRate)}
+                  {formatShare(row.winRate, language)}
                 </td>
                 <td
                   className={`whitespace-nowrap py-2 pl-3 text-right font-mono tabular-nums ${moneyTone(row.netPnlCents)}`}
                 >
-                  {formatCents(row.netPnlCents, { signed: true, currency })}
+                  {formatCents(row.netPnlCents, {
+                    signed: true,
+                    currency,
+                    language,
+                  })}
                 </td>
                 <td className="whitespace-nowrap py-2 pl-3 text-right font-mono tabular-nums">
-                  {formatR(row.avgR)}
+                  {formatR(row.avgR, language)}
                 </td>
                 <td className="whitespace-nowrap py-2 pl-3 text-right font-mono tabular-nums">
                   {row.rCount}

@@ -1,4 +1,5 @@
 import { ArrowLeft } from "lucide-react";
+import { getLocale } from "next-intl/server";
 import { ReviewWeekNav } from "@/components/progress/review-week-nav";
 import { WeekSummaryCard } from "@/components/progress/week-summary-card";
 import { WeeklyReviewForm } from "@/components/progress/weekly-review-form";
@@ -24,7 +25,11 @@ export default async function WeeklyReviewPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [user, rawParams] = await Promise.all([getCurrentUser(), searchParams]);
+  const [user, rawParams, language] = await Promise.all([
+    getCurrentUser(),
+    searchParams,
+    getLocale(),
+  ]);
 
   // The review belongs to the user, not to an account, so the account
   // selector plays no part here. Which week is current is the user's own
@@ -70,7 +75,8 @@ export default async function WeeklyReviewPage({
         <h1 className="page-title">Weekly Review</h1>
         <p className="text-muted-foreground text-xs">
           <span className="font-mono tabular-nums">
-            {formatDateWithYear(range.from)} – {formatDateWithYear(range.to)}
+            {formatDateWithYear(range.from, language)} –{" "}
+            {formatDateWithYear(range.to, language)}
           </span>{" "}
           · Sunday to Friday. Counts towards nothing but the habit itself.
         </p>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { type ElementType, type ReactNode, useState } from "react";
 import { LinkCard } from "@/components/journal/link-card";
 import { PriceBandChart } from "@/components/journal/price-band";
@@ -8,15 +9,20 @@ import { StrategyRules } from "@/components/strategies/strategy-rules";
 import type { JournalTradeRow } from "@/db/queries/trades";
 import { formatHoldTime } from "@/domain/execution";
 import { buildPriceBand } from "@/domain/price-band";
+import { formatR } from "@/lib/analytics/format";
 import { moneyTone, SIGN_TEXT, signOf } from "@/lib/dashboard/sign-tone";
+import type { Language } from "@/lib/i18n/languages";
 import { type DisplayCurrency, formatCents } from "@/lib/money";
+import { formatDecimalString, formatFixed } from "@/lib/numbers";
+import { formatNumericDate } from "@/lib/time";
 
-function signedR(r: number): string {
-  return `${r >= 0 ? "+" : ""}${r.toFixed(2)}R`;
+function excursion(value: number | null, language: Language): string | null {
+  return value === null ? null : `${formatFixed(value, 2, language)}R`;
 }
 
-function excursion(value: number | null): string | null {
-  return value === null ? null : `${value.toFixed(2)}R`;
+/** A price or a size with the language's decimal separator. */
+function decimal(value: number | null, language: Language): string | null {
+  return value === null ? null : formatDecimalString(value, language);
 }
 
 /** A key/value list; a row without a value is left out. */
@@ -107,6 +113,7 @@ export function TradeDetailBody({
   fxProvisional?: boolean;
 }) {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const language = useLocale();
 
   const pnl = trade.taken ? trade.displayPnlCents : null;
   const r = trade.taken ? trade.rMultiple : null;
@@ -153,7 +160,9 @@ export function TradeDetailBody({
             {trade.grade && <Chip>Grade {trade.grade}</Chip>}
           </div>
           <p className="text-muted-foreground text-sm">
-            <span className={MONO}>{trade.tradeDate}</span>
+            <span className={MONO}>
+              {formatNumericDate(trade.tradeDate, language)}
+            </span>
             {[trade.session, trade.setupType]
               .filter(Boolean)
               .map((part) => ` · ${part}`)
@@ -168,7 +177,7 @@ export function TradeDetailBody({
             <span
               className={`font-semibold text-2xl ${MONO} ${moneyTone(pnl)}`}
             >
-              {formatCents(pnl, { signed: true, currency })}
+              {formatCents(pnl, { signed: true, currency, language })}
             </span>
             {/* The parts of the figure above, not money of their own. */}
             {showBreakdown && (
@@ -177,20 +186,26 @@ export function TradeDetailBody({
                 {formatCents(pnl + trade.displayCommissionCents, {
                   signed: true,
                   currency,
+                  language,
                 })}{" "}
                 · Commission{" "}
-                {formatCents(-trade.displayCommissionCents, { currency })}
+                {formatCents(-trade.displayCommissionCents, {
+                  currency,
+                  language,
+                })}
               </span>
             )}
             {r !== null && (
               <span className={`text-sm ${MONO} ${SIGN_TEXT[signOf(r)]}`}>
-                {signedR(r)}
+                {formatR(r, language)}
               </span>
             )}
             {/* A note about the rate, not about the money: no colour. */}
             {fxProvisional && trade.fxRateDate !== null && (
               <span className="text-muted-foreground text-xs">
-                Provisional rate ({trade.fxRateDate}), corrected overnight
+                Provisional rate (
+                {formatNumericDate(trade.fxRateDate, language)}), corrected
+                overnight
               </span>
             )}
           </div>
@@ -220,7 +235,7 @@ export function TradeDetailBody({
                   [
                     "Entry",
                     <span key="entry" className={MONO}>
-                      {trade.entryPrice}{" "}
+                      {decimal(trade.entryPrice, language)}{" "}
                       <span className="text-muted-foreground">at</span>{" "}
                       {trade.entryTime.slice(0, 5)}
                     </span>,
@@ -229,7 +244,7 @@ export function TradeDetailBody({
                     "Exit",
                     trade.exitPrice === null ? null : (
                       <span key="exit" className={MONO}>
-                        {trade.exitPrice}
+                        {decimal(trade.exitPrice, language)}
                         {trade.exitTime && (
                           <>
                             {" "}
@@ -240,10 +255,12 @@ export function TradeDetailBody({
                       </span>
                     ),
                   ],
-                  ["Stop", monoValue(trade.stopPrice)],
+                  ["Stop", monoValue(decimal(trade.stopPrice, language))],
                   [
                     "Contracts",
-                    monoValue(trade.taken ? trade.contracts : null),
+                    monoValue(
+                      decimal(trade.taken ? trade.contracts : null, language),
+                    ),
                   ],
                   [
                     "Held",
@@ -253,9 +270,12 @@ export function TradeDetailBody({
                         : formatHoldTime(trade.holdMinutes),
                     ),
                   ],
-                  ["MFE", monoValue(excursion(trade.mfeR))],
-                  ["MAE", monoValue(excursion(trade.maeR))],
-                  ["Post-exit MFE", monoValue(excursion(trade.postExitMfeR))],
+                  ["MFE", monoValue(excursion(trade.mfeR, language))],
+                  ["MAE", monoValue(excursion(trade.maeR, language))],
+                  [
+                    "Post-exit MFE",
+                    monoValue(excursion(trade.postExitMfeR, language)),
+                  ],
                 ]}
               />
             </Block>
@@ -346,7 +366,10 @@ export function TradeDetailBody({
                       {account.name}
                       {account.commissionCents !== null && (
                         <span className={MONO} title="Commission">
-                          {formatCents(account.commissionCents, { currency })}
+                          {formatCents(account.commissionCents, {
+                            currency,
+                            language,
+                          })}
                         </span>
                       )}
                       {/* The marker travels with the account wherever its

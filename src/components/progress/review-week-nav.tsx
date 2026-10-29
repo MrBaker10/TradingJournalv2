@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useLocale } from "next-intl";
 import { shiftReviewWeek } from "@/domain/review-week";
 import type { IsoDate } from "@/domain/streak";
 import { Link } from "@/lib/i18n/navigation";
@@ -30,6 +31,7 @@ export function ReviewWeekNav({
   recentWeeks,
   reviewedWeeks,
 }: ReviewWeekNavProps) {
+  const language = useLocale();
   const reviewed = new Set(reviewedWeeks);
   const isCurrent = weekStart === currentWeek;
 
@@ -41,7 +43,9 @@ export function ReviewWeekNav({
           href={weekHref(shiftReviewWeek(weekStart, -1), currentWeek)}
         />
         <span className="min-w-28 text-center font-mono text-muted-foreground text-xs tabular-nums">
-          {isCurrent ? "This week" : `Week of ${formatDayLabel(weekStart)}`}
+          {isCurrent
+            ? "This week"
+            : `Week of ${formatDayLabel(weekStart, language)}`}
         </span>
         <WeekStep
           direction="forward"
@@ -62,7 +66,7 @@ export function ReviewWeekNav({
               <Link
                 href={weekHref(week, currentWeek)}
                 aria-current={isSelected ? "page" : undefined}
-                aria-label={`Week of ${formatDayLabel(week)}, ${
+                aria-label={`Week of ${formatDayLabel(week, language)}, ${
                   isReviewed ? "reviewed" : "not reviewed"
                 }`}
                 className={`flex h-10 items-center gap-1.5 rounded-lg border px-2.5 font-mono text-xs tabular-nums outline-none transition-colors duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 lg:h-8 ${
@@ -79,7 +83,7 @@ export function ReviewWeekNav({
                       : "border border-muted-foreground/50"
                   }`}
                 />
-                {formatDayLabel(week)}
+                {formatDayLabel(week, language)}
               </Link>
             </li>
           );

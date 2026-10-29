@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
+import { useLocale } from "next-intl";
 import { calendarDateOf, formatDayLabel } from "@/lib/time";
 
 export interface ArchivedAccountData {
@@ -25,6 +26,7 @@ export function ArchivedAccountsList({
   timeZone: string;
   onOpen: (accountId: number) => void;
 }) {
+  const language = useLocale();
   if (accounts.length === 0) return null;
 
   return (
@@ -41,7 +43,10 @@ export function ArchivedAccountsList({
               <span className="min-w-0 flex-1 truncate">{account.name}</span>
               <span className="shrink-0 text-muted-foreground text-xs">
                 Archived{" "}
-                {formatDayLabel(calendarDateOf(account.archivedAt, timeZone))}
+                {formatDayLabel(
+                  calendarDateOf(account.archivedAt, timeZone),
+                  language,
+                )}
               </span>
               <ChevronRight
                 aria-hidden="true"

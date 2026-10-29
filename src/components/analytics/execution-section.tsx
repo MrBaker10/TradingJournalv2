@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 import { TermInfo } from "@/components/terms/term-info";
 import type { ExecutionSummaryRow } from "@/db/queries/analytics";
 import { zeroLineLayout } from "@/domain/analytics";
@@ -12,6 +13,8 @@ import {
 } from "@/domain/execution";
 import { columnRect, toPercent } from "@/lib/analytics/columns";
 import { formatShare } from "@/lib/analytics/format";
+import type { Language } from "@/lib/i18n/languages";
+import { formatFixed } from "@/lib/numbers";
 import { CARD_SURFACE } from "./surface";
 import { ThinBar } from "./thin-bar";
 
@@ -38,8 +41,10 @@ const KIND_TITLES: Record<ExcursionKind, string> = {
  * An R without a sign: excursions are magnitudes, and the R left after the
  * exit was never realised, so a "+" would read like a gain.
  */
-function plainR(value: number | null | undefined): string {
-  return value === null || value === undefined ? "—" : `${value.toFixed(2)}R`;
+function plainR(value: number | null | undefined, language: Language): string {
+  return value === null || value === undefined
+    ? "—"
+    : `${formatFixed(value, 2, language)}R`;
 }
 
 function rowOf(summary: ExecutionSummaryRow[], outcome: Outcome) {
@@ -84,6 +89,7 @@ function Figure({
 }
 
 function HoldTime({ summary }: { summary: ExecutionSummaryRow[] }) {
+  const language = useLocale();
   const layout = zeroLineLayout(
     OUTCOMES.map((outcome) => rowOf(summary, outcome)?.holdMinutes ?? null),
   );
@@ -128,13 +134,13 @@ function HoldTime({ summary }: { summary: ExecutionSummaryRow[] }) {
               key={`${outcome}-mae`}
               className="text-right font-mono tabular-nums"
             >
-              {plainR(row?.avgMaeR)}
+              {plainR(row?.avgMaeR, language)}
             </dd>,
             <dd
               key={`${outcome}-mfe`}
               className="text-right font-mono tabular-nums"
             >
-              {plainR(row?.avgMfeR)}
+              {plainR(row?.avgMfeR, language)}
             </dd>,
           ];
         })}
@@ -157,6 +163,7 @@ function Excursions({
   excursions: ExcursionCount[];
   info?: React.ReactNode;
 }) {
+  const language = useLocale();
   const series = OUTCOMES.map((outcome) => ({
     outcome,
     rows: buildExcursionRows(kind, outcome, excursions),
@@ -204,7 +211,7 @@ function Excursions({
                 className={OUTCOME_FILL[outcome]}
               >
                 <title>
-                  {`${OUTCOME_LABELS[outcome]} · ${label}: ${formatShare(shares[bucket * series.length + side])}`}
+                  {`${OUTCOME_LABELS[outcome]} · ${label}: ${formatShare(shares[bucket * series.length + side], language)}`}
                 </title>
               </rect>
             );
@@ -229,13 +236,14 @@ function Excursions({
 }
 
 function ExitEfficiency({ summary }: { summary: ExecutionSummaryRow[] }) {
+  const language = useLocale();
   const winners = rowOf(summary, "winner");
   const share = winners?.capturedShare ?? null;
   return (
     <Figure title="Exit efficiency">
       <div className="flex items-baseline gap-2">
         <span className="font-mono font-semibold text-2xl tabular-nums">
-          {formatShare(share)}
+          {formatShare(share, language)}
         </span>
         <span className="text-muted-foreground text-xs">
           of the move kept by winners · n={winners?.capturedTrades ?? 0}
@@ -251,7 +259,7 @@ function ExitEfficiency({ summary }: { summary: ExecutionSummaryRow[] }) {
           Left after the exit (hypothetical)
         </dt>
         <dd className="font-mono tabular-nums">
-          {plainR(winners?.avgLeftOnTableR)}
+          {plainR(winners?.avgLeftOnTableR, language)}
           <span className="ml-1.5 text-muted-foreground">
             n={winners?.leftOnTableTrades ?? 0}
           </span>

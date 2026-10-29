@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 import {
   MISSED_DIMENSION_IDS,
   MISSED_DIMENSION_TITLES,
@@ -13,6 +14,7 @@ import { ThinBar } from "./thin-bar";
 const MISSED_ROW_COUNT = 6;
 
 function MissedCard({ title, rows }: { title: string; rows: MissedRow[] }) {
+  const language = useLocale();
   const shown = rows.slice(0, MISSED_ROW_COUNT);
   const layout = zeroLineLayout(
     shown.map((row) => (row.isNotSet ? null : row.missed)),
@@ -36,7 +38,7 @@ function MissedCard({ title, rows }: { title: string; rows: MissedRow[] }) {
                   {row.missed}
                   <span className="text-muted-foreground">
                     {" "}
-                    of {row.entries} · {formatShare(row.share)}
+                    of {row.entries} · {formatShare(row.share, language)}
                   </span>
                 </span>
               </span>

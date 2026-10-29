@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 import { RuleStatusLines } from "@/components/rule-status/rule-status-lines";
 import type { RuleState } from "@/domain/rule-status";
 import type { AttemptStatus } from "@/lib/prop-firms/rule-status";
@@ -14,6 +15,7 @@ export function AccountRuleStatus({
   attempt: AttemptStatus;
   state: RuleState | null;
 }) {
+  const language = useLocale();
   return (
     <section
       aria-labelledby="account-rule-status"
@@ -25,7 +27,7 @@ export function AccountRuleStatus({
           Rule status
         </h3>
         <span className={HELP_TEXT}>
-          Since {formatDateWithYear(attempt.start)}
+          Since {formatDateWithYear(attempt.start, language)}
         </span>
       </div>
       <RuleStatusLines status={attempt.status} />

@@ -84,7 +84,7 @@ src/
     econ/                     # Phase 2 — feed adapter, swappable in one file
     trades/                   # save a trade logged or edited by hand
     i18n/                     # languages, request language, next-intl routing, dictionaries
-    money.ts  time.ts  env.ts
+    money.ts  numbers.ts  time.ts  env.ts
   scripts/                    # CLI scripts without a database (prop firm source check)
   hooks/
   types/

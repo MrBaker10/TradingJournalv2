@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { useState, useTransition } from "react";
 import { undoImportBatch } from "@/actions/import";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ interface BatchListProps {
  */
 export function BatchList({ batches, timeZone }: BatchListProps) {
   const router = useRouter();
+  const language = useLocale();
   const [armed, setArmed] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -81,7 +83,10 @@ export function BatchList({ batches, timeZone }: BatchListProps) {
                 <span className="text-muted-foreground text-xs">
                   {batch.accountName} ·{" "}
                   <span className="font-mono tabular-nums">
-                    {formatDayLabel(calendarDateOf(batch.createdAt, timeZone))}
+                    {formatDayLabel(
+                      calendarDateOf(batch.createdAt, timeZone),
+                      language,
+                    )}
                   </span>{" "}
                   · {batch.detectedShape}
                 </span>

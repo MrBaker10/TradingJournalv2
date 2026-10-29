@@ -58,3 +58,12 @@ describe("formatMetric", () => {
     );
   });
 });
+
+describe("interface language", () => {
+  it("prints R, shares and metrics in German format", () => {
+    expect(formatR(1.254, "de")).toBe("+1,25R");
+    expect(formatShare(0.5833, "de")).toBe("58 %");
+    expect(formatMetric(row, "pnl", "USD", "de")).toBe("-1.234,56 $");
+    expect(formatMetric(row, "avgR", "USD", "de")).toBe("+0,40R");
+  });
+});

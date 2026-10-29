@@ -1,5 +1,6 @@
 import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { TradeForm } from "@/components/trades/trade-form";
 import { buttonVariants } from "@/components/ui/button";
 import { listAssignableAccounts } from "@/db/queries/accounts";
@@ -14,6 +15,7 @@ import {
 import { isDemoUsername } from "@/domain/demo";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { Link } from "@/lib/i18n/navigation";
+import { formatNumericDate } from "@/lib/time";
 import { strategyOptions } from "@/lib/trades/strategy-options";
 
 interface EditTradePageProps {
@@ -28,6 +30,7 @@ export default async function EditTradePage({ params }: EditTradePageProps) {
   const user = await getCurrentUser();
   const trade = await getJournalTradeById(user.id, tradeId);
   if (!trade) notFound();
+  const language = await getLocale();
 
   // Not listActiveAccountsForSwitcher, which the new-trade page uses: an
   // archived account this trade already sits on has to stay in the list, or
@@ -62,7 +65,10 @@ export default async function EditTradePage({ params }: EditTradePageProps) {
         </Link>
         <h1 className="font-semibold text-muted-foreground text-sm">
           Edit <span className="text-foreground">{trade.instrumentSymbol}</span>{" "}
-          · <span className="font-mono tabular-nums">{trade.tradeDate}</span>
+          ·{" "}
+          <span className="font-mono tabular-nums">
+            {formatNumericDate(trade.tradeDate, language)}
+          </span>
         </h1>
       </div>
 

@@ -5,13 +5,17 @@ import {
   formatDayLabel,
   formatEventDayLabel,
   formatEventTime,
+  formatLongDateLabel,
   formatMonthLabel,
   formatMonthTickLabel,
+  formatNumericDate,
+  formatWeekdayLabel,
   monthKeyOf,
   monthRangeOf,
   rangeForPreset,
   shiftMonth,
   todayInTimeZone,
+  weekdayLabels,
 } from "../time.ts";
 
 describe("todayInTimeZone", () => {
@@ -210,5 +214,79 @@ describe("formatEventDayLabel", () => {
   it("names the weekday, day and month", () => {
     expect(formatEventDayLabel("2026-09-28")).toBe("Mon 28 Sep");
     expect(formatEventDayLabel("2026-10-04")).toBe("Sun 4 Oct");
+  });
+});
+
+describe("date labels — interface language", () => {
+  it("is unchanged in English when the language is named", () => {
+    expect(formatDayLabel("2026-09-03", "en")).toBe("Sep 3");
+    expect(formatDateWithYear("2026-08-13", "en")).toBe("13 Aug 2026");
+    expect(formatEventDayLabel("2026-09-28", "en")).toBe("Mon 28 Sep");
+  });
+
+  it("writes a day with a German month name", () => {
+    expect(formatDayLabel("2026-09-03", "de")).toBe("3. Sep.");
+    expect(formatDayLabel("2026-05-04", "de")).toBe("4. Mai");
+  });
+
+  it("writes a month with its German name", () => {
+    expect(formatMonthLabel("2026-03", "de")).toBe("März 2026");
+    expect(formatMonthTickLabel("2026-10-29", "de")).toBe("Okt. 2026");
+  });
+
+  it("writes a full date the German way", () => {
+    expect(formatDateWithYear("2026-10-29", "de")).toBe("29.10.2026");
+    expect(formatDateWithYear("2026-08-03", "de")).toBe("03.08.2026");
+  });
+
+  it("writes an event day with a German day name", () => {
+    expect(formatEventDayLabel("2026-09-28", "de")).toBe("Mo., 28. Sep.");
+    expect(formatEventDayLabel("2026-10-04", "de")).toBe("So., 4. Okt.");
+  });
+
+  it("names the weekday of a date", () => {
+    expect(formatWeekdayLabel("2026-10-29", "en")).toBe("Thursday");
+    expect(formatWeekdayLabel("2026-10-29", "de")).toBe("Donnerstag");
+  });
+
+  it("writes a long date for an accessible label", () => {
+    expect(formatLongDateLabel("2026-10-29", "en")).toBe(
+      "Thursday 29 October 2026",
+    );
+    expect(formatLongDateLabel("2026-10-29", "de")).toBe(
+      "Donnerstag, 29. Oktober 2026",
+    );
+  });
+
+  it("lists the weekday names from Monday", () => {
+    expect(weekdayLabels("en")).toEqual([
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun",
+    ]);
+    expect(weekdayLabels("de")).toEqual([
+      "Mo",
+      "Di",
+      "Mi",
+      "Do",
+      "Fr",
+      "Sa",
+      "So",
+    ]);
+  });
+});
+
+describe("formatNumericDate", () => {
+  it("keeps the ISO date in English", () => {
+    expect(formatNumericDate("2026-10-29", "en")).toBe("2026-10-29");
+  });
+
+  it("writes day, month and year with dots in German", () => {
+    expect(formatNumericDate("2026-10-29", "de")).toBe("29.10.2026");
+    expect(formatNumericDate("2026-01-05", "de")).toBe("05.01.2026");
   });
 });

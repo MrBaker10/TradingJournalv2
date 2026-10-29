@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { useLocale } from "next-intl";
 import { RuleStatusLines } from "@/components/rule-status/rule-status-lines";
 import { Link } from "@/lib/i18n/navigation";
 import type { LinkedRuleStatus } from "@/lib/prop-firms/rule-status";
@@ -12,6 +13,7 @@ export function RuleStatusCard({
 }: {
   ruleStatus: LinkedRuleStatus;
 }) {
+  const language = useLocale();
   return (
     <section
       aria-labelledby="rule-status-heading"
@@ -26,7 +28,7 @@ export function RuleStatusCard({
         </h2>
         <span className="text-muted-foreground text-xs">
           {link.firmName} · {link.programName} · Since{" "}
-          {formatDateWithYear(attempt.start)}
+          {formatDateWithYear(attempt.start, language)}
         </span>
         {/* Straight into the account's settings sheet (Design.md §3.8). */}
         <Link

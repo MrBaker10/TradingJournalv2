@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import {
   ChevronCell,
   OpenColumnHead,
@@ -32,6 +33,7 @@ export function LedgerTable({
   openId: number | null;
   onOpen: (entryId: number) => void;
 }) {
+  const language = useLocale();
   return (
     <div className={TABLE_BOX}>
       <table className="w-full text-sm [&_th]:whitespace-nowrap">
@@ -54,7 +56,7 @@ export function LedgerTable({
                 className={`${TABLE_ROW} align-top last:border-b-0`}
               >
                 <td className="whitespace-nowrap px-4 py-2.5 font-mono text-muted-foreground tabular-nums">
-                  {formatDateWithYear(entry.entryDate)}
+                  {formatDateWithYear(entry.entryDate, language)}
                 </td>
                 <td className="min-w-48 px-4 py-2.5">
                   <button
@@ -79,7 +81,7 @@ export function LedgerTable({
                 <td
                   className={`whitespace-nowrap px-4 py-2.5 text-right font-mono tabular-nums ${moneyTone(signed)}`}
                 >
-                  {formatCents(signed, { signed: true })}
+                  {formatCents(signed, { signed: true, language })}
                 </td>
                 <ChevronCell />
               </tr>

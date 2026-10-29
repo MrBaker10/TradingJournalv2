@@ -8,7 +8,6 @@ import {
   isNull,
   sql,
 } from "drizzle-orm";
-import { formatCentsThousands } from "../../lib/money.ts";
 import type { ProgramFields } from "../../lib/prop-firms/parse.ts";
 import { db } from "../index.ts";
 import { propFirmPrograms, propFirms } from "../schema/prop-firms.ts";
@@ -166,7 +165,8 @@ export async function listSummaryTags(
 export interface AccountSizeChip {
   /** Whole USD, the value the URL carries. */
   usd: number;
-  label: string;
+  /** The same size in cents, which the chip labels in the page's language. */
+  cents: number;
 }
 
 // Every known account size, once, ascending — the size chips. Unknown sizes
@@ -185,10 +185,7 @@ export async function listAccountSizes(
     .where(and(ON_SALE, isNotNull(propFirmPrograms.accountSizeUsd)))
     .orderBy(ACCOUNT_SIZE_CENTS);
 
-  return rows.map((row) => ({
-    usd: row.usd,
-    label: formatCentsThousands(row.cents),
-  }));
+  return rows;
 }
 
 export interface ProgramOption {

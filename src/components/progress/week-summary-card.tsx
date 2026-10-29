@@ -1,11 +1,14 @@
+import { useLocale } from "next-intl";
 import { MetricRow } from "@/components/dashboard/metric-row";
 import type { WeekSummary } from "@/db/queries/weekly-reviews";
 import { TRADING_DAYS_PER_REVIEW_WEEK } from "@/domain/review-week";
+import type { Language } from "@/lib/i18n/languages";
 import { type DisplayCurrency, formatCents } from "@/lib/money";
+import { formatPercent } from "@/lib/numbers";
 
-function byTheBookShare(summary: WeekSummary): string {
+function byTheBookShare(summary: WeekSummary, language: Language): string {
   if (summary.takenTrades === 0) return "—";
-  return `${Math.round((summary.byTheBookTrades / summary.takenTrades) * 100)}%`;
+  return formatPercent(summary.byTheBookTrades / summary.takenTrades, language);
 }
 
 /**
@@ -21,6 +24,7 @@ export function WeekSummaryCard({
   summary: WeekSummary;
   currency: DisplayCurrency;
 }) {
+  const language = useLocale();
   return (
     <section className="flex flex-col gap-3">
       <h2 className="font-medium text-[11px] text-muted-foreground uppercase tracking-wider">
@@ -46,13 +50,17 @@ export function WeekSummaryCard({
               note={`${summary.byTheBookTrades} of ${summary.takenTrades} taken`}
               tone="text-process"
             >
-              {byTheBookShare(summary)}
+              {byTheBookShare(summary, language)}
             </MetricRow>
             <MetricRow label="Missed setups" tone="text-process">
               {summary.missedSetups}
             </MetricRow>
             <MetricRow label="Net P&L" note="all real accounts">
-              {formatCents(summary.netPnlCents, { signed: true, currency })}
+              {formatCents(summary.netPnlCents, {
+                signed: true,
+                currency,
+                language,
+              })}
             </MetricRow>
           </dl>
 

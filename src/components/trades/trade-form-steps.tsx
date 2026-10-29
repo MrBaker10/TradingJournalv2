@@ -2,6 +2,7 @@
 
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useLocale } from "next-intl";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 import { PriceBandChart } from "@/components/journal/price-band";
 import { TermInfo } from "@/components/terms/term-info";
@@ -31,6 +32,7 @@ import { groupByAssetClass } from "@/domain/instruments";
 import { calculatePnl } from "@/domain/pnl";
 import type { PriceBandInput } from "@/domain/price-band";
 import { formatCents, formatCentsPlain, type MoneyCurrency } from "@/lib/money";
+import { formatFixed } from "@/lib/numbers";
 import { parseNumber, type TradeFormState } from "@/lib/trades/form-steps";
 import type { StrategyOption } from "@/lib/trades/strategy-options";
 import { cn } from "@/lib/utils";
@@ -275,6 +277,7 @@ function signTone(value: number): string {
 export function StepExecution(props: StepProps) {
   const { state, update, errors, isMissing, disabled } = props;
   const live = useLivePnl(props.data, state);
+  const language = useLocale();
   // Live P&L and R show only while the execution fields are being typed in
   // (Design.md §3.5): information while it is useful, never a reward at rest.
   const [typing, setTyping] = useState(false);
@@ -400,12 +403,13 @@ export function StepExecution(props: StepProps) {
                   {formatCents(live.pnlCents, {
                     signed: true,
                     currency: live.currency,
+                    language,
                   })}
                 </span>
                 {live.rMultiple !== null && (
                   <span className={cn("text-sm", signTone(live.rMultiple))}>
                     {live.rMultiple >= 0 ? "+" : ""}
-                    {live.rMultiple.toFixed(2)}R
+                    {formatFixed(live.rMultiple, 2, language)}R
                   </span>
                 )}
               </div>

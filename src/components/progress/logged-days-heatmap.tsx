@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { useLocale } from "next-intl";
 import { TermInfo } from "@/components/terms/term-info";
 import { HEATMAP_WEEK_COUNT, type HeatmapCell } from "@/domain/progress";
 import { useProcessMoment } from "@/hooks/use-process-moment";
@@ -10,7 +11,8 @@ function Cell({ cell, pulse }: { cell: HeatmapCell; pulse: boolean }) {
   const className = `relative aspect-square w-full max-w-5 rounded-[3px] ${DAY_CELL_CLASS[cell.state]} ${
     cell.isToday ? TODAY_RING : ""
   }`;
-  const label = dayCellLabel(cell);
+  const language = useLocale();
+  const label = dayCellLabel(cell, language);
   if (!pulse) {
     return (
       <div role="img" aria-label={label} title={label} className={className} />
