@@ -105,8 +105,8 @@ themes meet WCAG 2.2 AA.
 - **Theme state:** a cookie `theme` holding the pick. One year, `SameSite=Lax`, path `/`.
   No database column, no migration (ADR 0007).
 - **Server action "set theme":** parses its input with the theme module, refuses
-  anything that is not a pick, sets the cookie. It needs no session: the theme belongs
-  to the device, and the signed-out pages have no switch anyway.
+  anything that is not a pick, sets the cookie. It requires a session like every
+  action (coding-standards → Visibility); the switch only exists behind sign-in.
 - **Rendering:** the root layout reads the cookie and puts the theme class on `<body>`,
   where overlays portal to. `system` applies the Light values inside a
   `prefers-color-scheme: light` media query and Dark otherwise. The `dark` custom variant
