@@ -1,6 +1,5 @@
 "use client";
 
-import { Monitor, Moon, Sun } from "lucide-react";
 import type { RefObject } from "react";
 import {
   DropdownMenu,
@@ -12,12 +11,7 @@ import {
 import { useThemePick } from "@/hooks/use-theme-pick";
 import { isThemePick, THEME_PICKS, type ThemePick } from "@/lib/theme";
 import { RailTip, SIDEBAR_ICON_BUTTON_CLASS } from "./sidebar-parts";
-
-const OPTIONS: Record<ThemePick, { label: string; icon: typeof Moon }> = {
-  dark: { label: "Dark", icon: Moon },
-  light: { label: "Light", icon: Sun },
-  system: { label: "System", icon: Monitor },
-};
+import { THEME_OPTIONS } from "./theme-options";
 
 /**
  * The theme switch in the sidebar footer, beside "Sign out" (Design.md §3.1):
@@ -38,7 +32,7 @@ export function ThemeMenu({
   container?: RefObject<HTMLElement | null>;
 }) {
   const { pick, choose } = useThemePick(theme);
-  const { label, icon: Icon } = OPTIONS[pick];
+  const { label, icon: Icon } = THEME_OPTIONS[pick];
 
   return (
     <DropdownMenu>
@@ -65,7 +59,7 @@ export function ThemeMenu({
           {/* Radio items keep a menu open by default; picking is the whole
               job of this menu, so it closes. */}
           {THEME_PICKS.map((value) => {
-            const { label: itemLabel, icon: ItemIcon } = OPTIONS[value];
+            const { label: itemLabel, icon: ItemIcon } = THEME_OPTIONS[value];
             return (
               <DropdownMenuRadioItem key={value} value={value} closeOnClick>
                 <ItemIcon aria-hidden="true" />
